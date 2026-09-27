@@ -1,0 +1,129 @@
+"use client";
+import { Component, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { useApp } from "@/lib/store";
+import { Splash, Welcome, SignUp, LogIn, SignedIn, Onboarding, StartChoice } from "@/screens/auth";
+import { Units, Experience, Gender, Method, NameBody, BaseMeasures, MeasureBase, ScanIntro, ScanPrep, ScanCam, Preview, EditMeasures, Ready } from "@/screens/setup";
+import { Wizard, WizardStep, GroupDone, AllDone } from "@/screens/wizard";
+import { Home, Bodies, Patterns, You } from "@/screens/home";
+import { PatSelectBody, Prompt, Reference, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
+import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
+import { Seam, Arrange, PrintMethod, Needs, PrintReady, Pages, MiniMap, Printed } from "@/screens/print";
+import { Pill } from "./ui";
+import { Icon } from "./icons";
+
+type ScreenC = ComponentType<{ p?: Record<string, unknown> }>;
+const SCREENS: Record<string, ScreenC> = {
+  splash: Splash, welcome: Welcome, signup: SignUp, login: LogIn, signedin: SignedIn, onboarding: Onboarding, start: StartChoice,
+  units: Units, experience: Experience, gender: Gender, method: Method, name: NameBody, base: BaseMeasures, measure: MeasureBase,
+  scanIntro: ScanIntro, scanPrep: ScanPrep, scanCam: ScanCam, preview: Preview, edit: EditMeasures, ready: Ready,
+  wizard: Wizard, wstep: WizardStep, wdone: GroupDone, alldone: AllDone,
+  home: Home, bodies: Bodies, patterns: Patterns, you: You,
+  patSelectBody: PatSelectBody, prompt: Prompt, ref: Reference, ai: AIRead, generating: Generating, garment: Garment, edits: Edits,
+  templates: Templates, template: TemplateDetail, tplBody: TplBody, tplFit: TplFit, tplResult: TplResult,
+  seam: Seam, arrange: Arrange, printMethod: PrintMethod, needs: Needs, print: PrintReady, pages: Pages, minimap: MiniMap, printed: Printed,
+};
+
+// If any screen throws, never show a broken page: offer a way home.
+class Guard extends Component<{ children: ReactNode; k: string }, { err: boolean }> {
+  state = { err: false };
+  static getDerivedStateFromError() { return { err: true }; }
+  componentDidUpdate(prev: { k: string }) { if (prev.k !== this.props.k && this.state.err) this.setState({ err: false }); }
+  render() {
+    if (!this.state.err) return this.props.children;
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+        <div className="serif text-[40px]">Oops — a loose thread.</div>
+        <p className="mt-2 text-[14px] text-white/60">Let’s pick up from home.</p>
+        <Pill className="mt-6" onClick={() => { this.setState({ err: false }); useApp.getState().home(); }}>Go to home</Pill>
+      </div>
+    );
+  }
+}
+
+function StatusBar() {
+  const [t, setT] = useState("9:41");
+  useEffect(() => { const f = () => { const d = new Date(); setT(`${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")}`); }; f(); const i = setInterval(f, 30000); return () => clearInterval(i); }, []);
+  return (
+    <div className="fakestatus pointer-events-none absolute inset-x-0 top-0 z-[60] hidden h-[50px] items-center justify-between px-8 pt-1 text-[15px] font-semibold">
+      <span>{t}</span>
+      <span className="absolute left-1/2 top-[11px] h-[30px] w-[110px] -translate-x-1/2 rounded-full bg-black" />
+      <span className="flex items-center gap-1.5">
+        <svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="6" rx="1" /><rect x="10" y="2.5" width="3" height="8.5" rx="1" /><rect x="15" y="0" width="3" height="11" rx="1" /></svg>
+        <svg width="24" height="12" viewBox="0 0 24 12"><rect x=".5" y=".5" width="20" height="11" rx="3" fill="none" stroke="#fff" opacity=".5" /><rect x="2" y="2" width="16" height="8" rx="1.8" fill="#fff" /><rect x="21.5" y="4" width="1.5" height="4" rx=".7" fill="#fff" opacity=".5" /></svg>
+      </span>
+    </div>
+  );
+}
+
+export default function App() {
+  const [ready, setReady] = useState(false);
+  const stack = useApp((s) => s.stack);
+  const dir = useApp((s) => s.dir);
+  const kiosk = useApp((s) => s.kiosk);
+  const top = stack[stack.length - 1] ?? { id: "home" };
+  const S = SCREENS[top.id] ?? Home;
+  const depth = useRef(stack.length);
+  const [resetAsk, setResetAsk] = useState(false);
+  const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // wait for localStorage rehydration to avoid flashes / mismatches
+  useEffect(() => {
+    const done = () => setReady(true);
+    if (useApp.persist.hasHydrated()) done();
+    const unsub = useApp.persist.onFinishHydration(done);
+    const t = setTimeout(done, 600);
+    return () => { unsub(); clearTimeout(t); };
+  }, []);
+
+  // browser / Android back button → in-app back
+  useEffect(() => {
+    if (!ready) return;
+    if (stack.length > depth.current) { try { history.pushState({ v: stack.length }, ""); } catch {} }
+    depth.current = stack.length;
+  }, [stack.length, ready]);
+  useEffect(() => {
+    const onPop = () => { const s = useApp.getState(); if (s.stack.length > 1) { depth.current = s.stack.length - 1; s.back(); } };
+    window.addEventListener("popstate", onPop); return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // expo mode: reset after 2 minutes idle
+  useEffect(() => {
+    if (!kiosk) return;
+    let t: ReturnType<typeof setTimeout>;
+    const arm = () => { clearTimeout(t); t = setTimeout(() => { const s = useApp.getState(); if (s.stack[s.stack.length - 1]?.id !== "splash") s.reset(); }, 120000); };
+    const ev = ["pointerdown", "keydown", "wheel", "touchstart"]; ev.forEach((e) => window.addEventListener(e, arm, { passive: true })); arm();
+    return () => { clearTimeout(t); ev.forEach((e) => window.removeEventListener(e, arm)); };
+  }, [kiosk]);
+
+  // service worker for offline use
+  useEffect(() => { if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") navigator.serviceWorker.register("/sw.js").catch(() => {}); }, []);
+
+  return (
+    <div className="stage">
+      <div className="device">
+        <StatusBar />
+        {ready && (
+          <AnimatePresence initial={false} custom={dir} mode="popLayout">
+            <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={dir} className="absolute inset-0"
+              initial={{ x: dir > 0 ? 60 : -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: dir > 0 ? -60 : 60, opacity: 0 }}
+              transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}>
+              <Guard k={top.id + stack.length}><S p={top.p} /></Guard>
+            </motion.div>
+          </AnimatePresence>
+        )}
+        {/* hidden reset: press and hold the top-left corner for 2 s */}
+        <div className="absolute left-0 top-0 z-[70] h-11 w-11" onPointerDown={() => { hold.current = setTimeout(() => setResetAsk(true), 2000); }} onPointerUp={() => hold.current && clearTimeout(hold.current)} onPointerLeave={() => hold.current && clearTimeout(hold.current)} />
+        <AnimatePresence>{resetAsk && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 px-8 backdrop-blur-sm">
+            <div className="w-full rounded-[28px] border border-white/15 bg-[#161826] p-6 text-center">
+              <Icon name="refresh" size={28} className="mx-auto" />
+              <div className="mt-3 text-[20px] font-semibold">Reset for the next visitor?</div>
+              <Pill className="mt-5" onClick={() => { setResetAsk(false); useApp.getState().reset(); }}>Reset Venty</Pill>
+              <Pill variant="dark" className="mt-2" onClick={() => setResetAsk(false)}>Cancel</Pill>
+            </div>
+          </motion.div>)}</AnimatePresence>
+      </div>
+    </div>
+  );
+}
