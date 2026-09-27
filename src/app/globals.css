@@ -1,19 +1,97 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #111111;
+@theme {
+  --color-bg: #0b0c15;
+  --color-ink: #131523;
+  --color-primary: #687ef5;
+  --color-primary-2: #4f63e0;
+  --color-peri: #8c9cf8;
+  --color-lav: #a0abca;
+  --color-mist: #c1c8d9;
+  --color-slate: #3c4b63;
+  --color-denim: #4d5e85;
+  --color-snow: #f0f4fe;
+  --font-sans: var(--font-grotesk), system-ui, sans-serif;
+  --font-serif: var(--font-serif-display), Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@layer base {
+:root { color-scheme: dark; }
+html, body { background: #05060b; color: #fff; height: 100%; overscroll-behavior: none; }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; }
+button { cursor: pointer; font: inherit; color: inherit; background: none; border: 0; padding: 0; -webkit-user-select: none; user-select: none; }
+input { font: inherit; color: inherit; }
+::selection { background: #687ef5; }
+
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+/* device shell */
+.device { position: relative; width: 100%; height: 100dvh; overflow: hidden; background: #0b0c15; isolation: isolate; }
+@media (min-width: 640px) and (min-height: 720px) {
+  .stage { min-height: 100dvh; display: grid; place-items: center; padding: 24px;
+    background: radial-gradient(60% 50% at 30% 20%, rgba(104,126,245,.18), transparent 70%), radial-gradient(50% 50% at 80% 90%, rgba(77,94,133,.25), transparent 70%), #05060b; }
+  .device { width: 402px; height: min(874px, calc(100dvh - 48px)); border-radius: 48px; box-shadow: 0 0 0 10px #15161f, 0 0 0 11px #2a2c3a, 0 40px 120px rgba(0,0,0,.6); }
+}
+
+/* dot grid background */
+.dotgrid { position: absolute; inset: 0; pointer-events: none; z-index: -1;
+  background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1.2px); background-size: 16px 16px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.9), rgba(0,0,0,.25)); }
+
+@layer components {
+/* type */
+.eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+.h1 { font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
+.serif { font-family: var(--font-serif); font-weight: 400; letter-spacing: -.01em; }
+.h-serif { font-family: var(--font-serif); font-size: 40px; line-height: 1; letter-spacing: -.01em; }
+.lead { font-size: 15px; line-height: 1.4; color: rgba(255,255,255,.6); }
+
+/* surfaces */
+.glass { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+.glass-2 { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+.sel { border-color: #687ef5 !important; box-shadow: inset 0 0 0 .5px #687ef5; }
+
+.glow { position: relative; overflow: hidden; isolation: isolate; border: 1px solid rgba(255,255,255,.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -20px 40px rgba(255,255,255,.06); background: var(--gc, #687ef5); }
+.glow::before { content: ""; position: absolute; z-index: -1; pointer-events: none; filter: blur(22px); border-radius: 50%; background: #0b0c15; opacity: .92; }
+.glow::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.14), transparent 35%); }
+.glow.edge::before { left: -5%; right: -5%; top: -45%; height: 115%; }
+.glow.fade::before { left: 10%; right: 10%; top: 40%; height: 90%; }
+.glow.side::before { left: 38%; right: -30%; top: -20%; bottom: -20%; }
+.glow.orb { background: #10121d; }
+.glow.orb::before { background: var(--gc, #687ef5); opacity: .9; inset: 18%; filter: blur(30px); }
+.glow.dim { background: #151827; }
+.glow.dim::before { background: var(--gc, #687ef5); opacity: .45; left: -10%; right: 30%; top: 50%; height: 90%; filter: blur(34px); }
+
+/* buttons */
+.pill { height: 56px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; font-size: 16px; transition: transform .15s ease, filter .15s ease, opacity .2s; }
+.pill:active, .rb:active, .tap:active { transform: scale(.97); }
+.pill-primary { background: #687ef5; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 10px 30px rgba(104,126,245,.35);
+  background-image: radial-gradient(rgba(255,255,255,.12) 1px, transparent 1.2px); background-size: 4px 4px; }
+.pill-glass { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
+.pill-white { background: #fff; color: #0b0c15; }
+.pill-dark { background: #1a1c28; border: 1px solid rgba(255,255,255,.08); }
+.rb { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; transition: transform .15s; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
+.rb-sm { width: 40px; height: 40px; background: #1a1c28; border-color: rgba(255,255,255,.08); }
+.chip { height: 34px; padding: 0 15px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.85); white-space: nowrap; transition: background .2s, color .2s; }
+.chip.on { background: #fff; color: #0b0c15; border-color: #fff; }
+
+}
+
+.noscroll::-webkit-scrollbar { display: none; }
+.noscroll { scrollbar-width: none; }
+
+@keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes pulse-ring { 0% { transform: scale(.9); opacity: .8; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes scan { 0% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+.animate-floaty { animation: floaty 5s ease-in-out infinite; }
+
+/* safe areas: phones use real insets; the desktop phone frame shows a fake status bar */
+.device { --top: calc(max(env(safe-area-inset-top), 10px) + 6px); --bottom: max(env(safe-area-inset-bottom), 18px); }
+@media (min-width: 640px) and (min-height: 720px) {
+  .device { --top: 52px; --bottom: 26px; }
+  .fakestatus { display: flex !important; }
 }
