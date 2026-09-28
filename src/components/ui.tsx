@@ -7,20 +7,35 @@ import { useApp } from "@/lib/store";
 export const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(" ");
 
 // ─── Screen shell ─────────────────────────────────────────────────────
-export function Screen({ children, footer, className, bg, noPad, fixed }: { children: ReactNode; footer?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean }) {
+// Phone: full-bleed column. Desktop (lg): centred content column with a right-aligned action bar.
+export function Screen({ children, footer, className, bg, noPad, fixed, wide }: { children: ReactNode; footer?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean; wide?: boolean }) {
   return (
     <div className="absolute inset-0 flex flex-col">
       <div className="dotgrid" />
       {bg}
-      <div className={cx("relative flex-1 noscroll", fixed ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden", !noPad && "px-6", className)} style={{ paddingTop: "var(--top)" }}>
-        {children}
+      <div className={cx("relative flex-1 noscroll", fixed ? "overflow-hidden lg:overflow-y-auto" : "overflow-y-auto overflow-x-hidden", !noPad && "px-6", "lg:px-14", className)} style={{ paddingTop: "var(--top)" }}>
+        <div className={cx("lg:mx-auto lg:w-full", wide ? "lg:max-w-[1280px]" : "lg:max-w-[1180px]")}>
+          {children}
+        </div>
         {footer && <div className="h-4" />}
       </div>
       {footer && (
-        <div className="relative z-10 px-6 pt-3" style={{ paddingBottom: "var(--bottom)", background: "linear-gradient(to top, #0b0c15 55%, rgba(11,12,21,0))" }}>
-          {footer}
+        <div className="relative z-10 px-6 pt-3 lg:px-14" style={{ paddingBottom: "var(--bottom)", background: "linear-gradient(to top, #0b0c15 55%, rgba(11,12,21,0))" }}>
+          <div className={cx("lg:mx-auto lg:flex lg:w-full lg:justify-end", wide ? "lg:max-w-[1280px]" : "lg:max-w-[1180px]")}>
+            <div className="lg:w-[480px]">{footer}</div>
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Two-column desktop layout; stacks in order on phones.
+export function Split({ left, right, className, cols = "lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]", center = true }: { left: ReactNode; right: ReactNode; className?: string; cols?: string; center?: boolean }) {
+  return (
+    <div className={cx("lg:grid lg:gap-16", cols, center && "lg:min-h-[calc(100dvh-var(--top)-var(--bottom)-120px)] lg:items-center", className)}>
+      <div className="min-w-0">{left}</div>
+      <div className="min-w-0">{right}</div>
     </div>
   );
 }
@@ -65,11 +80,17 @@ export function RB({ icon, onClick, label, variant = "glass", size = 44, classNa
 export function Arrows({ onPrev, onNext, hidePrev, nextLabel }: { onPrev?: () => void; onNext?: () => void; hidePrev?: boolean; nextLabel?: string }) {
   const back = useApp((s) => s.back);
   return (
-    <div className="flex items-center justify-between pb-1">
-      {hidePrev ? <span /> : <RB icon="back" variant="dark" size={42} onClick={onPrev ?? back} label="Previous" />}
-      {nextLabel && <span className="text-[13px] text-white/50">{nextLabel}</span>}
-      <RB icon="chevR" variant="dark" size={42} onClick={onNext} label="Next" className="animate-[none]" />
-    </div>
+    <>
+      <div className="flex items-center justify-between pb-1 lg:hidden">
+        {hidePrev ? <span /> : <RB icon="back" variant="dark" size={42} onClick={onPrev ?? back} label="Previous" />}
+        {nextLabel && <span className="text-[13px] text-white/50">{nextLabel}</span>}
+        <RB icon="chevR" variant="dark" size={42} onClick={onNext} label="Next" />
+      </div>
+      <div className="hidden items-center gap-3 lg:flex">
+        {!hidePrev && <Pill variant="dark" className="!w-[150px]" onClick={onPrev ?? back} icon={<Icon name="back" size={18} />}>Back</Pill>}
+        <Pill className="flex-1" onClick={onNext}>Continue<Icon name="chevR" size={18} /></Pill>
+      </div>
+    </>
   );
 }
 
@@ -155,19 +176,21 @@ export function Dots({ n, i, className }: { n: number; i: number; className?: st
   );
 }
 
-// Bottom sheet
+// Bottom sheet on phones, centred dialog on desktop
 export function Sheet({ open, onClose, children, className }: { open: boolean; onClose: () => void; children: ReactNode; className?: string }) {
   return (
     <AnimatePresence>
       {open && (
         <>
           <motion.div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <motion.div className={cx("absolute inset-x-0 bottom-0 z-50 rounded-t-[36px] border-t border-white/15 px-6 pt-3", className)} style={{ paddingBottom: "var(--bottom)", background: "linear-gradient(180deg, #2a2f48 0%, #161826 60%)" }}
-            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}
-            drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.5 }} onDragEnd={(_, i) => { if (i.offset.y > 90) onClose(); }}>
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/30" />
-            {children}
-          </motion.div>
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-end justify-center lg:items-center">
+            <motion.div className={cx("pointer-events-auto w-full rounded-t-[36px] border-t border-white/15 px-6 pt-3 lg:w-[480px] lg:rounded-[32px] lg:border lg:px-8 lg:pb-8 lg:pt-6", className)} style={{ paddingBottom: "var(--bottom)", background: "linear-gradient(180deg, #2a2f48 0%, #161826 60%)" }}
+              initial={{ y: "100%", opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}
+              drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.5 }} onDragEnd={(_, i) => { if (i.offset.y > 90) onClose(); }}>
+              <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/30 lg:hidden" />
+              {children}
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
@@ -181,7 +204,7 @@ export function useToast() {
   const node = (
     <AnimatePresence>
       {msg && (
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="pointer-events-none absolute inset-x-6 bottom-28 z-50 flex justify-center">
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="pointer-events-none absolute inset-x-6 bottom-28 z-50 flex justify-center lg:bottom-12">
           <div className="glass-2 flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-medium"><Icon name="check" size={16} /> {msg}</div>
         </motion.div>
       )}
@@ -232,4 +255,16 @@ export function Progress({ value, className }: { value: number; className?: stri
 
 export function Blob({ className, color = "#687ef5", style }: { className?: string; color?: string; style?: CSSProperties }) {
   return <div className={cx("pointer-events-none absolute rounded-full blur-[70px]", className)} style={{ background: color, ...style }} />;
+}
+
+// true on desktop-width screens (≥1024px)
+export function useDesk() {
+  const [d, setD] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches);
+  useEffect(() => {
+    const m = window.matchMedia("(min-width: 1024px)");
+    const f = () => setD(m.matches);
+    f(); m.addEventListener("change", f);
+    return () => m.removeEventListener("change", f);
+  }, []);
+  return d;
 }

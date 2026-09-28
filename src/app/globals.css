@@ -28,7 +28,7 @@ input { font: inherit; color: inherit; }
 
 /* device shell */
 .device { position: relative; width: 100%; height: 100dvh; overflow: hidden; background: #0b0c15; isolation: isolate; }
-@media (min-width: 640px) and (min-height: 720px) {
+@media (min-width: 640px) and (max-width: 1023px) and (min-height: 720px) {
   .stage { min-height: 100dvh; display: grid; place-items: center; padding: 24px;
     background: radial-gradient(60% 50% at 30% 20%, rgba(104,126,245,.18), transparent 70%), radial-gradient(50% 50% at 80% 90%, rgba(77,94,133,.25), transparent 70%), #05060b; }
   .device { width: 402px; height: min(874px, calc(100dvh - 48px)); border-radius: 48px; box-shadow: 0 0 0 10px #15161f, 0 0 0 11px #2a2c3a, 0 40px 120px rgba(0,0,0,.6); }
@@ -91,7 +91,15 @@ input { font: inherit; color: inherit; }
 
 /* safe areas: phones use real insets; the desktop phone frame shows a fake status bar */
 .device { --top: calc(max(env(safe-area-inset-top), 10px) + 6px); --bottom: max(env(safe-area-inset-bottom), 18px); }
-@media (min-width: 640px) and (min-height: 720px) {
+@media (min-width: 640px) and (max-width: 1023px) and (min-height: 720px) {
   .device { --top: 52px; --bottom: 26px; }
   .fakestatus { display: flex !important; }
+}
+
+/* desktop: full-screen app with sidebar */
+@media (min-width: 1024px) {
+  .device { --top: 36px; --bottom: 28px; height: 100dvh; width: 100%; border-radius: 0; box-shadow: none; }
+  .h1 { font-size: 40px; }
+  .h-serif { font-size: 60px; }
+  .lead { font-size: 16px; }
 }

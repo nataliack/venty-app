@@ -9,7 +9,11 @@ import { Home, Bodies, Patterns, You } from "@/screens/home";
 import { PatSelectBody, Prompt, Reference, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
 import { Seam, Arrange, PrintMethod, Needs, PrintReady, Pages, MiniMap, Printed } from "@/screens/print";
-import { Pill } from "./ui";
+import { Pill, cx } from "./ui";
+import { Sidebar } from "./Sidebar";
+
+// Screens shown full-bleed on desktop (no sidebar)
+const FULL = new Set(["splash", "welcome", "signup", "login", "signedin", "onboarding", "start", "scanCam"]);
 import { Icon } from "./icons";
 
 type ScreenC = ComponentType<{ p?: Record<string, unknown> }>;
@@ -103,6 +107,9 @@ export default function App() {
     <div className="stage">
       <div className="device">
         <StatusBar />
+        <div className="flex h-full">
+        {ready && !FULL.has(top.id) && <Sidebar route={top.id} />}
+        <div className={cx("relative h-full flex-1 overflow-hidden")}>
         {ready && (
           <AnimatePresence initial={false} custom={dir} mode="popLayout">
             <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={dir} className="absolute inset-0"
@@ -112,11 +119,13 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         )}
+        </div>
+        </div>
         {/* hidden reset: press and hold the top-left corner for 2 s */}
         <div className="absolute left-0 top-0 z-[70] h-11 w-11" onPointerDown={() => { hold.current = setTimeout(() => setResetAsk(true), 2000); }} onPointerUp={() => hold.current && clearTimeout(hold.current)} onPointerLeave={() => hold.current && clearTimeout(hold.current)} />
         <AnimatePresence>{resetAsk && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 px-8 backdrop-blur-sm">
-            <div className="w-full rounded-[28px] border border-white/15 bg-[#161826] p-6 text-center">
+            <div className="w-full max-w-sm rounded-[28px] border border-white/15 bg-[#161826] p-6 text-center">
               <Icon name="refresh" size={28} className="mx-auto" />
               <div className="mt-3 text-[20px] font-semibold">Reset for the next visitor?</div>
               <Pill className="mt-5" onClick={() => { setResetAsk(false); useApp.getState().reset(); }}>Reset Venty</Pill>
