@@ -1,9 +1,10 @@
 "use client";
+import { haptic } from "@/lib/haptics";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { FABRICS, PIECE_LABEL } from "@/lib/data";
-import { Screen, TopBar, Eyebrow, H1, Lead, Pill, Glow, Glass, RB, Arrows, Check, Toggle, cx, useToast } from "@/components/ui";
+import { Screen, TopBar, Eyebrow, H1, Lead, Pill, Glow, Glass, RB, Arrows, Check, Toggle, cx, useToast, Split } from "@/components/ui";
 import { Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { garmentName, piecesFor } from "./pattern";
@@ -16,10 +17,12 @@ export function Seam() {
   const add = draft.seam !== null;
   return (
     <Screen footer={<Arrows onNext={() => go("arrange")} />}>
+      <Split left={<>
       <div className="h-12" /><Eyebrow>Before you print · 01</Eyebrow>
       <H1 className="mt-4">Add seam allowance?</H1>
       <Lead className="mt-2 text-[14px]">The dashed line around each piece. Skip it if you add your own.</Lead>
-      <Glass className="relative mt-4 grid h-[min(220px,26dvh)] place-items-center rounded-[26px]" >
+      </>} right={<>
+      <Glass className="relative mt-4 grid h-[min(220px,26dvh)] place-items-center rounded-[26px] lg:h-[min(340px,38dvh)]" >
         <div className="absolute inset-0 rounded-[26px]" style={GRID} />
         <Piece k="bodiceFront" width={130} label="Bodice front" allowance={add} />
         {add && <span className="absolute right-6 top-6 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold">{draft.seam} cm</span>}
@@ -39,6 +42,7 @@ export function Seam() {
             )
           ))}</div>
         </motion.div>)}</AnimatePresence>
+      </>} />
     </Screen>
   );
 }
@@ -54,10 +58,13 @@ export function Arrange() {
   const { toast, node } = useToast();
   return (
     <Screen footer={<Arrows onNext={() => go("printMethod")} />}>
+      <Split cols="lg:grid-cols-[minmax(0,0.6fr)_minmax(0,1.4fr)]" left={<>
       <div className="h-12" /><Eyebrow>Print pattern · 02</Eyebrow>
       <H1 className="mt-4">Your pattern</H1>
       <Lead className="mt-2 text-[14px]">We packed the pieces to save paper. Drag to rearrange.</Lead>
-      <div ref={area} key={seed} className="glass relative mt-4 h-[min(400px,46dvh)] overflow-hidden rounded-[24px]" style={GRID}>
+      <div className="mt-6 hidden flex-col gap-2 text-[13px] text-white/60 lg:flex"><span>· Drag a piece to move it</span><span>· Tap a piece, then rotate</span><span>· Re-pack to start over</span></div>
+      </>} right={<>
+      <div ref={area} key={seed} className="glass relative mt-4 h-[min(400px,46dvh)] overflow-hidden rounded-[24px] lg:h-[min(600px,68dvh)]" style={GRID}>
         {["A", "B", "C", "D"].map((r, i) => <span key={r} className="absolute left-1.5 text-[8px] text-white/40" style={{ top: `${8 + i * 25}%` }}>{r}1</span>)}
         {pieces.map((k, i) => (
           <motion.div key={k} drag dragConstraints={area} dragMomentum={false} onTap={() => setSel(k)} whileDrag={{ scale: 1.05, zIndex: 10 }}
@@ -72,6 +79,7 @@ export function Arrange() {
         <RB icon="rotate" size={40} className="!border-0 !bg-transparent" onClick={() => { const k = sel ?? pieces[0]; setRot({ ...rot, [k]: ((rot[k] ?? 0) + 90) % 360 }); }} />
         <RB icon="grid" size={40} className="!border-0 !bg-transparent" onClick={() => { setRot({}); setSeed(seed + 1); toast("Pieces re-packed"); }} />
       </div></div>
+      </>} />
       {node}
     </Screen>
   );
@@ -84,11 +92,11 @@ export function PrintMethod() {
     <Screen footer={<Arrows onNext={() => go("needs")} />}>
       <div className="h-12" /><Eyebrow>Print pattern · 03</Eyebrow>
       <H1 className="mt-4">How are you<br />printing it?</H1>
-      <div className="mt-5 flex flex-col gap-3">
+      <div className="mt-5 flex flex-col gap-3 lg:mt-12 lg:grid lg:grid-cols-2 lg:gap-6">
         {([["A4", "A4 · Home printer", "Tile the pattern, then tape it together.", "16", "Sheets to tape"], ["A0", "A0 · Print shop", "One big sheet. No taping.", "01", "Sheet"]] as const).map(([k, t, d, n, l]) => {
           const on = draft.printer === k;
           return (
-            <Glow key={k} as="button" color={on ? "#687ef5" : "#3c4b63"} variant={on ? "fade" : "dim"} onClick={() => setDraft({ printer: k })} className="relative block h-[min(210px,25dvh)] w-full rounded-[28px] p-5">
+            <Glow key={k} as="button" color={on ? "#687ef5" : "#3c4b63"} variant={on ? "fade" : "dim"} onClick={() => setDraft({ printer: k })} className="relative block h-[min(210px,25dvh)] w-full rounded-[28px] p-5 lg:h-[340px] lg:p-8">
               <div className="text-[18px] font-semibold">{t}</div><div className="mt-1 text-[12px] text-white/65">{d}</div>
               {on && <Check className="absolute right-4 top-4" />}
               {k === "A4" ? <div className="absolute bottom-5 left-5 grid grid-cols-4 gap-1">{Array.from({ length: 12 }, (_, i) => <span key={i} className="h-[22px] w-[17px] rounded-[3px] border border-white/50 bg-white/10" />)}</div>
@@ -108,13 +116,15 @@ export function Needs() {
   return (
     <Screen footer={<Arrows onNext={() => go("print")} />}>
       <div className="h-12" /><Eyebrow>Print pattern · 04</Eyebrow>
+      <Split center={false} className="lg:pt-6" left={<>
       <H1 className="mt-4">What you’ll need</H1>
-      <Glow color="#687ef5" variant="side" className="relative mt-5 rounded-[26px] p-5">
+      <Glow color="#687ef5" variant="side" className="relative mt-5 rounded-[26px] p-5 lg:mt-8 lg:p-8">
         <Eyebrow className="text-[9px] text-white/70">Fabric needed</Eyebrow>
         <div className="mt-2 flex items-baseline gap-3"><span className="serif text-[64px] leading-none">2.4</span><span className="eyebrow text-[10px]">Metres</span></div>
         <div className="mt-2 text-[12px] text-white/70">at 140 cm wide · allow 10% for shrinkage</div>
       </Glow>
-      <Eyebrow className="mt-5 text-[9px]">Recommended fabric</Eyebrow>
+      </>} right={<>
+      <Eyebrow className="mt-5 text-[9px] lg:mt-16">Recommended fabric</Eyebrow>
       <div className="mt-2 flex flex-col gap-2">{FABRICS.map((f) => (
         <Glass key={f.name} onClick={() => setDraft({ fabric: f.name })} selected={draft.fabric === f.name} className="flex h-[58px] w-full items-center gap-3 rounded-[18px] px-3">
           <span className="h-9 w-9 rounded-[10px]" style={{ background: f.swatch }} />
@@ -124,6 +134,7 @@ export function Needs() {
       ))}</div>
       <Eyebrow className="mt-5 text-[9px]">Notions</Eyebrow>
       <div className="mt-2 flex flex-wrap gap-2">{["Invisible zip · 55 cm", "Thread", "Interfacing · 0.3 m"].map((n) => <span key={n} className="chip">{n}</span>)}</div>
+      </>} />
     </Screen>
   );
 }
@@ -138,20 +149,24 @@ export function PrintReady() {
   return (
     <Screen>
       <TopBar left="back" eyebrow="Print pattern · 05" />
-      <H1 className="mt-4">Ready to print</H1>
+      <Split cols="lg:grid-cols-2" left={<>
+      <H1 className="mt-4 lg:hidden">Ready to print</H1>
       <div className="mt-4 flex justify-center">
-        <motion.div initial={{ rotate: -3, y: 10, opacity: 0 }} animate={{ rotate: -2, y: 0, opacity: 1 }} className="glass-2 relative h-[min(330px,38dvh)] w-[250px] rounded-[14px] p-4 shadow-2xl" style={GRID}>
+        <motion.div initial={{ rotate: -3, y: 10, opacity: 0 }} animate={{ rotate: -2, y: 0, opacity: 1 }} className="glass-2 relative h-[min(330px,38dvh)] w-[250px] rounded-[14px] p-4 shadow-2xl lg:h-[min(520px,62dvh)] lg:w-[390px] lg:p-6" style={GRID}>
           <div className="eyebrow text-[7px]">Page 1 · Mini map</div>
           <div className="mt-3 grid grid-cols-3 gap-2">{pieces.slice(0, 6).map((k) => <Piece key={k} k={k} width={62} />)}</div>
           <div className="absolute bottom-3 left-4 text-[7px] text-white/50">{garmentName(draft.garment).toUpperCase()} · {useApp.getState().body().name.toUpperCase()}</div>
         </motion.div>
       </div>
-      <div className="mt-5 flex items-end gap-3"><span className="serif text-[56px] leading-none">{pages}</span><span className="eyebrow mb-2 text-[9px]">Pages · {pages - 1 || 1} tiles + map</span></div>
+      </>} right={<>
+      <H1 className="mt-4 hidden lg:block">Ready to print</H1>
+      <div className="mt-5 flex items-end gap-3"><span className="serif text-[56px] leading-none lg:text-[96px]">{pages}</span><span className="eyebrow mb-2 text-[9px]">Pages · {pages - 1 || 1} tiles + map</span></div>
       <div className="mt-3 flex flex-wrap gap-2"><span className="chip">{draft.printer}</span><span className="chip">{draft.seam ? `${draft.seam} cm SA` : "No SA"}</span><span className="chip">{garmentName(draft.garment).split(" ")[0]}</span></div>
       <div className="mt-6 flex gap-3">
         <Pill className="flex-1" onClick={() => { setBusy(true); setTimeout(() => { setBusy(false); go("pages"); }, 900); }}>{busy ? "Preparing…" : "Print PDF"}</Pill>
         <Pill variant="dark" className="flex-1" onClick={() => toast("PDF saved to Files")}>Save PDF</Pill>
       </div>
+      </>} />
       {node}
     </Screen>
   );
@@ -170,16 +185,19 @@ export function Pages() {
   const print = () => {
     setPrinting(0.01);
     const t0 = performance.now();
-    const tick = (n: number) => { const k = Math.min(1, (n - t0) / 2600); setPrinting(k); if (k < 1) requestAnimationFrame(tick); else { savePattern("Printed"); replace("printed", { n: count }); } };
+    const tick = (n: number) => { const k = Math.min(1, (n - t0) / 2600); setPrinting(k); if (k < 1) requestAnimationFrame(tick); else { haptic("success"); savePattern("Printed"); replace("printed", { n: count }); } };
     requestAnimationFrame(tick);
   };
   return (
     <Screen footer={<Pill onClick={print}>Print {count} pages</Pill>}>
       <TopBar left="back" eyebrow="Print PDF" />
+      <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<>
       <H1 className="mt-4">Pages to print</H1>
       <Glass className="mt-4 flex h-14 items-center gap-3 rounded-[18px] px-4"><Icon name="map" size={20} /><button className="flex-1 text-left text-[14px] font-medium" onClick={() => go("minimap")}>Include pattern mini map</button><Toggle on={map} onChange={setMap} /></Glass>
       <div className="glass mt-3 flex h-11 rounded-full p-1">{(["All pages", "Custom"] as const).map((m) => <button key={m} onClick={() => setMode(m)} className={cx("flex-1 rounded-full text-[13px] font-medium", mode === m ? "bg-white text-bg" : "text-white/70")}>{m}</button>)}</div>
-      <div className="mt-3 grid grid-cols-4 gap-2">
+      <div className="mt-6 hidden items-end gap-2 lg:flex"><span className="serif text-[72px] leading-none">{String(count - (map ? 1 : 0)).padStart(2, "0")}/16</span><span className="eyebrow mb-2.5 text-[10px]">Tiles{map ? " + map" : ""}</span></div>
+      </>} right={<>
+      <div className="mt-3 grid grid-cols-4 gap-2 lg:mx-auto lg:max-w-[min(520px,52dvh)] lg:gap-3">
         {ROWS.flatMap((r) => [1, 2, 3, 4].map((c) => {
           const id = r + c; const sel = mode === "All pages" || on.includes(id);
           return (
@@ -190,7 +208,8 @@ export function Pages() {
           );
         }))}
       </div>
-      <div className="mt-4 flex items-end gap-2"><span className="serif text-[40px] leading-none">{String(count - (map ? 1 : 0)).padStart(2, "0")}/16</span><span className="eyebrow mb-1.5 text-[9px]">Tiles{map ? " + map" : ""}</span></div>
+      <div className="mt-4 flex items-end gap-2 lg:hidden"><span className="serif text-[40px] leading-none">{String(count - (map ? 1 : 0)).padStart(2, "0")}/16</span><span className="eyebrow mb-1.5 text-[9px]">Tiles{map ? " + map" : ""}</span></div>
+      </>} />
       <AnimatePresence>{printing > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-bg/85 backdrop-blur-md">
           <div className="grid h-20 w-20 place-items-center rounded-full bg-white text-bg"><Icon name="printer" size={34} /></div>
@@ -209,13 +228,17 @@ export function MiniMap() {
   return (
     <Screen footer={<Pill variant="dark" onClick={back}>Back to print</Pill>}>
       <TopBar left="back" eyebrow="Page 1 of your print" />
+      <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<>
       <H1 className="mt-4">Pattern mini map</H1>
       <Lead className="mt-2 text-[14px]">Tape each row first, then join the rows. Match the triangles.</Lead>
-      <div className="relative mt-4 grid grid-cols-4 grid-rows-4 overflow-hidden rounded-[20px] border border-white/15" style={{ aspectRatio: "3 / 4" }}>
+      <div className="mt-6 hidden flex-wrap gap-2 lg:flex"><span className="chip"><Icon name="triangle" size={12} />Match triangles</span><span className="chip">— Trim 2 edges only</span><span className="chip">A1 Page code</span></div>
+      </>} right={<>
+      <div className="relative mt-4 grid lg:mx-auto lg:w-[min(480px,54dvh)] grid-cols-4 grid-rows-4 overflow-hidden rounded-[20px] border border-white/15" style={{ aspectRatio: "3 / 4" }}>
         {ROWS.flatMap((r) => [1, 2, 3, 4].map((c) => <div key={r + c} className="relative border border-dashed border-white/15"><span className="absolute left-1 top-0.5 text-[8px] text-white/45">{r + c}</span></div>))}
         <div className="absolute inset-0 grid grid-cols-3 place-items-center p-4">{pieces.map((k) => <Piece key={k} k={k} width={78} label={PIECE_LABEL[k]} />)}</div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2"><span className="chip"><Icon name="triangle" size={12} />Match triangles</span><span className="chip">— Trim 2 edges only</span><span className="chip">A1 Page code</span></div>
+      <div className="mt-3 flex flex-wrap gap-2 lg:hidden"><span className="chip"><Icon name="triangle" size={12} />Match triangles</span><span className="chip">— Trim 2 edges only</span><span className="chip">A1 Page code</span></div>
+      </>} />
     </Screen>
   );
 }
@@ -228,9 +251,11 @@ export function Printed({ p }: { p?: Record<string, unknown> }) {
   return (
     <Screen footer={<Pill onClick={home}>Back to home</Pill>} bg={<div className="absolute inset-0" style={{ background: "radial-gradient(90% 45% at 30% 0%, rgba(104,126,245,.5), transparent 70%)" }} />}>
       <TopBar left="close" onLeft={home} />
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="serif mt-6 text-[76px] leading-none">{n}/{n}</motion.div>
+      <Split left={<>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="serif mt-6 text-[76px] leading-none lg:text-[140px]">{n}/{n}</motion.div>
       <Eyebrow className="mt-2 text-[10px]">Pages printed</Eyebrow>
-      <h1 className="mt-4 text-[28px] font-semibold leading-tight tracking-tight">Printed. Now the<br />fun part.</h1>
+      <h1 className="mt-4 text-[28px] font-semibold leading-tight tracking-tight lg:text-[44px]">Printed. Now the<br />fun part.</h1>
+      </>} right={<>
       <Glow color="#8c9cf8" variant="fade" className="mt-6 rounded-[26px] p-4">
         <div className="text-[16px] font-semibold">Support resources</div><div className="text-[12px] text-white/65">Help while you cut and sew.</div>
         <div className="mt-3 flex flex-col gap-1.5">{([["book", "Sewing guide for this dress"], ["layers", "Glossary · plain language"], ["video", "Video · taping tiled pages"]] as const).map(([ic, t]) => (
@@ -238,6 +263,7 @@ export function Printed({ p }: { p?: Record<string, unknown> }) {
         ))}</div>
       </Glow>
       <Glass onClick={() => go("minimap")} className="mt-3 flex w-full items-center gap-3 rounded-[22px] p-4"><Icon name="map" size={20} /><div className="flex-1"><div className="text-[15px] font-semibold">View pattern mini map</div><div className="text-[12px] text-white/55">Where each piece sits on the pages</div></div></Glass>
+      </>} />
       {node}
     </Screen>
   );
