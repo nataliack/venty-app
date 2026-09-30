@@ -1,4 +1,5 @@
 "use client";
+import { haptic } from "@/lib/haptics";
 import { Component, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
@@ -101,6 +102,16 @@ export default function App() {
   }, [kiosk]);
 
   // service worker for offline use
+  // haptic tick on every button press (Android vibrates; iPhone gets the system switch tick)
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.("button, [role=button], a, [role=switch], [role=tab]");
+      if (!el || (el as HTMLButtonElement).disabled) return;
+      haptic(el.matches(".chip, [role=switch], [role=tab]") ? "select" : "tap");
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
   useEffect(() => { if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") navigator.serviceWorker.register("/sw.js").catch(() => {}); }, []);
 
   return (

@@ -254,7 +254,8 @@ export function Progress({ value, className }: { value: number; className?: stri
 }
 
 export function Blob({ className, color = "#687ef5", style }: { className?: string; color?: string; style?: CSSProperties }) {
-  return <div className={cx("pointer-events-none absolute rounded-full blur-[70px]", className)} style={{ background: color, ...style }} />;
+  const stops = [[0, 1], [15, .9], [30, .72], [44, .52], [56, .35], [67, .21], [77, .11], [86, .045], [93, .014], [100, 0]].map(([p, a]) => `color-mix(in srgb, ${color} ${a * 100}%, transparent) ${p}%`).join(", ");
+  return <div className={cx("pointer-events-none absolute scale-[1.6] blur-[40px]", className)} style={{ background: `radial-gradient(closest-side, ${stops})`, ...style }} />;
 }
 
 // true on desktop-width screens (≥1024px)
@@ -267,4 +268,12 @@ export function useDesk() {
     return () => m.removeEventListener("change", f);
   }, []);
   return d;
+}
+
+// Hover / press gradient effects that live inside a card. Put <FX kind="…" /> as the first child of a
+// Glow or Glass that has the "group" class; it fades in and starts moving on hover, or on press on touch.
+export type FXKind = "aurora" | "tide" | "orbit" | "sheen" | "ripple";
+export function FX({ kind }: { kind: FXKind }) {
+  const n = kind === "aurora" ? 3 : kind === "orbit" ? 2 : kind === "ripple" ? 3 : 1;
+  return <span aria-hidden className={`fx fx-${kind}`}>{Array.from({ length: n }, (_, i) => <i key={i} />)}</span>;
 }

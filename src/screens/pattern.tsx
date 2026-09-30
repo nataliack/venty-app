@@ -1,4 +1,5 @@
 "use client";
+import { haptic } from "@/lib/haptics";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
@@ -283,7 +284,7 @@ export function Generating({ p }: { p?: Record<string, unknown> }) {
   const dur = p?.quick ? 2200 : 4200;
   useEffect(() => {
     const t0 = performance.now(); let raf = 0;
-    const tick = (t: number) => { const k = Math.min(1, (t - t0) / dur); setPct(Math.round(100 * (1 - Math.pow(1 - k, 2)))); if (k < 1) raf = requestAnimationFrame(tick); else setTimeout(() => replace("garment"), 350); };
+    const tick = (t: number) => { const k = Math.min(1, (t - t0) / dur); setPct(Math.round(100 * (1 - Math.pow(1 - k, 2)))); if (k < 1) raf = requestAnimationFrame(tick); else setTimeout(() => { haptic("success"); replace("garment"); }, 350); };
     raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
   }, [dur, replace]);
   const active = Math.min(3, Math.floor(pct / 26));

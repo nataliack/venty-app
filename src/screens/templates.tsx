@@ -4,18 +4,40 @@ import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
 import { TEMPLATES, CATEGORIES, templateBy, type Category, type GarmentKey } from "@/lib/data";
 import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, cx, useToast } from "@/components/ui";
-import { Split, useDesk } from "@/components/ui";
+import { Split, useDesk, FX } from "@/components/ui";
 import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
+
+// Every template card looks the same at rest; the glow "expanded" look appears on hover / focus / press.
+function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: boolean; onClick: () => void }) {
+  return (
+    <div role="button" tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      className={cx("tplcard nofx group glass relative cursor-pointer select-none overflow-hidden outline-none transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_24px_60px_-20px_rgba(104,126,245,.55)] focus-visible:-translate-y-1 active:scale-[.985]",
+        desk ? "h-[min(440px,56dvh)] rounded-[30px] p-6" : "h-[220px] rounded-[24px] p-4")}>
+      <div className="glow fade pointer-events-none absolute inset-0 rounded-[inherit] border-0 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 group-active:opacity-100" style={{ ["--gc" as string]: t.color } as React.CSSProperties} />
+      <FX kind="ripple" />
+      <div className={cx("relative flex justify-center transition-transform duration-500 ease-out group-hover:scale-[1.06]", desk ? "pt-6" : "")}><Flat g={t.key} size={desk ? 170 : 84} /></div>
+      <div className={cx("absolute", desk ? "bottom-6 left-6 right-6" : "bottom-4 left-4 right-4")}>
+        <div className={cx("font-semibold", desk ? "text-[20px]" : "text-[15px]")}>{t.name}</div>
+        <div className={cx("text-white/55 transition-colors group-hover:text-white/80", desk ? "text-[13px]" : "text-[11px]")}>{t.level} · {t.pieces} pieces<span className="hidden group-hover:inline"> · {t.hours}</span></div>
+      </div>
+    </div>
+  );
+}
 
 export function Templates({ p }: { p?: Record<string, unknown> }) {
   const { go } = useApp();
   const [cat, setCat] = useState<Category>((p?.cat as Category) ?? "Dresses");
   const [q, setQ] = useState<string | null>(null);
-  const list = TEMPLATES.filter((t) => t.category === cat && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
-  const [feat, ...rest] = list.length ? list : TEMPLATES.filter((t) => t.category === cat);
+  const found = TEMPLATES.filter((t) => t.category === cat && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
+  const list = found.length ? found : TEMPLATES.filter((t) => t.category === cat);
   const { toast, node } = useToast();
   const desk = useDesk();
+  const request = (
+    <button onClick={() => toast("Thanks — we’ll add more soon")} className={cx("tap flex flex-col items-center justify-center border border-dashed border-white/25 transition-colors hover:border-white/45", desk ? "h-[min(440px,56dvh)] rounded-[30px]" : "h-[220px] rounded-[24px]")}>
+      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[14px] font-medium text-white/75">Request a style</span><span className="text-[11px] text-white/45">More coming soon</span>
+    </button>
+  );
   if (desk) return (
     <Screen wide>
       <TopBar left="back" eyebrow="Templates · 10 styles" right="search" onRight={() => setQ(q === null ? "" : null)} />
@@ -27,22 +49,8 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
         </div>
       </div>
       <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-8 grid grid-cols-4 gap-5">
-        <Glow color={feat.color} variant="fade" onClick={() => go("template", { key: feat.key })} className="relative col-span-2 h-[min(460px,58dvh)] rounded-[34px] p-7">
-          <span className="rounded-full bg-white/20 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.08em]">Featured</span>
-          <div className="absolute right-6 top-8"><Flat g={feat.key} size={250} /></div>
-          <div className="absolute bottom-8 left-7 max-w-[260px]"><div className="serif text-[60px] leading-[.95]">{feat.name}</div><div className="mt-3 text-[14px] font-medium text-white/70">{feat.level} · {feat.pieces} pieces · {feat.hours}</div></div>
-        </Glow>
-        {rest.map((t) => (
-          <Glass key={t.key} onClick={() => go("template", { key: t.key })} className="relative h-[min(460px,58dvh)] rounded-[30px] p-6 hover:bg-white/10">
-            <div className="flex justify-center pt-6"><Flat g={t.key} size={170} /></div>
-            <div className="absolute bottom-6 left-6"><div className="text-[20px] font-semibold">{t.name}</div><div className="text-[13px] text-white/55">{t.level} · {t.pieces} pieces</div></div>
-          </Glass>
-        ))}
-        {rest.length < 2 && (
-          <button onClick={() => toast("Thanks — we’ll add more soon")} className="tap flex h-[min(460px,58dvh)] flex-col items-center justify-center rounded-[30px] border border-dashed border-white/25">
-            <Icon name="plus" size={28} className="text-white/70" /><span className="mt-3 text-[16px] font-medium text-white/75">Request a style</span><span className="text-[12px] text-white/45">More coming soon</span>
-          </button>
-        )}
+        {list.map((t) => <TplCard key={t.key} t={t} desk onClick={() => go("template", { key: t.key })} />)}
+        {list.length < 4 && request}
       </motion.div>
       {node}
     </Screen>
@@ -54,25 +62,9 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
       <H1 className="mt-4">Start from a template</H1>
       <Lead className="mt-2 text-[14px]">Pick a style, fit it to a body, get the pattern.</Lead>
       <div className="-mx-6 mt-4 flex gap-2 overflow-x-auto px-6 noscroll">{CATEGORIES.map((c) => <Chip key={c} on={c === cat} onClick={() => setCat(c)}>{c}</Chip>)}</div>
-      <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <Glow as="button" color={feat.color} variant="fade" onClick={() => go("template", { key: feat.key })} className="relative mt-4 block h-[250px] w-full rounded-[30px] p-5">
-          <span className="rounded-full bg-white/20 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.08em]">Featured</span>
-          <div className="absolute right-2 top-4"><Flat g={feat.key} size={feat.name.length > 11 ? 140 : 165} /></div>
-          <div className="absolute bottom-5 left-5 max-w-[180px]"><div className={cx("serif leading-[.95]", feat.name.length > 11 ? "text-[34px]" : "text-[40px]")}>{feat.name}</div><div className="mt-2 text-[13px] font-medium text-white/70">{feat.level} · {feat.pieces} pieces</div></div>
-        </Glow>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {rest.map((t) => (
-            <Glass key={t.key} onClick={() => go("template", { key: t.key })} className="relative h-[220px] rounded-[24px] p-4">
-              <div className="flex justify-center"><Flat g={t.key} size={84} /></div>
-              <div className="absolute bottom-4 left-4"><div className="text-[15px] font-semibold">{t.name}</div><div className="text-[11px] text-white/55">{t.level} · {t.pieces} pieces</div></div>
-            </Glass>
-          ))}
-          {rest.length < 2 && (
-            <button onClick={() => toast("Thanks — we’ll add more soon")} className="tap flex h-[220px] flex-col items-center justify-center rounded-[24px] border border-dashed border-white/25">
-              <Icon name="plus" size={24} className="text-white/70" /><span className="mt-3 text-[14px] font-medium text-white/75">Request a style</span><span className="text-[11px] text-white/45">More coming soon</span>
-            </button>
-          )}
-        </div>
+      <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
+        {list.map((t) => <TplCard key={t.key} t={t} desk={false} onClick={() => go("template", { key: t.key })} />)}
+        {list.length % 2 === 1 && request}
       </motion.div>
       <div className="h-6" />
       {node}

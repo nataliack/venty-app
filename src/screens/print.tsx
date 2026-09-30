@@ -1,4 +1,5 @@
 "use client";
+import { haptic } from "@/lib/haptics";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
@@ -184,7 +185,7 @@ export function Pages() {
   const print = () => {
     setPrinting(0.01);
     const t0 = performance.now();
-    const tick = (n: number) => { const k = Math.min(1, (n - t0) / 2600); setPrinting(k); if (k < 1) requestAnimationFrame(tick); else { savePattern("Printed"); replace("printed", { n: count }); } };
+    const tick = (n: number) => { const k = Math.min(1, (n - t0) / 2600); setPrinting(k); if (k < 1) requestAnimationFrame(tick); else { haptic("success"); savePattern("Printed"); replace("printed", { n: count }); } };
     requestAnimationFrame(tick);
   };
   return (

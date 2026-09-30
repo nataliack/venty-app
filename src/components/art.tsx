@@ -14,18 +14,23 @@ export function Motif({ width = 96, className, color = "#fff" }: { width?: numbe
   );
 }
 
+// ─── Official Venty logo (vertical lockup, traced from the brand file) ─
+const LOGO = "M1240 1251C1226 1250 1225 1250 1222 1247C1218 1243 1218 1240 1222 1222C1225 1204 1224 1205 1228 1202C1232 1198 1236 1198 1259 1203C1278 1207 1279 1207 1296 1207C1318 1207 1326 1205 1337 1196C1360 1178 1369 1161 1379 1120C1391 1073 1392 1065 1387 1061C1385 1059 1384 1058 1373 1058C1361 1058 1361 1057 1358 1054C1355 1052 1349 1031 1299 870C1268 770 1242 687 1241 685C1238 680 1236 680 1182 680C1128 680 1127 680 1124 685C1122 687 1122 702 1122 839L1122 990L1126 999C1134 1023 1151 1039 1177 1046C1183 1048 1187 1048 1198 1048C1218 1048 1230 1044 1255 1030C1266 1023 1268 1023 1268 1027C1268 1032 1262 1037 1248 1044C1200 1069 1140 1060 1103 1020C1087 1003 1075 978 1071 956C1069 948 1069 929 1069 812L1069 678L1067 675C1064 673 1063 673 1058 673C1053 673 1052 673 1051 671C1050 669 1053 668 1059 668C1064 668 1065 668 1067 665C1069 663 1069 662 1069 587C1069 518 1069 510 1067 508C1066 506 1062 506 1056 508C1053 509 1050 509 1052 506C1053 504 1106 481 1110 481C1115 481 1118 483 1120 487C1123 493 1123 621 1120 631C1117 646 1107 658 1094 664L1087 668L1184 668C1237 668 1282 668 1284 669C1292 670 1288 662 1334 811C1358 887 1378 953 1380 958C1391 984 1405 990 1414 970C1417 966 1457 812 1487 692C1494 662 1494 662 1476 668C1467 672 1463 672 1466 670C1467 669 1563 633 1565 633C1568 633 1565 635 1556 639C1531 649 1513 667 1506 690C1504 694 1480 787 1452 897C1425 1007 1399 1109 1395 1124C1387 1153 1383 1165 1375 1178C1355 1213 1322 1237 1282 1247C1273 1250 1251 1252 1246 1252C1244 1252 1242 1252 1240 1251ZM511 1057C447 1050 388 1007 359 948C325 877 337 793 390 734C463 651 587 646 666 723C694 750 712 777 721 808C724 817 724 819 723 821C721 826 719 827 713 828C704 829 699 835 698 846C698 852 698 853 702 861C716 888 718 916 708 943C702 961 687 984 669 1001C627 1043 569 1063 511 1057ZM750 1057C748 1055 750 1054 755 1054C761 1054 764 1053 766 1049C767 1048 767 995 767 862L767 678L765 675C762 673 761 673 756 673C750 673 747 671 750 669C752 668 810 668 814 669C817 670 820 674 820 678C820 681 824 684 827 684C829 684 833 682 837 681C882 658 938 668 975 703C992 720 1002 738 1009 761L1011 770L1012 910L1012 1049L1015 1052C1018 1054 1019 1054 1024 1054C1029 1054 1030 1054 1030 1056C1029 1057 1027 1058 986 1058C945 1058 943 1057 942 1056C942 1054 943 1054 948 1054C953 1054 954 1054 957 1052L960 1049L960 896C960 743 960 735 957 723C953 710 933 696 908 690C894 686 872 686 860 689C846 693 834 699 826 707L820 713L820 881C820 1073 819 1053 830 1054C837 1054 838 1055 837 1056C837 1058 832 1058 793 1058C766 1058 750 1058 750 1057ZM218 1055C211 1052 205 1047 202 1041C200 1038 167 914 127 764C68 545 53 492 51 489C46 482 42 480 23 478C13 477 5 476 5 476C5 475 32 476 54 476C63 477 67 477 73 479C82 482 93 490 99 497C110 509 108 505 149 664C170 743 188 811 189 814C198 841 221 857 238 848C249 843 260 830 267 816C272 804 273 798 281 745C296 650 301 584 295 569C293 564 288 561 271 552C263 548 257 545 257 544C257 544 266 548 277 552C288 557 317 569 341 579C380 594 389 599 384 599C383 599 376 597 369 594C353 587 346 585 339 587C329 589 322 595 317 606C315 612 312 634 286 824C255 1056 258 1040 249 1049C241 1056 228 1059 218 1055ZM548 1040C628 1034 691 982 698 916C701 891 694 864 679 841C672 831 658 823 640 818L632 816L515 816L398 816L395 818L392 821L392 870C392 909 392 920 393 928C403 992 453 1035 521 1040C527 1040 532 1041 533 1041C534 1041 540 1041 548 1040ZM666 782C669 780 669 777 664 764C657 746 642 723 631 713C618 702 589 690 564 685C548 683 517 683 503 686C485 690 465 697 449 704C441 708 438 710 431 717C418 732 406 751 400 769C397 778 398 779 404 782L409 785L536 785L663 784L666 782ZM554 543C553 543 548 543 544 542C527 539 503 529 493 520C476 506 460 489 452 478C447 471 441 463 439 460C436 456 427 445 420 434C405 414 407 415 386 403C374 395 314 366 307 364C295 361 286 361 261 365C237 369 231 371 207 378C185 386 178 386 178 382C178 380 181 377 199 365C209 357 224 350 232 349C240 348 247 346 268 338C276 335 287 332 293 331C304 329 317 324 319 321C320 321 319 320 314 317C306 313 284 298 275 291C247 267 227 229 219 187C218 177 218 160 219 157C221 152 226 147 232 144C235 142 240 139 243 137C248 132 251 131 258 129C260 128 265 125 270 122C284 112 287 110 294 108C299 107 301 106 304 103C306 100 307 100 309 101C311 102 312 103 312 104C312 108 322 104 323 100C323 96 329 92 341 86C346 84 355 78 361 74C367 70 376 64 381 61C386 58 393 53 396 50C400 46 403 45 408 44C415 42 432 35 440 29C443 27 451 22 458 19C466 15 475 10 479 7C495 -3 504 -2 514 10C522 19 522 21 517 50C515 70 517 97 524 120C528 135 540 152 562 175C580 195 595 204 638 225C684 248 686 249 705 284C723 317 729 330 735 347C744 374 743 399 733 429C728 445 727 449 730 451C734 455 749 440 762 422C770 409 777 396 788 370C799 347 806 333 814 321C820 312 844 286 854 278C858 275 863 270 867 267C873 261 888 253 899 249C902 249 907 246 910 245C913 243 920 241 925 239C930 238 939 235 944 233C949 232 957 229 963 228C992 220 1035 204 1068 187C1087 178 1090 177 1092 180C1095 185 1093 187 1060 215C1035 237 1027 245 1014 264C1008 273 1001 284 998 288C991 297 988 302 980 317C971 334 968 338 955 354C936 377 914 400 900 411C889 418 866 432 845 442C822 453 779 477 766 485C759 490 740 499 736 499C736 499 729 502 720 506C704 514 669 527 655 531C650 532 641 533 634 534C628 535 621 535 620 536C619 536 614 537 610 538C606 539 598 540 592 541C582 543 559 544 554 543Z";
+export function VentyLogo({ width = 160, className, color = "#fff" }: { width?: number; className?: string; color?: string }) {
+  return (
+    <svg viewBox="0 0 1567 1252" width={width} height={(width * 1252) / 1567} className={className} role="img" aria-label="Venty">
+      <path d={LOGO} fill={color} fillRule="evenodd" />
+    </svg>
+  );
+}
+
 // ─── Body silhouettes (200 × 530) ─────────────────────────────────────
-const BODY: Record<Sex, string> = {
-  female:
-    "M111 60L112 65L111 83L111 86L113 89L116 91L137 98L147 102L154 108L156 114L156 119L156 123L150 134L146 144L146 151L147 163L147 167L138 197L135 212L136 222L138 235L148 260L153 278L155 289L155 298L153 318L148 354L135 401L135 411L138 432L138 444L137 455L134 470L125 500L125 505L128 514L128 521L126 525L124 527L119 528L113 528L111 527L110 525L108 516L113 444L113 432L110 398L108 347L105 312L101 289L100 287L99 290L97 302L94 321L90 398L87 432L87 444L92 518L90 525L89 527L87 528L81 528L76 527L74 525L73 522L72 514L75 505L75 500L66 470L64 459L62 444L62 432L65 411L65 401L55 366L51 350L46 311L45 295L45 289L47 278L52 260L62 235L65 222L65 212L62 197L53 167L53 163L54 151L54 144L50 134L44 123L44 117L45 110L47 107L51 104L58 100L84 91L87 89L89 86L89 83L88 65L89 60L94 58L100 57L107 58L111 60ZM148 101L150 100L154 102L159 107L161 113L162 121L166 189L172 237L175 285L179 303L179 312L179 327L177 339L174 348L171 354L169 355L167 354L165 348L165 336L166 311L166 292L163 262L146 124L146 109L147 103L148 101ZM52 101L50 100L46 102L41 107L39 113L38 121L34 189L28 237L25 285L21 303L21 312L21 327L23 339L26 348L29 354L31 355L33 354L35 348L35 336L34 311L34 292L37 262L54 124L54 109L53 103L52 101ZM100 2L110 3L113 4L117 8L120 14L122 22L123 28L123 37L122 44L117 56L113 63L109 66L100 69L91 66L88 64L84 58L79 46L77 32L77 26L78 18L82 9L86 5L90 3L100 2Z",
-  male:
-    "M115 60L116 62L117 65L115 80L115 83L116 88L121 91L146 97L158 102L161 105L165 110L166 114L166 119L164 128L157 140L154 148L153 164L144 216L144 223L148 271L149 288L148 323L144 360L135 405L135 413L138 438L138 449L137 460L134 474L127 500L127 505L130 514L129 525L127 527L124 528L117 529L113 528L110 526L108 521L108 514L110 497L114 447L114 433L111 398L107 322L106 314L102 300L100 293L99 296L95 311L94 322L89 398L86 433L86 447L92 520L91 524L90 526L88 528L85 529L78 529L74 528L72 526L71 523L70 514L73 505L73 500L66 474L63 460L62 449L62 438L65 413L65 405L56 360L52 323L51 302L52 271L56 223L56 216L47 164L46 148L43 140L36 128L35 123L34 116L36 108L39 105L44 101L54 97L79 91L84 88L86 83L85 80L83 65L84 62L85 60L91 58L100 57L109 58L115 60ZM157 100L159 100L163 103L169 110L172 121L173 135L176 195L181 251L183 290L186 304L186 313L186 329L184 341L181 351L177 357L174 358L172 356L170 350L170 338L172 295L159 166L154 134L154 113L155 104L157 100ZM43 100L41 100L37 103L31 110L28 121L27 135L24 195L19 251L17 290L14 304L14 313L14 329L16 341L19 351L23 357L26 358L28 356L30 350L30 338L28 295L42 163L46 134L46 113L45 104L43 100ZM100 2L111 3L115 5L119 9L123 18L124 31L123 45L121 53L119 59L115 64L111 67L100 70L89 67L86 65L82 61L79 55L77 49L76 35L77 22L79 14L81 9L85 5L89 3L100 2Z",
-};
+import { BODY } from "./bodyShape";
 
 type BodyProps = {
   sex?: Sex;
   width?: number;
-  variant?: "dots" | "solid";
+  variant?: "dots" | "solid"; // legacy, both render the mannequin
   markers?: Marker[];
   garment?: GarmentKey | null;
   garmentStyle?: "flat" | "fabric";
@@ -36,39 +41,40 @@ type BodyProps = {
   dim?: number;
 };
 
-export function BodyFigure({ sex = "female", width = 140, variant = "dots", markers = [], garment = null, garmentStyle = "fabric", scaleX = 1, className, glow = true, label, dim = 1 }: BodyProps) {
+export function BodyFigure({ sex = "female", width = 140, markers = [], garment = null, garmentStyle = "fabric", scaleX = 1, className, glow = true, label, dim = 1 }: BodyProps) {
   const id = useId().replace(/:/g, "");
   const h = (width * 530) / 200;
+  const d = BODY[sex];
   return (
     <svg viewBox="-10 -6 220 542" width={width * 1.1} height={h * 1.02} className={className} style={{ overflow: "visible" }} aria-hidden>
       <defs>
-        <pattern id={`d${id}`} width="3.4" height="3.4" patternUnits="userSpaceOnUse">
-          <circle cx="1.7" cy="1.7" r="1.05" fill="#fff" />
-        </pattern>
-        <linearGradient id={`g${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="1" />
-          <stop offset=".55" stopColor="#c1c8d9" stopOpacity=".85" />
-          <stop offset="1" stopColor="#687ef5" stopOpacity=".55" />
+        <linearGradient id={`b${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#262b45" />
+          <stop offset=".45" stopColor="#171a2e" />
+          <stop offset="1" stopColor="#0f1122" />
         </linearGradient>
-        <mask id={`m${id}`}>
-          <path d={BODY[sex]} fill={`url(#g${id})`} />
-        </mask>
-        <filter id={`f${id}`} x="-50%" y="-20%" width="200%" height="140%">
-          <feGaussianBlur stdDeviation="9" />
+        {/* glossy mannequin: the blurred silhouette is used as a height map and lit like a 3D surface */}
+        <filter id={`gl${id}`} x="-10%" y="-5%" width="120%" height="110%" colorInterpolationFilters="sRGB">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="4.5" result="h" />
+          <feSpecularLighting in="h" surfaceScale="7" specularConstant="1.15" specularExponent="22" lightingColor="#dfe3ff" result="sp">
+            <fePointLight x="150" y="-60" z="140" />
+          </feSpecularLighting>
+          <feComposite in="sp" in2="SourceAlpha" operator="in" result="sp2" />
+          <feDiffuseLighting in="h" surfaceScale="6" diffuseConstant="1" lightingColor="#6f82f0" result="df">
+            <feDistantLight azimuth="200" elevation="18" />
+          </feDiffuseLighting>
+          <feComposite in="df" in2="SourceAlpha" operator="in" result="df2" />
+          <feComposite in="SourceGraphic" in2="df2" operator="arithmetic" k1="0" k2="1" k3=".32" k4="0" result="lit" />
+          <feComposite in="lit" in2="sp2" operator="arithmetic" k1="0" k2="1" k3=".55" k4="0" />
         </filter>
-        <filter id={`mk${id}`} x="-50%" y="-200%" width="200%" height="500%">
-          <feGaussianBlur stdDeviation="2.2" />
-        </filter>
+        <filter id={`f${id}`} x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur stdDeviation="14" /></filter>
+        <filter id={`mk${id}`} x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="2.2" /></filter>
       </defs>
       <g transform={`translate(${100 - 100 * scaleX} 0) scale(${scaleX} 1)`} opacity={dim}>
-        {glow && <path d={BODY[sex]} fill="#687ef5" opacity=".55" filter={`url(#f${id})`} />}
-        {variant === "dots" ? (
-          <rect x="0" y="0" width="200" height="530" fill={`url(#d${id})`} mask={`url(#m${id})`} />
-        ) : (
-          <path d={BODY[sex]} fill={`url(#g${id})`} />
-        )}
+        {glow && <path d={d} fill="#687ef5" opacity=".4" filter={`url(#f${id})`} />}
+        <path d={d} fill={`url(#b${id})`} filter={`url(#gl${id})`} />
+        {garment && <GarmentOn garment={garment} style={garmentStyle} sex={sex} />}
       </g>
-      {garment && <GarmentOn garment={garment} style={garmentStyle} />}
       {markers.map((m, i) =>
         m.kind === "ring" ? (
           <g key={i}>
@@ -121,35 +127,102 @@ export function Flat({ g, size = 120, className, stroke = "#fff", fill = "rgba(2
   );
 }
 
-// where each garment sits on the 200×530 body: flat point (ax,ay) → body (100,by), scale k
-const ANCHOR: Record<GarmentKey, { ax: number; ay: number; by: number; k: number }> = {
-  slip: { ax: 60, ay: 30, by: 141, k: 1.875 },
-  wrap: { ax: 60, ay: 14, by: 92, k: 1.75 },
-  aline: { ax: 60, ay: 12, by: 90, k: 1.8 },
-  cami: { ax: 60, ay: 22, by: 118, k: 2.0 },
-  tee: { ax: 60, ay: 16, by: 90, k: 1.55 },
-  shirt: { ax: 60, ay: 16, by: 88, k: 1.5 },
-  wideleg: { ax: 60, ay: 10, by: 186, k: 1.95 },
-  straight: { ax: 60, ay: 10, by: 186, k: 1.8 },
-  biasskirt: { ax: 60, ay: 20, by: 196, k: 1.9 },
-  mini: { ax: 60, ay: 40, by: 196, k: 1.9 },
-  flutter: { ax: 60, ay: 16, by: 92, k: 1.75 },
+// ─── Garments fitted to the body (drawn in the body's 200×530 space) ─────
+// Landmarks are measured off the silhouettes above; every garment is built from them,
+// so shoulders, waist and hips always land on the figure.
+type L = { neckY: number; neckH: number; shY: number; shH: number; armY: number; armH: number; bustY: number; bustH: number; waistY: number; waistH: number; hipY: number; hipH: number; crotchY: number; kneeY: number; ankleY: number; elbowY: number; elbowO: number; elbowI: number; wristY: number; wristO: number; wristI: number };
+const LM: Record<Sex, L> = {
+  female: { neckY: 90, neckH: 10, shY: 101, shH: 49, armY: 134, armH: 43, bustY: 150, bustH: 44, waistY: 205, waistH: 29, hipY: 275, hipH: 48, crotchY: 293, kneeY: 405, ankleY: 494, elbowY: 205, elbowO: 69, elbowI: 54, wristY: 282, wristO: 77, wristI: 67 },
+  male: { neckY: 90, neckH: 12, shY: 101, shH: 57, armY: 140, armH: 50, bustY: 156, bustH: 50, waistY: 205, waistH: 39, hipY: 278, hipH: 44, crotchY: 296, kneeY: 404, ankleY: 494, elbowY: 205, elbowO: 75.5, elbowI: 57.5, wristY: 282, wristO: 83.5, wristI: 70.5 },
 };
+const P = (x: number, y: number) => `${(100 + x).toFixed(1)} ${y.toFixed(1)}`;
+// mirror a right-hand half outline (list of [x,y], x ≥ 0 offsets from centre) into a closed path
+function sym(pts: [number, number][], neck?: string) {
+  const right = pts.map(([x, y]) => P(x, y));
+  const left = [...pts].reverse().map(([x, y]) => P(-x, y));
+  return `M${right.join(" L")} L${left.join(" L")}${neck ?? ""} Z`;
+}
+function sleeve(l: L, long: boolean, side: 1 | -1, ease = 3) {
+  const s = (x: number) => side * x;
+  if (long) return `M${P(s(l.shH - 4), l.shY - 3)} L${P(s(l.shH + ease), l.shY + 4)} L${P(s(l.elbowO + ease), l.elbowY)} L${P(s(l.wristO + ease), l.wristY)} L${P(s(l.wristI - ease), l.wristY)} L${P(s(l.elbowI - ease), l.elbowY)} L${P(s(l.armH), l.armY + 2)} Z`;
+  const y = l.shY + 34;
+  return `M${P(s(l.shH - 4), l.shY - 3)} L${P(s(l.shH + ease), l.shY + 4)} L${P(s(l.shH + ease + 5), y)} L${P(s(l.armH - 1), y + 4)} L${P(s(l.armH), l.armY + 2)} Z`;
+}
+function flutterSleeve(l: L, side: 1 | -1) {
+  const s = (x: number) => side * x;
+  return `M${P(s(l.shH - 6), l.shY - 3)} Q${P(s(l.shH + 18), l.shY)} ${P(s(l.shH + 16), l.shY + 26)} Q${P(s(l.shH + 2), l.shY + 30)} ${P(s(l.armH - 1), l.armY - 4)} Z`;
+}
 
-export function GarmentOn({ garment, style = "fabric" }: { garment: GarmentKey; style?: "flat" | "fabric" }) {
-  const a = ANCHOR[garment];
-  const f = FLATS[garment];
+type G = { body: string; extra?: string[]; details: string };
+function build(g: GarmentKey, l: L): G {
+  const skirt = (hemY: number, hemH: number, e = 4): [number, number][] => [[l.waistH + e, l.waistY], [l.hipH + e - 2, l.hipY - 22], [l.hipH + e, l.hipY], [hemH, hemY]];
+  const knee = l.kneeY - 5, midi = l.kneeY + 40;
+  const bodice = (e = 3): [number, number][] => [[l.shH - 4, l.shY - 3], [l.shH + 1, l.shY + 3], [l.armH + e, l.armY + 2], [l.bustH + e, l.bustY], [l.waistH + e, l.waistY]];
+  const panels = (y0: number, hemY: number, hemH: number) => `M${P(-l.waistH * 0.45, y0)} L${P(-hemH * 0.45, hemY)} M${P(l.waistH * 0.45, y0)} L${P(hemH * 0.45, hemY)}`;
+  const waistSeam = (e = 3) => `M${P(-(l.waistH + e), l.waistY)} Q${P(0, l.waistY + 3)} ${P(l.waistH + e, l.waistY)}`;
+  const round = ` L${P(-l.neckH - 4, l.neckY)} Q${P(0, l.neckY + 16)} ${P(l.neckH + 4, l.neckY)}`;
+  const vneck = (d: number) => ` L${P(-l.neckH - 3, l.neckY - 1)} L${P(0, l.neckY + d)} L${P(l.neckH + 3, l.neckY - 1)}`;
+  const shoulderTop = (w = 0): [number, number][] => [[l.neckH + 3 + w, l.neckY - 1]];
+  const hemCurve = (hemY: number, hemH: number) => ` Q${P(0, hemY + 7)} ${P(-hemH, hemY)}`;
+  switch (g) {
+    case "slip": {
+      const top = l.bustY - 16, H = l.hipH + 16;
+      const pts: [number, number][] = [[l.bustH - 12, top - 4], [l.bustH + 2, top + 4], [l.bustH + 3, l.bustY + 6], ...skirt(knee, H).slice(0)];
+      return { body: `M${P(-(l.bustH - 12), top - 4)} Q${P(0, top + 10)} ${P(l.bustH - 12, top - 4)} L${pts.slice(1).map(([x, y]) => P(x, y)).join(" L")}${hemCurve(knee, H)} L${[...pts.slice(1)].reverse().slice(1).map(([x, y]) => P(-x, y)).join(" L")} Z`,
+        details: `M${P(-(l.bustH - 12), top - 4)} L${P(-(l.neckH + 16), l.shY - 6)} M${P(l.bustH - 12, top - 4)} L${P(l.neckH + 16, l.shY - 6)} ${waistSeam()}` };
+    }
+    case "cami": {
+      const top = l.bustY - 18, hemY = l.hipY - 12, H = l.hipH + 2;
+      return { body: `M${P(-(l.bustH - 12), top - 4)} Q${P(0, top + 10)} ${P(l.bustH - 12, top - 4)} L${P(l.bustH + 3, top + 6)} L${P(l.bustH + 3, l.bustY + 8)} L${P(l.waistH + 6, l.waistY)} L${P(H, hemY)}${hemCurve(hemY, H)} L${P(-(l.waistH + 6), l.waistY)} L${P(-(l.bustH + 3), l.bustY + 8)} L${P(-(l.bustH + 3), top + 6)} Z`,
+        details: `M${P(-(l.bustH - 12), top - 4)} L${P(-(l.neckH + 14), l.shY - 6)} M${P(l.bustH - 12, top - 4)} L${P(l.neckH + 14, l.shY - 6)}` };
+    }
+    case "aline": case "wrap": case "flutter": {
+      const hemY = g === "flutter" ? midi : knee, H = l.hipH + (g === "flutter" ? 26 : 20);
+      const right: [number, number][] = [...shoulderTop(), ...bodice(), ...skirt(hemY, H).slice(1)];
+      const body = `M${right.map(([x, y]) => P(x, y)).join(" L")}${hemCurve(hemY, H)} L${[...right].reverse().slice(1).map(([x, y]) => P(-x, y)).join(" L")}${g === "aline" ? round : vneck(g === "wrap" ? 70 : 40)} Z`;
+      const extra = g === "flutter" ? [flutterSleeve(l, 1), flutterSleeve(l, -1)] : g === "wrap" ? [sleeve(l, false, 1), sleeve(l, false, -1)] : undefined;
+      const wrapLines = g === "wrap" ? ` M${P(-l.neckH - 3, l.neckY - 1)} L${P(l.waistH * 0.5, l.waistY)} M${P(l.waistH * 0.5, l.waistY + 1)} L${P(l.waistH * 0.62, l.waistY + 36)} M${P(l.waistH * 0.5, l.waistY + 1)} L${P(l.waistH * 0.34, l.waistY + 32)}` : "";
+      return { body, extra, details: `${waistSeam()} ${panels(l.waistY + 2, hemY + 2, H)}${wrapLines}` };
+    }
+    case "tee": case "shirt": {
+      const hemY = l.hipY + (g === "shirt" ? 14 : 4), H = l.hipH + 3;
+      const right: [number, number][] = [...shoulderTop(g === "shirt" ? -2 : 0), ...bodice(4).slice(0, 3), [Math.max(l.bustH, l.hipH) + 3, l.bustY + 20], [H, hemY]];
+      const body = `M${right.map(([x, y]) => P(x, y)).join(" L")}${hemCurve(hemY, H)} L${[...right].reverse().slice(1).map(([x, y]) => P(-x, y)).join(" L")}${g === "shirt" ? vneck(14) : round} Z`;
+      const collar = g === "shirt" ? ` M${P(-l.neckH - 1, l.neckY - 1)} L${P(-5, l.neckY + 18)} L${P(0, l.neckY + 14)} L${P(5, l.neckY + 18)} L${P(l.neckH + 1, l.neckY - 1)} M${P(0, l.neckY + 14)} L${P(0, hemY + 6)}` : ` M${P(-H, hemY - 8)} L${P(H, hemY - 8)}`;
+      return { body, extra: [sleeve(l, g === "shirt", 1, 4), sleeve(l, g === "shirt", -1, 4)], details: collar.trim() };
+    }
+    case "wideleg": case "straight": {
+      const wide = g === "wideleg";
+      const outH = wide ? l.hipH + 12 : l.hipH - 8, inH = wide ? 6 : 5, hemY = l.ankleY + 4;
+      const wY = l.waistY + 4;
+      const body = `M${P(-(l.waistH + 3), wY)} L${P(l.waistH + 3, wY)} L${P(l.hipH + 3, l.hipY - 14)} L${P(l.hipH + 4, l.hipY)} L${P(outH, hemY)} L${P(inH, hemY)} L${P(2, l.crotchY + 16)} Q${P(0, l.crotchY + 6)} ${P(-2, l.crotchY + 16)} L${P(-inH, hemY)} L${P(-outH, hemY)} L${P(-(l.hipH + 4), l.hipY)} L${P(-(l.hipH + 3), l.hipY - 14)} Z`;
+      return { body, details: `M${P(-(l.waistH + 4), wY + 10)} L${P(l.waistH + 4, wY + 10)} M${P(0, wY + 10)} L${P(0, wY + 40)} M${P(-(l.hipH * 0.5), wY + 12)} L${P(-(outH + inH) / 2, hemY)} M${P(l.hipH * 0.5, wY + 12)} L${P((outH + inH) / 2, hemY)}` };
+    }
+    case "biasskirt": case "mini": {
+      const hemY = g === "mini" ? l.crotchY + 55 : l.kneeY + 20, H = l.hipH + (g === "mini" ? 10 : 16);
+      const wY = l.waistY;
+      const right: [number, number][] = [[l.waistH + 3, wY], [l.hipH + 2, l.hipY - 22], [l.hipH + 4, l.hipY], [H, hemY]];
+      const body = `M${right.map(([x, y]) => P(x, y)).join(" L")}${hemCurve(hemY, H)} L${[...right].reverse().slice(1).map(([x, y]) => P(-x, y)).join(" L")} Z`;
+      return { body, details: `M${P(-(l.waistH + 3), wY + 9)} L${P(l.waistH + 3, wY + 9)} ${g === "mini" ? `M${P(0, wY + 9)} L${P(0, hemY + 6)}` : panels(wY + 10, hemY + 3, H)}` };
+    }
+  }
+}
+
+export function GarmentOn({ garment, style = "fabric", sex = "female" }: { garment: GarmentKey; style?: "flat" | "fabric"; sex?: Sex }) {
   const id = useId().replace(/:/g, "");
+  const g = build(garment, LM[sex]);
+  const fill = style === "fabric" ? `url(#gf${id})` : "rgba(11,12,21,.35)";
   return (
-    <g transform={`translate(${100 - a.ax * a.k} ${a.by - a.ay * a.k}) scale(${a.k})`} style={{ color: "#fff" }}>
+    <g style={{ color: "#fff" }}>
       <defs>
         <linearGradient id={`gf${id}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#8c9cf8" stopOpacity=".95" />
-          <stop offset="1" stopColor="#4f63e0" stopOpacity=".75" />
+          <stop offset="1" stopColor="#4f63e0" stopOpacity=".82" />
         </linearGradient>
       </defs>
-      <path d={f.outline} fill={style === "fabric" ? `url(#gf${id})` : "rgba(11,12,21,.35)"} stroke="currentColor" strokeWidth={1.4 / a.k * 1.6} strokeLinejoin="round" />
-      <path d={f.details} fill="none" stroke="currentColor" strokeOpacity=".55" strokeWidth={1 / a.k * 1.6} />
+      {g.extra?.map((d, i) => <path key={i} d={d} fill={fill} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />)}
+      <path d={g.body} fill={fill} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d={g.details} fill="none" stroke="currentColor" strokeOpacity=".55" strokeWidth="1.1" strokeLinecap="round" />
     </g>
   );
 }

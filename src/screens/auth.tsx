@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { Screen, Pill, Field, Eyebrow, HS, Lead, Dots, Glow, Chip, Blob, RB, Glass, cx, useDesk } from "@/components/ui";
-import { Motif, BodyFigure, Flat, Piece } from "@/components/art";
+import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
 export function Splash() {
@@ -17,10 +17,9 @@ export function Splash() {
         <Blob className="left-[40px] top-[430px] h-[220px] w-[260px] opacity-90" color="#4d5e85" />
       </div>
       <div className="absolute inset-x-0 top-[34%] flex flex-col items-center">
-        <motion.div initial={{ opacity: 0, y: 12, rotate: -8 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="ml-6">
-          <Motif width={150} />
+        <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }}>
+          <VentyLogo width={230} className="lg:h-auto lg:w-[320px]" />
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.9 }} className="serif -mt-4 text-[120px] leading-none lg:text-[180px]">Venty</motion.div>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="eyebrow mt-8 text-white/60">AI pattern studio</motion.div>
       </div>
       <div className="absolute bottom-[110px] left-1/2 h-[2px] w-[120px] -translate-x-1/2 overflow-hidden rounded bg-white/15">
@@ -34,36 +33,34 @@ export function Welcome() {
   const go = useApp((s) => s.go);
   const desk = useDesk();
   if (desk) return (
-    <div className="absolute inset-0 grid grid-cols-[1.15fr_1fr]">
-      <div className="relative overflow-hidden" style={{ background: "radial-gradient(120% 80% at 30% 10%, #8c9cf8 0%, #4f63e0 40%, #0b0c15 90%)" }}>
-        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,.35) 1px, transparent 1.2px)", backgroundSize: "16px 16px" }} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="eyebrow text-white/80">AI pattern studio</div>
-          <div className="ml-10 mt-6"><Motif width={150} /></div>
-          <div className="serif -mt-4 text-[180px] leading-none">Venty</div>
-        </div>
-        <div className="absolute bottom-10 left-10 flex gap-2"><Chip>Photo</Chip><Chip>Pattern</Chip><Chip>Print</Chip></div>
-      </div>
-      <div className="relative flex items-center px-20">
-        <div className="dotgrid" />
-        <div className="max-w-[440px]">
-          <h2 className="text-[48px] font-semibold leading-[1.05] tracking-tight">See a dress you love.<br />Wear it, made for you.</h2>
-          <Lead className="mt-5 text-[17px]">Upload any photo from Pinterest or a magazine. Venty drafts a sewing pattern to your exact measurements, ready to print.</Lead>
-          <Pill className="mt-10" onClick={() => go("signup")}>Get started</Pill>
-          <button className="mt-4 h-10 w-full text-[15px] font-medium text-white/90" onClick={() => go("login")}>I already have an account</button>
+    <div className="absolute inset-0 overflow-hidden">
+      <div className="sky" />
+      <div className="relative flex h-full flex-col px-16 pb-14" style={{ paddingTop: "var(--top)" }}>
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[9vh] flex flex-col items-center">
+          <div className="eyebrow text-white/85">AI pattern studio</div>
+          <VentyLogo width={300} className="mt-6" />
+        </motion.div>
+        <div className="mt-auto flex items-end justify-between gap-16">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.8 }} className="max-w-[560px]">
+            <h2 className="text-[52px] font-semibold leading-[1.04] tracking-tight">See a dress you love.<br />Wear it, made for you.</h2>
+            <Lead className="mt-5 text-[17px]">Upload any photo from Pinterest or a magazine. Venty drafts a sewing pattern to your exact measurements, ready to print.</Lead>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }} className="flex w-[380px] shrink-0 flex-col items-center gap-3">
+            <Pill onClick={() => go("signup")}>Get started</Pill>
+            <button className="h-10 px-4 text-[15px] font-medium text-white/90 transition-colors hover:text-white" onClick={() => go("login")}>I already have an account</button>
+          </motion.div>
         </div>
       </div>
     </div>
   );
   return (
     <Screen
-      bg={<><div className="absolute inset-0" style={{ background: "radial-gradient(120% 70% at 30% 10%, #8c9cf8 0%, #4f63e0 35%, rgba(11,12,21,0) 75%)" }} /><div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-bg via-bg to-transparent" /></>}
+      bg={<div className="sky" />}
       footer={<div className="flex flex-col items-center gap-4"><Pill onClick={() => go("signup")}>Get started</Pill><button className="h-10 text-[15px] font-medium text-white/90" onClick={() => go("login")}>I already have an account</button></div>}>
-      <div className="flex min-h-full flex-col">
+      <div className="flex min-h-[calc(100dvh-var(--top)-var(--bottom)-150px)] flex-col pb-4">
         <div className="mt-[14vh] flex flex-col items-center">
-          <div className="eyebrow text-white/80">AI pattern studio</div>
-          <div className="ml-6 mt-5"><Motif width={96} /></div>
-          <div className="serif -mt-3 text-[104px] leading-none">Venty</div>
+          <div className="eyebrow text-white/85">AI pattern studio</div>
+          <VentyLogo width={190} className="mt-5" />
         </div>
         <div className="mt-auto">
           <h2 className="text-[26px] font-semibold leading-tight tracking-tight">See a dress you love.<br />Wear it, made for you.</h2>
@@ -82,7 +79,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
     <div className="absolute inset-0 grid grid-cols-[1fr_1fr]">
       <div className="p-6">
         <Glow color="#687ef5" variant="fade" className="relative h-full rounded-[36px]">
-          <div className="absolute left-10 top-10 flex items-end gap-2"><Motif width={48} className="mb-2" /><span className="serif text-[44px] leading-none">Venty</span></div>
+          <div className="absolute left-10 top-10"><VentyLogo width={96} /></div>
           <div className="absolute inset-0 flex items-center justify-center gap-6"><BodyFigure width={170} garment="flutter" variant="solid" glow={false} /><div className="flex flex-col gap-4"><Piece k="bodiceFront" width={110} label="Bodice front" /><Piece k="skirtFront" width={90} label="Skirt front" /></div></div>
           <div className="absolute bottom-10 left-10 right-10"><div className="serif text-[40px] leading-tight">Your body. Your pattern.</div><div className="mt-2 text-[15px] text-white/70">Sewing patterns drafted to your exact measurements.</div></div>
         </Glow>

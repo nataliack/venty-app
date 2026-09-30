@@ -54,28 +54,116 @@ input { font: inherit; color: inherit; }
 
 .glow { position: relative; overflow: hidden; isolation: isolate; border: 1px solid rgba(255,255,255,.14);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -20px 40px rgba(255,255,255,.06); background: var(--gc, #687ef5); }
-.glow::before { content: ""; position: absolute; z-index: -1; pointer-events: none; filter: blur(22px); border-radius: 50%; background: #0b0c15; opacity: .92; }
-.glow::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.14), transparent 35%); }
-.glow.edge::before { left: -5%; right: -5%; top: -45%; height: 115%; }
-.glow.fade::before { left: 10%; right: 10%; top: 40%; height: 90%; }
-.glow.side::before { left: 38%; right: -30%; top: -20%; bottom: -20%; }
+.glow::before { content: ""; position: absolute; inset: -12%; z-index: -1; pointer-events: none; filter: blur(18px); }
+.glow::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.12), transparent 40%); }
+/* super-diffused ombré: long eased falloff, no visible circle edge */
+.glow.edge::before { background: radial-gradient(ellipse 70% 62% at 50% 22%, rgb(11 12 21 / 0.920) 0%, rgb(11 12 21 / 0.856) 12%, rgb(11 12 21 / 0.736) 24%, rgb(11 12 21 / 0.589) 35%, rgb(11 12 21 / 0.451) 45%, rgb(11 12 21 / 0.331) 54%, rgb(11 12 21 / 0.230) 62%, rgb(11 12 21 / 0.147) 70%, rgb(11 12 21 / 0.087) 77%, rgb(11 12 21 / 0.046) 84%, rgb(11 12 21 / 0.020) 90%, rgb(11 12 21 / 0.006) 95%, rgb(11 12 21 / 0.000) 100%); }
+.glow.fade::before { background: radial-gradient(ellipse 62% 66% at 52% 88%, rgb(11 12 21 / 0.900) 0%, rgb(11 12 21 / 0.837) 12%, rgb(11 12 21 / 0.720) 24%, rgb(11 12 21 / 0.576) 35%, rgb(11 12 21 / 0.441) 45%, rgb(11 12 21 / 0.324) 54%, rgb(11 12 21 / 0.225) 62%, rgb(11 12 21 / 0.144) 70%, rgb(11 12 21 / 0.086) 77%, rgb(11 12 21 / 0.045) 84%, rgb(11 12 21 / 0.020) 90%, rgb(11 12 21 / 0.006) 95%, rgb(11 12 21 / 0.000) 100%); }
+.glow.side::before { background: radial-gradient(ellipse 60% 80% at 88% 50%, rgb(11 12 21 / 0.900) 0%, rgb(11 12 21 / 0.837) 12%, rgb(11 12 21 / 0.720) 24%, rgb(11 12 21 / 0.576) 35%, rgb(11 12 21 / 0.441) 45%, rgb(11 12 21 / 0.324) 54%, rgb(11 12 21 / 0.225) 62%, rgb(11 12 21 / 0.144) 70%, rgb(11 12 21 / 0.086) 77%, rgb(11 12 21 / 0.045) 84%, rgb(11 12 21 / 0.020) 90%, rgb(11 12 21 / 0.006) 95%, rgb(11 12 21 / 0.000) 100%); }
 .glow.orb { background: #10121d; }
-.glow.orb::before { background: var(--gc, #687ef5); opacity: .9; inset: 18%; filter: blur(30px); }
+.glow.orb::before { background: radial-gradient(ellipse 52% 52% at 50% 50%, color-mix(in srgb, var(--gc, #687ef5) 90.0%, transparent) 0%, color-mix(in srgb, var(--gc, #687ef5) 83.7%, transparent) 12%, color-mix(in srgb, var(--gc, #687ef5) 72.0%, transparent) 24%, color-mix(in srgb, var(--gc, #687ef5) 57.6%, transparent) 35%, color-mix(in srgb, var(--gc, #687ef5) 44.1%, transparent) 45%, color-mix(in srgb, var(--gc, #687ef5) 32.4%, transparent) 54%, color-mix(in srgb, var(--gc, #687ef5) 22.5%, transparent) 62%, color-mix(in srgb, var(--gc, #687ef5) 14.4%, transparent) 70%, color-mix(in srgb, var(--gc, #687ef5) 8.6%, transparent) 77%, color-mix(in srgb, var(--gc, #687ef5) 4.5%, transparent) 84%, color-mix(in srgb, var(--gc, #687ef5) 2.0%, transparent) 90%, color-mix(in srgb, var(--gc, #687ef5) 0.6%, transparent) 95%, color-mix(in srgb, var(--gc, #687ef5) 0.0%, transparent) 100%); }
 .glow.dim { background: #151827; }
-.glow.dim::before { background: var(--gc, #687ef5); opacity: .45; left: -10%; right: 30%; top: 50%; height: 90%; filter: blur(34px); }
+.glow.dim::before { background: radial-gradient(ellipse 70% 70% at 30% 100%, color-mix(in srgb, var(--gc, #687ef5) 50.0%, transparent) 0%, color-mix(in srgb, var(--gc, #687ef5) 46.5%, transparent) 12%, color-mix(in srgb, var(--gc, #687ef5) 40.0%, transparent) 24%, color-mix(in srgb, var(--gc, #687ef5) 32.0%, transparent) 35%, color-mix(in srgb, var(--gc, #687ef5) 24.5%, transparent) 45%, color-mix(in srgb, var(--gc, #687ef5) 18.0%, transparent) 54%, color-mix(in srgb, var(--gc, #687ef5) 12.5%, transparent) 62%, color-mix(in srgb, var(--gc, #687ef5) 8.0%, transparent) 70%, color-mix(in srgb, var(--gc, #687ef5) 4.8%, transparent) 77%, color-mix(in srgb, var(--gc, #687ef5) 2.5%, transparent) 84%, color-mix(in srgb, var(--gc, #687ef5) 1.1%, transparent) 90%, color-mix(in srgb, var(--gc, #687ef5) 0.4%, transparent) 95%, color-mix(in srgb, var(--gc, #687ef5) 0.0%, transparent) 100%); }
 
 /* buttons */
-.pill { height: 56px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; font-size: 16px; transition: transform .15s ease, filter .15s ease, opacity .2s; }
-.pill:active, .rb:active, .tap:active { transform: scale(.97); }
+.pill { height: 56px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; font-size: 16px; transition: transform .35s cubic-bezier(.2,1.4,.4,1), box-shadow .35s ease, filter .15s ease, opacity .2s; }
+.pill:active, .rb:active, .tap:active { transform: scale(.965); transition-duration: .12s; }
 .pill-primary { background: #687ef5; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 10px 30px rgba(104,126,245,.35);
   background-image: radial-gradient(rgba(255,255,255,.12) 1px, transparent 1.2px); background-size: 4px 4px; }
 .pill-glass { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
 .pill-white { background: #fff; color: #0b0c15; }
 .pill-dark { background: #1a1c28; border: 1px solid rgba(255,255,255,.08); }
-.rb { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; transition: transform .15s; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
+.rb { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; transition: transform .35s cubic-bezier(.2,1.4,.4,1), border-color .3s, box-shadow .3s; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
 .rb-sm { width: 40px; height: 40px; background: #1a1c28; border-color: rgba(255,255,255,.08); }
 .chip { height: 34px; padding: 0 15px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.85); white-space: nowrap; transition: background .2s, color .2s; }
 .chip.on { background: #fff; color: #0b0c15; border-color: #fff; }
+
+/* ─── micro-interactions: a slow, symmetrical gradient that swirls inside anything you can press ─── */
+.pill, .rb, .chip, .glass.tap, .tplcard { position: relative; isolation: isolate; overflow: hidden; }
+.pill::after, .rb::after, .chip::after, .glass.tap::after, .tplcard::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: max(180%, 260px); aspect-ratio: 1; translate: -50% -50%;
+  z-index: -1; pointer-events: none; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 8%, rgb(140 156 248 / .7) 18%, transparent 30% 50%, rgb(193 200 217 / .5) 68%, transparent 80%);
+  filter: blur(22px); opacity: 0; transition: opacity .5s ease;
+  animation: v-swirl 6s linear infinite; animation-play-state: paused;
+}
+.pill-primary::after { background: conic-gradient(from 0deg, transparent 0 6%, rgb(255 255 255 / .45) 18%, transparent 32% 50%, rgb(60 75 210 / .7) 68%, transparent 82%); }
+.chip.on::after { background: conic-gradient(from 0deg, transparent 0 10%, rgb(140 156 248 / .4) 22%, transparent 36% 50%, rgb(140 156 248 / .4) 72%, transparent 86%); }
+@media (hover: hover) {
+  .pill:hover::after, .rb:hover::after, .chip:hover::after, .glass.tap:hover::after, .tplcard:hover::after { opacity: 1; animation-play-state: running; }
+  .pill:hover { transform: translateY(-2px); }
+  .pill-primary:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 16px 44px rgba(104,126,245,.55); }
+  .rb:hover { transform: scale(1.06); border-color: rgba(255,255,255,.3); box-shadow: 0 0 0 4px rgba(104,126,245,.14); }
+  .chip:hover { border-color: rgba(255,255,255,.3); }
+  .glass.tap { transition: transform .45s cubic-bezier(.2,1.2,.4,1), border-color .3s, background-color .3s; }
+  .glass.tap:hover { border-color: rgba(255,255,255,.22); background-color: rgba(255,255,255,.08); }
+  .glow.tap { transition: transform .45s cubic-bezier(.2,1.2,.4,1), box-shadow .4s; }
+  .glow.tap:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 22px 60px -18px color-mix(in srgb, var(--gc, #687ef5) 70%, transparent); }
+  .glow.tap:hover::before { animation: v-drift 5s ease-in-out infinite alternate; }
+}
+/* pressing: the swirl blooms instantly, the element dips, then springs back */
+.pill:active::after, .rb:active::after, .chip:active::after, .glass.tap:active::after, .tplcard:active::after { opacity: 1; animation-play-state: running; transition-duration: .1s; }
+.glow.tap:active::before { animation: v-drift 1.6s ease-in-out infinite alternate; }
+@keyframes v-swirl { to { rotate: 360deg; } }
+@keyframes v-drift { 0% { translate: 0 0; scale: 1; } 50% { translate: 7% -5%; scale: 1.1; } 100% { translate: -7% 4%; scale: .95; } }
+
+
+/* ─── per-card hover effects (see <FX/>). Each sits under the content, fades in, and only moves while hovered/pressed ─── */
+.fx { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .6s ease; }
+.fx i { position: absolute; display: block; animation-play-state: paused !important; }
+.group:hover > .fx, .group:active > .fx, .group:focus-visible > .fx { opacity: 1; }
+.group:hover > .fx i, .group:active > .fx i, .group:focus-visible > .fx i { animation-play-state: running !important; }
+.nofx::after { display: none !important; }
+.tplcard > .fx { z-index: 0; }
+
+/* aurora: three soft lights drifting in slow figure-eights (Make a pattern) */
+.fx-aurora i { width: 55%; aspect-ratio: 1; border-radius: 50%; filter: blur(30px); mix-blend-mode: screen; }
+.fx-aurora i:nth-child(1) { left: -8%; top: -30%; background: radial-gradient(closest-side, rgb(246 247 255 / .7), transparent); animation: v-aur1 7s ease-in-out infinite alternate; }
+.fx-aurora i:nth-child(2) { right: -10%; top: 10%; background: radial-gradient(closest-side, rgb(193 200 230 / .75), transparent); animation: v-aur2 8s ease-in-out infinite alternate; }
+.fx-aurora i:nth-child(3) { left: 30%; bottom: -45%; background: radial-gradient(closest-side, rgb(79 99 224 / .9), transparent); animation: v-aur3 6s ease-in-out infinite alternate; }
+@keyframes v-aur1 { 0% { translate: 0 0; } 50% { translate: 40% 25%; } 100% { translate: 10% 45%; } }
+@keyframes v-aur2 { 0% { translate: 0 0; } 50% { translate: -35% 20%; } 100% { translate: -10% -20%; } }
+@keyframes v-aur3 { 0% { translate: 0 0; scale: 1; } 50% { translate: -30% -30%; scale: 1.2; } 100% { translate: 25% -15%; scale: .9; } }
+
+/* tide: a soft band of light rising up through the card, like a scan up the body (Body library) */
+.fx-tide i { inset: 0; background: linear-gradient(0deg, transparent 0%, rgb(193 200 217 / 0) 30%, rgb(193 200 217 / .4) 44%, rgb(240 242 255 / .7) 50%, rgb(193 200 217 / .4) 56%, transparent 70%); background-size: 100% 260%; filter: blur(6px); animation: v-tide 3.2s cubic-bezier(.45,0,.55,1) infinite; }
+@keyframes v-tide { from { background-position: 0 0%; } to { background-position: 0 100%; } }
+
+/* orbit: two lights circling the centre in perfect symmetry (Pattern library) */
+.fx-orbit i { left: 50%; top: 50%; translate: -50% -50%; width: 140%; aspect-ratio: 1; animation: v-swirl 7s linear infinite; }
+.fx-orbit i::before, .fx-orbit i::after { content: ""; position: absolute; top: 50%; width: 38%; aspect-ratio: 1; translate: 0 -50%; border-radius: 50%; filter: blur(34px); }
+.fx-orbit i::before { left: 8%; background: rgb(240 242 255 / .8); }
+.fx-orbit i::after { right: 8%; background: rgb(30 38 130 / .9); }
+.fx-orbit i:nth-child(2) { animation-duration: 11s; animation-direction: reverse; opacity: .6; }
+
+/* sheen: a diagonal ribbon of light sweeping across (Continue) */
+.fx-sheen i { inset: -20% -60%; background: linear-gradient(110deg, transparent 30%, rgb(140 156 248 / .22) 42%, rgb(236 239 255 / .3) 50%, rgb(140 156 248 / .22) 58%, transparent 70%); filter: blur(8px); animation: v-sheen 2.8s ease-in-out infinite; }
+@keyframes v-sheen { from { translate: -45% 0; } to { translate: 45% 0; } }
+
+/* ripple: soft rings spreading out from the centre, like a drop on fabric (template cards) */
+.fx-ripple i { left: 50%; top: 42%; width: 40%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; box-shadow: 0 0 0 2px rgb(193 200 217 / .35), 0 0 40px 10px rgb(104 126 245 / .35) inset; filter: blur(3px); opacity: 0; animation: v-ripple 3.6s cubic-bezier(.2,.6,.3,1) infinite; }
+.fx-ripple i:nth-child(2) { animation-delay: 1.2s; }
+.fx-ripple i:nth-child(3) { animation-delay: 2.4s; }
+@keyframes v-ripple { 0% { scale: .3; opacity: 0; } 15% { opacity: 1; } 100% { scale: 3.2; opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) { .fx i { animation: none !important; } }
+
+/* ─── welcome sky: soft light beam from the top-left, periwinkle haze falling into night ─── */
+.sky { position: absolute; inset: 0; overflow: hidden; background:
+    linear-gradient(90deg, transparent 55%, rgb(20 24 45 / .35) 100%),
+    linear-gradient(180deg, #a3aed0 0%, #95a2c8 14%, #8a97c2 28%, #7686b7 36%, #5a6c99 44%, #3b4668 51%, #262d4a 58%, #1b2035 65%, #151827 76%, #131523 100%); }
+.sky::before { content: ""; position: absolute; inset: -20%; pointer-events: none;
+  background:
+    radial-gradient(38% 30% at 12% 20%, rgb(246 247 255 / .95) 0%, rgb(236 239 252 / .7) 22%, rgb(214 220 243 / .38) 48%, rgb(200 207 236 / .12) 72%, transparent 100%),
+    linear-gradient(118deg, rgb(255 255 255 / .42) 8%, rgb(240 242 252 / .18) 22%, transparent 38%);
+  animation: v-beam 14s ease-in-out infinite alternate; }
+.sky::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .22; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+@keyframes v-beam { from { translate: 0 0; } to { translate: 3% 2%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pill::after, .rb::after, .chip::after, .glass.tap::after, .tplcard::after, .sky::before, .glow.tap:hover::before, .glow.tap:active::before { animation: none !important; }
+}
 
 }
 

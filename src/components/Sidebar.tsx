@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
-import { Motif, BodyFigure } from "./art";
+import { VentyLogo, BodyFigure } from "./art";
 import { Icon, type IconName } from "./icons";
 import { cx, Pill } from "./ui";
 import { CreateSheet } from "@/screens/home";
@@ -33,11 +33,10 @@ export function Sidebar({ route }: { route: string }) {
   ];
   return (
     <aside className="relative z-20 hidden w-[260px] shrink-0 flex-col border-r border-white/8 bg-[#0d0e18] px-5 pb-6 pt-8 lg:flex">
-      <button onClick={() => nav("home")} className="flex items-end gap-2 px-2">
-        <Motif width={44} className="mb-2" />
-        <span className="serif text-[38px] leading-none">Venty</span>
+      <button onClick={() => nav("home")} className="flex flex-col items-center self-start px-2" aria-label="Venty home">
+        <VentyLogo width={92} />
       </button>
-      <div className="eyebrow mt-2 px-2 text-[10px] text-white/40">AI pattern studio</div>
+      <div className="eyebrow mt-3 px-2 text-[10px] text-white/40">AI pattern studio</div>
       <Pill className="mt-8 !h-12 !text-[15px]" onClick={() => setCreate(true)} icon={<Icon name="plus" size={18} />}>Create</Pill>
       <nav className="mt-6 flex flex-col gap-1">
         {items.map(([id, ic, label, fn]) => (

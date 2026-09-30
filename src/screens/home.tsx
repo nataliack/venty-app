@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
 import type { GarmentKey } from "@/lib/data";
-import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, cx, useToast, useDesk } from "@/components/ui";
+import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, cx, useToast, useDesk , FX } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
@@ -63,16 +63,16 @@ export function Home() {
       </div>
       <H1 className="mt-3">What are we making?</H1>
       <div className="mt-7 grid grid-cols-3 gap-5">
-        <Glow color="#687ef5" variant="edge" onClick={() => { newDraft(); go("patSelectBody"); }} className="relative col-span-2 row-span-2 h-[360px] rounded-[32px] p-8">
+        <Glow color="#687ef5" variant="edge" onClick={() => { newDraft(); go("patSelectBody"); }} className="group relative col-span-2 row-span-2 h-[360px] rounded-[32px] p-8">
+          <FX kind="aurora" />
           <Eyebrow className="text-[11px] text-white/70">Start here</Eyebrow>
           <div className="mt-3 text-[40px] font-semibold tracking-tight">Make a pattern</div>
           <div className="mt-2 max-w-[300px] text-[16px] leading-snug text-white/70">From a photo, a link, a sketch or a style. Drafted to your body.</div>
           <div className="absolute bottom-8 left-8 flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-full bg-white text-bg"><Icon name="upload" size={22} /></span><span className="eyebrow text-[11px] text-white/80">Photo · Link · Sketch · Voice</span></div>
-          <div className="absolute bottom-0 right-16 opacity-95"><BodyFigure width={150} variant="solid" garment="flutter" glow={false} dim={0.55} /></div>
+          <div className="absolute bottom-3 right-16 opacity-95"><BodyFigure width={118} variant="solid" garment="flutter" glow={false} dim={0.7} /></div>
         </Glow>
         <Glass onClick={() => { newBody(); go("gender"); }} className="relative h-[170px] rounded-[28px] p-6">
           <div className="text-[20px] font-semibold">Make a body</div><div className="mt-1 text-[13px] text-white/55">Measure yourself or someone new</div>
-          <div className="absolute bottom-4 left-6 flex -space-x-3"><BodyFigure width={34} glow={false} /><BodyFigure width={34} sex="male" glow={false} /></div>
           <span className="absolute bottom-6 right-6 grid h-10 w-10 place-items-center rounded-full bg-white/10"><Icon name="plus" size={20} /></span>
         </Glass>
         <Glass onClick={() => go("templates")} className="relative h-[170px] rounded-[28px] p-6">
@@ -82,17 +82,20 @@ export function Home() {
       </div>
       <Eyebrow className="mt-9 text-[10px] text-white/40">Your library</Eyebrow>
       <div className="mt-3 grid grid-cols-3 gap-5">
-        <Glow color="#4d5e85" variant="fade" onClick={() => go("bodies")} className="relative h-[220px] rounded-[28px] p-6">
+        <Glow color="#4d5e85" variant="fade" onClick={() => go("bodies")} className="group relative min-h-[220px] rounded-[28px] p-6">
+          <FX kind="tide" />
           <span className="serif text-[56px] leading-none">{String(bodies.length).padStart(2, "0")}</span>
           <div className="absolute right-5 top-5 flex -space-x-2 opacity-90">{bodies.slice(0, 3).map((b) => <BodyFigure key={b.id} sex={b.sex} width={34} glow={false} />)}</div>
           <div className="absolute bottom-6 left-6"><div className="text-[17px] font-semibold">Body library</div><div className="eyebrow text-[10px]">Bodies</div></div>
         </Glow>
-        <Glow color="#687ef5" variant="fade" onClick={() => go("patterns")} className="relative h-[220px] rounded-[28px] p-6">
+        <Glow color="#687ef5" variant="fade" onClick={() => go("patterns")} className="group relative min-h-[220px] rounded-[28px] p-6">
+          <FX kind="orbit" />
           <span className="serif text-[56px] leading-none">{String(patterns.length).padStart(2, "0")}</span>
           <div className="absolute right-5 top-4"><Flat g="flutter" size={80} /></div>
           <div className="absolute bottom-6 left-6"><div className="text-[17px] font-semibold">Pattern library</div><div className="eyebrow text-[10px]">Patterns</div></div>
         </Glow>
-        <Glass className="h-[220px] rounded-[28px] p-5">
+        <Glass className="group relative isolate min-h-[220px] overflow-hidden rounded-[28px] p-6">
+          <FX kind="sheen" />
           <Eyebrow className="text-[10px] text-white/40">Continue</Eyebrow>
           <div className="mt-3 flex flex-col gap-2">{patterns.slice(0, 3).map((p) => (
             <button key={p.id} onClick={() => { setDraft({ garment: p.garment as GarmentKey }); go("garment"); }} className="tap flex items-center gap-3 rounded-[14px] p-1.5 text-left hover:bg-white/5">
@@ -103,6 +106,7 @@ export function Home() {
           ))}</div>
         </Glass>
       </div>
+      <div className="h-20" />
     </Screen>
   );
   return (
@@ -113,7 +117,8 @@ export function Home() {
         <span className="flex-1" /><RB icon="search" onClick={() => go("templates")} />
       </div>
       <H1 className="mt-4">What are we making?</H1>
-      <Glow as="button" color="#687ef5" variant="edge" onClick={() => { newDraft(); go("patSelectBody"); }} className="relative mt-5 block h-[184px] w-full rounded-[28px] p-5">
+      <Glow as="button" color="#687ef5" variant="edge" onClick={() => { newDraft(); go("patSelectBody"); }} className="group relative mt-5 block h-[184px] w-full rounded-[28px] p-5">
+        <FX kind="aurora" />
         <Eyebrow className="text-[10px] text-white/70">Start here</Eyebrow>
         <div className="mt-2 text-[26px] font-semibold">Make a pattern</div>
         <div className="mt-1 max-w-[180px] text-[13px] leading-snug text-white/70">From a photo, a link, a sketch or a style.</div>
@@ -121,18 +126,19 @@ export function Home() {
         <div className="absolute bottom-0 right-3 opacity-90"><BodyFigure width={92} variant="solid" garment="flutter" glow={false} dim={0.5} /></div>
       </Glow>
       <Glass onClick={() => { newBody(); go("gender"); }} className="mt-3 flex h-[84px] w-full items-center gap-3 rounded-[24px] px-4">
-        <div className="flex -space-x-3"><BodyFigure width={30} glow={false} /><BodyFigure width={30} sex="male" glow={false} /></div>
         <div className="flex-1"><div className="text-[16px] font-semibold">Make a body</div><div className="text-[12px] text-white/55">Measure yourself or someone new</div></div>
         <Icon name="plus" size={22} />
       </Glass>
       <Eyebrow className="mt-5 text-[10px] text-white/40">Your library</Eyebrow>
       <div className="mt-2.5 grid grid-cols-2 gap-3">
-        <Glow as="button" color="#4d5e85" variant="fade" onClick={() => go("bodies")} className="relative h-[140px] rounded-[24px] p-4">
+        <Glow as="button" color="#4d5e85" variant="fade" onClick={() => go("bodies")} className="group relative h-[140px] rounded-[24px] p-4">
+          <FX kind="tide" />
           <span className="serif text-[40px] leading-none">{String(bodies.length).padStart(2, "0")}</span>
           <div className="absolute right-3 top-3 flex -space-x-2 opacity-90">{bodies.slice(0, 3).map((b) => <BodyFigure key={b.id} sex={b.sex} width={24} glow={false} />)}</div>
           <div className="absolute bottom-4 left-4"><div className="text-[14px] font-semibold">Body library</div><div className="eyebrow text-[9px]">Bodies</div></div>
         </Glow>
-        <Glow as="button" color="#687ef5" variant="fade" onClick={() => go("patterns")} className="relative h-[140px] rounded-[24px] p-4">
+        <Glow as="button" color="#687ef5" variant="fade" onClick={() => go("patterns")} className="group relative h-[140px] rounded-[24px] p-4">
+          <FX kind="orbit" />
           <span className="serif text-[40px] leading-none">{String(patterns.length).padStart(2, "0")}</span>
           <div className="absolute right-3 top-2"><Flat g="flutter" size={56} /></div>
           <div className="absolute bottom-4 left-4"><div className="text-[14px] font-semibold">Pattern library</div><div className="eyebrow text-[9px]">Patterns</div></div>
@@ -146,7 +152,8 @@ export function Home() {
       {last && (
         <>
           <Eyebrow className="mt-5 text-[10px] text-white/40">Continue</Eyebrow>
-          <Glass onClick={() => { useApp.getState().setDraft({ garment: last.garment as GarmentKey }); go("garment"); }} className="mt-2.5 flex w-full items-center gap-3 rounded-[22px] p-3">
+          <Glass onClick={() => { useApp.getState().setDraft({ garment: last.garment as GarmentKey }); go("garment"); }} className="nofx group mt-2.5 flex w-full items-center gap-3 rounded-[22px] p-3">
+            <FX kind="sheen" />
             <div className="grid h-14 w-12 place-items-center rounded-[12px] bg-primary/30"><Flat g={last.garment as GarmentKey} size={34} /></div>
             <div className="flex-1"><div className="text-[14px] font-semibold">{last.name}</div><div className="text-[12px] text-white/55">{last.status} · {last.body}</div>
               <div className="mt-1.5 flex gap-1">{[0, 1, 2, 3].map((i) => <span key={i} className={cx("h-1 w-6 rounded-full", i < (last.status === "Printed" ? 4 : last.status === "Fitting" ? 3 : 1) ? "bg-primary" : "bg-white/15")} />)}</div></div>
