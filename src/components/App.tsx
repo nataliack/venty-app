@@ -3,8 +3,8 @@ import { haptic } from "@/lib/haptics";
 import { Component, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { Splash, Welcome, SignUp, LogIn, SignedIn, Onboarding, StartChoice } from "@/screens/auth";
-import { Units, Experience, Gender, Method, NameBody, BaseMeasures, MeasureBase, ScanIntro, ScanPrep, ScanCam, Preview, EditMeasures, Ready } from "@/screens/setup";
+import { Splash, Welcome, SignUp, LogIn, EmailStep, SignedIn, Onboarding, StartChoice } from "@/screens/auth";
+import { Prefs, Method, NameBody, BaseMeasures, MeasureBase, ScanPrep, ScanCam, Preview, EditMeasures, Ready } from "@/screens/setup";
 import { Wizard, WizardStep, GroupDone, AllDone } from "@/screens/wizard";
 import { Home, Bodies, Patterns, You } from "@/screens/home";
 import { PatSelectBody, Prompt, Reference, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
@@ -14,14 +14,14 @@ import { Pill, cx } from "./ui";
 import { Sidebar } from "./Sidebar";
 
 // Screens shown full-bleed on desktop (no sidebar)
-const FULL = new Set(["splash", "welcome", "signup", "login", "signedin", "onboarding", "start", "scanCam"]);
+const FULL = new Set(["splash", "welcome", "signup", "login", "email", "signedin", "onboarding", "start", "scanCam"]);
 import { Icon } from "./icons";
 
 type ScreenC = ComponentType<{ p?: Record<string, unknown> }>;
 const SCREENS: Record<string, ScreenC> = {
-  splash: Splash, welcome: Welcome, signup: SignUp, login: LogIn, signedin: SignedIn, onboarding: Onboarding, start: StartChoice,
-  units: Units, experience: Experience, gender: Gender, method: Method, name: NameBody, base: BaseMeasures, measure: MeasureBase,
-  scanIntro: ScanIntro, scanPrep: ScanPrep, scanCam: ScanCam, preview: Preview, edit: EditMeasures, ready: Ready,
+  splash: Splash, welcome: Welcome, signup: SignUp, login: LogIn, email: EmailStep, signedin: SignedIn, onboarding: Onboarding, start: StartChoice,
+  prefs: Prefs, name: NameBody, method: Method, measure: MeasureBase, base: BaseMeasures,
+  scanPrep: ScanPrep, scanCam: ScanCam, preview: Preview, edit: EditMeasures, ready: Ready,
   wizard: Wizard, wstep: WizardStep, wdone: GroupDone, alldone: AllDone,
   home: Home, bodies: Bodies, patterns: Patterns, you: You,
   patSelectBody: PatSelectBody, prompt: Prompt, ref: Reference, ai: AIRead, generating: Generating, garment: Garment, edits: Edits,
@@ -38,8 +38,8 @@ class Guard extends Component<{ children: ReactNode; k: string }, { err: boolean
     if (!this.state.err) return this.props.children;
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-        <div className="serif text-[40px]">Oops — a loose thread.</div>
-        <p className="mt-2 text-[14px] text-white/60">Let’s pick up from home.</p>
+        <div className="h1">Oops, a loose thread.</div>
+        <p className="mt-2 text-[15px] text-white/60">Let’s pick up from home.</p>
         <Pill className="mt-6" onClick={() => { this.setState({ err: false }); useApp.getState().home(); }}>Go to home</Pill>
       </div>
     );

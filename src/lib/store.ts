@@ -19,6 +19,8 @@ export type Body = {
   measures: Record<string, number>;
   done: string[]; // measure keys the user has confirmed
   photoScan?: boolean;
+  est?: string[]; // keys AI-estimated from the photo scan and not yet checked by the user
+  photos?: (string | null)[]; // front, back, side (small JPEG data URLs, kept on this device)
 };
 
 export type Pattern = {
@@ -61,7 +63,10 @@ type State = {
   dir: 1 | -1;
   user: { name: string; email: string; guest: boolean };
   units: "cm" | "in";
-  experience: number;
+  experience: number | null;
+  prefsDone: boolean; // units + experience chosen once, app-wide
+  tourSkipped: boolean; // skipped onboarding: home offers the tour later
+  resumeBody: string | null; // body whose extra measures were paused ("Take a break")
   bodies: Body[];
   activeBody: string; // body being edited / selected
   patterns: Pattern[];
@@ -83,6 +88,8 @@ type State = {
   setMeasure: (key: string, v: number) => void;
   confirmMeasure: (key: string) => void;
   newBody: () => void;
+  startBody: () => void;
+  exitFlow: () => void;
   savePattern: (status?: Pattern["status"]) => void;
 };
 
@@ -91,7 +98,10 @@ const initial = () => ({
   dir: 1 as 1 | -1,
   user: { name: "Ana", email: "", guest: true },
   units: "cm" as const,
-  experience: 1,
+  experience: null as number | null,
+  prefsDone: false,
+  tourSkipped: false,
+  resumeBody: null as string | null,
   bodies: [ME, ...seedBodies()],
   activeBody: "me",
   patterns: SEED_PATTERNS as Pattern[],
@@ -115,13 +125,23 @@ export const useApp = create<State>()(
       body: () => { const s = get(); return s.bodies.find((b) => b.id === s.activeBody) ?? s.bodies[0] ?? ME; },
       updateBody: (patch) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, ...patch } : b)) })),
       setMeasure: (key, v) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, measures: { ...b.measures, [key]: Math.round(v * 2) / 2 } } : b)) })),
-      confirmMeasure: (key) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody && !b.done.includes(key) ? { ...b, done: [...b.done, key] } : b)) })),
+      confirmMeasure: (key) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, done: b.done.includes(key) ? b.done : [...b.done, key], est: (b.est ?? []).filter((k) => k !== key) } : b)) })),
       newBody: () => set((s) => {
         const id = "b" + Date.now().toString(36);
-        const b: Body = { id, name: "Me, Spring 26", sex: "female", measures: defaultMeasures(), done: [] };
+        const b: Body = { id, name: "", sex: "female", measures: defaultMeasures(), done: [], est: [] };
         // replace the default "me" body if the visitor is building their first one
         const others = s.bodies.filter((x) => x.id !== "me");
         return { bodies: [b, ...others], activeBody: id };
+      }),
+      startBody: () => { get().newBody(); get().go(get().prefsDone ? "name" : "prefs"); },
+      // leave a setup flow: back to where it started ("Where do you want to start?" or home); drop a body that was never named
+      exitFlow: () => set((s) => {
+        const b = s.bodies.find((x) => x.id === s.activeBody);
+        const bodies = b && !b.name.trim() ? s.bodies.filter((x) => x.id !== b.id) : s.bodies;
+        const activeBody = bodies.some((x) => x.id === s.activeBody) ? s.activeBody : bodies[0]?.id ?? "me";
+        const ids = s.stack.map((r) => r.id);
+        const at = Math.max(ids.lastIndexOf("start"), ids.lastIndexOf("home"));
+        return { bodies, activeBody, dir: -1 as const, stack: at >= 0 ? s.stack.slice(0, at + 1) : [{ id: "home" }] };
       }),
       savePattern: (status = "Fitting") => set((s) => {
         const name = s.draft.garment === "flutter" ? "Flutter midi dress" : templateBy(s.draft.garment).name;
@@ -135,7 +155,8 @@ export const useApp = create<State>()(
       name: "venty-expo-v1",
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ ...s, draft: { ...s.draft, photo: undefined }, stack: s.stack.slice(-12) }),
-      version: 1,
+      version: 2,
+      migrate: () => ({ ...initial() }) as unknown as State,
     },
   ),
 );

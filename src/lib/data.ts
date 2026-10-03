@@ -26,7 +26,7 @@ export const BASE: Measure[] = [
 ];
 
 export const WIZARD: Measure[] = [
-  // Step 1 · Around you
+  // Wraps
   { key: "neck", label: "Neck", group: "around", value: 34.5, min: 28, max: 48, hint: "Around the base of your neck.", how: ["Stand tall and look straight ahead.", "Wrap the tape round the base of your neck.", "Slip one finger under the tape, then read."], marker: { kind: "ring", y: 78, w: 26 } },
   { key: "underbust", label: "Underbust", group: "around", value: 76, min: 60, max: 110, hint: "Around your ribcage, just under the bust.", how: ["Find the band just under your bust.", "Wrap the tape snug round your ribcage.", "Keep it level at the back."], marker: { kind: "ring", y: 162, w: 88 } },
   { key: "upperArm", label: "Upper arm", group: "around", value: 28.5, min: 20, max: 45, hint: "Around the fullest part of your upper arm.", how: ["Relax your arm by your side.", "Wrap the tape round the fullest part, between shoulder and elbow.", "Keep it snug, not tight. Read where it meets."], marker: { kind: "ring", y: 150, w: 20, x: 155 } },
@@ -34,7 +34,7 @@ export const WIZARD: Measure[] = [
   { key: "wrist", label: "Wrist", group: "around", value: 15.5, min: 12, max: 22, hint: "Around your wrist bone.", how: ["Find the bump of your wrist bone.", "Wrap the tape round just above it.", "Leave room for one finger."], marker: { kind: "ring", y: 285, w: 14, x: 172 } },
   { key: "highHip", label: "High hip", group: "around", value: 88, min: 65, max: 130, hint: "Around your hip bones, between waist and hips.", how: ["Find the top of your hip bones.", "Wrap the tape round at that level.", "It sits about 10 cm below your waist."], marker: { kind: "ring", y: 238, w: 94 } },
   { key: "thigh", label: "Thigh", group: "around", value: 54, min: 40, max: 80, hint: "Around the fullest part of one thigh.", how: ["Stand with weight on both feet.", "Wrap the tape round the top of one thigh.", "Keep it level, then read."], marker: { kind: "ring", y: 320, w: 40, x: 78 } },
-  // Step 2 · Down you
+  // Lengths
   { key: "napeWaist", label: "Nape to waist", group: "down", value: 40.5, min: 32, max: 50, hint: "From the bone at the back of your neck to your waist.", how: ["Tilt your head forward to find the neck bone.", "Hold the tape there.", "Run it straight down your spine to your waist."], marker: { kind: "line", x1: 100, y1: 82, x2: 100, y2: 205 } },
   { key: "frontNeckWaist", label: "Front neck to waist", group: "down", value: 34, min: 28, max: 46, hint: "From the hollow of your neck down to your waist.", how: ["Find the dip at the base of your throat.", "Run the tape down over your bust.", "Stop at your natural waist."], marker: { kind: "line", x1: 100, y1: 92, x2: 100, y2: 205 } },
   { key: "armhole", label: "Armhole depth", group: "down", value: 19.5, min: 14, max: 26, hint: "From the top of the shoulder to the underarm.", how: ["Rest a ruler under your arm.", "Measure from the top of your shoulder…", "…straight down to the ruler."], marker: { kind: "line", x1: 146, y1: 100, x2: 146, y2: 150 } },
@@ -42,21 +42,21 @@ export const WIZARD: Measure[] = [
   { key: "waistHip", label: "Waist to hip", group: "down", value: 21, min: 14, max: 30, hint: "Down your side from waist to the fullest part of your hips.", how: ["Tie a string round your waist.", "Measure down your side…", "…to the fullest part of your hips."], marker: { kind: "line", x1: 150, y1: 205, x2: 154, y2: 275 } },
   { key: "shoulderWrist", label: "Shoulder to wrist", group: "down", value: 58, min: 45, max: 70, hint: "From the shoulder point, over a bent elbow, to the wrist.", how: ["Bend your elbow slightly.", "Start at the tip of your shoulder.", "Run over the elbow down to your wrist bone."], marker: { kind: "line", x1: 154, y1: 104, x2: 172, y2: 285 } },
   { key: "insideLeg", label: "Inside leg", group: "down", value: 78, min: 65, max: 95, hint: "From your crotch down to the floor.", how: ["Stand with feet slightly apart.", "Start the tape at the top of your inner leg.", "Run it straight down to the floor."], marker: { kind: "line", x1: 92, y1: 292, x2: 88, y2: 525 } },
-  // Step 3 · Across you
+  // Widths
   { key: "shoulderLength", label: "Shoulder length", group: "across", value: 12.5, min: 9, max: 17, hint: "From the side of your neck to the shoulder point.", how: ["Find where your neck meets your shoulder.", "Run the tape along the top of your shoulder.", "Stop at the bony tip."], marker: { kind: "line", x1: 113, y1: 90, x2: 150, y2: 101 } },
   { key: "acrossShoulder", label: "Across shoulder", group: "across", value: 38, min: 32, max: 48, hint: "Across your back from shoulder point to shoulder point.", how: ["Find both bony shoulder tips.", "Measure straight across your upper back.", "Keep the tape level."], marker: { kind: "line", x1: 50, y1: 102, x2: 150, y2: 102 } },
   { key: "acrossBack", label: "Across back", group: "across", value: 34.5, min: 28, max: 44, hint: "Across your back, halfway between neck and underarm.", how: ["Let your arms hang naturally.", "Measure across your back…", "…between the two arm creases."], marker: { kind: "line", x1: 58, y1: 122, x2: 142, y2: 122 } },
   { key: "acrossFront", label: "Across front", group: "across", value: 33, min: 26, max: 42, hint: "Across your chest between the arm creases.", how: ["Find the crease where arm meets chest.", "Measure straight across the front.", "Stay above the bust."], marker: { kind: "line", x1: 60, y1: 118, x2: 140, y2: 118 } },
   { key: "apexApex", label: "Apex to apex", group: "across", value: 18.5, min: 14, max: 26, hint: "Between the fullest points of your bust.", how: ["Find the fullest point of each side.", "Measure straight across between them.", "Keep the tape flat."], marker: { kind: "line", x1: 80, y1: 140, x2: 120, y2: 140 } },
-  // Step 4 · Sitting down
+  // Seated
   { key: "rise", label: "Rise", group: "sitting", value: 27, min: 20, max: 36, hint: "Sitting on a hard chair: from your waist down to the seat.", how: ["Sit up straight on a hard, flat chair.", "Measure down your side from your waist…", "…to the chair seat."], marker: { kind: "line", x1: 154, y1: 205, x2: 156, y2: 290 } },
 ];
 
 export const GROUPS = [
-  { key: "around", title: "Around you", short: "Around", desc: "Circumferences: neck, underbust, arm, wrist, hip, thigh", mins: 2 },
-  { key: "down", title: "Down you", short: "Down", desc: "Lengths: nape to waist, shoulder to wrist, inside leg", mins: 3 },
-  { key: "across", title: "Across you", short: "Across", desc: "Widths: shoulders, back, front, apex to apex", mins: 2 },
-  { key: "sitting", title: "Sitting down", short: "Sitting", desc: "Rise, measured while seated on a chair", mins: 1 },
+  { key: "around", title: "Wraps", short: "Wraps", desc: "Tape wrapped around your neck, ribs, arm, wrist, hip and thigh", mins: 2 },
+  { key: "down", title: "Lengths", short: "Lengths", desc: "Tape running top to bottom: back, front, arm and leg", mins: 3 },
+  { key: "across", title: "Widths", short: "Widths", desc: "Tape running side to side: shoulders, back and chest", mins: 2 },
+  { key: "sitting", title: "Seated", short: "Seated", desc: "One measure, sitting on a hard chair", mins: 1 },
 ] as const;
 
 export type GroupKey = (typeof GROUPS)[number]["key"];

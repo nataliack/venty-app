@@ -1,27 +1,38 @@
 "use client";
-import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons";
 import { useApp } from "@/lib/store";
 
 export const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(" ");
 
 // ─── Screen shell ─────────────────────────────────────────────────────
-// Phone: full-bleed column. Desktop (lg): centred content column with a right-aligned action bar.
-export function Screen({ children, footer, className, bg, noPad, fixed, wide }: { children: ReactNode; footer?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean; wide?: boolean }) {
+// header (optional, pinned) · scroll area (only scrolls, and only fades, when content overflows) · footer (pinned, no backdrop).
+export function Screen({ children, footer, header, className, bg, noPad, wide }: { children: ReactNode; footer?: ReactNode; header?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean; wide?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [over, setOver] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const check = () => setOver(el.scrollHeight - el.clientHeight > 2 && el.scrollTop + el.clientHeight < el.scrollHeight - 2);
+    const ro = new ResizeObserver(check); ro.observe(el); if (el.firstElementChild) ro.observe(el.firstElementChild);
+    el.addEventListener("scroll", check, { passive: true }); check();
+    return () => { ro.disconnect(); el.removeEventListener("scroll", check); };
+  }, []);
+  const max = wide ? "lg:max-w-[1280px]" : "lg:max-w-[1180px]";
   return (
     <div className="absolute inset-0 flex flex-col">
       <div className="dotgrid" />
       {bg}
-      <div className={cx("relative flex-1 noscroll", fixed ? "overflow-hidden lg:overflow-y-auto" : "overflow-y-auto overflow-x-hidden", !noPad && "px-6", "lg:px-14", className)} style={{ paddingTop: "var(--top)" }}>
-        <div className={cx("lg:mx-auto lg:w-full", wide ? "lg:max-w-[1280px]" : "lg:max-w-[1180px]")}>
+      {header && <div className="relative z-10 shrink-0 px-6 lg:px-14" style={{ paddingTop: "var(--top)" }}><div className={cx("lg:mx-auto lg:w-full", max)}>{header}</div></div>}
+      <div ref={ref} className={cx("scroller relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden noscroll", over && "is-over", !noPad && "px-6", "lg:px-14", className)} style={{ paddingTop: header ? 0 : "var(--top)" }}>
+        <div className={cx("lg:mx-auto lg:w-full", max, "pb-5", !footer && "pb-[calc(var(--bottom)+12px)]")}>
           {children}
         </div>
-        {footer && <div className="h-4" />}
       </div>
       {footer && (
-        <div className="relative z-10 px-6 pt-3 lg:px-14" style={{ paddingBottom: "var(--bottom)", background: "linear-gradient(to top, #0b0c15 55%, rgba(11,12,21,0))" }}>
-          <div className={cx("lg:mx-auto lg:flex lg:w-full lg:justify-end", wide ? "lg:max-w-[1280px]" : "lg:max-w-[1180px]")}>
+        <div className="relative z-10 shrink-0 px-6 pt-2 lg:px-14" style={{ paddingBottom: "var(--bottom)" }}>
+          <div className={cx("lg:mx-auto lg:flex lg:w-full lg:justify-end", max)}>
             <div className="lg:w-[480px]">{footer}</div>
           </div>
         </div>
@@ -77,20 +88,35 @@ export function RB({ icon, onClick, label, variant = "glass", size = 44, classNa
   );
 }
 
-export function Arrows({ onPrev, onNext, hidePrev, nextLabel }: { onPrev?: () => void; onNext?: () => void; hidePrev?: boolean; nextLabel?: string }) {
+// Bottom bar for steps: back on the left, the decision button on the right.
+// Until something is chosen (ready=false) it is a quiet chevron; once chosen it grows into "Next ›" with a violet edge.
+export function Arrows({ onPrev, onNext, hidePrev, ready = true, label = "Next", nudge }: { onPrev?: () => void; onNext?: () => void; hidePrev?: boolean; ready?: boolean; label?: string; nudge?: boolean; nextLabel?: string }) {
   const back = useApp((s) => s.back);
   return (
-    <>
-      <div className="flex items-center justify-between pb-1 lg:hidden">
-        {hidePrev ? <span /> : <RB icon="back" variant="dark" size={42} onClick={onPrev ?? back} label="Previous" />}
-        {nextLabel && <span className="text-[13px] text-white/50">{nextLabel}</span>}
-        <RB icon="chevR" variant="dark" size={42} onClick={onNext} label="Next" />
-      </div>
-      <div className="hidden items-center gap-3 lg:flex">
-        {!hidePrev && <Pill variant="dark" className="!w-[150px]" onClick={onPrev ?? back} icon={<Icon name="back" size={18} />}>Back</Pill>}
-        <Pill className="flex-1" onClick={onNext}>Continue<Icon name="chevR" size={18} /></Pill>
-      </div>
-    </>
+    <div className="flex items-center justify-between gap-3 pb-1">
+      {hidePrev ? <span /> : <RB icon="back" variant="dark" size={52} onClick={onPrev ?? back} label="Back" />}
+      <NextButton ready={ready} onClick={onNext} label={label} nudge={nudge} />
+    </div>
+  );
+}
+
+export function NextButton({ ready, onClick, label = "Next", nudge, className }: { ready: boolean; onClick?: () => void; label?: string; nudge?: boolean; className?: string }) {
+  return (
+    <motion.button layout aria-label={label} aria-disabled={!ready} onClick={() => ready && onClick?.()} transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
+      className={cx("nextbtn", ready && "ready", ready && nudge && "nudge", className)} style={{ width: ready ? "auto" : 52, paddingLeft: ready ? 22 : 0, paddingRight: ready ? 16 : 0, justifyContent: ready ? "flex-end" : "center" }}>
+      <AnimatePresence initial={false}>{ready && <motion.span key="l" initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="max-w-[230px] truncate">{label}</motion.span>}</AnimatePresence>
+      <Icon name="chevR" size={20} />
+    </motion.button>
+  );
+}
+
+// Selectable option card (no option is ever pre-selected): radio ring idle, violet edge + gradient when chosen.
+export function Option({ on, onClick, children, className, radio = true }: { on: boolean; onClick: () => void; children: ReactNode; className?: string; radio?: boolean }) {
+  return (
+    <div role="radio" aria-checked={on} tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }} className={cx("opt text-left", on && "on", className)}>
+      {children}
+      {radio && <span className="radio absolute right-4 top-4">{on && <Icon name="check" size={13} strokeWidth={3} />}</span>}
+    </div>
   );
 }
 
@@ -155,13 +181,14 @@ export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) =
   );
 }
 
-export function Field({ label, value, onChange, type = "text", focus, placeholder, inputMode }: { label: string; value: string; onChange: (v: string) => void; type?: string; focus?: boolean; placeholder?: string; inputMode?: "email" | "text" }) {
-  const [f, setF] = useState(false);
+export function Field({ label, value, onChange, type = "text", placeholder, inputMode, autoComplete = "off", error }: { label: string; value: string; onChange: (v: string) => void; type?: string; focus?: boolean; placeholder?: string; inputMode?: "email" | "text"; autoComplete?: string; error?: string }) {
   return (
-    <label className={cx("glass block h-16 rounded-[20px] px-[18px] pt-3 transition-all", (f || focus) && "sel")}>
-      <span className="block text-[10px] font-medium uppercase tracking-[.08em] text-white/45">{label}</span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} onFocus={() => setF(true)} onBlur={() => setF(false)} type={type} placeholder={placeholder} inputMode={inputMode} autoComplete="off" autoCapitalize="off"
-        className="mt-1 w-full bg-transparent text-[16px] font-medium outline-none placeholder:text-white/30 caret-primary" />
+    <label className="block">
+      <span className="mb-1.5 block text-[14px] font-medium text-white/70">{label}</span>
+      <span className="field flex h-14 items-center px-4">
+        <input value={value} onChange={(e) => onChange(e.target.value)} type={type} placeholder={placeholder} inputMode={inputMode} autoComplete={autoComplete} autoCapitalize="off" spellCheck={false} className="text-[17px]" />
+      </span>
+      {error && <span className="mt-1.5 block text-[13px] text-peri">{error}</span>}
     </label>
   );
 }
@@ -177,9 +204,16 @@ export function Dots({ n, i, className }: { n: number; i: number; className?: st
 }
 
 // Bottom sheet on phones, centred dialog on desktop
+// Overlays render into the device frame, so they always cover the whole screen (never clipped by a scroll area).
+function Layer({ children }: { children: ReactNode }) {
+  const [el, setEl] = useState<Element | null>(null);
+  useEffect(() => setEl(document.querySelector(".device") ?? document.body), []);
+  return el ? createPortal(children, el) : null;
+}
+
 export function Sheet({ open, onClose, children, className }: { open: boolean; onClose: () => void; children: ReactNode; className?: string }) {
   return (
-    <AnimatePresence>
+    <Layer><AnimatePresence>
       {open && (
         <>
           <motion.div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
@@ -193,7 +227,7 @@ export function Sheet({ open, onClose, children, className }: { open: boolean; o
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence></Layer>
   );
 }
 
@@ -202,35 +236,28 @@ export function useToast() {
   const [msg, setMsg] = useState<string | null>(null);
   useEffect(() => { if (!msg) return; const t = setTimeout(() => setMsg(null), 2200); return () => clearTimeout(t); }, [msg]);
   const node = (
-    <AnimatePresence>
+    <Layer><AnimatePresence>
       {msg && (
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="pointer-events-none absolute inset-x-6 bottom-28 z-50 flex justify-center lg:bottom-12">
-          <div className="glass-2 flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-medium"><Icon name="check" size={16} /> {msg}</div>
+          <div className="glass-2 flex items-center gap-2 rounded-full px-4 py-2.5 text-[15px] font-medium"><Icon name="check" size={16} /> {msg}</div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence></Layer>
   );
   return { toast: setMsg, node };
 }
 
-// Stepper (wizard)
-export function Stepper({ step, done }: { step: number; done: number[] }) {
-  const labels = ["Around", "Down", "Across", "Sitting"];
+// Flow progress: labelled segments; each fills 0..1. Used by every setup and measuring step so progress always reads the same way.
+export function FlowProgress({ steps, className }: { steps: { label: string; value: number }[]; className?: string }) {
+  const cur = steps.findIndex((s) => s.value < 1);
   return (
-    <div className="relative flex justify-between px-1">
-      <div className="absolute left-[26px] right-[26px] top-[13px] h-px bg-white/15" />
-      <motion.div className="absolute left-[26px] top-[13px] h-px bg-primary" animate={{ width: `calc((100% - 52px) * ${Math.min(3, Math.max(0, step - 1 + (done.includes(step) ? 1 : 0))) / 3})` }} />
-      {labels.map((l, i) => {
-        const n = i + 1; const isDone = done.includes(n); const cur = n === step && !isDone;
-        return (
-          <div key={l} className="relative z-10 flex w-[52px] flex-col items-center gap-1.5">
-            <span className={cx("grid h-[26px] w-[26px] place-items-center rounded-full text-[11px] font-semibold transition-colors", isDone ? "bg-primary" : cur ? "bg-white text-bg shadow-[0_0_0_5px_rgba(255,255,255,.12)]" : "border border-white/25 bg-bg text-white/50")}>
-              {isDone ? <Icon name="check" size={14} strokeWidth={2.6} /> : n}
-            </span>
-            <span className={cx("text-[11px]", cur || isDone ? "text-white" : "text-white/40")}>{l}</span>
-          </div>
-        );
-      })}
+    <div className={cx("flex gap-1.5", className)}>
+      {steps.map((s, i) => (
+        <div key={s.label} className="min-w-0 flex-1">
+          <div className="h-[3px] overflow-hidden rounded-full bg-white/12"><motion.div className="h-full rounded-full bg-primary" initial={false} animate={{ width: `${Math.round(Math.min(1, s.value) * 100)}%` }} transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }} /></div>
+          <div className={cx("mt-1.5 truncate text-[12px]", i === cur ? "text-white" : s.value >= 1 ? "text-white/60" : "text-white/35")}>{s.label}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -240,7 +267,7 @@ export function Num({ v, unit, size = 44, className }: { v: string | number; uni
   return (
     <span className={cx("inline-flex items-baseline gap-2", className)}>
       <span className="serif leading-none" style={{ fontSize: size }}>{v}</span>
-      {unit && <span className="text-[11px] font-medium uppercase tracking-[.08em] text-white/50">{unit}</span>}
+      {unit && <span className="unit" translate="no">{unit}</span>}
     </span>
   );
 }

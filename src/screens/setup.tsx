@@ -1,436 +1,366 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, fmt } from "@/lib/store";
-import { BASE, WIZARD, ALL_MEASURES, defaultMeasures } from "@/lib/data";
-import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Arrows, RB, Check, Sheet, Num, cx, useToast, Blob, Split, useDesk } from "@/components/ui";
+import { BASE, WIZARD, ALL_MEASURES } from "@/lib/data";
+import { Screen, TopBar, HS, Lead, Pill, Glow, Glass, RB, Check, Sheet, Option, Arrows, cx, useToast, Blob, Split, useDesk } from "@/components/ui";
 import { BodyFigure, Ruler } from "@/components/art";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
+import { FlowHeader, bodySteps } from "./measure";
+export { MeasureBase, HowSheet } from "./measure";
 
-const Mini = ({ light }: { light?: boolean }) => (
-  <div className="flex h-7 items-end gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("w-px", light ? "bg-white/80" : "bg-white/40")} style={{ height: i === 16 ? 28 : i % 5 === 0 ? 18 : 12, width: i === 16 ? 2 : 1 }} />)}</div>
+const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={cx("text-[15px] font-medium text-white/80", className)}>{children}</div>;
+const Note = ({ icon = "info", children, className }: { icon?: IconName; children: React.ReactNode; className?: string }) => (
+  <div className={cx("flex items-start gap-2.5 text-[14px] leading-snug text-white/55", className)}><Icon name={icon} size={18} className="mt-px shrink-0" />{children}</div>
 );
 
-export function Units() {
-  const { units, set, go } = useApp();
-  return (
-    <Screen footer={<Arrows onNext={() => go("experience")} />}>
-      <div className="h-12" />
-      <Split left={<>
-      <Eyebrow>Set up · 01 / 02</Eyebrow>
-      <H1 className="mt-4">How do you like<br />to measure?</H1>
-      <Lead className="mt-3">We’ll use this for every body and pattern. Switch any time in Settings.</Lead>
-      </>} right={<>
-      <div className="mt-8 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-5">
-        {(["cm", "in"] as const).map((u) => (
-          <Glow key={u} as="button" onClick={() => set({ units: u })} color={u === units ? "#687ef5" : "#3c4b63"} variant={u === units ? "fade" : "dim"} className="relative h-[240px] rounded-[26px] p-4 lg:h-[380px] lg:p-6">
-            <div className="text-[16px] font-semibold">{u === "cm" ? "Centimetres" : "Inches"}</div>
-            <div className="eyebrow mt-0.5 text-white/50">{u === "cm" ? "Metric" : "Imperial"}</div>
-            {u === units && <Check className="absolute right-3.5 top-3.5" />}
-            <div className="serif absolute inset-x-0 top-[88px] text-center text-[64px] leading-none lg:top-[130px] lg:text-[110px]">{u}</div>
-            <div className="absolute inset-x-4 bottom-5"><Mini light={u === units} /></div>
-          </Glow>
-        ))}
-      </div>
-      <Glass className="mt-3 flex items-center justify-between rounded-[22px] px-5 py-4 lg:mt-5">
-        <div><div className="eyebrow text-[10px]">Example</div><div className="mt-1 text-[15px] font-medium">Bust</div></div>
-        <Num v={units === "cm" ? "88.0" : "34.6"} unit={units} size={34} />
-      </Glass>
-      </>} />
-    </Screen>
-  );
-}
-
+// ─── App preferences: asked once, before the first body. Units default to cm (never "none"). ─────────
 const EXP = [
-  { t: "New to this", d: "Never made a garment", n: "01" },
-  { t: "I’ve made a few things", d: "Follows patterns, sews them, doesn’t draft", n: "02", chips: ["Guided steps", "Plain language"] },
-  { t: "I do this professionally", d: "Drafts, alters, knows the vocabulary", n: "03" },
+  { t: "New to sewing", d: "Never made a garment", n: "01", chips: ["Step-by-step help", "Plain language"] },
+  { t: "I’ve made a few things", d: "Sews from patterns, doesn’t draft", n: "02", chips: ["Guided steps", "Plain language"] },
+  { t: "I sew professionally", d: "Drafts, alters, knows the terms", n: "03", chips: ["Pattern terms", "Fewer tips"] },
 ];
-export function Experience() {
-  const { experience, set, go } = useApp();
+export function Prefs() {
+  const { units, experience, set, go } = useApp();
   return (
-    <Screen footer={<Arrows onNext={() => go("gender")} />}>
-      <div className="h-12" />
+    <Screen header={<TopBar left="close" onLeft={useApp.getState().exitFlow} />} footer={<Arrows ready={experience !== null} onNext={() => { set({ prefsDone: true }); go("name"); }} />}>
       <Split left={<>
-      <Eyebrow>Set up · 02 / 02</Eyebrow>
-      <HS className="mt-4">How much have<br />you sewn before?</HS>
-      <Lead className="mt-3">We tune the guidance and vocabulary to you.</Lead>
-      </>} right={
-      <div className="mt-6 flex flex-col gap-3 lg:mt-0">
-        {EXP.map((e, i) => {
-          const on = i === experience;
-          return (
-            <Glow key={i} as="button" onClick={() => set({ experience: i })} color={on ? "#687ef5" : "#3c4b63"} variant={on ? "edge" : "dim"} className={cx("relative w-full rounded-[26px] p-5 transition-all", on ? "min-h-[170px]" : "min-h-[104px]")}>
-              <div className="pr-16 text-[17px] font-semibold">{e.t}</div>
-              <div className="mt-1 max-w-[220px] text-[13px] text-white/60">{e.d}</div>
-              <div className="serif absolute right-5 top-4 text-[40px] leading-none">{e.n}</div>
-              {on && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 flex items-center justify-between">
-                  <div className="flex gap-2">{(e.chips ?? ["Plain language"]).map((c) => <span key={c} className="rounded-full bg-white/15 px-3 py-1.5 text-[12px]">{c}</span>)}</div>
-                  <Check />
-                </motion.div>
-              )}
-            </Glow>
-          );
-        })}
-      </div>} />
-    </Screen>
-  );
-}
-
-export function Gender() {
-  const { go } = useApp();
-  const body = useApp((s) => s.body());
-  const update = useApp((s) => s.updateBody);
-  return (
-    <Screen footer={<Arrows onNext={() => go("method")} />}>
-      <div className="h-12" />
-      <Split left={<>
-      <Eyebrow>Body · 01 / 04</Eyebrow>
-      <HS className="mt-4">Who are we<br />fitting?</HS>
-      <Lead className="mt-3">This sets the base block Venty drafts from.</Lead>
-      <Glass className="mt-8 hidden items-start gap-3 rounded-[22px] px-4 py-4 text-[13px] text-white/60 lg:flex"><Icon name="info" size={20} className="shrink-0" />Every measurement you enter still overrides the base block.</Glass>
+        <HS className="mt-2 lg:mt-0">Two quick<br />preferences</HS>
+        <Lead className="mt-3">They apply to every body and pattern. Change them any time in Profile.</Lead>
       </>} right={<>
-      <div className="mt-7 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-5">
-        {(["female", "male"] as const).map((s) => {
-          const on = body.sex === s;
-          return (
-            <Glow key={s} as="button" onClick={() => update({ sex: s })} color={on ? "#687ef5" : "#3c4b63"} variant={on ? "fade" : "dim"} className="relative h-[min(330px,40dvh)] rounded-[26px] lg:h-[min(480px,62dvh)] lg:rounded-[32px]">
-              {on && <Check className="absolute right-3.5 top-3.5" />}
-              <div className={cx("serif absolute inset-0 grid place-items-center text-[170px] leading-none lg:text-[260px]", !on && "text-white/55")}>{s === "female" ? "F" : "M"}</div>
-              <div className="eyebrow absolute inset-x-0 bottom-5 text-center text-white/70">{s}</div>
-            </Glow>
-          );
-        })}
-      </div>
-      <Glass className="mt-3 flex items-start gap-3 rounded-[22px] px-4 py-4 text-[13px] text-white/60 lg:hidden"><Icon name="info" size={20} className="shrink-0" />Every measurement you enter still overrides the base block.</Glass>
+        <Label className="mt-7 lg:mt-0">Measure in</Label>
+        <div className="mt-2.5 grid grid-cols-2 gap-3">
+          {(["cm", "in"] as const).map((u) => (
+            <Option key={u} on={units === u} onClick={() => set({ units: u })} className="h-[104px] rounded-[22px] p-4 lg:h-[150px]">
+              <div className="text-[17px] font-medium">{u === "cm" ? "Centimetres" : "Inches"}</div>
+              <div className="serif mt-1 text-[30px] leading-none text-white/90" translate="no">{u}</div>
+              <span className="ticks" />
+            </Option>
+          ))}
+        </div>
+        <Label className="mt-6">How much have you sewn?</Label>
+        <div className="mt-2.5 flex flex-col gap-2.5">
+          {EXP.map((e, i) => {
+            const on = experience === i;
+            return (
+              <Option key={i} on={on} radio={false} onClick={() => set({ experience: i })} className={cx("flex flex-col rounded-[22px] px-4 py-3.5 transition-[min-height] duration-300", on ? "min-h-[132px] justify-between" : "min-h-[76px] justify-center")}>
+                <div className={cx("flex justify-between gap-3", on ? "items-start" : "items-center")}>
+                  <div><div className="text-[17px] font-medium">{e.t}</div><div className="mt-0.5 text-[14px] text-white/55">{e.d}</div></div>
+                  <span className={cx("serif text-[28px] leading-none", on ? "text-white" : "text-white/40")}>{e.n}</span>
+                </div>
+                <AnimatePresence initial={false}>{on && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3 flex items-center justify-between">
+                    <div className="flex flex-wrap gap-1.5">{e.chips.map((c) => <span key={c} className="rounded-full bg-white/15 px-2.5 py-1 text-[13px]">{c}</span>)}</div>
+                    <Check size={22} />
+                  </motion.div>)}</AnimatePresence>
+              </Option>
+            );
+          })}
+        </div>
       </>} />
     </Screen>
   );
 }
 
-const SIZES: Record<string, Partial<Record<string, number>>> = {
-  XS: { bust: 80, waist: 62, hips: 88, height: 160 }, S: { bust: 84, waist: 66, hips: 92, height: 164 }, M: { bust: 88, waist: 70, hips: 96, height: 168 },
-  L: { bust: 94, waist: 76, hips: 102, height: 170 }, XL: { bust: 100, waist: 82, hips: 108, height: 172 },
-};
+// ─── Step 1 · Body: name + pattern block on one screen. Nothing pre-filled. ───────────────────────
+export function NameBody() {
+  const { go } = useApp();
+  const body = useApp((s) => s.body());
+  const update = useApp((s) => s.updateBody);
+  const [name, setName] = useState(body.name);
+  const [sex, setSex] = useState<"female" | "male" | null>(body.name ? body.sex : null);
+  const ready = name.trim().length > 0 && sex !== null;
+  const next = () => { update({ name: name.trim(), sex: sex! }); go("method"); };
+  return (
+    <Screen header={<FlowHeader steps={bodySteps(0, (name.trim() ? 0.5 : 0) + (sex ? 0.5 : 0))} />} footer={<Arrows ready={ready} onNext={next} hidePrev />}>
+      <Split left={<>
+        <HS className="mt-4 lg:mt-0">Who is this<br />body for?</HS>
+        <Lead className="mt-3">Make one for each person you sew for: you, family or clients.</Lead>
+      </>} right={<>
+        <label className="mt-7 block lg:mt-0">
+          <Label>Name</Label>
+          <span className="field mt-2.5 flex h-[60px] items-center px-4">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Me, Mum or Ana" maxLength={28} autoComplete="off" enterKeyHint="next" className="text-[19px]" />
+            {name && <button onClick={() => setName("")} aria-label="Clear" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-white/70"><Icon name="close" size={14} /></button>}
+          </span>
+        </label>
+        <Label className="mt-6">Start the pattern from a</Label>
+        <div className="mt-2.5 grid grid-cols-2 gap-3">
+          {(["female", "male"] as const).map((s) => (
+            <Option key={s} on={sex === s} onClick={() => setSex(s)} className="flex h-[150px] items-end rounded-[22px] p-4 lg:h-[220px]">
+              <div className="absolute left-4 top-3 h-[86px] lg:h-[150px]"><BodyFigure sex={s} width={36} glow={false} className="h-full w-auto" /></div>
+              <div><div className="text-[17px] font-medium">{s === "female" ? "Women’s block" : "Men’s block"}</div><div className="text-[14px] text-white/55">{s === "female" ? "Shaped for a bust" : "Straighter chest"}</div></div>
+            </Option>
+          ))}
+        </div>
+        <Note className="mt-4">The block is only the starting shape. The measurements you enter always take over.</Note>
+      </>} />
+    </Screen>
+  );
+}
+
+// ─── Step 2 · Method: photo scan (AI fills, you check) or by hand ───────────────────────────────
 export function Method() {
-  const { go, set } = useApp();
-  const body = useApp((s) => s.body());
-  const update = useApp((s) => s.updateBody);
-  const [m, setM] = useState<"general" | "enter">("enter");
-  const [size, setSize] = useState("M");
-  const next = () => {
-    if (m === "general") { update({ measures: { ...defaultMeasures(), ...(SIZES[size] as Record<string, number>) }, done: ["height", "bust", "waist", "hips"] }); set({}); }
-    go("name", { method: m });
-  };
-  return (
-    <Screen footer={<Arrows onNext={next} />}>
-      <div className="h-12" />
-      <Split left={<>
-      <Eyebrow>Body · 02 / 04</Eyebrow>
-      <HS className="mt-4">How should we<br />build your body?</HS>
-      <Lead className="mt-3 hidden lg:block">Start from a standard size, or enter four measurements for a closer fit.</Lead>
-      </>} right={<>
-      <div className="mt-7 flex flex-col gap-3 lg:mt-0 lg:gap-4">
-        <Glow as="button" onClick={() => setM("general")} color={m === "general" ? "#687ef5" : "#3c4b63"} variant={m === "general" ? "edge" : "dim"} className="relative w-full rounded-[26px] p-5 lg:p-7">
-          <div className="text-[17px] font-semibold">Use a general body</div>
-          <div className="mt-1 max-w-[230px] text-[13px] text-white/60">Start from a standard size. Fastest, least exact.</div>
-          <div className="mt-4 flex gap-2">{Object.keys(SIZES).map((s) => (
-            <span key={s} role="button" onClick={(e) => { e.stopPropagation(); setM("general"); setSize(s); }} className={cx("grid h-9 w-9 place-items-center rounded-full text-[12px] font-semibold", m === "general" && size === s ? "bg-white text-bg" : "bg-white/10 text-white/70")}>{s}</span>
-          ))}</div>
-          {m === "general" && <Check className="absolute bottom-5 right-5" />}
-        </Glow>
-        <Glow as="button" onClick={() => setM("enter")} color={m === "enter" ? "#687ef5" : "#3c4b63"} variant={m === "enter" ? "edge" : "dim"} className="relative w-full rounded-[26px] p-5 lg:p-7">
-          <span className="rounded-full bg-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-[.08em]">Recommended</span>
-          <div className="mt-3 text-[17px] font-semibold">Enter my measurements</div>
-          <div className="mt-1 max-w-[240px] text-[13px] text-white/60">Four quick measures now, the rest later for a closer fit.</div>
-          <div className="mt-4 flex items-baseline gap-2"><span className="serif text-[48px] leading-none">04</span><span className="eyebrow text-[10px] leading-tight text-white/60">Measures<br />to start</span></div>
-          {m === "enter" && <Check className="absolute bottom-5 right-5" />}
-        </Glow>
-      </div>
-      <p className="mt-4 text-[12px] text-white/40">{body.sex === "male" ? "Male" : "Female"} base block</p>
-      </>} />
-    </Screen>
-  );
-}
-
-export function NameBody({ p }: { p?: Record<string, unknown> }) {
   const { go } = useApp();
-  const body = useApp((s) => s.body());
   const update = useApp((s) => s.updateBody);
-  const [name, setName] = useState(body.name || "Me, Spring 26");
-  const initials = useMemo(() => name.split(/[\s,·]+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "ME", [name]);
-  const next = () => { update({ name: name.trim() || "My body" }); go(p?.method === "general" ? "preview" : "base"); };
+  const [m, setM] = useState<"scan" | "hand" | null>(null);
+  const next = () => {
+    if (m === "scan") go("scanPrep");
+    else { update({ photoScan: false, est: [] }); go("measure", { key: "height" }); }
+  };
+  const opt = (k: "scan" | "hand", icon: IconName, t: string, d: string, time: string) => (
+    <Option on={m === k} onClick={() => setM(k)} className="rounded-[24px] p-5 lg:p-7">
+      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Icon name={icon} size={22} /></span>
+      <div className="mt-4 text-[19px] font-medium tracking-[-.01em]">{t}</div>
+      <div className="mt-1 max-w-[280px] text-[15px] leading-snug text-white/60">{d}</div>
+      <div className="mt-3 text-[14px] text-white/45">{time}</div>
+    </Option>
+  );
   return (
-    <Screen footer={<Arrows onNext={next} />}>
-      <div className="h-12" />
-      <Split cols="lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" left={<>
-      <Eyebrow>Body · 03 / 04</Eyebrow>
-      <H1 className="mt-4">Name this body</H1>
-      <Lead className="mt-2">Make one for yourself, a client, or anyone you sew for.</Lead>
-      <div className="mt-10 flex justify-center lg:hidden"><Glow color="#687ef5" variant="orb" className="grid h-[120px] w-[120px] place-items-center rounded-[30px]"><span className="serif text-[54px]">{initials}</span></Glow></div>
-      <label className="glass mt-8 block rounded-[24px] px-5 py-4">
-        <span className="eyebrow text-[10px]">Name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full bg-transparent text-[22px] font-medium outline-none caret-primary" />
-      </label>
-      <Eyebrow className="mt-6 text-white/40">Suggestions</Eyebrow>
-      <div className="mt-3 flex flex-wrap gap-2">{["Me", "Mum", "Client · Ana", "Sister"].map((s) => <Chip key={s} on={name === s} onClick={() => setName(s)}>{s}</Chip>)}</div>
-      <Glass className="mt-6 flex items-center gap-3 rounded-[22px] px-4 py-4 text-[13px] text-white/60"><Icon name="layers" size={22} className="shrink-0" />Bodies are saved to your library. Make one per person you sew for.</Glass>
-      </>} right={<div className="hidden justify-center lg:flex"><Glow color="#687ef5" variant="orb" className="grid h-[340px] w-[340px] place-items-center rounded-[60px]"><span className="serif text-[150px]">{initials}</span></Glow></div>} />
+    <Screen header={<FlowHeader steps={bodySteps(1, m ? 0.5 : 0)} />} footer={<Arrows ready={!!m} onNext={next} label={m === "scan" ? "Open photo scan" : "Start measuring"} />}>
+      <Split left={<>
+        <HS className="mt-4 lg:mt-0">How do you want<br />to add measures?</HS>
+        <Lead className="mt-3">Either way, you check every number before it’s saved.</Lead>
+      </>} right={
+        <div className="mt-7 flex flex-col gap-3 lg:mt-0">
+          {opt("scan", "camera", "Scan with my camera", "Take three photos. AI estimates your measures, then you check each one.", "About 2 minutes")}
+          {opt("hand", "tape", "Measure by hand", "Grab a soft tape. We guide you through four measures, one at a time.", "About 4 minutes")}
+        </div>} />
     </Screen>
   );
 }
 
-const feet = (cm: number) => { const inch = cm / 2.54; return `${Math.floor(inch / 12)}'${Math.round(inch % 12)}"`; };
-
+// ─── Step 4 · Review the four base measures (after hand entry or after the scan) ────────────────
 export function BaseMeasures() {
   const { go, units } = useApp();
   const body = useApp((s) => s.body());
   const [sheet, setSheet] = useState(false);
-  const M = body.measures; const d = (k: string) => body.done.includes(k);
-  const extra = body.done.filter((k) => WIZARD.some((w) => w.key === k)).length;
-  const v = (k: string) => (units === "in" ? (M[k] / 2.54).toFixed(0) : Math.round(M[k]).toString());
-  const tile = (k: string, label: string, color: string, variant: "edge" | "fade" | "dim", viz: React.ReactNode) => (
-    <Glow as="button" onClick={() => go("measure", { key: k })} color={color} variant={variant} className="relative h-[150px] rounded-[26px] p-4 lg:h-[190px] lg:p-6">
-      <div className="text-[13px] font-medium">{label}</div>
-      {d(k) && <span className="absolute right-3 top-3"><Check size={20} /></span>}
-      <div className="mt-2">{viz}</div>
-      <div className="absolute bottom-3.5 left-4"><Num v={v(k)} unit={units} size={36} /></div>
-    </Glow>
-  );
+  const [photos, setPhotos] = useState(false);
+  const scan = !!body.photoScan;
+  const checked = BASE.filter((b) => body.done.includes(b.key)).length;
+  const all = checked === 4;
   return (
-    <Screen footer={<Arrows onNext={() => setSheet(true)} />}>
-      <div className="h-12" />
+    <Screen header={<FlowHeader steps={bodySteps(3, all ? 1 : checked / 4)} />} footer={<Arrows ready={all} onNext={() => setSheet(true)} label="Continue" />}>
       <Split left={<>
-      <Eyebrow>Body · 04 / 04</Eyebrow>
-      <H1 className="mt-4">Base measures</H1>
-      <Lead className="mt-2 text-[14px]">Four to start. Tape snug, not tight, over light clothing.</Lead>
-      <div className="mt-10 hidden justify-center lg:flex"><BodyFigure sex={body.sex} width={170} markers={[BASE[1].marker, BASE[2].marker, BASE[3].marker]} /></div>
+        <HS className="mt-4 lg:mt-0">{scan ? <>Check your<br />measures</> : <>Your base<br />measures</>}</HS>
+        <Lead className="mt-3">{scan ? `AI estimated these from your photos. Tap each one to check it. ${checked} of 4 checked.` : "Tap any one to change it."}</Lead>
+        <div className="mt-10 hidden justify-center lg:flex"><BodyFigure sex={body.sex} width={170} markers={[BASE[1].marker, BASE[2].marker, BASE[3].marker]} /></div>
       </>} right={<>
-      <Glow as="button" onClick={() => go("measure", { key: "height" })} color="#687ef5" variant="side" className="relative mt-6 block h-[120px] w-full rounded-[26px] p-4 lg:mt-0 lg:h-[160px] lg:p-6">
-        <div className="text-[13px] font-medium">Height</div>
-        {d("height") && <span className="absolute left-[70px] top-3.5"><Check size={20} /></span>}
-        <div className="absolute bottom-3.5 left-4"><Num v={v("height")} unit={units} size={40} /></div>
-        <div className="absolute right-5 top-1/2 grid h-[76px] w-[76px] -translate-y-1/2 place-items-center rounded-full border border-white/40"><span className="serif text-[24px]">{feet(M.height)}</span></div>
-      </Glow>
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:mt-4 lg:gap-4">
-        {tile("bust", "Bust", "#3c4b63", "dim", <div className="relative mt-3 h-px bg-white/60"><span className="absolute left-1/2 -top-1 h-2 w-px bg-white" /></div>)}
-        {tile("waist", "Waist", "#687ef5", "fade", <div className="mt-4 flex gap-1.5">{Array.from({ length: 12 }, (_, i) => <span key={i} className="h-1 w-1 rounded-full bg-white/70" />)}</div>)}
-        {tile("hips", "Hips", "#4d5e85", "dim", <Mini />)}
-        <Glow as="button" onClick={() => go("wizard")} color="#8c9cf8" variant="orb" className="relative h-[150px] rounded-[26px] p-4 lg:h-[190px] lg:p-6">
-          <div className="text-[13px] font-medium">All measures</div>
-          <div className="mt-1 text-[11px] leading-snug text-white/60">Add them for a<br />closer fit</div>
-          <div className="serif absolute bottom-3 left-4 text-[40px] leading-none">+{20 - extra}</div>
-        </Glow>
-      </div>
+        <div className="mt-7 flex flex-col gap-2.5 lg:mt-0">
+          {BASE.map((b) => {
+            const ok = body.done.includes(b.key);
+            return (
+              <button key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className={cx("field tap flex h-[72px] items-center gap-3 px-5 text-left", !ok && "!border-primary/60")}>
+                <span className="flex-1 text-[17px]">{b.label}</span>
+                <span className="flex items-baseline gap-1.5"><span className="serif text-[30px] leading-none" translate="no">{fmt(body.measures[b.key], units)}</span><span className="unit" translate="no">{units}</span></span>
+                {ok ? <span className="grid h-7 w-7 place-items-center rounded-full bg-primary"><Icon name="check" size={15} strokeWidth={2.6} /></span>
+                  : <span className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-bg">Check</span>}
+              </button>
+            );
+          })}
+        </div>
+        {scan && body.photos?.some(Boolean) && (
+          <button onClick={() => setPhotos(true)} className="mt-4 flex w-full items-center gap-3 rounded-[18px] py-2 text-left">
+            <span className="flex -space-x-3">{(body.photos ?? []).map((ph, i) => ph && <img key={i} src={ph} alt="" className="h-12 w-9 rounded-[8px] border-2 border-bg object-cover" />)}</span>
+            <span className="flex-1 text-[15px] text-white/70">Your scan photos</span><Icon name="chevR" size={18} className="text-white/45" />
+          </button>
+        )}
       </>} />
       <FinishSheet open={sheet} onClose={() => setSheet(false)} />
+      <PhotosSheet open={photos} onClose={() => setPhotos(false)} />
     </Screen>
+  );
+}
+
+export function PhotosSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const body = useApp((s) => s.body());
+  return (
+    <Sheet open={open} onClose={onClose}>
+      <div className="flex items-center justify-between"><h3 className="text-[24px] font-normal tracking-[-.03em]">Scan photos</h3><RB icon="close" size={38} onClick={onClose} /></div>
+      <p className="mt-1 text-[15px] text-white/55">Kept on this device only.</p>
+      <div className="mt-4 grid grid-cols-3 gap-2.5">{["Front", "Back", "Side"].map((v, i) => (
+        <div key={v}><div className="aspect-[3/4] overflow-hidden rounded-[16px] bg-white/5">{body.photos?.[i] && <img src={body.photos[i]!} alt={`${v} photo`} className="h-full w-full object-cover" />}</div><div className="mt-1.5 text-center text-[14px] text-white/70">{v}</div></div>
+      ))}</div>
+      <Pill className="mt-6" variant="white" onClick={onClose}>Done</Pill>
+    </Sheet>
   );
 }
 
 function FinishSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { go } = useApp();
+  const { go, set, activeBody } = useApp();
   const body = useApp((s) => s.body());
-  const n = Math.min(24, body.done.length + (body.done.length < 4 ? 4 - body.done.length : 0));
+  const n = body.done.length;
   return (
     <Sheet open={open} onClose={onClose}>
-      <div className="flex items-end gap-3"><span className="serif text-[60px] leading-none">{n}/24</span><span className="eyebrow mb-2 text-white/60">Measures done</span></div>
-      <div className="mt-4 flex gap-[5px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-2 flex-1 rounded-full", i < n ? "bg-primary" : "bg-white/15")} />)}</div>
-      <h3 className="mt-6 text-[22px] font-semibold leading-tight">Finish the rest of your<br />measures now?</h3>
-      <p className="mt-2 text-[14px] leading-snug text-white/60">20 more — around, down and across you — give the closest fit. About 8 minutes with a tape.</p>
-      <Pill className="mt-6" onClick={() => { onClose(); go("wizard"); }}>Yes, let’s finish</Pill>
-      <Pill className="mt-2.5" variant="glass" onClick={() => { onClose(); go("scanIntro"); }}>Later — preview my body</Pill>
+      <div className="flex items-baseline gap-2"><span className="serif text-[52px] leading-none">{n}/24</span><span className="text-[15px] text-white/60">measures saved</span></div>
+      <div className="mt-3 flex gap-[4px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1.5 flex-1 rounded-full", i < n ? "bg-primary" : "bg-white/15")} />)}</div>
+      <h3 className="mt-6 text-[26px] font-normal leading-tight tracking-[-.03em]">Add the other 20 now?</h3>
+      <p className="mt-2 text-[16px] leading-snug text-white/60">{body.photoScan ? "AI estimated them from your photos too. You just check each one, about 3 minutes." : "They give the closest fit. About 8 minutes with a tape, and you can stop any time."}</p>
+      <Pill className="mt-6" onClick={() => { onClose(); go("wizard"); }}>Yes, continue</Pill>
+      <Pill className="mt-2.5" variant="glass" onClick={() => { onClose(); set({ resumeBody: activeBody }); go("ready"); }}>Later</Pill>
     </Sheet>
   );
 }
 
-export function MeasureBase({ p }: { p?: Record<string, unknown> }) {
-  const { back, units } = useApp();
-  const body = useApp((s) => s.body());
-  const setMeasure = useApp((s) => s.setMeasure);
-  const confirm = useApp((s) => s.confirmMeasure);
-  const key = (p?.key as string) ?? "bust";
-  const i = BASE.findIndex((b) => b.key === key);
-  const m = BASE[i] ?? BASE[1];
-  const nextM = BASE[i + 1];
-  const val = body.measures[m.key] ?? m.value;
-  const [help, setHelp] = useState(false);
-  const save = () => { confirm(m.key); if (nextM) useApp.getState().replace("measure", { key: nextM.key }); else back(); };
-  const desk = useDesk();
-  const prev = () => (i > 0 ? useApp.getState().replace("measure", { key: BASE[i - 1].key }) : back());
-  if (desk) return (
-    <Screen footer={<Arrows onPrev={prev} onNext={save} />}>
-      <div className="grid min-h-[calc(100dvh-var(--top)-150px)] grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] items-center gap-16">
-        <Glass className="relative flex h-[min(640px,74dvh)] items-center justify-center rounded-[36px]">
-          <Blob className="left-1/2 top-1/2 h-[380px] w-[260px] -translate-x-1/2 -translate-y-1/2 opacity-30" />
-          <BodyFigure sex={body.sex} width={220} markers={[m.marker]} label="HERE" className="relative h-[92%] w-auto" />
-          <div className="absolute left-6 top-6 flex gap-1.5">{BASE.map((b, k) => <span key={b.key} className={cx("h-1.5 w-8 rounded-full", k < i ? "bg-primary" : k === i ? "bg-white" : "bg-white/15")} />)}</div>
-        </Glass>
-        <div>
-          <div className="flex items-start justify-between"><div><Eyebrow>Base measure · 0{i + 1} / 04</Eyebrow><h1 className="mt-2 text-[40px] font-semibold tracking-tight">{m.label}</h1></div><RB icon="help" onClick={() => setHelp(true)} /></div>
-          <div className="eyebrow mt-8 text-[11px]">Current</div>
-          <AnimatePresence mode="popLayout"><motion.div key={val} initial={{ y: 6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className="serif text-[120px] leading-[1]">{fmt(val, units)}</motion.div></AnimatePresence>
-          <div className="eyebrow mt-2 text-[11px] text-white/70">{units}  ·  {units === "cm" ? (val / 2.54).toFixed(1) + " in" : val.toFixed(1) + " cm"}</div>
-          <p className="mt-5 max-w-[440px] text-[15px] leading-relaxed text-white/60">{m.hint}</p>
-          <Glow color="#4d5e85" variant="edge" className="mt-8 rounded-[30px] px-6 pb-6 pt-5">
-            <div className="flex items-center justify-between text-[12px] text-white/50"><span>{fmt(val - 0.5, units)}</span><span className="flex items-center gap-2 text-white/80"><Icon name="ruler" size={18} /><span className="text-[14px]">Drag to adjust</span></span><span>{fmt(val + 0.5, units)}</span></div>
-            <Ruler value={val} min={m.min} max={m.max} onChange={(v) => setMeasure(m.key, v)} className="mt-2" />
-            <div className="mt-3 flex items-center gap-3">
-              <RB icon="refresh" onClick={() => setMeasure(m.key, m.value)} label="Reset" />
-              <button onClick={save} className="tap glass-2 flex h-14 flex-1 items-center justify-between rounded-full pl-6 pr-2 text-[15px] font-medium">
-                <span>{nextM ? `Save · next: ${nextM.label}` : "Save · all four done"}</span>
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-bg"><Icon name="check" size={20} strokeWidth={2.4} /></span>
-              </button>
-            </div>
-          </Glow>
-        </div>
-      </div>
-      <HowSheet open={help} onClose={() => setHelp(false)} m={m} />
-    </Screen>
-  );
-  return (
-    <Screen fixed footer={<Arrows onPrev={() => (i > 0 ? useApp.getState().replace("measure", { key: BASE[i - 1].key }) : back())} onNext={save} />}>
-      <div className="flex items-start justify-between">
-        <div className="pt-1"><Eyebrow>Base measure · 0{i + 1} / 04</Eyebrow><h1 className="mt-1.5 text-[26px] font-semibold tracking-tight">{m.label}</h1></div>
-        <RB icon="help" onClick={() => setHelp(true)} />
-      </div>
-      <div className="relative mt-2 flex h-[min(360px,40dvh)] items-start">
-        <div className="h-full shrink-0"><BodyFigure sex={body.sex} width={Math.min(150, 150)} markers={[m.marker]} className="h-full w-auto" /></div>
-        <div className="flex-1 pl-2 pt-14">
-          <div className="eyebrow text-[10px]">Current</div>
-          <AnimatePresence mode="popLayout"><motion.div key={val} initial={{ y: 6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className="serif text-[68px] leading-[1]">{fmt(val, units)}</motion.div></AnimatePresence>
-          <div className="eyebrow mt-1 text-[10px] text-white/70">{units}  ·  {units === "cm" ? (val / 2.54).toFixed(1) + " in" : val.toFixed(1) + " cm"}</div>
-          <p className="mt-5 text-[13px] leading-snug text-white/60">{m.hint}</p>
-        </div>
-      </div>
-      <Glow color="#4d5e85" variant="edge" className="mt-3 rounded-[30px] px-5 pb-5 pt-4">
-        <div className="flex items-center justify-between text-[11px] text-white/50"><span>{fmt(val - 0.5, units)}</span><span className="flex flex-col items-center gap-1 text-white/80"><Icon name="ruler" size={18} /><span className="text-[13px]">Slide to adjust</span></span><span>{fmt(val + 0.5, units)}</span></div>
-        <Ruler value={val} min={m.min} max={m.max} onChange={(v) => setMeasure(m.key, v)} className="mt-1" />
-        <div className="mt-2 flex items-center gap-3">
-          <RB icon="refresh" onClick={() => setMeasure(m.key, m.value)} label="Reset" />
-          <button onClick={save} className="tap glass-2 flex h-14 flex-1 items-center justify-between rounded-full pl-6 pr-2 text-[14px] font-medium">
-            <span>{nextM ? `Save · next: ${nextM.label}` : "Save · all four done"}</span>
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-bg"><Icon name="check" size={20} strokeWidth={2.4} /></span>
-          </button>
-        </div>
-      </Glow>
-      <HowSheet open={help} onClose={() => setHelp(false)} m={m} />
-    </Screen>
-  );
-}
-
-export function HowSheet({ open, onClose, m }: { open: boolean; onClose: () => void; m: (typeof ALL_MEASURES)[number] }) {
-  const body = useApp((s) => s.body());
-  return (
-    <Sheet open={open} onClose={onClose}>
-      <div className="flex gap-4">
-        <div className="glass grid h-[190px] w-[120px] shrink-0 place-items-center rounded-[22px]"><BodyFigure sex={body.sex} width={70} markers={[m.marker]} /></div>
-        <div>
-          <Eyebrow>How to measure</Eyebrow>
-          <h3 className="mt-1 text-[24px] font-semibold">{m.label}</h3>
-          <ol className="mt-3 flex flex-col gap-2.5">{m.how.map((h, i) => <li key={i} className="flex gap-2.5 text-[13px] leading-snug text-white/75"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] font-semibold text-white">{i + 1}</span>{h}</li>)}</ol>
-        </div>
-      </div>
-      <Glass className="mt-5 flex items-center gap-3 rounded-[20px] p-3 text-[13px] text-white/70"><span className="grid h-10 w-10 place-items-center rounded-full bg-white/10"><Icon name="video" size={18} /></span>Watch a 20-second video<span className="ml-auto text-white/40">0:20</span></Glass>
-      <Pill className="mt-5" variant="white" onClick={onClose}>Got it</Pill>
-    </Sheet>
-  );
-}
-
-// ─── Photo scan (optional) ────────────────────────────────────────────
-export function ScanIntro() {
-  const { go } = useApp();
-  return (
-    <Screen footer={<><Pill onClick={() => go("scanPrep")}>Try photo scan</Pill><button className="mt-2 h-11 w-full text-[14px] font-medium" onClick={() => go("preview")}>Skip for now</button></>}>
-      <TopBar left="back" eyebrow="Optional" />
-      <Split left={<>
-      <H1 className="mt-5 lg:mt-0">Want an even<br />closer fit?</H1>
-      <Lead className="mt-3">Photo scan reads your proportions from three photos and fills in the gaps.</Lead>
-      </>} right={
-      <Glow color="#4d5e85" variant="edge" className="relative mx-auto mt-8 grid aspect-square w-full max-w-[330px] place-items-center rounded-[36px] lg:mt-0 lg:max-w-[520px] lg:rounded-[48px]">
-        <svg viewBox="0 0 200 200" className="absolute h-[82%] w-[82%]" style={{ animation: "spin 30s linear infinite" }}>{Array.from({ length: 72 }, (_, i) => <line key={i} x1="100" y1="6" x2="100" y2={i % 6 === 0 ? 16 : 12} stroke="#fff" strokeOpacity={i % 6 === 0 ? 0.8 : 0.35} transform={`rotate(${i * 5} 100 100)`} />)}</svg>
-        <div className="grid h-[88px] w-[88px] place-items-center rounded-full bg-white text-bg shadow-[0_0_60px_rgba(255,255,255,.35)]"><Icon name="camera" size={34} /></div>
-        <div className="eyebrow absolute bottom-6 text-white/70">Front · Back · Side</div>
-      </Glow>} />
-    </Screen>
-  );
-}
-
+// ─── Photo scan ───────────────────────────────────────────────────────
+const TIPS: [IconName, string, string][] = [
+  ["shirt", "Wear fitted clothes", "Leggings and a fitted top, or underwear."],
+  ["wall", "Stand against a plain wall", "Good, even light. No mirrors behind you."],
+  ["phone", "Prop the phone at hip height", "Or ask a friend to hold it level."],
+  ["body", "Step back", "Your whole body, head to feet, fits the frame."],
+];
 export function ScanPrep() {
   const { go } = useApp();
-  const tips = [["01", "Wear fitted clothes", "#687ef5"], ["02", "Plain wall behind you", "#a0abca"], ["03", "Phone propped at hip height", "#8c9cf8"], ["04", "Three steps back", "#4f63e0"]];
   return (
-    <Screen footer={<Pill onClick={() => go("scanCam")}>Open camera</Pill>}>
-      <TopBar left="back" eyebrow="Photo scan · Prep" />
+    <Screen header={<FlowHeader steps={bodySteps(2, 0)} />} footer={<Arrows ready onNext={() => go("scanCam")} label="Open camera" />}>
       <Split left={<>
-      <H1 className="mt-4 lg:mt-0">Before you scan</H1>
-      <div className="hidden lg:block">
-        <Glass className="mt-8 rounded-[22px] p-5"><div className="flex items-center gap-2 text-[15px] font-semibold"><Icon name="lock" size={18} />Private by design</div><p className="mt-1.5 text-[14px] leading-snug text-white/55">Photos are read on your phone, never uploaded, and deleted the moment you leave this screen.</p></Glass>
-        <Eyebrow className="mt-6 text-white/40">You’ll take</Eyebrow>
-        <div className="mt-3 flex gap-2"><Chip icon="user">Full body · Front</Chip><Chip>Back</Chip><Chip>Side</Chip></div>
-      </div>
+        <HS className="mt-4 lg:mt-0">Before you scan</HS>
+        <Lead className="mt-3">Three photos: front, back and side. Takes about a minute.</Lead>
       </>} right={<>
-      <div className="mt-5 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">{tips.map(([n, t, c]) => (
-        <Glow key={n} color={c} variant="fade" className="h-[124px] rounded-[24px] p-4 lg:h-[220px] lg:p-6"><div className="serif text-[34px] leading-none lg:text-[56px]">{n}</div><div className="absolute bottom-4 left-4 right-4 text-[14px] font-semibold leading-tight lg:bottom-6 lg:left-6 lg:text-[18px]">{t}</div></Glow>
-      ))}</div>
-      <div className="lg:hidden">
-      <Glass className="mt-4 rounded-[22px] p-4">
-        <div className="flex items-center gap-2 text-[14px] font-semibold"><Icon name="lock" size={18} />Private by design</div>
-        <p className="mt-1.5 text-[13px] leading-snug text-white/55">Photos are read on your phone, never uploaded, and deleted the moment you leave this screen.</p>
-      </Glass>
-      <Eyebrow className="mt-5 text-white/40">You’ll take</Eyebrow>
-      <div className="mt-3 flex gap-2"><Chip icon="user">Full body · Front</Chip><Chip>Back</Chip><Chip>Side</Chip></div>
-      </div>
+        <ul className="mt-7 flex flex-col gap-5 lg:mt-0">{TIPS.map(([ic, t, d]) => (
+          <li key={t} className="flex items-start gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center text-peri"><Icon name={ic} size={26} /></span><div><div className="text-[17px] font-medium">{t}</div><div className="text-[15px] text-white/55">{d}</div></div></li>
+        ))}</ul>
+        <Note icon="lock" className="mt-8">Your photos stay on this device. You can view or delete them any time.</Note>
       </>} />
     </Screen>
   );
 }
 
+const VIEWS = ["Front", "Back", "Side"] as const;
+const VIEW_HINT = ["Face the camera, arms slightly away from your body", "Turn around, same pose", "Turn to your right, arms by your sides"];
+const fakePhoto = (i: number) => "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='480'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#d9dcea'/><stop offset='1' stop-color='#9aa1bd'/></linearGradient></defs><rect width='360' height='480' fill='url(#g)'/><g fill='#2a2f48'><circle cx='180' cy='92' r='26'/>${i === 2 ? "<rect x='158' y='122' width='46' height='170' rx='22'/><rect x='160' y='280' width='40' height='170' rx='18'/>" : "<path d='M130 128h100l18 150h-22l-8 172h-28l-10-130-10 130h-28l-8-172h-22z'/>"}</g><text x='18' y='462' font-family='sans-serif' font-size='14' fill='#2a2f48'>${VIEWS[i]}</text></svg>`);
+
 export function ScanCam() {
-  const { replace, updateBody } = { replace: useApp((s) => s.replace), updateBody: useApp((s) => s.updateBody) };
+  const replace = useApp((s) => s.replace);
+  const back = useApp((s) => s.back);
+  const updateBody = useApp((s) => s.updateBody);
   const body = useApp((s) => s.body());
   const video = useRef<HTMLVideoElement>(null);
-  const [shot, setShot] = useState(0);
+  const stream = useRef<MediaStream | null>(null);
+  const file = useRef<HTMLInputElement>(null);
   const [live, setLive] = useState(false);
+  const [photos, setPhotos] = useState<(string | null)[]>(body.photos ?? [null, null, null]);
+  const [view, setView] = useState(() => Math.max(0, (body.photos ?? [null, null, null]).findIndex((p) => !p)));
+  const [shot, setShot] = useState<string | null>(null); // photo under review
+  const [saved, setSaved] = useState<number | null>(null); // view just approved (for the confirmation)
+  const [flash, setFlash] = useState(false);
   const [reading, setReading] = useState(false);
-  const views = ["Front", "Back", "Side"];
+  const all = photos.every(Boolean);
+
   useEffect(() => {
-    let stream: MediaStream | null = null; let cancelled = false;
+    let cancelled = false;
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) return;
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
-        if (video.current) { video.current.srcObject = stream; await video.current.play().catch(() => {}); setLive(true); }
-      } catch { /* no camera: keep the illustrated view */ }
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false });
+        if (cancelled) { s.getTracks().forEach((t) => t.stop()); return; }
+        stream.current = s;
+        if (video.current) { video.current.srcObject = s; await video.current.play().catch(() => {}); setLive(true); }
+      } catch { /* no camera: illustrated view, photos are simulated */ }
     })();
-    return () => { cancelled = true; stream?.getTracks().forEach((t) => t.stop()); };
+    return () => { cancelled = true; stream.current?.getTracks().forEach((t) => t.stop()); };
   }, []);
-  const snap = () => {
+  useEffect(() => {
+    const track = stream.current?.getVideoTracks()[0];
+    try { track?.applyConstraints({ advanced: [{ torch: flash } as MediaTrackConstraintSet] }).catch(() => {}); } catch {}
+  }, [flash]);
+
+  const capture = () => {
     try { navigator.vibrate?.(20); } catch {}
-    if (shot < 2) setShot(shot + 1);
-    else { setReading(true); setTimeout(() => { updateBody({ photoScan: true }); replace("preview"); }, 2200); }
+    const v = video.current;
+    if (live && v && v.videoWidth) {
+      const c = document.createElement("canvas"); const w = 360; c.width = w; c.height = Math.round((v.videoHeight / v.videoWidth) * w);
+      c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
+      setShot(c.toDataURL("image/jpeg", 0.72));
+    } else setShot(fakePhoto(view));
   };
+  const fromLibrary = (f?: File) => {
+    if (!f) return;
+    const img = new Image(); const url = URL.createObjectURL(f);
+    img.onload = () => { const c = document.createElement("canvas"); c.width = 360; c.height = Math.round((img.height / img.width) * 360); c.getContext("2d")?.drawImage(img, 0, 0, c.width, c.height); setShot(c.toDataURL("image/jpeg", 0.72)); URL.revokeObjectURL(url); };
+    img.src = url;
+  };
+  const use = () => {
+    const next = photos.map((p, i) => (i === view ? shot : p));
+    setPhotos(next); updateBody({ photos: next }); setShot(null); setSaved(view);
+    setTimeout(() => setSaved(null), 1100);
+    const missing = next.findIndex((p) => !p);
+    if (missing >= 0) setTimeout(() => setView(missing), 500);
+  };
+  const pickView = (i: number) => { setView(i); setShot(photos[i]); };
+  const read = () => {
+    setReading(true);
+    setTimeout(() => {
+      // simulated AI read: proportions estimated from the photos; every value still has to be checked by the user
+      const seed = Date.now() % 997;
+      const measures = Object.fromEntries(ALL_MEASURES.map((m, k) => { const j = ((seed * (k + 3)) % 7 - 3) / 100; return [m.key, Math.round(m.value * (1 + j) * 2) / 2]; }));
+      updateBody({ photoScan: true, measures, est: ALL_MEASURES.map((m) => m.key), done: [], photos });
+      replace("base");
+    }, 2400);
+  };
+
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#10121c]">
-      <video ref={video} playsInline muted className={cx("absolute inset-0 h-full w-full object-cover transition-opacity", live ? "opacity-60" : "opacity-0")} />
-      <div className="absolute inset-0" style={{ background: "radial-gradient(70% 50% at 50% 40%, rgba(104,126,245,.25), transparent 70%)" }} />
-      <div className="absolute inset-x-0 top-[16%] flex justify-center opacity-70"><BodyFigure sex={body.sex} width={170} dim={0.8} className="lg:h-[62dvh] lg:w-auto" /></div>
-      <div className="absolute inset-x-0 top-[16%] h-[60%] overflow-hidden"><div className="h-1/3 w-full bg-gradient-to-b from-transparent via-primary/30 to-transparent" style={{ animation: "scan 2.4s ease-in-out infinite alternate" }} /></div>
-      <div className="relative flex items-center justify-between px-6" style={{ paddingTop: "var(--top)" }}>
-        <RB icon="close" onClick={() => useApp.getState().back()} />
-        <span className="serif text-[34px]">{Math.min(3, shot + 1)}/3</span>
+    <div className="absolute inset-0 overflow-hidden bg-[#0a0b12]">
+      {/* viewfinder */}
+      <video ref={video} playsInline muted className={cx("absolute inset-0 h-full w-full object-cover transition-opacity", live && !shot ? "opacity-100" : "opacity-0")} />
+      {!live && !shot && <div className="absolute inset-0" style={{ background: "radial-gradient(80% 60% at 50% 40%, #232842, #0a0b12)" }} />}
+      {!shot && (
+        <div className="pointer-events-none absolute inset-x-[14%] bottom-[24%] top-[20%]">
+          {["left-0 top-0 border-l-2 border-t-2 rounded-tl-[18px]", "right-0 top-0 border-r-2 border-t-2 rounded-tr-[18px]", "left-0 bottom-0 border-l-2 border-b-2 rounded-bl-[18px]", "right-0 bottom-0 border-r-2 border-b-2 rounded-br-[18px]"].map((c) => <span key={c} className={cx("absolute h-8 w-8 border-white/80", c)} />)}
+          <div className="absolute inset-0 flex justify-center py-4 opacity-25"><BodyFigure sex={body.sex} width={120} glow={false} className="h-full w-auto" /></div>
+        </div>
+      )}
+      {/* review */}
+      <AnimatePresence>{shot && <motion.img key={shot.slice(-40)} src={shot} alt={`${VIEWS[view]} photo`} initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 h-full w-full object-cover" />}</AnimatePresence>
+
+      {/* top: close + views */}
+      <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/55 to-transparent px-5 pb-8" style={{ paddingTop: "var(--top)" }}>
+        <div className="flex items-center gap-3">
+          <RB icon="close" size={40} onClick={back} label="Close camera" />
+          <div className="mx-auto flex rounded-full bg-black/40 p-1 backdrop-blur-md">{VIEWS.map((v, i) => (
+            <button key={v} onClick={() => pickView(i)} className={cx("flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition-colors", i === view ? "bg-white text-bg" : "text-white/80")}>
+              {photos[i] ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.6 }} className={cx("grid h-4 w-4 place-items-center rounded-full", i === view ? "bg-bg text-white" : "bg-primary")}><Icon name="check" size={10} strokeWidth={3.2} /></motion.span> : null}{v}
+            </button>
+          ))}</div>
+          <span className="w-10" />
+        </div>
+        {!shot && !all && <p className="mt-3 text-center text-[15px] text-white/85">{VIEW_HINT[view]}</p>}
       </div>
-      <div className="relative mt-3 flex justify-center"><div className="glass flex rounded-full p-1">{views.map((v, i) => <span key={v} className={cx("rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[.06em]", i === shot ? "bg-white text-bg" : "text-white/60")}>{v}</span>)}</div></div>
-      <div className="absolute inset-x-0 bottom-[150px] flex justify-center"><div className="glass-2 rounded-full px-4 py-2.5 text-[13px]">{reading ? "Reading your proportions…" : `Step back — fit your whole body in the outline (${views[shot].toLowerCase()})`}</div></div>
-      <div className="absolute inset-x-0 flex items-center justify-between px-10" style={{ bottom: "calc(var(--bottom) + 20px)" }}>
-        <span className="h-11 w-11 rounded-xl border border-white/20 bg-white/10" />
-        <button onClick={snap} disabled={reading} className="tap grid h-[78px] w-[78px] place-items-center rounded-full border-[3px] border-white">
-          {reading ? <span className="h-8 w-8 rounded-full border-2 border-white/30 border-t-white" style={{ animation: "spin .8s linear infinite" }} /> : <span className="h-[62px] w-[62px] rounded-full bg-white" />}
-        </button>
-        <RB icon="flash" />
+
+      {/* approved confirmation */}
+      <AnimatePresence>{saved !== null && (
+        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0 grid place-items-center">
+          <div className="flex flex-col items-center gap-3"><span className="grid h-20 w-20 place-items-center rounded-full bg-primary shadow-[0_0_60px_rgba(104,126,245,.8)]"><Icon name="check" size={40} strokeWidth={2.4} /></span><span className="rounded-full bg-black/50 px-4 py-1.5 text-[15px] backdrop-blur">{VIEWS[saved]} saved</span></div>
+        </motion.div>)}</AnimatePresence>
+
+      {/* reading */}
+      {reading && (
+        <div className="absolute inset-0 grid place-items-center bg-black/60 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4"><span className="h-10 w-10 rounded-full border-2 border-white/25 border-t-white" style={{ animation: "spin .8s linear infinite" }} /><span className="text-[17px]">Reading your proportions…</span></div>
+        </div>
+      )}
+
+      {/* bottom controls, low and out of the way */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-6 pt-10" style={{ paddingBottom: "calc(var(--bottom) + 2px)" }}>
+        {shot ? (
+          <div className="flex gap-3">
+            <Pill variant="glass" className="flex-1" onClick={() => setShot(null)} icon={<Icon name="refresh" size={18} />}>Retake</Pill>
+            <Pill className="flex-1" onClick={photos[view] === shot ? () => setShot(null) : use} icon={<Icon name="check" size={18} />}>{photos[view] === shot ? "Keep" : "Use photo"}</Pill>
+          </div>
+        ) : all ? (
+          <Pill onClick={read} disabled={reading} icon={<Icon name="sparkle" size={18} />}>Read my measures</Pill>
+        ) : (
+          <div className="flex items-center justify-between px-2">
+            <button onClick={() => file.current?.click()} aria-label="Choose from library" className="tap grid h-12 w-12 place-items-center overflow-hidden rounded-[12px] border border-white/30 bg-white/10">
+              {photos.find(Boolean) ? <img src={photos.filter(Boolean).slice(-1)[0]!} alt="" className="h-full w-full object-cover" /> : <Icon name="image" size={22} />}
+            </button>
+            <button onClick={capture} aria-label={`Take ${VIEWS[view]} photo`} className="tap grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white"><span className="h-[60px] w-[60px] rounded-full bg-white" /></button>
+            <button onClick={() => setFlash(!flash)} aria-pressed={flash} aria-label="Flash" className={cx("tap grid h-12 w-12 place-items-center rounded-full", flash ? "bg-white text-bg" : "bg-white/10")}><Icon name="flash" size={22} /></button>
+          </div>
+        )}
       </div>
+      <input ref={file} type="file" accept="image/*" className="hidden" onChange={(e) => { fromLibrary(e.target.files?.[0]); e.target.value = ""; }} />
     </div>
   );
 }
@@ -439,38 +369,38 @@ export function ScanCam() {
 export function Preview() {
   const { go, units } = useApp();
   const body = useApp((s) => s.body());
-  const [view, setView] = useState(0); // 0 front 1 side 2 back
+  const [view, setView] = useState(0);
   const views = ["Front", "Side", "Back"];
-  const count = Math.max(4, body.done.length);
+  const count = body.done.length;
   const sx = view === 1 ? 0.55 : 1;
   const dragStart = useRef<number | null>(null);
   const M = body.measures;
   const shape = Math.min(1.12, Math.max(0.9, ((M.bust + M.hips) / 2 - M.waist * 0.3) / 71));
   return (
     <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edit")}>Edit measures</Pill><Pill className="flex-1" onClick={() => go("ready")}>Save body</Pill></div>}>
-      <TopBar left="back" eyebrow="Body preview" right="more" onRight={() => go("edit")} />
+      <TopBar left="back" right="more" onRight={() => go("edit")} />
       <div className="lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-16">
-      <div className="lg:order-2">
-      <H1 className="mt-3">{body.name}</H1>
-      <Eyebrow className="mt-1 text-[10px]">{count}/24 measures{body.photoScan ? " · Photo scan on" : ""}</Eyebrow>
-      <p className="mt-4 hidden max-w-[400px] text-[15px] text-white/60 lg:block">Drag the figure or use the arrows to turn it. Tap any number to change it.</p>
-      <div className="mt-4 hidden grid-cols-2 gap-3 lg:grid">{BASE.map((b) => (
-        <Glass key={b.key} onClick={() => go("edit", { key: b.key })} className="rounded-[22px] px-5 py-5"><div className="eyebrow text-[10px]">{b.label}</div><div className="serif mt-3 text-[48px] leading-none">{units === "in" ? (M[b.key] / 2.54).toFixed(0) : Math.round(M[b.key])}<span className="ml-2 font-sans text-[11px] uppercase text-white/50">{units}</span></div></Glass>
-      ))}</div>
-      </div>
-      <div className="relative mt-2 flex h-[min(430px,50dvh)] touch-none items-center justify-center lg:order-1 lg:h-[min(680px,76dvh)]"
-        onPointerDown={(e) => (dragStart.current = e.clientX)} onPointerUp={(e) => { if (dragStart.current !== null) { const dx = e.clientX - dragStart.current; if (Math.abs(dx) > 30) setView((v) => (v + (dx < 0 ? 1 : 2)) % 3); } dragStart.current = null; }}>
-        <Blob className="left-1/2 top-1/2 h-[300px] w-[220px] -translate-x-1/2 -translate-y-1/2 opacity-40 lg:h-[460px] lg:w-[320px]" />
-        <motion.div animate={{ scaleX: sx, opacity: 1 }} transition={{ type: "spring", bounce: 0.2 }} className="relative h-full">
-                    <div className="relative flex h-full justify-center"><BodyFigure sex={body.sex} width={170} variant="solid" scaleX={shape} className="h-full w-auto" /></div>
-        </motion.div>
-        <RB icon="back" className="absolute left-0 top-1/2 -translate-y-1/2 lg:left-6" onClick={() => setView((v) => (v + 2) % 3)} />
-        <RB icon="chevR" className="absolute right-0 top-1/2 -translate-y-1/2 lg:right-6" onClick={() => setView((v) => (v + 1) % 3)} />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2"><span className="glass-2 whitespace-nowrap rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.08em]">3D · {views[view]} · drag to rotate</span></div>
-      </div>
+        <div className="lg:order-2">
+          <HS className="mt-3">{body.name || "Body"}</HS>
+          <div className="mt-1 text-[15px] text-white/55">{count} of 24 measures{body.photoScan ? " · from photo scan" : ""}</div>
+          <p className="mt-4 hidden max-w-[400px] text-[16px] text-white/60 lg:block">Drag the figure or use the arrows to turn it. Tap any number to change it.</p>
+          <div className="mt-4 hidden grid-cols-2 gap-3 lg:grid">{BASE.map((b) => (
+            <Glass key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className="rounded-[22px] px-5 py-5"><div className="text-[14px] text-white/60">{b.label}</div><div className="mt-3 flex items-baseline gap-2"><span className="serif text-[48px] leading-none" translate="no">{fmt(M[b.key], units).replace(/\.0$/, "")}</span><span className="unit" translate="no">{units}</span></div></Glass>
+          ))}</div>
+        </div>
+        <div className="relative mt-2 flex h-[min(430px,48dvh)] touch-none items-center justify-center lg:order-1 lg:h-[min(680px,76dvh)]"
+          onPointerDown={(e) => (dragStart.current = e.clientX)} onPointerUp={(e) => { if (dragStart.current !== null) { const dx = e.clientX - dragStart.current; if (Math.abs(dx) > 30) setView((v) => (v + (dx < 0 ? 1 : 2)) % 3); } dragStart.current = null; }}>
+          <Blob className="left-1/2 top-1/2 h-[300px] w-[220px] -translate-x-1/2 -translate-y-1/2 opacity-40 lg:h-[460px] lg:w-[320px]" />
+          <motion.div animate={{ scaleX: sx, opacity: 1 }} transition={{ type: "spring", bounce: 0.2 }} className="relative h-full">
+            <div className="relative flex h-full justify-center"><BodyFigure sex={body.sex} width={170} scaleX={shape} className="h-full w-auto" /></div>
+          </motion.div>
+          <RB icon="back" className="absolute left-0 top-1/2 -translate-y-1/2 lg:left-6" onClick={() => setView((v) => (v + 2) % 3)} label="Turn left" />
+          <RB icon="chevR" className="absolute right-0 top-1/2 -translate-y-1/2 lg:right-6" onClick={() => setView((v) => (v + 1) % 3)} label="Turn right" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2"><span className="glass-2 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px]">{views[view]} · drag to turn</span></div>
+        </div>
       </div>
       <div className="mt-4 grid grid-cols-4 gap-2 lg:hidden">{BASE.map((b) => (
-        <Glass key={b.key} onClick={() => go("edit", { key: b.key })} className="rounded-[18px] px-3 py-3"><div className="eyebrow text-[9px]">{b.label}</div><div className="serif mt-2 text-[28px] leading-none">{units === "in" ? (M[b.key] / 2.54).toFixed(0) : Math.round(M[b.key])}</div></Glass>
+        <Glass key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className="rounded-[18px] px-3 py-3"><div className="text-[13px] text-white/60">{b.label}</div><div className="serif mt-2 text-[26px] leading-none" translate="no">{fmt(M[b.key], units).replace(/\.0$/, "")}</div></Glass>
       ))}</div>
     </Screen>
   );
@@ -488,27 +418,27 @@ export function EditMeasures({ p }: { p?: Record<string, unknown> }) {
   const desk = useDesk();
   return (
     <Screen footer={<Pill onClick={() => { toast("Changes saved"); setTimeout(back, 700); }}>Save changes</Pill>}>
-      <TopBar left="back" eyebrow={body.name} />
-      <H1 className="mt-3">Edit measures</H1>
+      <TopBar left="back" />
+      <HS className="mt-3">Edit measures</HS>
+      <div className="mt-1 text-[15px] text-white/55">{body.name}</div>
       <div className="lg:mt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-10">
-      <div className="mt-4 flex gap-3 lg:mt-0">
-        <div className="flex w-[40%] justify-center pt-2 lg:w-[45%]"><BodyFigure sex={body.sex} width={desk ? 190 : 130} markers={[m.marker]} /></div>
-        <div className="flex flex-1 flex-col gap-2">{list.map((x) => (
-          <Glass key={x.key} onClick={() => setSel(x.key)} selected={x.key === sel} className="flex h-[46px] items-center justify-between rounded-[14px] px-3.5">
-            <span className="text-[12px] text-white/70">{x.label}</span><span className="serif text-[22px]">{fmt(body.measures[x.key] ?? x.value, units).replace(/\.0$/, "")}</span>
-          </Glass>
-        ))}</div>
-      </div>
-      <Glow color="#687ef5" variant="fade" className="mt-4 rounded-[28px] p-4 lg:mt-0 lg:self-center lg:p-8">
-        <div className="text-[15px] font-semibold lg:text-[22px]">{m.label}</div>
-        <div className="eyebrow text-[9px] text-white/60">{m.hint.slice(0, 44)}</div>
-        <div className="mt-2 flex items-center justify-between">
-          <RB icon="back" size={36} onClick={() => setMeasure(sel, Math.max(m.min, v - 0.5))} />
-          <span className="serif text-[52px] leading-none lg:text-[96px]">{fmt(v, units)}</span>
-          <RB icon="chevR" size={36} onClick={() => setMeasure(sel, Math.min(m.max, v + 0.5))} />
+        <div className="mt-4 flex gap-3 lg:mt-0">
+          <div className="flex w-[40%] justify-center pt-2 lg:w-[45%]"><BodyFigure sex={body.sex} width={desk ? 190 : 130} markers={[m.marker]} /></div>
+          <div className="flex flex-1 flex-col gap-2">{list.map((x) => (
+            <Glass key={x.key} onClick={() => setSel(x.key)} selected={x.key === sel} className="flex h-[46px] items-center justify-between rounded-[14px] px-3.5">
+              <span className="text-[14px] text-white/75">{x.label}</span><span className="serif text-[22px]" translate="no">{fmt(body.measures[x.key] ?? x.value, units).replace(/\.0$/, "")}</span>
+            </Glass>
+          ))}</div>
         </div>
-        <Ruler value={v} min={m.min} max={m.max} onChange={(nv) => setMeasure(sel, nv)} className="mt-1" />
-      </Glow>
+        <div className="field mt-4 !rounded-[26px] px-3 pt-3 lg:mt-0 lg:self-center">
+          <div className="px-2 text-[16px] font-medium">{m.label}</div>
+          <div className="mt-2 flex items-center justify-between">
+            <RB icon="minus" size={48} onClick={() => setMeasure(sel, Math.max(m.min, v - 0.5))} label="Minus 0.5" />
+            <span className="flex items-baseline gap-2"><span className="serif text-[52px] leading-none lg:text-[80px]" translate="no">{fmt(v, units)}</span><span className="unit" translate="no">{units}</span></span>
+            <RB icon="plus" size={48} onClick={() => setMeasure(sel, Math.min(m.max, v + 0.5))} label="Plus 0.5" />
+          </div>
+          <div className="-mx-3"><Ruler value={v} min={m.min} max={m.max} onChange={(nv) => setMeasure(sel, nv)} className="mt-1" /></div>
+        </div>
       </div>
       {node}
     </Screen>
@@ -518,17 +448,22 @@ export function EditMeasures({ p }: { p?: Record<string, unknown> }) {
 export function Ready() {
   const { go, home, set, activeBody } = useApp();
   const body = useApp((s) => s.body());
-  const count = Math.max(4, body.done.length);
+  const count = body.done.length;
+  const left = 24 - count;
+  useEffect(() => { set({ resumeBody: left > 0 ? activeBody : null }); }, [left, activeBody, set]);
   return (
-    <Screen footer={<><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt"); }}>Start a pattern</Pill><Pill variant="dark" className="mt-2.5" onClick={() => { set({}); home(); }}>Go to home</Pill></>}
-      bg={<div className="absolute inset-0" style={{ background: "radial-gradient(80% 45% at 50% 20%, rgba(104,126,245,.55), transparent 70%)" }} />}>
-      <Split left={<div className="flex h-[min(360px,44dvh)] justify-center pt-4 lg:h-[min(640px,72dvh)]"><motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }}><BodyFigure sex={body.sex} width={140} variant="solid" className="h-full w-auto" /></motion.div></div>} right={<>
-      <span className="mt-4 inline-block rounded-full bg-primary px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.08em]">Saved to bodies</span>
-      <h1 className="mt-3 text-[28px] font-semibold tracking-tight lg:text-[48px]">Your body is ready.</h1>
-      <Lead className="mt-1 text-[14px]">Want to turn a dress you love into a pattern now?</Lead>
-      <Glass className="mt-5 flex items-center justify-between rounded-[20px] px-5 py-4 lg:max-w-[440px]"><span className="text-[15px] font-medium">{body.name}</span><span className="serif text-[30px]">{count}/24</span></Glass>
+    <Screen footer={<><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt"); }}>Start a pattern</Pill><Pill variant="dark" className="mt-2.5" onClick={home}>Go to home</Pill></>}
+      bg={<div className="absolute inset-0" style={{ background: "radial-gradient(80% 45% at 50% 18%, rgba(104,126,245,.5), transparent 70%)" }} />}>
+      <Split left={<div className="flex h-[min(300px,36dvh)] justify-center pt-2 lg:h-[min(640px,72dvh)]"><motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }}><BodyFigure sex={body.sex} width={140} className="h-full w-auto" /></motion.div></div>} right={<>
+        <div className="mt-6 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
+        <HS className="mt-3">Your body<br />is ready</HS>
+        <Lead className="mt-3">Turn a dress you love into a pattern drafted to {body.name || "this body"}.</Lead>
+        <div className="mt-6 border-t border-white/10 pt-4">
+          <div className="flex items-baseline justify-between"><span className="text-[17px]">{body.name}</span><span className="text-[15px] text-white/60"><span className="serif text-[20px] text-white">{count}</span> of 24 measures</span></div>
+          <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-white/15")} />)}</div>
+          {left > 0 && <button onClick={() => go("wizard")} className="mt-3 flex items-center gap-1 text-[15px] font-medium text-peri">Add the other {left} for a closer fit<Icon name="chevR" size={16} /></button>}
+        </div>
       </>} />
     </Screen>
   );
 }
-
