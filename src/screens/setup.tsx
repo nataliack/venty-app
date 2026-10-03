@@ -434,9 +434,9 @@ export function EditMeasures({ p }: { p?: Record<string, unknown> }) {
         <div className="field mt-4 !rounded-[26px] px-3 pt-3 lg:mt-0 lg:self-center">
           <div className="px-2 text-[16px] font-medium">{m.label}</div>
           <div className="mt-2 flex items-center justify-between">
-            <RB icon="minus" size={48} onClick={() => setMeasure(sel, Math.max(m.min, v - 0.5))} label="Minus 0.5" />
-            <span className="flex items-baseline gap-2"><span className="serif text-[52px] leading-none lg:text-[80px]" translate="no">{fmt(v, units)}</span><span className="unit" translate="no">{units}</span></span>
-            <RB icon="plus" size={48} onClick={() => setMeasure(sel, Math.min(m.max, v + 0.5))} label="Plus 0.5" />
+            <RB icon="minus" size={48} onClick={() => setMeasure(sel, Math.max(m.min, v - 0.5))} label="Minus 0.5" className="rb-plain" />
+            <span className="flex items-baseline gap-2"><span className="serif text-[46px] leading-none lg:text-[64px]" translate="no">{fmt(v, units)}</span><span className="unit" translate="no">{units}</span></span>
+            <RB icon="plus" size={48} onClick={() => setMeasure(sel, Math.min(m.max, v + 0.5))} label="Plus 0.5" className="rb-plain" />
           </div>
           <div className="-mx-3"><Ruler value={v} min={m.min} max={m.max} onChange={(nv) => setMeasure(sel, nv)} className="mt-1" /></div>
         </div>

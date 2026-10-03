@@ -109,8 +109,7 @@ export function WizardStep({ p }: { p?: Record<string, unknown> }) {
   const onNext = () => (edit ? back() : lastOfGroup ? replace("wdone", { g: m.group }) : replace("wstep", { i: i + 1 }));
   const onPrev = () => (edit || k === 0 ? back() : replace("wstep", { i: i - 1 }));
   return <MeasureStep key={m.key} m={m} header={<FlowHeader steps={steps} onClose={edit ? back : takeBreak} />} onNext={onNext} onPrev={onPrev}
-    nextLabel={edit ? "Save" : lastOfGroup ? `Finish ${g.title.toLowerCase()}` : `Next: ${next.label}`}
-    cheer={edit ? undefined : lastOfGroup ? `That’s all the ${g.title.toLowerCase()}.` : `Nice. ${next.label} is next.`} />;
+    nextLabel={edit ? "Save" : lastOfGroup ? `Finish ${g.title.toLowerCase()}` : `Next: ${next.label}`} />;
 }
 
 export function GroupDone({ p }: { p?: Record<string, unknown> }) {

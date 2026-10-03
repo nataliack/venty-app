@@ -1,6 +1,6 @@
 "use client";
 // One measuring UI for every measure in the app (base and the extra 20), so it always reads the same way.
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, fmt } from "@/lib/store";
 import { BASE, WIZARD, GROUPS, type Measure } from "@/lib/data";
@@ -60,28 +60,27 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
   const base = val ?? m.value;
   const step = 0.5;
   const bump = (d: number) => { set(Math.min(m.max, Math.max(m.min, (val === null ? m.value : base + d)))); onSet(); };
-  const other = units === "cm" ? `${(base / 2.54).toFixed(1)} in` : `${base.toFixed(1)} cm`;
   return (
-    <div className={cx("field relative overflow-hidden !rounded-[26px] px-3 pt-3", val === null && "!border-white/25")}>
+    <div className={cx("field relative overflow-hidden !rounded-[26px] px-3 pt-2.5", val === null && "!border-white/25")}>
       <div className="flex items-center justify-between gap-2">
-        <RB icon="minus" size={48} onClick={() => bump(-step)} label={`Minus ${step} ${units}`} />
+        <RB icon="minus" size={48} onClick={() => bump(-step)} label={`Minus ${step} ${units}`} className="rb-plain" />
         <button onClick={() => setTyping(true)} className="flex min-w-0 flex-1 flex-col items-center" aria-label="Type a value">
           {typing ? (
             <input autoFocus inputMode="decimal" defaultValue={val === null ? "" : fmt(base, units)} placeholder={fmt(m.value, units)}
               onBlur={(e) => { const n = parseFloat(e.target.value.replace(",", ".")); if (!isNaN(n)) { set(Math.min(m.max, Math.max(m.min, units === "in" ? n * 2.54 : n))); onSet(); } setTyping(false); }}
               onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              className="serif w-[180px] bg-transparent text-center text-[56px] leading-none outline-none placeholder:text-white/20" />
+              className="serif w-[160px] bg-transparent text-center text-[46px] leading-none outline-none placeholder:text-white/20" />
           ) : (
             <span className="flex items-baseline gap-2">
               <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span key={val === null ? "empty" : base} initial={{ y: 6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className={cx("serif text-[56px] leading-none", val === null && "text-white/25")} translate="no">{val === null ? "—" : fmt(base, units)}</motion.span>
+                <motion.span key={val === null ? "empty" : base} initial={{ y: 6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className={cx("serif text-[46px] leading-none", val === null && "text-white/25")} translate="no">{val === null ? "—" : fmt(base, units)}</motion.span>
               </AnimatePresence>
               <span className="unit" translate="no">{units}</span>
             </span>
           )}
-          <span className="mt-1 text-[13px] text-white/45" translate="no">{val === null ? "Tap to type, or slide below" : other}</span>
+          {val === null && <span className="mt-1 text-[13px] text-white/45">Tap to type, or slide below</span>}
         </button>
-        <RB icon="plus" size={48} onClick={() => bump(step)} label={`Plus ${step} ${units}`} />
+        <RB icon="plus" size={48} onClick={() => bump(step)} label={`Plus ${step} ${units}`} className="rb-plain" />
       </div>
       <div className={cx("-mx-3 mt-1 transition-opacity", val === null && "opacity-45")}>
         <Ruler value={base} min={m.min} max={m.max} onChange={(v) => { set(v); onSet(); }} />
@@ -90,7 +89,7 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
   );
 }
 
-export function MeasureStep({ m, header, nextLabel, onNext, onPrev, cheer }: { m: Measure; header: ReactNode; nextLabel: string; onNext: () => void; onPrev: () => void; cheer?: string }) {
+export function MeasureStep({ m, header, nextLabel, onNext, onPrev }: { m: Measure; header: ReactNode; nextLabel: string; onNext: () => void; onPrev: () => void }) {
   const body = useApp((s) => s.body());
   const setMeasure = useApp((s) => s.setMeasure);
   const confirm = useApp((s) => s.confirmMeasure);
@@ -101,11 +100,7 @@ export function MeasureStep({ m, header, nextLabel, onNext, onPrev, cheer }: { m
   const desk = useDesk();
   const go = () => { confirm(m.key); onNext(); };
   const label = isEst && touched ? `Looks right · ${nextLabel}` : nextLabel;
-  // a moment after a value is set, the Next button pulses and a line invites the next measure
-  const [nudge, setNudge] = useState(false);
-  const t = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onSet = () => { setTouched(true); if (t.current) clearTimeout(t.current); setNudge(false); t.current = setTimeout(() => setNudge(true), 900); };
-  useEffect(() => () => { if (t.current) clearTimeout(t.current); }, []);
+  const onSet = () => setTouched(true);
 
   const title = (
     <div className="flex items-start justify-between gap-3">
@@ -122,17 +117,9 @@ export function MeasureStep({ m, header, nextLabel, onNext, onPrev, cheer }: { m
     <Glass className={cx("overflow-hidden", h)}><BodyFigure sex={body.sex} width={120} markers={[m.marker]} className="h-full w-full py-[4%]" /></Glass>
   );
   const est = isEst && (
-    <div className="mb-2 flex items-center gap-2 text-[14px] text-peri"><Icon name="sparkle" size={16} />AI estimate from your photos. Check it, change it if needed.</div>
+    <div className="mt-3 flex items-center gap-2 text-[14px] text-peri"><Icon name="sparkle" size={16} className="shrink-0" />AI estimate from your photos. Check it, change it if needed.</div>
   );
-  const footer = (
-    <div>
-      <AnimatePresence>{nudge && cheer && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-          <div className="flex items-center justify-end gap-2 pb-2.5 text-[15px] text-white/75"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary"><Icon name="check" size={12} strokeWidth={3} /></span>{cheer}</div>
-        </motion.div>)}</AnimatePresence>
-      <Arrows onPrev={onPrev} onNext={go} ready={val !== null} label={label} nudge={nudge} />
-    </div>
-  );
+  const footer = <Arrows onPrev={onPrev} onNext={go} ready={val !== null} label={label} />;
   return (
     <Screen header={header} footer={footer}>
       <AnimatePresence mode="wait">
@@ -141,13 +128,13 @@ export function MeasureStep({ m, header, nextLabel, onNext, onPrev, cheer }: { m
           {desk ? (
             <>
               {figure("h-[min(600px,64dvh)] rounded-[32px]")}
-              <div className="lg:self-center">{title}<div className="mt-8">{est}<ValueControl m={m} val={val} set={(v) => setMeasure(m.key, v)} onSet={onSet} /></div></div>
+              <div className="lg:self-center">{title}<div className="mt-8"><ValueControl m={m} val={val} set={(v) => setMeasure(m.key, v)} onSet={onSet} />{est}</div></div>
             </>
           ) : (
             <>
               <div className="mt-3">{title}</div>
               <div className="mt-4">{figure("h-[min(340px,38dvh)] rounded-[24px]")}</div>
-              <div className="mt-4">{est}<ValueControl m={m} val={val} set={(v) => setMeasure(m.key, v)} onSet={onSet} /></div>
+              <div className="mt-4"><ValueControl m={m} val={val} set={(v) => setMeasure(m.key, v)} onSet={onSet} />{est}</div>
             </>
           )}
         </motion.div>
@@ -172,5 +159,5 @@ export function MeasureBase({ p }: { p?: Record<string, unknown> }) {
   const onNext = () => (edit ? back() : nextM ? replace("measure", { key: nextM.key }) : replace("base"));
   const onPrev = () => (edit || i === 0 ? back() : replace("measure", { key: BASE[i - 1].key }));
   return <MeasureStep key={m.key} m={m} header={header} onNext={onNext} onPrev={onPrev}
-    nextLabel={edit ? "Save" : nextM ? `Next: ${nextM.label}` : "Review"} cheer={edit ? undefined : nextM ? `Nice. ${nextM.label} is next.` : "All four done. Let’s review."} />;
+    nextLabel={edit ? "Save" : nextM ? `Next: ${nextM.label}` : "Review"} />;
 }

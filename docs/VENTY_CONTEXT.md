@@ -193,7 +193,10 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
    - Each starts **empty** ("—"), and Next stays disabled until a value is set.
    - The screen shows only the title, a **full-width, centred body figure** with the tape marker, and the value control. The how-to steps live **only in the "?" sheet** (on phone and desktop), so they are never shown twice.
    - **− and + buttons** step 0.5cm. Tap the number to type a value. Drag the ruler.
-   - Once a value is set, the Next button pulses and a line appears: "Nice. Bust is next."
+   - **One unit only:** the value shows in the chosen unit (cm or in) and never a second conversion line under it. The number is 46px Bigilla, sitting high in the card. "Tap to type, or slide below" shows only while the value is empty.
+   - The − / + buttons are plain (`.rb-plain`): no swirl or glow. Hover lifts the fill slightly; a press flashes solid white.
+   - No "Nice, X is next" line and no pulsing Next button after a value is set. They read as too AI in review.
+   - On AI-estimated values, the note "AI estimate from your photos…" sits **under** the measuring card.
    - Reset, the misleading neighbouring numbers, and the old "Save · next" bar are gone.
 4. **Scan:**
    - **`scanPrep`:** plain tips (not cards) and a privacy note.
