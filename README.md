@@ -13,11 +13,24 @@ Everything *looks* like it works; nothing needs a backend. Any login succeeds, u
 
 ## Stack
 
-Next.js 16 (App Router), TypeScript, Tailwind CSS 4, Zustand, Motion. Fonts: Familjen Grotesk + Instrument Serif (self-hosted).
+Next.js 16 (App Router), TypeScript, Tailwind CSS 4, Zustand, Motion. Fonts: Familjen Grotesk (all text) + Bigilla Bold (numbers only), self-hosted. Full project context: `docs/VENTY_CONTEXT.md`.
 
 ## Run locally
 
 ```bash
 npm install
 npm run dev
+```
+
+## Getting the latest code onto GitHub
+
+If this code came from `venty-app.zip` rather than from a clone:
+
+```bash
+git clone https://github.com/nataliack/venty-app.git && cd venty-app
+git checkout -b overhaul
+# copy everything from the unzipped venty-app folder over this one (overwrite), then:
+npm install && npm run build
+git add -A && git commit -m "UI/UX overhaul + project context docs"
+git push -u origin overhaul   # Vercel builds a preview; merge to main when happy
 ```

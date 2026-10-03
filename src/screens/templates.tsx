@@ -18,8 +18,8 @@ function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: bo
       <FX kind="ripple" />
       <div className={cx("relative flex justify-center transition-transform duration-500 ease-out group-hover:scale-[1.06]", desk ? "pt-6" : "")}><Flat g={t.key} size={desk ? 170 : 84} /></div>
       <div className={cx("absolute", desk ? "bottom-6 left-6 right-6" : "bottom-4 left-4 right-4")}>
-        <div className={cx("font-semibold", desk ? "text-[20px]" : "text-[15px]")}>{t.name}</div>
-        <div className={cx("text-white/55 transition-colors group-hover:text-white/80", desk ? "text-[13px]" : "text-[11px]")}>{t.level} · {t.pieces} pieces<span className="hidden group-hover:inline"> · {t.hours}</span></div>
+        <div className={cx("font-semibold", desk ? "text-[20px]" : "text-[16px]")}>{t.name}</div>
+        <div className={cx("text-white/55 transition-colors group-hover:text-white/80", desk ? "text-[14px]" : "text-[11px]")}>{t.level} · {t.pieces} pieces<span className="hidden group-hover:inline"> · {t.hours}</span></div>
       </div>
     </div>
   );
@@ -35,7 +35,7 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
   const desk = useDesk();
   const request = (
     <button onClick={() => toast("Thanks — we’ll add more soon")} className={cx("tap flex flex-col items-center justify-center border border-dashed border-white/25 transition-colors hover:border-white/45", desk ? "h-[min(440px,56dvh)] rounded-[30px]" : "h-[220px] rounded-[24px]")}>
-      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[14px] font-medium text-white/75">Request a style</span><span className="text-[11px] text-white/45">More coming soon</span>
+      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[15px] font-medium text-white/75">Request a style</span><span className="text-[11px] text-white/45">More coming soon</span>
     </button>
   );
   if (desk) return (
@@ -44,7 +44,7 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
       <div className="mt-3 flex items-end justify-between gap-6">
         <div><H1>Start from a template</H1><Lead className="mt-2">Pick a style, fit it to a body, get the pattern.</Lead></div>
         <div className="flex items-center gap-2">
-          {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search styles" className="glass h-10 w-[200px] rounded-full px-4 text-[14px] outline-none" />}
+          {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search styles" className="glass h-10 w-[200px] rounded-full px-4 text-[15px] outline-none" />}
           {CATEGORIES.map((c) => <Chip key={c} on={c === cat} onClick={() => setCat(c)}>{c}</Chip>)}
         </div>
       </div>
@@ -58,9 +58,9 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
   return (
     <Screen>
       <TopBar left="back" eyebrow="Templates · 10 styles" right="search" onRight={() => setQ(q === null ? "" : null)} />
-      {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search styles" className="glass mt-3 h-12 w-full rounded-full px-5 text-[15px] outline-none" />}
+      {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search styles" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none" />}
       <H1 className="mt-4">Start from a template</H1>
-      <Lead className="mt-2 text-[14px]">Pick a style, fit it to a body, get the pattern.</Lead>
+      <Lead className="mt-2 text-[15px]">Pick a style, fit it to a body, get the pattern.</Lead>
       <div className="-mx-6 mt-4 flex gap-2 overflow-x-auto px-6 noscroll">{CATEGORIES.map((c) => <Chip key={c} on={c === cat} onClick={() => setCat(c)}>{c}</Chip>)}</div>
       <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
         {list.map((t) => <TplCard key={t.key} t={t} desk={false} onClick={() => go("template", { key: t.key })} />)}
@@ -88,7 +88,7 @@ export function TemplateDetail({ p }: { p?: Record<string, unknown> }) {
       </Glow>} right={<>
       <HS className="mt-5 text-[46px] lg:mt-0 lg:text-[72px]">{t.name}</HS>
       <div className="mt-3 flex flex-wrap gap-2">{[t.level, `${t.pieces} pieces`, t.hours, t.tag].map((c) => <span key={c} className="chip">{c}</span>)}</div>
-      <p className="mt-4 text-[14px] leading-relaxed text-white/60 lg:max-w-[460px] lg:text-[16px]">{t.blurb}</p>
+      <p className="mt-4 text-[15px] leading-relaxed text-white/60 lg:max-w-[460px] lg:text-[16px]">{t.blurb}</p>
       <Eyebrow className="mt-5">Length</Eyebrow>
       <div className="mt-2 flex gap-2">{t.lengths.map((l) => <Chip key={l} on={l === len} onClick={() => setLen(l)}>{l}</Chip>)}</div>
       <div className="hidden lg:block">
@@ -101,7 +101,7 @@ export function TemplateDetail({ p }: { p?: Record<string, unknown> }) {
 }
 
 export function TplBody() {
-  const { go, bodies, activeBody, set, setDraft, draft, newBody } = useApp();
+  const { go, bodies, activeBody, set, setDraft, draft, newBody, startBody } = useApp();
   const t = templateBy(draft.garment);
   const [sel, setSel] = useState(activeBody);
   const b = bodies.find((x) => x.id === sel) ?? bodies[0];
@@ -110,18 +110,18 @@ export function TplBody() {
       <TopBar left="back" eyebrow={`${t.name} · Fit to`} />
       <Split left={<>
       <HS className="mt-4 lg:mt-0">Who is this for?</HS>
-      <Lead className="mt-2 text-[14px]">We’ll grade the pattern to this body’s measurements.</Lead>
+      <Lead className="mt-2 text-[15px]">We’ll grade the pattern to this body’s measurements.</Lead>
       <div className="mt-10 hidden lg:block"><Flat g={t.key} size={180} /></div>
       </>} right={
       <div className="mt-5 flex flex-col gap-2.5 lg:mt-0 lg:gap-3">
         {bodies.map((x) => (
           <Glass key={x.id} onClick={() => setSel(x.id)} selected={x.id === sel} className="flex h-[84px] w-full items-center gap-4 rounded-[24px] px-4 lg:h-[100px] lg:px-6">
             <BodyFigure sex={x.sex} width={26} glow={false} />
-            <div className="flex-1"><div className="text-[16px] font-semibold">{x.name}</div><div className="text-[12px] text-white/55">{Math.max(4, x.done.length)} / 24 measures</div></div>
+            <div className="flex-1"><div className="text-[16px] font-semibold">{x.name}</div><div className="text-[13px] text-white/55">{x.done.length} / 24 measures</div></div>
             <Check on={x.id === sel} className={x.id === sel ? "!bg-primary !text-white" : ""} />
           </Glass>
         ))}
-        <button onClick={() => { newBody(); go("gender"); }} className="tap flex h-16 items-center gap-3 rounded-[22px] border border-dashed border-white/25 px-5 text-[15px] font-medium text-white/75"><Icon name="plus" size={20} />New body</button>
+        <button onClick={() => { startBody(); }} className="tap flex h-16 items-center gap-3 rounded-[22px] border border-dashed border-white/25 px-5 text-[16px] font-medium text-white/75"><Icon name="plus" size={20} />New body</button>
       </div>} />
     </Screen>
   );
@@ -151,7 +151,7 @@ export function TplFit() {
         {steps.map((s, i) => (
           <div key={s} className="flex items-center gap-3 py-2">
             <span className={cx("grid h-5 w-5 place-items-center rounded-full", i < active ? "bg-primary" : i === active ? "bg-primary/60 animate-pulse" : "border border-white/30")}>{i < active && <Icon name="check" size={12} strokeWidth={3} />}</span>
-            <span className={cx("text-[14px]", i === active && "font-semibold", i > active && "text-white/45")}>{s}</span>
+            <span className={cx("text-[15px]", i === active && "font-semibold", i > active && "text-white/45")}>{s}</span>
           </div>
         ))}
       </Glass>
@@ -182,7 +182,7 @@ export function TplResult() {
         <Glow color={t.color} variant="fade" className="flex h-[min(470px,52dvh)] justify-center rounded-[28px] pt-4 lg:h-[min(600px,66dvh)] lg:rounded-[36px] lg:pt-8"><BodyFigure sex={b.sex} width={150} garment={t.key} className="h-[94%] w-auto" /></Glow>
         <div className="flex flex-col justify-between py-1 lg:grid lg:grid-cols-2 lg:content-center lg:gap-5">
           {notes.map(([l, v, e]) => (
-            <div key={l as string} className="lg:rounded-[24px] lg:border lg:border-white/10 lg:bg-white/5 lg:p-6"><Eyebrow className="text-[9px] lg:text-[11px]">{l}</Eyebrow><div className="flex items-baseline gap-1.5"><span className="serif text-[40px] leading-none lg:text-[64px]">{u(v as number)}</span><span className="text-[10px] text-white/50">{units}</span></div><div className="text-[11px] font-medium text-peri">{e}</div></div>
+            <div key={l as string} className="lg:rounded-[24px] lg:border lg:border-white/10 lg:bg-white/5 lg:p-6"><Eyebrow className=" lg:">{l}</Eyebrow><div className="flex items-baseline gap-1.5"><span className="serif text-[40px] leading-none lg:text-[64px]">{u(v as number)}</span><span className="text-[10px] text-white/50">{units}</span></div><div className="text-[11px] font-medium text-peri">{e}</div></div>
           ))}
         </div>
       </div>

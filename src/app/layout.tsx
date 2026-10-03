@@ -13,12 +13,9 @@ const grotesk = localFont({
   display: "swap",
 });
 
-const serif = localFont({
-  src: [
-    { path: "../fonts/instrument-serif-latin-400-normal.woff2", weight: "400", style: "normal" },
-    { path: "../fonts/instrument-serif-latin-400-italic.woff2", weight: "400", style: "italic" },
-  ],
-  variable: "--font-serif-display",
+const num = localFont({
+  src: [{ path: "../fonts/bigilla-bold.woff2", weight: "700", style: "normal" }],
+  variable: "--font-num",
   display: "swap",
 });
 
@@ -27,7 +24,7 @@ export const metadata: Metadata = {
   description: "See a dress you love. Wear it, made for you. Sewing patterns drafted to your exact measurements.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Venty" },
-  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon-192.png", type: "image/png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
@@ -41,7 +38,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-AU" className={`${grotesk.variable} ${serif.variable}`}>
+    <html lang="en-AU" className={`${grotesk.variable} ${num.variable}`}>
       <body>{children}</body>
     </html>
   );
