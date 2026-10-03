@@ -245,6 +245,26 @@ input { font: inherit; color: inherit; }
 @keyframes v-d2 { 0% { translate: 0 0; } 50% { translate: -30% 10%; } 100% { translate: -12% -12%; } }
 @keyframes v-d3 { 0% { translate: 0 0; scale: 1; } 50% { translate: -18% -14%; scale: 1.15; } 100% { translate: 14% -6%; scale: .92; } }
 
+/* ─── home: periwinkle hero that bleeds under the status bar, then the dark page ─── */
+@layer components {
+.home-hero { color: #131523; margin-top: calc(-1 * var(--top)); padding-top: var(--top); border-radius: 0 0 36px 36px;
+  background-image: radial-gradient(rgb(255 255 255 / .2) .8px, transparent 1.1px),
+    radial-gradient(70% 55% at 12% 0%, rgb(255 255 255 / .6), transparent 70%),
+    radial-gradient(70% 70% at 100% 100%, rgb(79 99 224 / .45), transparent 70%),
+    linear-gradient(180deg, #bcc5fc 0%, #9dabf9 48%, #8295f7 100%);
+  background-size: 6px 6px, auto, auto, auto;
+  box-shadow: 0 30px 80px -40px rgb(104 126 245 / .6); }
+.hero-card { background: rgb(255 255 255 / .32); border: 1px solid rgb(255 255 255 / .55); box-shadow: inset 0 1px 0 rgb(255 255 255 / .7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+@media (min-width: 1024px) { .home-hero { margin-top: 0; padding-top: 0; border-radius: 36px; } }
+
+/* phone tab bar: light, same family as the hero; Create sits raised in a notch */
+.tabbar { background: linear-gradient(180deg, #e8ecff, #cdd5fd); color: #131523;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .8), 0 20px 40px -16px rgb(0 0 0 / .7); }
+.createbtn { color: #fff;
+  background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
+  box-shadow: 0 0 0 6px #0b0c15, inset 0 1px 0 rgb(255 255 255 / .5), 0 14px 30px -8px rgb(104 126 245 / .8); }
+}
+
 /* ─── onboarding paper (light, editorial) ─── */
 .paper { background: #f3f1ec; color: #12131c; }
 .paper .lead { color: rgba(18,19,28,.62); }

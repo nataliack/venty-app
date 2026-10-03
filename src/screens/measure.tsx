@@ -8,14 +8,13 @@ import { Screen, RB, Arrows, Sheet, Pill, FlowProgress, Glass, cx, useDesk } fro
 import { BodyFigure, Ruler } from "@/components/art";
 import { Icon } from "@/components/icons";
 
-// ─── Flow header: exit on the left, labelled progress in the middle, optional help on the right ───
-export function FlowHeader({ steps, onHelp, onClose }: { steps: { label: string; value: number }[]; onHelp?: () => void; onClose?: () => void }) {
+// ─── Flow header: exit on the left, then labelled progress running to the right edge ───
+export function FlowHeader({ steps, onClose }: { steps: { label: string; value: number }[]; onClose?: () => void }) {
   const exitFlow = useApp((s) => s.exitFlow);
   return (
     <div className="flex h-14 items-center gap-4">
       <RB icon="close" size={40} onClick={onClose ?? exitFlow} label="Close" />
       <FlowProgress steps={steps} className="flex-1 pt-[18px]" />
-      {onHelp ? <RB icon="help" size={40} onClick={onHelp} label="How to measure" /> : <span className="w-10" />}
     </div>
   );
 }
@@ -114,11 +113,13 @@ export function MeasureStep({ m, header, nextLabel, onNext, onPrev, cheer }: { m
         <h1 className="h1 !text-[32px] lg:!text-[48px]">{m.label}</h1>
         <p className="mt-1.5 text-[16px] leading-snug text-white/60">{m.hint}</p>
       </div>
-      <RB icon="help" size={40} onClick={() => setHelp(true)} label="How to measure" className="shrink-0 lg:hidden" />
+      <RB icon="help" size={40} onClick={() => setHelp(true)} label="How to measure" className="shrink-0" />
     </div>
   );
-  const how = (
-    <ol className="flex flex-col gap-3">{m.how.map((h, j) => <li key={j} className="flex gap-2.5 text-[15px] leading-snug text-white/75"><span className="mt-px grid h-[20px] w-[20px] shrink-0 place-items-center rounded-full bg-white/12 text-[12px] font-medium">{j + 1}</span>{h}</li>)}</ol>
+  // the how-to steps live only in the help sheet; the screen shows the figure, full width and centred
+  // (svg fills its box and centres itself through the viewBox, so it never drifts off-centre)
+  const figure = (h: string) => (
+    <Glass className={cx("overflow-hidden", h)}><BodyFigure sex={body.sex} width={120} markers={[m.marker]} className="h-full w-full py-[4%]" /></Glass>
   );
   const est = isEst && (
     <div className="mb-2 flex items-center gap-2 text-[14px] text-peri"><Icon name="sparkle" size={16} />AI estimate from your photos. Check it, change it if needed.</div>
@@ -139,16 +140,13 @@ export function MeasureStep({ m, header, nextLabel, onNext, onPrev, cheer }: { m
           className="lg:mt-6 lg:grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start lg:gap-14">
           {desk ? (
             <>
-              <Glass className="flex h-[min(600px,64dvh)] items-center justify-center rounded-[32px]"><BodyFigure sex={body.sex} width={190} markers={[m.marker]} className="h-[90%] w-auto" /></Glass>
-              <div>{title}<div className="mt-6">{how}</div><div className="mt-8">{est}<ValueControl m={m} val={val} set={(v) => setMeasure(m.key, v)} onSet={onSet} /></div></div>
+              {figure("h-[min(600px,64dvh)] rounded-[32px]")}
+              <div className="lg:self-center">{title}<div className="mt-8">{est}<ValueControl m={m} val={val} set={(v) => setMeasure(m.key, v)} onSet={onSet} /></div></div>
             </>
           ) : (
             <>
               <div className="mt-3">{title}</div>
-              <div className="mt-4 grid grid-cols-[0.8fr_1.2fr] items-center gap-4">
-                <div className="glass flex h-[min(250px,28dvh)] items-center justify-center overflow-hidden rounded-[22px]"><BodyFigure sex={body.sex} width={96} markers={[m.marker]} className="h-[92%] w-auto" /></div>
-                {how}
-              </div>
+              <div className="mt-4">{figure("h-[min(340px,38dvh)] rounded-[24px]")}</div>
               <div className="mt-4">{est}<ValueControl m={m} val={val} set={(v) => setMeasure(m.key, v)} onSet={onSet} /></div>
             </>
           )}

@@ -274,9 +274,9 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   );
   const words = (
     <AnimatePresence mode="wait">
-      <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35 }}>
+      <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35 }} className="text-center">
         <h1 className="h1 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[56px]">{s.t}</h1>
-        <p className="lead mt-3 max-w-[460px]">{s.b}</p>
+        <p className="lead mx-auto mt-3 max-w-[460px] [text-wrap:pretty]">{s.b}</p>
       </motion.div>
     </AnimatePresence>
   );
@@ -289,7 +289,7 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   if (desk) return (
     <div className="paper absolute inset-0 grid grid-cols-[1.1fr_0.9fr] gap-0">
       <div className="p-5"><div className="h-full overflow-hidden rounded-[36px]">{image}</div></div>
-      <div className="flex flex-col justify-center px-16">{words}<div className="mt-12 max-w-[460px]">{controls}</div></div>
+      <div className="flex flex-col justify-center px-16">{words}<div className="mx-auto mt-12 w-full max-w-[460px]">{controls}</div></div>
     </div>
   );
   return (

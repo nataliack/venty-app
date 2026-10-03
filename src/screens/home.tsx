@@ -7,21 +7,26 @@ import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, cx, us
 import { BodyFigure, Flat } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
+// Phone navigation: a light bar (the same family as the home hero) with one raised Create button in a notch.
+// Create is the one action that matters most, so it is the only thing that sits above the bar.
 function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
   const items: [typeof tab, IconName, string][] = [["home", "home", "Home"], ["bodies", "body", "Bodies"], ["patterns", "scissors", "Patterns"], ["you", "user", "You"]];
   const btn = ([k, ic, l]: (typeof items)[number]) => (
-    <button key={k} onClick={() => replace(k)} className={cx("flex w-14 flex-col items-center gap-1 text-[10px]", tab === k ? "text-white" : "text-white/45")}>
-      <Icon name={ic} size={21} />{l}
+    <button key={k} onClick={() => replace(k)} aria-current={tab === k ? "page" : undefined} className={cx("flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] font-medium transition-colors", tab === k ? "text-ink" : "text-ink/45")}>
+      <Icon name={ic} size={22} strokeWidth={tab === k ? 2.1 : 1.7} />{l}
     </button>
   );
   return (
     <>
-      <div className="glass-2 flex h-[68px] items-center justify-between rounded-[28px] px-3">
-        {items.slice(0, 2).map(btn)}
-        <button onClick={() => setOpen(true)} aria-label="Create" className="tap grid h-12 w-[72px] place-items-center rounded-full bg-primary shadow-[0_8px_30px_rgba(104,126,245,.55)]"><Icon name="plus" size={24} /></button>
-        {items.slice(2).map(btn)}
+      <div className="relative mt-3">
+        <nav className="tabbar flex h-[68px] items-stretch rounded-[26px] px-1.5">
+          {items.slice(0, 2).map(btn)}
+          <span className="w-[78px] shrink-0" />
+          {items.slice(2).map(btn)}
+        </nav>
+        <button onClick={() => setOpen(true)} aria-label="Create" className="createbtn tap absolute left-1/2 top-0 grid h-[62px] w-[62px] -translate-x-1/2 -translate-y-[36%] place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></button>
       </div>
       <CreateSheet open={open} onClose={() => setOpen(false)} />
     </>
@@ -79,118 +84,90 @@ function Notices() {
 
 const greet = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
 
-export function Home() {
-  const { go, user, bodies, patterns, newDraft, newBody, setDraft, startBody } = useApp();
-  const last = patterns[0];
-  const desk = useDesk();
-  if (desk) return (
-    <Screen>
-      <div className="flex h-12 items-center gap-3">
-        <span className="eyebrow">{greet()}, {user.guest ? "guest" : user.name}</span>
-        <span className="flex-1" /><RB icon="search" onClick={() => go("templates")} />
-      </div>
-      <H1 className="mt-3">What are we making?</H1>
-      <Notices />
-      <div className="mt-7 grid grid-cols-3 gap-5">
-        <Glow color="#687ef5" variant="edge" onClick={() => { newDraft(); go("patSelectBody"); }} className="group relative col-span-2 row-span-2 h-[360px] rounded-[32px] p-8">
-          <FX kind="aurora" />
-          <Eyebrow className=" text-white/70">Start here</Eyebrow>
-          <div className="mt-3 text-[40px] font-normal tracking-tight">Make a pattern</div>
-          <div className="mt-2 max-w-[300px] text-[16px] leading-snug text-white/70">From a photo, a link, a sketch or a style. Drafted to your body.</div>
-          <div className="absolute bottom-8 left-8 flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-full bg-white text-bg"><Icon name="upload" size={22} /></span><span className="eyebrow text-white/80">Photo · Link · Sketch · Voice</span></div>
-          <div className="absolute bottom-3 right-16 opacity-95"><BodyFigure width={118} variant="solid" garment="flutter" glow={false} dim={0.7} /></div>
-        </Glow>
-        <Glass onClick={() => { startBody(); }} className="relative h-[170px] rounded-[28px] p-6">
-          <div className="text-[20px] font-semibold">Make a body</div><div className="mt-1 text-[14px] text-white/55">Measure yourself or someone new</div>
-          <span className="absolute bottom-6 right-6 grid h-10 w-10 place-items-center rounded-full bg-white/10"><Icon name="plus" size={20} /></span>
-        </Glass>
-        <Glass onClick={() => go("templates")} className="relative h-[170px] rounded-[28px] p-6">
-          <div className="text-[20px] font-semibold">Templates</div><div className="mt-1 text-[14px] text-white/55">10 styles, ready to fit</div>
-          <div className="absolute bottom-3 right-5 flex gap-1 opacity-90"><Flat g="slip" size={44} /><Flat g="tee" size={44} /><Flat g="wideleg" size={44} /></div>
-        </Glass>
-      </div>
-      <Eyebrow className="mt-9 text-white/40">Your library</Eyebrow>
-      <div className="mt-3 grid grid-cols-3 gap-5">
-        <Glow color="#4d5e85" variant="fade" onClick={() => go("bodies")} className="group relative min-h-[220px] rounded-[28px] p-6">
-          <FX kind="tide" />
-          <span className="serif text-[56px] leading-none">{String(bodies.length).padStart(2, "0")}</span>
-          <div className="absolute right-5 top-5 flex -space-x-2 opacity-90">{bodies.slice(0, 3).map((b) => <BodyFigure key={b.id} sex={b.sex} width={34} glow={false} />)}</div>
-          <div className="absolute bottom-6 left-6"><div className="text-[17px] font-semibold">Body library</div><div className="eyebrow">Bodies</div></div>
-        </Glow>
-        <Glow color="#687ef5" variant="fade" onClick={() => go("patterns")} className="group relative min-h-[220px] rounded-[28px] p-6">
-          <FX kind="orbit" />
-          <span className="serif text-[56px] leading-none">{String(patterns.length).padStart(2, "0")}</span>
-          <div className="absolute right-5 top-4"><Flat g="flutter" size={80} /></div>
-          <div className="absolute bottom-6 left-6"><div className="text-[17px] font-semibold">Pattern library</div><div className="eyebrow">Patterns</div></div>
-        </Glow>
-        <Glass className="group relative isolate min-h-[220px] overflow-hidden rounded-[28px] p-6">
-          <FX kind="sheen" />
-          <Eyebrow className=" text-white/40">Continue</Eyebrow>
-          <div className="mt-3 flex flex-col gap-2">{patterns.slice(0, 3).map((p) => (
-            <button key={p.id} onClick={() => { setDraft({ garment: p.garment as GarmentKey }); go("garment"); }} className="tap flex items-center gap-3 rounded-[14px] p-1.5 text-left hover:bg-white/5">
-              <div className="grid h-11 w-10 place-items-center rounded-[10px] bg-primary/30"><Flat g={p.garment as GarmentKey} size={28} /></div>
-              <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-semibold">{p.name}</div><div className="text-[11px] text-white/50">{p.status} · {p.body}</div></div>
-              <Icon name="chevR" size={16} className="text-white/40" />
-            </button>
-          ))}</div>
-        </Glass>
-      </div>
-      <div className="h-20" />
-    </Screen>
-  );
+const STATUS_DOT: Record<string, string> = { Printed: "bg-primary", Fitting: "bg-peri", Draft: "bg-white/40" };
+
+function SectionHead({ title, onAll }: { title: string; onAll: () => void }) {
   return (
-    <Screen footer={desk ? undefined : <TabBar tab="home" />}>
-      <div className="flex h-12 items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-primary text-[16px] font-semibold">{(user.guest ? "G" : user.name[0]).toUpperCase()}</span>
-        <span className="eyebrow">{greet()}, {user.guest ? "guest" : user.name}</span>
-        <span className="flex-1" /><RB icon="search" onClick={() => go("templates")} />
+    <div className="flex items-center justify-between">
+      <h2 className="text-[18px] font-normal tracking-[-.02em] lg:text-[22px]">{title}</h2>
+      <button onClick={onAll} className="tap flex h-8 items-center gap-0.5 rounded-full border border-white/15 pl-3 pr-2 text-[13px] font-medium text-white/75 hover:text-white">View all<Icon name="chevR" size={14} /></button>
+    </div>
+  );
+}
+
+// Home: a coloured hero on top holds the one main job (start a pattern, from any source);
+// everything else sits below it on the dark page: bodies, recent patterns, templates.
+export function Home() {
+  const { go, user, bodies, patterns, newDraft, setDraft, startBody, set } = useApp();
+  const body = useApp((s) => s.body());
+  const name = user.guest ? "Guest" : user.name;
+  const desk = useDesk();
+  const startFrom = (start?: "link" | "sketch") => { newDraft(start ? { start } : undefined); go("patSelectBody"); };
+  const actions: [IconName, string, () => void][] = [
+    ["image", "Photo", () => startFrom()],
+    ["link", "Link", () => startFrom("link")],
+    ["pencil", "Sketch", () => startFrom("sketch")],
+    ["dress", "Template", () => go("templates")],
+  ];
+  return (
+    <Screen noPad footer={desk ? undefined : <TabBar tab="home" />}>
+      <section className="home-hero relative overflow-hidden px-5 pb-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-12 lg:px-12 lg:py-11">
+        <div>
+          <div className="flex h-12 items-center gap-3 pt-1">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-[17px] font-medium text-white">{name[0].toUpperCase()}</span>
+            <div className="min-w-0 flex-1 leading-tight"><div className="text-[13px] text-ink/60">{greet()}</div><div className="truncate text-[17px] font-medium">{name}</div></div>
+            <button onClick={() => go("templates")} aria-label="Search templates" className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white lg:hidden"><Icon name="search" size={20} /></button>
+          </div>
+          <h1 className="h1 mt-6 !text-[34px] text-ink lg:mt-10 lg:!text-[56px]">What are we<br className="lg:hidden" /> making?</h1>
+          <p className="mt-2 max-w-[420px] text-[16px] leading-snug text-ink/65 lg:text-[18px]">Start from any look you love. We draft it to {body.name || "your body"}.</p>
+        </div>
+        <div className="hero-card mt-5 grid grid-cols-4 gap-2 rounded-[28px] p-3 lg:mt-0 lg:gap-3 lg:p-4">
+          {actions.map(([ic, l, fn]) => (
+            <button key={l} onClick={fn} className="tap group flex flex-col items-center gap-2 rounded-[20px] py-2 lg:py-4">
+              <span className="grid h-[56px] w-[56px] place-items-center rounded-[18px] bg-ink text-white shadow-[0_10px_24px_-10px_rgba(19,21,35,.7)] transition-transform group-hover:-translate-y-0.5 lg:h-[76px] lg:w-[76px] lg:rounded-[24px]"><Icon name={ic} size={24} /></span>
+              <span className="text-[14px] font-medium text-ink lg:text-[15px]">{l}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="px-6 lg:px-0">
+        <Notices />
+        <div className="lg:mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-12">
+          <div>
+            <div className="mt-7"><SectionHead title="Your bodies" onAll={() => go("bodies")} /></div>
+            <div className="noscroll -mx-6 mt-3 flex gap-2.5 overflow-x-auto px-6 pb-1 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
+              <button onClick={() => startBody()} aria-label="New body" className="tap grid h-[76px] w-[64px] shrink-0 place-items-center rounded-[20px] border border-dashed border-white/30 text-white/80 hover:border-white/60 lg:w-auto lg:grid-cols-[auto_auto] lg:justify-center lg:gap-2 lg:text-[15px] lg:font-medium">
+                <Icon name="plus" size={22} /><span className="hidden lg:inline">New body</span>
+              </button>
+              {bodies.map((b) => (
+                <Glass key={b.id} onClick={() => { set({ activeBody: b.id }); go("preview"); }} className="flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4">
+                  <span className="grid h-[60px] w-11 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-primary/20"><BodyFigure sex={b.sex} width={20} glow={false} className="h-[52px] w-full" /></span>
+                  <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/50">{b.done.length} of 24 measures</span></span>
+                </Glass>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="mt-7"><SectionHead title="Your patterns" onAll={() => go("patterns")} /></div>
+            <div className="mt-2 flex flex-col">
+              {patterns.slice(0, 3).map((p) => (
+                <button key={p.id} onClick={() => { setDraft({ garment: p.garment as GarmentKey }); go("garment"); }} className="tap flex items-center gap-3.5 border-b border-white/8 py-3 text-left last:border-0">
+                  <span className="grid h-[52px] w-[48px] shrink-0 place-items-center rounded-[14px] border border-white/10 bg-white/[.06]"><Flat g={p.garment as GarmentKey} size={32} /></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-[16px] font-medium">{p.name}</span><span className="block truncate text-[14px] text-white/50">{p.body}</span></span>
+                  <span className="flex items-center gap-1.5 text-[14px] text-white/70"><span className={cx("h-2 w-2 rounded-full", STATUS_DOT[p.status])} />{p.status}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <Glass onClick={() => go("templates")} className="mt-5 flex w-full items-center gap-3 rounded-[22px] p-3 lg:mt-8 lg:p-4">
+          <div className="flex shrink-0 -space-x-3"><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-primary/25"><Flat g="slip" size={30} /></span><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-denim/60"><Flat g="tee" size={30} /></span></div>
+          <div className="flex-1"><div className="text-[16px] font-medium">Templates</div><div className="text-[14px] text-white/55">10 styles, ready to fit to a body</div></div>
+          <Icon name="chevR" size={18} className="text-white/50" />
+        </Glass>
+        <div className="h-4" />
       </div>
-      <H1 className="mt-4">What are we making?</H1>
-      <Notices />
-      <Glow as="button" color="#687ef5" variant="edge" onClick={() => { newDraft(); go("patSelectBody"); }} className="group relative mt-5 block h-[184px] w-full rounded-[28px] p-5">
-        <FX kind="aurora" />
-        <Eyebrow className=" text-white/70">Start here</Eyebrow>
-        <div className="mt-2 text-[26px] font-normal">Make a pattern</div>
-        <div className="mt-1 max-w-[180px] text-[14px] leading-snug text-white/70">From a photo, a link, a sketch or a style.</div>
-        <div className="absolute bottom-5 left-5 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-white text-bg"><Icon name="upload" size={20} /></span><span className="eyebrow text-white/80">Photo · Link · Sketch</span></div>
-        <div className="absolute bottom-0 right-3 opacity-90"><BodyFigure width={92} variant="solid" garment="flutter" glow={false} dim={0.5} /></div>
-      </Glow>
-      <Glass onClick={() => { startBody(); }} className="mt-3 flex h-[84px] w-full items-center gap-3 rounded-[24px] px-4">
-        <div className="flex-1"><div className="text-[16px] font-semibold">Make a body</div><div className="text-[13px] text-white/55">Measure yourself or someone new</div></div>
-        <Icon name="plus" size={22} />
-      </Glass>
-      <Eyebrow className="mt-5 text-white/40">Your library</Eyebrow>
-      <div className="mt-2.5 grid grid-cols-2 gap-3">
-        <Glow as="button" color="#4d5e85" variant="fade" onClick={() => go("bodies")} className="group relative h-[140px] rounded-[24px] p-4">
-          <FX kind="tide" />
-          <span className="serif text-[40px] leading-none">{String(bodies.length).padStart(2, "0")}</span>
-          <div className="absolute right-3 top-3 flex -space-x-2 opacity-90">{bodies.slice(0, 3).map((b) => <BodyFigure key={b.id} sex={b.sex} width={24} glow={false} />)}</div>
-          <div className="absolute bottom-4 left-4"><div className="text-[15px] font-semibold">Body library</div><div className="eyebrow">Bodies</div></div>
-        </Glow>
-        <Glow as="button" color="#687ef5" variant="fade" onClick={() => go("patterns")} className="group relative h-[140px] rounded-[24px] p-4">
-          <FX kind="orbit" />
-          <span className="serif text-[40px] leading-none">{String(patterns.length).padStart(2, "0")}</span>
-          <div className="absolute right-3 top-2"><Flat g="flutter" size={56} /></div>
-          <div className="absolute bottom-4 left-4"><div className="text-[15px] font-semibold">Pattern library</div><div className="eyebrow">Patterns</div></div>
-        </Glow>
-      </div>
-      <Glass onClick={() => go("templates")} className="mt-3 flex w-full items-center gap-3 rounded-[22px] p-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-white/8"><Flat g="slip" size={34} /></div>
-        <div className="flex-1"><div className="text-[15px] font-semibold">Templates</div><div className="text-[13px] text-white/55">10 styles, ready to fit</div></div>
-        <Icon name="chevR" size={18} className="text-white/50" />
-      </Glass>
-      {last && (
-        <>
-          <Eyebrow className="mt-5 text-white/40">Continue</Eyebrow>
-          <Glass onClick={() => { useApp.getState().setDraft({ garment: last.garment as GarmentKey }); go("garment"); }} className="nofx group mt-2.5 flex w-full items-center gap-3 rounded-[22px] p-3">
-            <FX kind="sheen" />
-            <div className="grid h-14 w-12 place-items-center rounded-[12px] bg-primary/30"><Flat g={last.garment as GarmentKey} size={34} /></div>
-            <div className="flex-1"><div className="text-[15px] font-semibold">{last.name}</div><div className="text-[13px] text-white/55">{last.status} · {last.body}</div>
-              <div className="mt-1.5 flex gap-1">{[0, 1, 2, 3].map((i) => <span key={i} className={cx("h-1 w-6 rounded-full", i < (last.status === "Printed" ? 4 : last.status === "Fitting" ? 3 : 1) ? "bg-primary" : "bg-white/15")} />)}</div></div>
-            <Icon name="chevR" size={18} className="text-white/50" />
-          </Glass>
-        </>
-      )}
     </Screen>
   );
 }

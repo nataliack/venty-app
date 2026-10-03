@@ -33,10 +33,10 @@ Venty is an AI sewing-pattern app.
 
 - **GitHub:** `github.com/nataliack/venty-app` (account `nataliack`).
 - **Hosting:** Vercel, Next.js preset (`vercel.json` pins it). Every push to a branch gets a preview URL.
-- **Remote branches at handoff:** `main`, `build`, `desktop-test`.
-- **The latest work is NOT on GitHub yet.** It exists only in `venty-app.zip`, commit `b074286` "UI/UX overhaul…".
-  - The previous session could not push to GitHub, so the user had been uploading files by hand through the GitHub web UI.
-  - **Step one in Claude Code:** put the zip's contents on a new branch (for example `overhaul`), push it, and check the Vercel preview. See the README section "Getting the latest code onto GitHub".
+- **Remote branches:** `main`, `build`, `desktop-test`, `overhaul`.
+- **The overhaul is on GitHub** (branch `overhaul`, pull request #3 into `main`). Claude Code pushes with the GitHub CLI (`gh`), signed in as `nataliack`.
+- **Workflow from now on:** edits go to `main`, which is the live site. Vercel deploys `main` to production automatically.
+- **Node 20.9 or newer is required** (Next.js 16). Node 22 is installed through nvm; Node 16 cannot build the app.
 - **Installable app (PWA):** manifest in `src/app/manifest.ts`, service worker at `public/sw.js`, icons in `public/`.
 - **Parked:** `venty-3d.zip` holds a 3D-body experiment (see §9). It was never pushed. Keep it apart from main.
 
@@ -102,6 +102,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 
 **Type:**
 - One family: **Familjen Grotesk**.
+- Small numbers inside circles (for example the wizard's group numbers) use `tabular-nums leading-none` so every digit, including "1", sits dead centre.
 - Headings use **Regular 400** with tight letter spacing (`.h1` / `.h-serif`: 34px, 52px on desktop, -0.035em). They are never medium or bold.
   - Santiago said "500 … regular, not medium, not bold … we're trying to use regular". 400 was chosen; if he means 500, change the one CSS rule.
 - **Bigilla Bold only for numbers** (the `.serif` class).
@@ -136,6 +137,10 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - The footer has no backdrop.
   - The scroll area fades its bottom edge only when it really overflows (`.scroller.is-over`).
 
+**Body figure centring:** to centre a `BodyFigure` in a box, give the svg `h-full w-full` (the viewBox centres the figure itself). Never use `h-full w-auto` inside a flex box: Safari sizes the box from the svg's width attribute and the figure drifts off-centre.
+
+**Navigation (phones):** a light periwinkle tab bar (`.tabbar`, the same colour family as the home hero) with Home, Bodies, Patterns and You, plus one raised round **Create** button sitting in a notch in the middle (`.createbtn`). Create is the single most important action, so it is the only thing raised. Desktop keeps the sidebar.
+
 **Styling pitfall:** custom classes in `globals.css` written **outside** `@layer` beat Tailwind utilities.
 - Never put `display`, `position` or size on those classes (`.field`, `.opt`, `.nextbtn`, …), or utilities like `flex` stop working.
 - This bug has already happened once.
@@ -158,6 +163,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 
 **Onboarding (`onboarding`):**
 - **Light and editorial:** paper background, a 56% picture panel, and a "Fig. 1 …" caption. It is meant to look nothing like the dark app.
+- **Heading and body text are centre-aligned** on these light pages only (the rest of the app stays left-aligned).
 - **Three chapters:** any look you love (photo, screenshot, link, sketch; not just Pinterest), drafted to your body, then tweak and print.
 - **Stories-style progress bars** that auto-advance every 7 seconds and stop on the last chapter.
 - **A prominent white "Skip" button.** Skipping sets `tourSkipped`, which shows a dismissable "New here? Take the tour" card on home.
@@ -176,7 +182,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - Both can be edited in Profile.
 
 **Body setup:**
-- A progress header on every step: close (X), then "Body · Method · Measures · Review".
+- A progress header on every step: close (X), then "Body · Method · Measures · Review". The bar runs full width to the right edge (no spacer on the right).
 1. **`name`:** "Who is this body for?"
    - An empty name field (placeholder "e.g. Me, Mum or Ana").
    - A pattern block choice: Women's block or Men's block, neither pre-selected.
@@ -185,6 +191,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 2. **`method`:** **Scan with my camera** (AI estimates, then the user checks each value) or **Measure by hand**.
 3. **By hand:** `measure`, one measure at a time: height → bust → waist → hips.
    - Each starts **empty** ("—"), and Next stays disabled until a value is set.
+   - The screen shows only the title, a **full-width, centred body figure** with the tape marker, and the value control. The how-to steps live **only in the "?" sheet** (on phone and desktop), so they are never shown twice.
    - **− and + buttons** step 0.5cm. Tap the number to type a value. Drag the ruler.
    - Once a value is set, the Next button pulses and a line appears: "Nice. Bust is next."
    - Reset, the misleading neighbouring numbers, and the old "Save · next" bar are gone.
@@ -197,7 +204,8 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
      - Photos are saved as small JPEGs in `body.photos` and can be viewed later ("Your scan photos" sheet).
      - "Read my measures" simulates the AI read. It fills all 24 values and marks them `est` (estimated).
 5. **`base`, the review:**
-   - Four field-like rows. Rows still marked AI-estimated show "Check", and tapping one opens the measure step with "Looks right · Save".
+   - Four field-like rows. Rows still marked AI-estimated show a white **"Check"**, and tapping one opens the measure step with "Looks right · Save".
+   - Confirmed rows show a small tick before the label and a quiet **"Edit"**. Decision: AI estimates must each be checked once (a wrong bust or hip estimate ruins the pattern, and it is only four taps); values the user measured or already confirmed just offer Edit.
    - Continue stays disabled until all 4 are confirmed.
    - Continue opens a sheet: "Add the other 20 now?" → **Yes, continue** (to `wizard`) or **Later** (to `ready`).
 6. **`ready`:**
@@ -217,6 +225,14 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - Taking a break goes **home**, which then shows a **"Continue finishing your measures"** card (`resumeBody`).
 - **`alldone`:** the count, then every group including base, each with a dropdown of values. Tapping a value edits it.
   - Button: "Save body". There is no "Edit dimension" button.
+
+**Home (`home`), redesigned so it looks nothing like the setup flows:**
+- **Top: a periwinkle hero** (`.home-hero`) that bleeds under the status bar and ends in rounded bottom corners. Dark ink text on it.
+  - Avatar, greeting and name, and a search button.
+  - "What are we making?" and "Start from any look you love. We draft it to {body}."
+  - A frosted card (`.hero-card`) with four dark square shortcuts: **Photo, Link, Sketch, Template**. Photo, Link and Sketch start a pattern (pick the body, then the prompt screen opens the matching input through `draft.start`). Template opens templates.
+- **Below, on the dark page:** notices (finish your measures, take the tour), **Your bodies** (a horizontal row with a dashed "+" first, then each body), **Your patterns** (the three latest, with a status dot), and a Templates row. Each section has a "View all".
+- Desktop uses the same structure: the hero becomes a rounded card with the shortcuts on the right, and bodies and patterns sit side by side.
 
 **Elsewhere:**
 - **home, bodies, patterns, you:** tab bar on phones, sidebar on desktop.
@@ -238,7 +254,13 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - `photoScan`.
 - `activeBody`, `patterns`, `draft` (the pattern being made).
 
-## 8. Status at handoff (3 Oct 2026)
+## 8. Status (updated 3 Oct 2026, second round)
+
+**Second review round (done):** centred onboarding text, full-width progress bars, centred wizard numbers, how-to steps moved into the "?" sheet only, full-width centred body figures (measure and ready screens), Check/Edit on the base review, the new home and the new tab bar.
+
+**Next likely round:** the pattern, templates and print screens. Known issues there: the prompt screen pre-fills the link and description fields, and shows a "New pattern · 02" step counter (both against §5).
+
+### Status at handoff (3 Oct 2026)
 
 **Done in the last session:** everything in §5–§6. The build passes, and the body flow and photo-scan flow were checked with Playwright on phone and desktop sizes with no console errors.
 

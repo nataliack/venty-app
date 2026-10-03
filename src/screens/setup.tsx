@@ -150,11 +150,12 @@ export function BaseMeasures() {
           {BASE.map((b) => {
             const ok = body.done.includes(b.key);
             return (
+              // AI estimates must each be checked once ("Check"); confirmed values just offer "Edit"
               <button key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className={cx("field tap flex h-[72px] items-center gap-3 px-5 text-left", !ok && "!border-primary/60")}>
-                <span className="flex-1 text-[17px]">{b.label}</span>
+                <span className="flex flex-1 items-center gap-2.5 text-[17px]">{ok && <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary"><Icon name="check" size={12} strokeWidth={3} /></span>}{b.label}</span>
                 <span className="flex items-baseline gap-1.5"><span className="serif text-[30px] leading-none" translate="no">{fmt(body.measures[b.key], units)}</span><span className="unit" translate="no">{units}</span></span>
-                {ok ? <span className="grid h-7 w-7 place-items-center rounded-full bg-primary"><Icon name="check" size={15} strokeWidth={2.6} /></span>
-                  : <span className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-bg">Check</span>}
+                {ok ? <span className="flex w-[58px] items-center justify-end gap-1 text-[14px] font-medium text-white/60"><Icon name="pencil" size={14} />Edit</span>
+                  : <span className="flex w-[58px] justify-end"><span className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-bg">Check</span></span>}
               </button>
             );
           })}
@@ -454,7 +455,7 @@ export function Ready() {
   return (
     <Screen footer={<><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt"); }}>Start a pattern</Pill><Pill variant="dark" className="mt-2.5" onClick={home}>Go to home</Pill></>}
       bg={<div className="absolute inset-0" style={{ background: "radial-gradient(80% 45% at 50% 18%, rgba(104,126,245,.5), transparent 70%)" }} />}>
-      <Split left={<div className="flex h-[min(300px,36dvh)] justify-center pt-2 lg:h-[min(640px,72dvh)]"><motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }}><BodyFigure sex={body.sex} width={140} className="h-full w-auto" /></motion.div></div>} right={<>
+      <Split left={<div className="h-[min(300px,36dvh)] pt-2 lg:h-[min(640px,72dvh)]"><motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }} className="h-full w-full"><BodyFigure sex={body.sex} width={140} className="h-full w-full" /></motion.div></div>} right={<>
         <div className="mt-6 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
         <HS className="mt-3">Your body<br />is ready</HS>
         <Lead className="mt-3">Turn a dress you love into a pattern drafted to {body.name || "this body"}.</Lead>

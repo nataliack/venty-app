@@ -35,6 +35,7 @@ export type Pattern = {
 export type Draft = {
   garment: GarmentKey;
   source: "photo" | "link" | "sketch" | "template" | "voice";
+  start?: "link" | "sketch"; // home shortcut: open this input straight away on the prompt screen
   photo?: string; // object URL, not persisted
   bodyId?: string;
   length?: string;

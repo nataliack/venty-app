@@ -78,6 +78,8 @@ export function Prompt() {
   const [link, setLink] = useState("https://pin.it/flutter-midi-dress");
   const [text, setText] = useState("Midi wrap dress, flutter sleeves, V neck");
   const [listening, setListening] = useState(false);
+  // arriving from a home shortcut (Link / Sketch): open that input once
+  useEffect(() => { const st = useApp.getState().draft.start; if (st) { setSheet(st); setDraft({ start: undefined }); } }, [setDraft]);
   const onFile = (f?: File) => {
     if (!f) return;
     let url: string | undefined; try { url = URL.createObjectURL(f); } catch { url = undefined; }
