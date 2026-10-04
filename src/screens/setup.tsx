@@ -7,6 +7,7 @@ import { Screen, TopBar, HS, Lead, Pill, Glow, Glass, RB, Check, Sheet, Option, 
 import { BodyFigure, Ruler } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 import { FlowHeader, bodySteps } from "./measure";
+import { InstallSheet, useInstall } from "@/components/Install";
 export { MeasureBase, HowSheet } from "./measure";
 
 const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={cx("text-[15px] font-medium text-white/80", className)}>{children}</div>;
@@ -436,6 +437,8 @@ export function Ready() {
   const count = body.done.length;
   const left = 24 - count;
   const desk = useDesk();
+  const { offer } = useInstall();
+  const [howTo, setHowTo] = useState(false);
   useEffect(() => { set({ resumeBody: left > 0 ? activeBody : null }); }, [left, activeBody, set]);
   // a moment, so it uses the onboarding's paper and violet
   const art = (
@@ -453,6 +456,14 @@ export function Ready() {
         <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-[#12131c]/12")} />)}</div>
         {left > 0 && <button onClick={() => go("wizard")} className="mt-3 flex items-center gap-1 text-[15px] font-medium text-primary-2">Add the other {left} for a closer fit<Icon name="chevR" size={16} /></button>}
       </div>
+      {offer && (
+        <button onClick={() => setHowTo(true)} className="paper-card tap mt-5 flex w-full items-center gap-3.5 rounded-[20px] p-3.5 text-left">
+          <span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-full"><Icon name="addhome" size={19} strokeWidth={2} /></span>
+          <span className="flex-1"><span className="block text-[16px] font-medium text-[#12131c]">Add Venty to your home screen</span><span className="block text-[14px] text-[#12131c]/60">Open it in one tap, like an app.</span></span>
+          <Icon name="chevR" size={18} className="text-[#12131c]/40" />
+        </button>
+      )}
+      <InstallSheet open={howTo} onClose={() => setHowTo(false)} />
     </PaperScreen>
   );
 }

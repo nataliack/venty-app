@@ -5,6 +5,7 @@ import { useApp, type Pattern } from "@/lib/store";
 import { fabricAdvice, fitName, metresFor, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
 import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar, Split, Blob, Crown, cx, useToast, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
+import { InstallSheet, useInstall } from "@/components/Install";
 import { Icon, type IconName } from "@/components/icons";
 
 // Phone navigation: a light floating bar with the Create button raised in a notch in the centre.
@@ -38,25 +39,28 @@ function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
 }
 
 export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { go, newBody, newDraft, startBody } = useApp();
-  const row = (ic: IconName, t: string, d: string, color: string, fn: () => void) => (
-    <Glow as="button" color={color} variant="side" onClick={() => { onClose(); fn(); }} className="flex w-full items-center gap-4 rounded-[24px] p-5">
-      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/15"><Icon name={ic} size={22} /></span>
-      <span className="flex-1"><span className="block text-[17px] font-semibold">{t}</span><span className="block text-[13px] text-white/60">{d}</span></span>
-      <Icon name="chevR" size={20} />
-    </Glow>
+  const { go, newDraft, startBody } = useApp();
+  const act = (fn: () => void) => () => { onClose(); fn(); };
+  const tile = (ic: IconName, t: string, d: string, fn: () => void) => (
+    <button onClick={act(fn)} className="card-soft tap flex min-h-[132px] flex-col justify-between rounded-[22px] p-4 text-left">
+      <span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name={ic} size={21} strokeWidth={2} /></span>
+      <span><span className="block text-[16px] font-medium leading-tight">{t}</span><span className="mt-1 block text-[14px] leading-snug text-white/60">{d}</span></span>
+    </button>
   );
   return (
     <Sheet open={open} onClose={onClose}>
-      <div className="mb-4 flex items-center justify-between"><span className="text-[20px] font-semibold">Create</span><RB icon="close" size={38} onClick={onClose} /></div>
-      <div className="flex flex-col gap-2.5">
-        {row("pencil", "Design your own", "From a photo, a sketch or your own words", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
-        <button onClick={() => { onClose(); go("templates"); }} className="paper-card tap flex w-full items-center gap-4 rounded-[24px] p-5 text-left">
-          <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name="dress" size={22} strokeWidth={2} /></span>
-          <span className="flex-1"><span className="block text-[17px] font-semibold text-[#26335f]">Use a pre-made pattern</span><span className="block text-[13px] text-[#3f4c80]">Dresses, tops, trousers and skirts</span></span>
-          <Icon name="chevR" size={20} className="text-[#4f63e0]/70" />
-        </button>
-        {row("body", "Make a body", "Measure yourself or someone you sew for", "#4d5e85", () => { startBody(); })}
+      <div className="flex items-start justify-between gap-3">
+        <div><h3 className="text-[26px] font-normal leading-tight tracking-[-.02em]">Create</h3><p className="mt-1 text-[15px] text-white/60">What would you like to start?</p></div>
+        <RB icon="close" size={38} onClick={onClose} />
+      </div>
+      <button onClick={act(() => { newDraft(); go("patSelectBody"); })} className="tap relative isolate mt-5 flex min-h-[150px] w-full flex-col justify-between overflow-hidden rounded-[26px] p-5 text-left text-white">
+        <Crown className="-z-10" />
+        <span className="flex items-center justify-between"><span className="iconbadge grid h-12 w-12 place-items-center rounded-full"><Icon name="pencil" size={22} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
+        <span><span className="block text-[21px] leading-tight tracking-[-.01em]">Design your own</span><span className="mt-1 block text-[15px] text-white/80">From a photo, a sketch or your own words</span></span>
+      </button>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {tile("dress", "Use a pre-made", "Ready-to-fit patterns", () => go("templates"))}
+        {tile("body", "Make a body", "Add measurements", () => startBody())}
       </div>
     </Sheet>
   );
@@ -64,11 +68,24 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
 
 // Home notices: resume paused measures; offer the tour to people who skipped it. Both dismiss themselves once used.
 function Notices() {
-  const { bodies, resumeBody, tourSkipped, set, go } = useApp();
+  const { bodies, resumeBody, tourSkipped, installDismissed, set, go } = useApp();
   const b = bodies.find((x) => x.id === resumeBody && x.done.length < 24);
-  if (!b && !tourSkipped) return null;
+  const { offer } = useInstall();
+  const [howTo, setHowTo] = useState(false);
+  const showInstall = offer && !installDismissed;
+  if (!b && !tourSkipped && !showInstall) return null;
   return (
     <div className="mt-5 flex flex-col gap-2.5 lg:max-w-[720px]">
+      {showInstall && (
+        <div className="card-soft relative flex items-center gap-3.5 rounded-[22px] p-4">
+          <button onClick={() => setHowTo(true)} className="flex flex-1 items-center gap-3.5 text-left">
+            <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name="addhome" size={20} strokeWidth={2} /></span>
+            <span><span className="block text-[16px] font-medium">Add to your home screen</span><span className="block text-[14px] text-white/55">Open Venty in one tap, like an app.</span></span>
+          </button>
+          <button onClick={() => set({ installDismissed: true })} aria-label="Dismiss" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10"><Icon name="close" size={16} /></button>
+          <InstallSheet open={howTo} onClose={() => setHowTo(false)} />
+        </div>
+      )}
       {b && (
         <button onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="card-soft tap flex w-full items-center gap-3.5 rounded-[22px] !border-primary/60 p-4 text-left">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/25 text-peri"><Icon name="ruler" size={22} /></span>
@@ -123,18 +140,18 @@ function UpdatesButton() {
   const list = useUpdates();
   return (
     <>
-      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[#4f63e0]/15 bg-white text-[#4f63e0] shadow-[0_6px_16px_-10px_rgba(79,99,224,.6)]">
-        <Icon name="bell" size={21} />
-        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-white bg-[#687ef5]" />}
+      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="iconbadge tap relative grid h-11 w-11 shrink-0 place-items-center rounded-full">
+        <Icon name="bell" size={21} strokeWidth={2} />
+        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-[#7685c8] bg-white" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
         <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Updates</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
         <div className="flex flex-col gap-2">{list.map((u) => {
-          const body = <><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/20 text-peri"><Icon name={u.icon} size={20} /></span>
+          const body = <><span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name={u.icon} size={20} strokeWidth={2} /></span>
             <span className="min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px] font-medium">{u.t}</span><span className="shrink-0 text-[13px] text-white/45">{u.when}</span></span><span className="mt-0.5 block text-[15px] leading-snug text-white/60">{u.d}</span></span></>;
           return u.go
             ? <button key={u.t} onClick={() => { setOpen(false); u.go!(); }} className="card-soft tap flex items-start gap-3.5 rounded-[20px] p-4 text-left">{body}</button>
-            : <div key={u.t} className="flex items-start gap-3.5 rounded-[20px] border border-white/8 p-4">{body}</div>;
+            : <div key={u.t} className="card-soft flex items-start gap-3.5 rounded-[20px] p-4">{body}</div>;
         })}</div>
       </Sheet>
     </>
@@ -152,7 +169,7 @@ export function Home() {
     <Screen noPad dock footer={desk ? undefined : <TabBar tab="home" />}>
       {/* the dark page sits behind the rounded corners, so nothing grey shows through */}
       <div className="bg-bg">
-      <section className="home-hero light-hero relative px-5 pb-6 lg:px-12 lg:py-12">
+      <section className="home-hero light-hero relative px-5 pb-5 lg:px-12 lg:py-12">
         <div className="light-mat" aria-hidden />
         <div className="relative">
           <div className="flex h-12 items-center gap-3 pt-1">
@@ -162,16 +179,16 @@ export function Home() {
           </div>
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-end lg:gap-12">
             <div>
-              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[36px] text-[#26335f] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
-              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#3f4c80] lg:text-[18px]">Design your own, or start from one of our pre‑made patterns.</p>
+              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-5 !text-[32px] text-[#26335f] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
+              <p className="mt-1.5 max-w-[440px] text-[15px] leading-snug text-[#3f4c80] lg:text-[18px]">Design your own, or use a pre‑made pattern.</p>
             </div>
-            <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
-              <button onClick={make} className="tap relative isolate flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
+            <div className="mt-4 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
+              <button onClick={make} className="tap relative isolate flex min-h-[116px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
                 <Crown className="-z-10" />
                 <span className="relative flex items-center justify-between"><span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
                 <span className="relative"><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/85">Photo, sketch or words</span></span>
               </button>
-              <button onClick={() => go("templates")} className="paper-card tap flex min-h-[132px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[170px] lg:p-6">
+              <button onClick={() => go("templates")} className="paper-card tap flex min-h-[116px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[170px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-[#4f63e0]/70" /></span>
                 <span><span className="block text-[18px] font-medium leading-tight text-[#26335f] lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-[#3f4c80]">Ready-to-fit patterns</span></span>
               </button>
@@ -279,6 +296,8 @@ export function Patterns() {
 export function You() {
   const { user, units, experience, set, reset, bodies, patterns, go } = useApp();
   const [confirm, setConfirm] = useState(false);
+  const { offer } = useInstall();
+  const [howTo, setHowTo] = useState(false);
   const kiosk = useApp((s) => s.kiosk);
   const { toast, node } = useToast();
   const desk = useDesk();
@@ -298,6 +317,7 @@ export function You() {
       <Glass className="mt-2.5 divide-y divide-white/8 rounded-[22px]">
         <div className="flex items-center justify-between px-4 py-3.5"><span className="text-[15px]">Units</span><div className="flex rounded-full bg-white/8 p-1">{(["cm", "in"] as const).map((u) => <button key={u} onClick={() => set({ units: u })} className={cx("h-8 w-12 rounded-full text-[14px] font-medium", units === u ? "bg-white text-bg" : "text-white/60")}>{u}</button>)}</div></div>
         <div className="flex items-center justify-between gap-3 px-4 py-3.5"><span className="text-[15px]">Sewing experience</span><select value={experience ?? ""} onChange={(e) => set({ experience: e.target.value === "" ? null : Number(e.target.value), prefsDone: e.target.value !== "" })} className="rounded-full bg-white/8 px-3 py-1.5 text-[14px] outline-none"><option value="" disabled>Choose</option><option value="0">New to sewing</option><option value="1">Made a few things</option><option value="2">Professional</option></select></div>
+        {offer && <button onClick={() => setHowTo(true)} className="flex w-full items-center justify-between px-4 py-3.5 text-left"><span className="text-[15px]">Add to home screen</span><Icon name="chevR" size={18} className="text-white/45" /></button>}
         <div className="flex items-center justify-between px-4 py-3.5"><span className="text-[15px]">App tour</span><button onClick={() => go("onboarding", { from: "app" })} className="text-[14px] font-medium text-peri">Play</button></div>
         <div className="flex items-center justify-between px-4 py-3.5"><div><div className="text-[15px]">Expo mode</div><div className="text-[11px] text-white/45">Reset after 2 minutes idle</div></div><Toggle on={kiosk} onChange={(v) => { set({ kiosk: v }); toast(v ? "Expo mode on" : "Expo mode off"); }} /></div>
       </Glass>
@@ -310,6 +330,7 @@ export function You() {
         <Pill className="mt-5" onClick={() => { setConfirm(false); reset(); }}>Reset Venty</Pill>
         <Pill variant="dark" className="mt-2.5" onClick={() => setConfirm(false)}>Cancel</Pill>
       </Sheet>
+      <InstallSheet open={howTo} onClose={() => setHowTo(false)} />
       {node}
       <motion.div />
     </Screen>

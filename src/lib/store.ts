@@ -75,6 +75,7 @@ type State = {
   prefsDone: boolean; // units + experience chosen once, app-wide
   tourSkipped: boolean; // skipped onboarding: home offers the tour later
   updatesSeen: boolean; // the home bell has been opened
+  installDismissed: boolean; // "Add Venty to your home screen" card closed on home
   resumeBody: string | null; // body whose extra measures were paused ("Take a break")
   bodies: Body[];
   activeBody: string; // body being edited / selected
@@ -111,6 +112,7 @@ const initial = () => ({
   prefsDone: false,
   tourSkipped: false,
   updatesSeen: false,
+  installDismissed: false,
   resumeBody: null as string | null,
   bodies: [ME, ...seedBodies()],
   activeBody: "me",
