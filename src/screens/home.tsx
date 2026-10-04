@@ -5,7 +5,7 @@ import { useApp, type Pattern } from "@/lib/store";
 import { fabricAdvice, fitName, metresFor, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
 import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar, Split, Blob, Crown, cx, useToast, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
-import { InstallSheet, useInstall } from "@/components/Install";
+import { useInstall } from "@/components/Install";
 import { Icon, type IconName } from "@/components/icons";
 
 // Phone navigation: a light floating bar with the Create button raised in a notch in the centre.
@@ -71,19 +71,17 @@ function Notices() {
   const { bodies, resumeBody, tourSkipped, installDismissed, set, go } = useApp();
   const b = bodies.find((x) => x.id === resumeBody && x.done.length < 24);
   const { offer } = useInstall();
-  const [howTo, setHowTo] = useState(false);
   const showInstall = offer && !installDismissed;
   if (!b && !tourSkipped && !showInstall) return null;
   return (
     <div className="mt-5 flex flex-col gap-2.5 lg:max-w-[720px]">
       {showInstall && (
         <div className="card-soft relative flex items-center gap-3.5 rounded-[22px] p-4">
-          <button onClick={() => setHowTo(true)} className="flex flex-1 items-center gap-3.5 text-left">
+          <button onClick={() => go("install")} className="flex flex-1 items-center gap-3.5 text-left">
             <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name="addhome" size={20} strokeWidth={2} /></span>
             <span><span className="block text-[16px] font-medium">Add to your home screen</span><span className="block text-[14px] text-white/55">Open Venty in one tap, like an app.</span></span>
           </button>
           <button onClick={() => set({ installDismissed: true })} aria-label="Dismiss" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10"><Icon name="close" size={16} /></button>
-          <InstallSheet open={howTo} onClose={() => setHowTo(false)} />
         </div>
       )}
       {b && (
@@ -142,16 +140,18 @@ function UpdatesButton() {
     <>
       <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="iconbadge tap relative grid h-11 w-11 shrink-0 place-items-center rounded-full">
         <Icon name="bell" size={21} strokeWidth={2} />
-        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-[#7685c8] bg-white" />}
+        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-[#1d2140] bg-[#8c9cf8]" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
         <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Updates</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
-        <div className="flex flex-col gap-2">{list.map((u) => {
-          const body = <><span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name={u.icon} size={20} strokeWidth={2} /></span>
-            <span className="min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px] font-medium">{u.t}</span><span className="shrink-0 text-[13px] text-white/45">{u.when}</span></span><span className="mt-0.5 block text-[15px] leading-snug text-white/60">{u.d}</span></span></>;
+        {/* a quiet feed, not a stack of buttons: plain rows split by hairlines. Rows that lead somewhere are still tappable. */}
+        <div className="-mx-2 flex flex-col">{list.map((u, i) => {
+          const body = <><span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-full"><Icon name={u.icon} size={18} strokeWidth={2} /></span>
+            <span className="min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px]">{u.t}</span><span className="shrink-0 text-[13px] text-white/40">{u.when}</span></span><span className="mt-0.5 block text-[14px] leading-snug text-white/55">{u.d}</span></span></>;
+          const row = cx("flex items-start gap-3.5 rounded-[16px] px-2 py-3.5 text-left", i > 0 && "border-t border-white/[.07]");
           return u.go
-            ? <button key={u.t} onClick={() => { setOpen(false); u.go!(); }} className="card-soft tap flex items-start gap-3.5 rounded-[20px] p-4 text-left">{body}</button>
-            : <div key={u.t} className="card-soft flex items-start gap-3.5 rounded-[20px] p-4">{body}</div>;
+            ? <button key={u.t} onClick={() => { setOpen(false); u.go!(); }} className={cx(row, "transition-colors hover:bg-white/[.04]")}>{body}</button>
+            : <div key={u.t} className={row}>{body}</div>;
         })}</div>
       </Sheet>
     </>
@@ -297,7 +297,6 @@ export function You() {
   const { user, units, experience, set, reset, bodies, patterns, go } = useApp();
   const [confirm, setConfirm] = useState(false);
   const { offer } = useInstall();
-  const [howTo, setHowTo] = useState(false);
   const kiosk = useApp((s) => s.kiosk);
   const { toast, node } = useToast();
   const desk = useDesk();
@@ -317,7 +316,7 @@ export function You() {
       <Glass className="mt-2.5 divide-y divide-white/8 rounded-[22px]">
         <div className="flex items-center justify-between px-4 py-3.5"><span className="text-[15px]">Units</span><div className="flex rounded-full bg-white/8 p-1">{(["cm", "in"] as const).map((u) => <button key={u} onClick={() => set({ units: u })} className={cx("h-8 w-12 rounded-full text-[14px] font-medium", units === u ? "bg-white text-bg" : "text-white/60")}>{u}</button>)}</div></div>
         <div className="flex items-center justify-between gap-3 px-4 py-3.5"><span className="text-[15px]">Sewing experience</span><select value={experience ?? ""} onChange={(e) => set({ experience: e.target.value === "" ? null : Number(e.target.value), prefsDone: e.target.value !== "" })} className="rounded-full bg-white/8 px-3 py-1.5 text-[14px] outline-none"><option value="" disabled>Choose</option><option value="0">New to sewing</option><option value="1">Made a few things</option><option value="2">Professional</option></select></div>
-        {offer && <button onClick={() => setHowTo(true)} className="flex w-full items-center justify-between px-4 py-3.5 text-left"><span className="text-[15px]">Add to home screen</span><Icon name="chevR" size={18} className="text-white/45" /></button>}
+        {offer && <button onClick={() => go("install")} className="flex w-full items-center justify-between px-4 py-3.5 text-left"><span className="text-[15px]">Add to home screen</span><Icon name="chevR" size={18} className="text-white/45" /></button>}
         <div className="flex items-center justify-between px-4 py-3.5"><span className="text-[15px]">App tour</span><button onClick={() => go("onboarding", { from: "app" })} className="text-[14px] font-medium text-peri">Play</button></div>
         <div className="flex items-center justify-between px-4 py-3.5"><div><div className="text-[15px]">Expo mode</div><div className="text-[11px] text-white/45">Reset after 2 minutes idle</div></div><Toggle on={kiosk} onChange={(v) => { set({ kiosk: v }); toast(v ? "Expo mode on" : "Expo mode off"); }} /></div>
       </Glass>
@@ -330,7 +329,6 @@ export function You() {
         <Pill className="mt-5" onClick={() => { setConfirm(false); reset(); }}>Reset Venty</Pill>
         <Pill variant="dark" className="mt-2.5" onClick={() => setConfirm(false)}>Cancel</Pill>
       </Sheet>
-      <InstallSheet open={howTo} onClose={() => setHowTo(false)} />
       {node}
       <motion.div />
     </Screen>

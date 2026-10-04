@@ -7,7 +7,7 @@ import { Screen, TopBar, HS, Lead, Pill, Glow, Glass, RB, Check, Sheet, Option, 
 import { BodyFigure, Ruler } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 import { FlowHeader, bodySteps } from "./measure";
-import { InstallSheet, useInstall } from "@/components/Install";
+import { useInstall } from "@/components/Install";
 export { MeasureBase, HowSheet } from "./measure";
 
 const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={cx("text-[15px] font-medium text-white/80", className)}>{children}</div>;
@@ -23,8 +23,13 @@ const EXP = [
 ];
 export function Prefs() {
   const { units, experience, set, go } = useApp();
+  // on a phone browser, also ask about the home screen; "Yes" shows the short guide, then the flow carries on
+  const { offer } = useInstall();
+  const [addHome, setAddHome] = useState<boolean | null>(null);
+  const ready = experience !== null && (!offer || addHome !== null);
+  const next = () => { set({ prefsDone: true }); if (offer && addHome) go("install", { then: "name" }); else go("name"); };
   return (
-    <Screen header={<TopBar left="close" onLeft={useApp.getState().exitFlow} />} footer={<Arrows ready={experience !== null} onNext={() => { set({ prefsDone: true }); go("name"); }} />}>
+    <Screen header={<TopBar left="close" onLeft={useApp.getState().exitFlow} />} footer={<Arrows ready={ready} onNext={next} />}>
       <Split left={<>
         <HS className="mt-2 lg:mt-0">Before we begin</HS>
       </>} right={<>
@@ -46,6 +51,15 @@ export function Prefs() {
             </Option>
           ))}
         </div>
+        {offer && <>
+          <Label className="mt-6">Add Venty to your home screen?</Label>
+          <p className="mt-1 text-[15px] text-white/55">Open it in one tap, like an app.</p>
+          <div className="mt-2.5 grid grid-cols-2 gap-3" data-need={addHome === null ? "1" : "0"}>
+            {([[true, "Yes, show me"], [false, "Not now"]] as const).map(([v, t]) => (
+              <Option key={t} on={addHome === v} onClick={() => setAddHome(v)} className="flex min-h-[64px] items-center rounded-[22px] px-4 py-3 pr-11"><span className="text-[16px] font-medium leading-tight">{t}</span></Option>
+            ))}
+          </div>
+        </>}
       </>} />
     </Screen>
   );
@@ -437,8 +451,6 @@ export function Ready() {
   const count = body.done.length;
   const left = 24 - count;
   const desk = useDesk();
-  const { offer } = useInstall();
-  const [howTo, setHowTo] = useState(false);
   useEffect(() => { set({ resumeBody: left > 0 ? activeBody : null }); }, [left, activeBody, set]);
   // a moment, so it uses the onboarding's paper and violet
   const art = (
@@ -447,7 +459,7 @@ export function Ready() {
     </div>
   );
   return (
-    <PaperScreen art={art} artH="h-[31%]" footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
+    <PaperScreen art={art} artH="h-[40%]" footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
       <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
       <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Well done! Your body is ready</h1>
       <p className="lead mt-3">Good job finishing {body.name ? `${body.name}’s` : "your"} measurements. Every pattern you make will be drafted to them.</p>
@@ -456,14 +468,6 @@ export function Ready() {
         <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-[#12131c]/12")} />)}</div>
         {left > 0 && <button onClick={() => go("wizard")} className="mt-3 flex items-center gap-1 text-[15px] font-medium text-primary-2">Add the other {left} for a closer fit<Icon name="chevR" size={16} /></button>}
       </div>
-      {offer && (
-        <button onClick={() => setHowTo(true)} className="paper-card tap mt-5 flex w-full items-center gap-3.5 rounded-[20px] p-3.5 text-left">
-          <span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-full"><Icon name="addhome" size={19} strokeWidth={2} /></span>
-          <span className="flex-1"><span className="block text-[16px] font-medium text-[#12131c]">Add Venty to your home screen</span><span className="block text-[14px] text-[#12131c]/60">Open it in one tap, like an app.</span></span>
-          <Icon name="chevR" size={18} className="text-[#12131c]/40" />
-        </button>
-      )}
-      <InstallSheet open={howTo} onClose={() => setHowTo(false)} />
     </PaperScreen>
   );
 }

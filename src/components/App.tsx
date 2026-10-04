@@ -11,6 +11,7 @@ import { PatSelectBody, Prompt, AIRead, Generating, Garment, Edits } from "@/scr
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
 import { Seam, Arrange, PrintMethod, Needs, PrintReady, MiniMap, Printed } from "@/screens/print";
 import { Pill, cx } from "./ui";
+import { InstallGuide } from "./Install";
 import { Sidebar } from "./Sidebar";
 
 // Screens shown full-bleed on desktop (no sidebar)
@@ -26,6 +27,7 @@ const SCREENS: Record<string, ScreenC> = {
   home: Home, bodies: Bodies, patterns: Patterns, you: You, pattern: PatternView,
   patSelectBody: PatSelectBody, prompt: Prompt, ref: AIRead, ai: AIRead, generating: Generating, garment: Garment, edits: Edits,
   templates: Templates, template: TemplateDetail, tplBody: TplBody, tplFit: TplFit, tplResult: TplResult,
+  install: InstallGuide,
   seam: Seam, arrange: Arrange, printMethod: PrintMethod, needs: Needs, print: PrintReady, minimap: MiniMap, printed: Printed,
 };
 

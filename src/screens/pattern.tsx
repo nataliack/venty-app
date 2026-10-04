@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { FLUTTER, FITS, fitName, fabricAdvice, templateBy, type GarmentKey, type PieceKey } from "@/lib/data";
-import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, RB, Arrows, Check, Option, Segmented, Sheet, cx, Blob, Field, Split, useDesk } from "@/components/ui";
+import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, RB, Arrows, NextButton, Check, Option, Segmented, Sheet, Crown, cx, Blob, Field, Split, useDesk } from "@/components/ui";
 import { BodyFigure, Piece, Ruler } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 import { FlowHeader } from "./measure";
@@ -50,26 +50,40 @@ export function PatSelectBody() {
   );
 }
 
-// P02 · the studio: one canvas. Add a photo of the garment, sketch on it or beside it, or both.
-// The canvas lives on the page (not in a sheet), so drawing never drags anything away.
-type Stroke = [number, number][]; // points, normalised 0..1 so the drawing survives a resize
+// P02 · the studio: one instrument that holds every tool, in the spirit of a creative toolkit. Photos, a sketch pad
+// and your words live in a single panel, so mixing them feels natural. The pad lives on the page (not in a sheet),
+// so drawing never drags anything away.
+type Stroke = { pts: [number, number][]; erase?: boolean }; // points normalised 0..1 so the drawing survives a resize
+const MAX_REFS = 4;
 export function Prompt() {
-  const { go, setDraft } = useApp();
+  const { go, back, setDraft, draft, bodies, stack } = useApp();
   const file = useRef<HTMLInputElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const strokes = useRef<Stroke[]>([]);
   const cur = useRef<Stroke | null>(null);
-  const [n, setN] = useState(0); // number of strokes, for the UI
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [n, setN] = useState(0); // strokes drawn, for the UI
+  const [refs, setRefs] = useState<string[]>([]);
+  const [active, setActive] = useState(0);
+  const [tool, setTool] = useState<"pen" | "erase">("pen");
   const [text, setText] = useState("");
   const pic = useRef<HTMLImageElement>(null);
   const desk = useDesk();
+  const photo = refs[active] ?? null;
+  const body = bodies.find((x) => x.id === draft.bodyId);
+  const changeBody = () => (stack[stack.length - 2]?.id === "patSelectBody" ? back() : go("patSelectBody"));
 
-  const ctx = () => { const c = cv.current; const g = c?.getContext("2d"); if (!c || !g) return null; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#fff"; g.lineWidth = 2.6 * (window.devicePixelRatio || 1); return { c, g }; };
+  const ctx = () => { const c = cv.current; const g = c?.getContext("2d"); if (!c || !g) return null; g.lineCap = "round"; g.lineJoin = "round"; return { c, g }; };
+  const paint = (g: CanvasRenderingContext2D, st: Stroke) => {
+    const d = window.devicePixelRatio || 1;
+    g.globalCompositeOperation = st.erase ? "destination-out" : "source-over";
+    g.strokeStyle = "#fff"; g.lineWidth = (st.erase ? 22 : 2.8) * d;
+    g.shadowColor = st.erase ? "transparent" : "rgb(8 10 30 / .7)"; g.shadowBlur = st.erase ? 0 : 3 * d;
+  };
   const redraw = useCallback(() => {
     const k = ctx(); if (!k) return; const { c, g } = k;
-    g.clearRect(0, 0, c.width, c.height);
-    strokes.current.forEach((st) => { g.beginPath(); st.forEach(([x, y], i) => (i ? g.lineTo(x * c.width, y * c.height) : g.moveTo(x * c.width, y * c.height))); if (st.length === 1) g.lineTo(st[0][0] * c.width + 0.1, st[0][1] * c.height); g.stroke(); });
+    g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, c.width, c.height);
+    strokes.current.forEach((st) => { paint(g, st); g.beginPath(); st.pts.forEach(([x, y], i) => (i ? g.lineTo(x * c.width, y * c.height) : g.moveTo(x * c.width, y * c.height))); if (st.pts.length === 1) g.lineTo(st.pts[0][0] * c.width + 0.1, st.pts[0][1] * c.height); g.stroke(); });
+    g.globalCompositeOperation = "source-over";
   }, []);
   useEffect(() => {
     const c = cv.current; if (!c) return;
@@ -78,17 +92,27 @@ export function Prompt() {
     return () => ro.disconnect();
   }, [redraw]);
   const at = (e: React.PointerEvent): [number, number] => { const r = cv.current!.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
-  const down = (e: React.PointerEvent) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); cur.current = [at(e)]; strokes.current.push(cur.current); redraw(); };
+  const down = (e: React.PointerEvent) => {
+    if (tool === "erase" && n === 0) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId); cur.current = { pts: [at(e)], erase: tool === "erase" }; strokes.current.push(cur.current); redraw();
+  };
   const move = (e: React.PointerEvent) => {
     const st = cur.current; const k = ctx(); if (!st || !k) return;
-    const p = at(e); const [lx, ly] = st[st.length - 1]; st.push(p);
-    k.g.beginPath(); k.g.moveTo(lx * k.c.width, ly * k.c.height); k.g.lineTo(p[0] * k.c.width, p[1] * k.c.height); k.g.stroke();
+    const p = at(e); const [lx, ly] = st.pts[st.pts.length - 1]; st.pts.push(p);
+    paint(k.g, st); k.g.beginPath(); k.g.moveTo(lx * k.c.width, ly * k.c.height); k.g.lineTo(p[0] * k.c.width, p[1] * k.c.height); k.g.stroke();
+    k.g.globalCompositeOperation = "source-over";
   };
   const up = () => { if (cur.current) { cur.current = null; setN(strokes.current.length); } };
-  const undo = () => { strokes.current.pop(); redraw(); setN(strokes.current.length); };
-  const clear = () => { strokes.current = []; redraw(); setN(0); setPhoto(null); };
-  const onFile = (f?: File) => { if (!f) return; try { setPhoto(URL.createObjectURL(f)); } catch { /* ignore */ } };
-  const ready = !!photo || n > 0 || text.trim().length > 0;
+  const undo = () => { strokes.current.pop(); redraw(); setN(strokes.current.length); if (!strokes.current.some((x) => !x.erase)) setTool("pen"); };
+  const clear = () => { strokes.current = []; redraw(); setN(0); setTool("pen"); };
+  const onFiles = (fs?: FileList | null) => {
+    if (!fs?.length) return;
+    const urls: string[] = []; Array.from(fs).forEach((f) => { try { urls.push(URL.createObjectURL(f)); } catch { /* ignore */ } });
+    setRefs((r) => { const all = [...r, ...urls].slice(0, MAX_REFS); setActive(Math.min(all.length - 1, r.length)); return all; });
+  };
+  const removeRef = (i: number) => { setRefs((r) => r.filter((_, k) => k !== i)); setActive((a) => Math.max(0, a > i ? a - 1 : a === i ? 0 : a)); };
+  const drawn = strokes.current.some((x) => !x.erase) && n > 0;
+  const ready = refs.length > 0 || drawn || text.trim().length > 0;
   // merge the photo (fitted the way it is shown) and the sketch into one picture for the next steps
   const merge = () => {
     const c = cv.current; if (!c || !c.width) return undefined;
@@ -104,49 +128,81 @@ export function Prompt() {
     try { return out.toDataURL("image/jpeg", 0.82); } catch { return photo ?? undefined; }
   };
   const next = () => {
-    setDraft({ photo: photo || n ? merge() : undefined, source: photo ? "photo" : n ? "sketch" : "voice", prompt: text.trim() || undefined, garment: "flutter", chosen: {}, details: undefined });
+    setDraft({ photo: photo || drawn ? merge() : undefined, source: photo ? "photo" : drawn ? "sketch" : "voice", prompt: text.trim() || undefined, garment: "flutter", chosen: {}, details: undefined });
     go("ref");
   };
 
-  const tool = (icon: IconName, label: string, fn: () => void, on = true) => (
-    <button onClick={fn} disabled={!on} className={cx("tap flex h-12 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium transition-opacity", !on && "opacity-35")}><Icon name={icon} size={18} />{label}</button>
-  );
-  const tools = (
-    <div className="flex flex-wrap gap-2">
-      <button onClick={() => file.current?.click()} className="tap flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[15px] font-medium text-bg"><Icon name="image" size={18} />{photo ? "Change photo" : "Add a photo"}</button>
-      {tool("refresh", "Undo", undo, n > 0)}
-      {tool("trash", "Clear", clear, !!photo || n > 0)}
+  // the reference strip: your photos as thumbnails, plus one tile to add more (like a mood board pinned to the pad)
+  const strip = (
+    <div className="flex items-center gap-2">
+      {refs.map((r, i) => (
+        <div key={r} className="relative">
+          <button onClick={() => setActive(i)} aria-label={`Show photo ${i + 1}`} className={cx("block h-12 w-12 overflow-hidden rounded-[14px] border-2 transition-colors", i === active ? "border-white" : "border-white/15 opacity-75")}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={r} alt="" className="h-full w-full object-cover" />
+          </button>
+          {i === active && <button onClick={() => removeRef(i)} aria-label="Remove photo" className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-white text-[#0b0c15] shadow"><Icon name="close" size={11} strokeWidth={3} /></button>}
+        </div>
+      ))}
+      {refs.length < MAX_REFS && (
+        <button onClick={() => file.current?.click()} aria-label="Add a photo" className="grid h-12 w-12 place-items-center rounded-[14px] border border-white/15 bg-white/[.06] text-white/80 backdrop-blur-md transition-colors hover:bg-white/10"><Icon name="imageplus" size={20} /></button>
+      )}
     </div>
   );
-  const canvas = (
-    <div className={cx("relative overflow-hidden rounded-[28px] border border-white/15 bg-[#121427]", desk ? "h-[min(520px,54dvh)]" : "h-[min(380px,44dvh)]")} style={{ backgroundImage: "radial-gradient(rgb(255 255 255 / .12) 1px, transparent 1.3px)", backgroundSize: "18px 18px" }}>
+  const stage = (
+    <div className={cx("studio-stage relative overflow-hidden rounded-[22px]", desk ? "h-[min(470px,50dvh)]" : "h-[min(380px,44dvh)]")}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {photo && <img ref={pic} src={photo} alt="Your garment photo" className="pointer-events-none absolute inset-0 h-full w-full object-contain p-4" />}
       {!photo && n === 0 && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-white/10"><Icon name="pencil" size={24} /></span>
-          <div className="mt-3 text-[19px]">Sketch here, or add a photo</div>
-          <div className="mt-1 max-w-[280px] text-[15px] leading-snug text-white/60">Draw on top of a photo to show what you would change.</div>
+          <div className="text-[19px]">Sketch your idea here</div>
+          <div className="mt-1 max-w-[260px] text-[15px] leading-snug text-white/55">or add a photo and draw what you’d change.</div>
         </div>
       )}
-      <canvas ref={cv} aria-label="Sketch area" className="absolute inset-0 h-full w-full cursor-crosshair touch-none" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+      <canvas ref={cv} aria-label="Sketch pad" className={cx("absolute inset-0 h-full w-full touch-none", tool === "erase" ? "cursor-cell" : "cursor-crosshair")} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+      <div className="absolute left-2.5 top-2.5">{strip}</div>
+      {n > 0 && (
+        <div className="absolute right-2.5 top-2.5 flex gap-1.5">
+          <button onClick={undo} aria-label="Undo" className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-[#0b0c15]/60 backdrop-blur-md hover:bg-white/10"><Icon name="undo" size={18} /></button>
+          <button onClick={clear} aria-label="Clear the sketch" className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-[#0b0c15]/60 backdrop-blur-md hover:bg-white/10"><Icon name="trash" size={18} /></button>
+        </div>
+      )}
+    </div>
+  );
+  const tools = (
+    <div className="flex items-center gap-2 overflow-x-auto noscroll">
+      <button onClick={() => file.current?.click()} disabled={refs.length >= MAX_REFS} className="tool"><Icon name="imageplus" size={17} />Photo</button>
+      <button onClick={() => setTool("pen")} aria-pressed={tool === "pen"} className={cx("tool", tool === "pen" && "on")}><Icon name="pencil" size={17} />Draw</button>
+      <button onClick={() => setTool("erase")} aria-pressed={tool === "erase"} disabled={n === 0} className={cx("tool", tool === "erase" && "on")}><Icon name="eraser" size={17} />Erase</button>
+    </div>
+  );
+  const composer = (
+    <div className="studio rounded-[28px] p-2" data-need={ready ? "0" : "1"}>
+      {stage}
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={desk ? 2 : 2} aria-label="Describe it" placeholder="Describe it, e.g. a midi wrap dress with flutter sleeves"
+        className="block w-full resize-none bg-transparent px-3 pb-2 pt-3.5 text-[17px] leading-snug outline-none placeholder:text-white/35" />
+      {/* who it's drafted to, set like a setting inside the tool rather than a separate question */}
+      {body && (
+        <button onClick={changeBody} className="flex w-full items-center justify-between gap-3 border-t border-white/[.07] px-3 py-2.5 text-left">
+          <span className="flex items-center gap-2 text-[14px] text-white/50"><Icon name="body" size={16} />Drafted to</span>
+          <span className="flex items-center gap-1 text-[15px] font-medium">{body.name}<Icon name="chevR" size={15} className="text-white/45" /></span>
+        </button>
+      )}
+      <div className={cx("flex items-center gap-3 border-t border-white/[.07] px-1 pt-2", desk && "pb-0.5")}>
+        <div className="min-w-0 flex-1">{tools}</div>
+        {desk && <NextButton ready={ready} onClick={next} label="Continue" className="!h-[52px] w-[200px] shrink-0" />}
+      </div>
     </div>
   );
   return (
-    <Screen footer={<Arrows ready={ready} onNext={next} label="Continue" />}>
-      <input ref={file} type="file" accept="image/*" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
-      <TopBar left="back" />
-      <Split cols="lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]" left={<>
-        <H1 className="mt-3 lg:mt-0">What are we<br />making?</H1>
-        <Lead className="mt-3 max-w-[420px]">Add a photo, sketch your idea and describe it. Use one, or mix all three.</Lead>
-      </>} right={<div className="mt-5 lg:mt-0" data-need={ready ? "0" : "1"}>
-        <label className="block">
-          <span className="mb-2 block text-[15px] font-medium text-white/80">Describe it</span>
-          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="e.g. a midi wrap dress with flutter sleeves" className="field block w-full resize-none bg-transparent px-4 py-3 text-[16px] leading-snug outline-none placeholder:text-white/35" />
-        </label>
-        <div className="mt-4">{tools}</div>
-        <div className="mt-3">{canvas}</div>
-      </div>} />
+    <Screen header={<TopBar left="back" />} footer={desk ? undefined : <Arrows ready={ready} onNext={next} label="Continue" />}
+      bg={<div className="pointer-events-none absolute inset-x-0 top-0 h-[320px] opacity-[.35] [mask-image:linear-gradient(#000,transparent)]"><Crown /></div>}>
+      <input ref={file} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
+      <div className="lg:mx-auto lg:max-w-[920px]">
+        <h1 className="h1 !text-[28px] [text-wrap:balance] lg:!text-[44px]">What are we making?</h1>
+        <p className="mt-1 text-[15px] text-white/60 lg:text-[17px]">Mix photos, a sketch and your words.</p>
+        <div className="mt-4 lg:mt-6">{composer}</div>
+      </div>
     </Screen>
   );
 }

@@ -303,9 +303,18 @@ input { font: inherit; color: inherit; }
 .herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
 /* small icon badges in the same periwinkle as the Create (+) button, white line icon, a fine light outline */
-/* soft, faded blue: dark enough for a white icon, quiet enough to sit on paper, Crown or dark cards */
-.iconbadge { color: #fff; background: linear-gradient(160deg, #8e9ad2 0%, #6f7dbd 100%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .28), inset 0 1px 0 rgb(255 255 255 / .3), 0 6px 14px -8px rgb(40 50 110 / .55); }
+/* the app's own dark blue (the page background, lifted a touch) with a white icon and a fine light edge */
+.iconbadge { color: #fff; background: linear-gradient(160deg, #262b4b 0%, #14172a 100%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .1), 0 6px 14px -8px rgb(8 10 24 / .7); }
+/* the studio: one panel that holds every tool (photos, sketch, words), like a single instrument */
+.studio { background: linear-gradient(180deg, #171a2d 0%, #111324 100%); border: 1px solid rgb(255 255 255 / .1);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), 0 30px 60px -30px rgb(0 0 0 / .9), 0 0 0 1px rgb(140 156 248 / .04); }
+.studio-stage { background-color: #0d0f1c; background-image: radial-gradient(rgb(255 255 255 / .1) 1px, transparent 1.3px); background-size: 18px 18px; }
+.tool { height: 40px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; white-space: nowrap;
+  color: rgb(255 255 255 / .82); background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .1); transition: background .2s, color .2s, border-color .2s, opacity .2s; }
+.tool.on { color: #0b0c15; background: #fff; border-color: #fff; }
+.tool:disabled { opacity: .35; }
+@media (hover: hover) { .tool:not(.on):not(:disabled):hover { background: rgb(255 255 255 / .1); border-color: rgb(255 255 255 / .2); } }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: 0 0 0 6px #0b0c15, inset 0 1px 0 rgb(255 255 255 / .45); }

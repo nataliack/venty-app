@@ -48,7 +48,7 @@ export const Crown = ({ className }: { className?: string }) => (
 
 // A "moment" screen in the onboarding style: a violet picture panel and warm paper below (side by side on desktop).
 // Used where something starts or finishes, so those screens stand apart from the dark working screens.
-export function PaperScreen({ art, children, footer, top, artH = "h-[42%]" }: { art: ReactNode; children: ReactNode; footer: ReactNode; top?: ReactNode; artH?: string }) {
+export function PaperScreen({ art, children, footer, top, artH = "h-[54%]" }: { art: ReactNode; children: ReactNode; footer: ReactNode; top?: ReactNode; artH?: string }) {
   const desk = useDesk();
   if (desk) return (
     <div className="paper absolute inset-0 grid grid-cols-[1.05fr_0.95fr]">
