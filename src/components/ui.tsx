@@ -59,7 +59,7 @@ export function PaperScreen({ art, children, footer, top, artH = "h-[42%]" }: { 
   return (
     <div className="paper absolute inset-0 flex flex-col">
       <div className={cx("relative shrink-0 overflow-hidden rounded-b-[32px] text-white", artH)}><Crown />{art}{top && <div className="absolute inset-x-0 top-0 px-5" style={{ paddingTop: "var(--top)" }}>{top}</div>}</div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-6 noscroll">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-5 noscroll"><div className="my-auto py-2">{children}</div></div>
       <div className="shrink-0 px-6 pt-3" style={{ paddingBottom: "var(--bottom)" }}>{footer}</div>
     </div>
   );

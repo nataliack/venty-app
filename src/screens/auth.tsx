@@ -321,9 +321,10 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   return (
     <div className="paper absolute inset-0 flex flex-col">
       <div className="h-[56%] shrink-0 overflow-hidden rounded-b-[32px]">{image}</div>
-      <div className="flex min-h-0 flex-1 flex-col px-6 pt-7" style={{ paddingBottom: "var(--bottom)" }}>
-        {words}
-        <div className="mt-auto pt-4">{controls}</div>
+      <div className="flex min-h-0 flex-1 flex-col px-6 pt-4" style={{ paddingBottom: "var(--bottom)" }}>
+        {/* the heading and text sit in the middle of the paper, between the picture and the buttons */}
+        <div className="flex min-h-0 flex-1 flex-col justify-center py-2">{words}</div>
+        <div className="pt-2">{controls}</div>
       </div>
     </div>
   );
