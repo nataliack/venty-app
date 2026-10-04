@@ -24,8 +24,9 @@ function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   };
   return (
     <>
-      <div className="relative mt-3">
-        <nav className="tabbar flex h-[72px] items-stretch rounded-[28px] px-1.5">
+      <div className="relative mt-5">
+        {/* docked flush to the bottom edge; the padding keeps the icons above the home indicator */}
+        <nav className="tabbar flex items-stretch rounded-t-[28px] px-2" style={{ height: "calc(64px + var(--dock))", paddingBottom: "var(--dock)" }}>
           {items.slice(0, 2).map(btn)}
           <span className="w-[78px] shrink-0" />
           {items.slice(2).map(btn)}
