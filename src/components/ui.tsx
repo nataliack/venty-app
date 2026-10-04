@@ -41,6 +41,25 @@ export function Screen({ children, footer, header, className, bg, noPad, wide }:
   );
 }
 
+// A "moment" screen in the onboarding style: a violet picture panel and warm paper below (side by side on desktop).
+// Used where something starts or finishes, so those screens stand apart from the dark working screens.
+export function PaperScreen({ art, children, footer, top }: { art: ReactNode; children: ReactNode; footer: ReactNode; top?: ReactNode }) {
+  const desk = useDesk();
+  if (desk) return (
+    <div className="paper absolute inset-0 grid grid-cols-[1.05fr_0.95fr]">
+      <div className="p-5"><div className="violet-panel grain relative h-full overflow-hidden rounded-[36px]">{art}{top && <div className="absolute inset-x-0 top-0 p-8">{top}</div>}</div></div>
+      <div className="flex min-h-0 flex-col justify-center overflow-y-auto px-14 py-10 noscroll"><div className="mx-auto w-full max-w-[480px]">{children}<div className="mt-10">{footer}</div></div></div>
+    </div>
+  );
+  return (
+    <div className="paper absolute inset-0 flex flex-col">
+      <div className="violet-panel grain relative h-[42%] shrink-0 overflow-hidden rounded-b-[32px]">{art}{top && <div className="absolute inset-x-0 top-0 px-5" style={{ paddingTop: "var(--top)" }}>{top}</div>}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-6 noscroll">{children}</div>
+      <div className="shrink-0 px-6 pt-3" style={{ paddingBottom: "var(--bottom)" }}>{footer}</div>
+    </div>
+  );
+}
+
 // Two-column desktop layout; stacks in order on phones.
 export function Split({ left, right, className, cols = "lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]", center = true }: { left: ReactNode; right: ReactNode; className?: string; cols?: string; center?: boolean }) {
   return (

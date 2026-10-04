@@ -231,14 +231,7 @@ input { font: inherit; color: inherit; }
 
 /* ─── home: periwinkle hero that bleeds under the status bar, then the dark page ─── */
 @layer components {
-.home-hero { color: #fff; margin-top: calc(-1 * var(--top)); padding-top: var(--top); border-radius: 0 0 36px 36px; overflow: hidden; isolation: isolate;
-  box-shadow: 0 28px 60px -34px rgb(104 126 245 / .55); }
-/* the Welcome sky, lighter and contained in the rounded block, so the top half reads as its own shape */
-.sky.sky-hero { background:
-    linear-gradient(90deg, transparent 55%, rgb(20 24 45 / .18) 100%),
-    linear-gradient(180deg, #919dc9 0%, #8592c2 22%, #7686b8 46%, #6878ad 70%, #5c6ca2 100%); }
-.sky.sky-hero::before { opacity: .35; }
-.sky.sky-hero .drift { opacity: .65; }
+.home-hero { margin-top: calc(-1 * var(--top)); padding-top: var(--top); border-radius: 0 0 36px 36px; overflow: hidden; isolation: isolate; }
 @media (min-width: 1024px) { .home-hero { margin-top: 0; padding-top: 0; border-radius: 36px; } }
 /* a soft graph-paper grid that grows from the top and fades out */
 .hero-mat { position: absolute; inset: 0; pointer-events: none;
@@ -283,7 +276,26 @@ input { font: inherit; color: inherit; }
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
-  box-shadow: 0 0 0 6px #0b0c15, inset 0 1px 0 rgb(255 255 255 / .5), 0 14px 30px -8px rgb(104 126 245 / .8); }
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 14px 30px -10px rgb(104 126 245 / .8); }
+}
+
+/* ─── colour roles: dark screens are for working (focus); paper + violet screens are for moments
+   (welcome, a step starting, something finished), the same look as the onboarding ─── */
+@layer components {
+.violet-panel { background: radial-gradient(90% 70% at 30% 20%, #8c9cf8 0%, #4f63e0 45%, #1c2252 100%); color: #fff; }
+.paper-card { background: #fff; border: 1px solid rgb(18 19 28 / .08); box-shadow: 0 10px 30px -22px rgb(28 34 82 / .5); color: #12131c; }
+@media (hover: hover) { .paper-card.tap:hover { border-color: rgb(79 99 224 / .35); } }
+/* home: a light, airy top on graph paper in periwinkle, text in a soft (but readable) indigo */
+.light-hero { background: linear-gradient(180deg, #f6f7fd 0%, #eceffd 55%, #e1e6fd 100%); color: #3d4bb3; }
+.light-mat { position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgb(104 126 245 / .12) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .12) 1px, transparent 1px),
+    linear-gradient(rgb(104 126 245 / .06) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .06) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px; background-position: -1px -1px;
+  mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .55) 50%, transparent 92%); -webkit-mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .55) 50%, transparent 92%); }
+/* tab bar: a solid dark capsule; the current tab grows into a periwinkle pill with its name */
+.tabdock { background: linear-gradient(180deg, #1c1f35 0%, #14162a 100%); border: 1px solid rgb(255 255 255 / .1);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), 0 22px 44px -16px rgb(0 0 0 / .9); }
+.tabpill { background: radial-gradient(120% 140% at 30% 0%, #a9b5fb 0%, #687ef5 55%, #4f63e0 100%); box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), 0 8px 20px -8px rgb(104 126 245 / .8); }
 }
 
 /* ─── onboarding paper (light, editorial) ─── */

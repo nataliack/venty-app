@@ -118,6 +118,12 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - decorative chips that look clickable but aren't;
 - arrow characters like "→" in buttons.
 
+**Colour roles (4 Oct 2026):** the app was monotonous because every screen was the same dark navy. Colour now has a job:
+- **Dark navy screens are for working**: measuring, the studio, the garment check, printing, libraries. Dark keeps attention on the task and reads as precise.
+- **Paper + violet screens are for moments**: the tour question, the start page, "Your body is ready", "Your pattern is complete" (all built with `PaperScreen`: a violet picture panel, the onboarding's `violet-panel`, over warm paper; side by side on desktop). Light and violet read as calm, encouraging and celebratory, and they tie back to the onboarding.
+- **Home** has a light top (`.light-hero`: pale periwinkle with a periwinkle graph-paper grid) with text in a soft, readable indigo (`#3d4bb3` / `#5c68b0`, not white, not a harsh navy), above the dark page.
+- The finished-pattern page shows the garment on a violet panel.
+
 **Choices and buttons:**
 - **Nothing is ever pre-selected.** The user picks, then continues.
   - **The only exception: units default to cm**, and units can never be empty.
@@ -231,12 +237,12 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - "Open any group to see your measurements. Tap a measurement to change it." Button: "Save body".
 
 **Home (`home`):**
-- **Top: a clearly separate rounded block** (`.home-hero`, rounded bottom corners and a soft shadow) filled with a **lighter version of the Welcome sky** (`.sky.sky-hero`, same palette and drifting lights) and a **soft graph-paper grid** (`.hero-mat`) that is strongest at the top and fades out. No ruler edge, no mannequin or floating pieces, no "drafted to" chip (home is generic, not tied to one body). White text.
-  - Avatar, greeting and name, and an **Updates bell** (replaced search). The bell shows a dot until opened; its sheet lists only things that matter: measurements to finish, a pattern ready to print, new pre-made patterns, what's new.
-  - "What are we making today?" on two lines, and one line under it.
-  - **Two ways to start**, side by side: **Create something new** ("From a photo, a sketch or your own words"; periwinkle `.start-main`; picks the body, then the studio) and **Select from pre-made patterns** ("Ready to fit to a body"; frosted `.start-alt`; the library). The Create menu uses the same words.
+- **Top: a light rounded block** (`.home-hero.light-hero`): pale periwinkle with a soft periwinkle grid fading down, rounded bottom corners over the dark page (a dark wrapper sits behind the corners so nothing grey shows). Text in soft indigo.
+  - Violet avatar, greeting and name, and a white **Updates bell** (replaced search).
+  - "What are we making today?" on two lines, and "Design your own, or start from one of our pre-made patterns."
+  - **Two ways to start**: **Design your own** ("Photo, sketch or words"; violet card, picks the body, then the studio) and **Use a pre-made** ("Ready-to-fit patterns"; white card, the library). The Create menu uses the same words.
 - **Below, on the dark page:** notices (finish your measurements, take the tour), **Your bodies** (a horizontal row with a dashed "+" first), **Your patterns** (the three latest, with a status dot) and a Pre-made patterns row. All are solid `.card-soft` cards. Each section has a "View all".
-- **Phone tab bar:** a light floating bar; the current tab sits in a soft periwinkle capsule; the raised Create button sits in a notch.
+- **Phone tab bar:** a solid dark capsule (`.tabdock`); the current tab grows into a periwinkle pill with its name (`.tabpill`), the others are icons. Create is its own round periwinkle button beside the capsule.
 - **Library pages** (Body library, Pattern library) no longer show a big count next to the title. Counts live on the profile page.
 - **A saved pattern opens as its own page (`pattern`)**, not the making flow: the garment on the body, its status ("Printed", "Ready to print", "Draft") and who it was drafted to, a **Shopping list** to show at the fabric shop (metres, stretch, feel, the fabric you chose, and why), and **How it was made** (fit and ease, seam allowance, pieces, paper, garment details). Actions: **Print again** (or Print it) and **Change the design**. Patterns save these details (`pattern.spec`) when made and printed.
 
@@ -244,8 +250,8 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **home, bodies, patterns, you:** tab bar on phones, sidebar on desktop.
 - **Pattern flow:** `patSelectBody` → `prompt` → `ref` → `ai` → `generating` → `garment` → `edits`.
   - `patSelectBody`: "Who is this pattern for?", a **vertical list** of bodies (no swiping), plus "New body".
-  - `prompt` ("What are we making?") is **the studio**: one canvas on the page where you add a photo of a garment and sketch on it or beside it (Add a photo / Undo / Clear), plus a **"Describe it"** text box. Use one, or mix all three. The photo and sketch are merged into one picture for the next steps; the words are shown on the garment check. Continue unlocks once there is a photo or a stroke. The link option and "Choose a pre-made pattern" are gone from this flow (pre-made patterns start from home or the Create menu). Drawing happens on the page, not in a sheet, so nothing slides away while you draw.
-  - After the studio, the garment check is **three steps with a progress header (Garment · Fit · Fabric)**, not hidden tabs: `ref`/`ai` Overview **"Let's check your garment"** (your picture, a summary, your words, and details you tap to change; each detail offers the full range a sewist expects, e.g. Length: extra mini, mini, above the knee, knee, midi, maxi; Skirt includes bodycon and pencil) → `ai` Fitting **"How should it fit?"**: the body with a dashed garment outline around it; the gap is the ease, so you can see it. **Tight +1 · Easy +4 · Loose +8 · Oversized +16 cm**, or **your own** amount up to +30 cm (nothing pre-selected) → `ai` Fabric **"Choose your fabric"**: a suggestion based on the fit, described by behaviour not by name (e.g. "A stretchy fabric" for a tight fit, "No stretch" for loose), then "Does your fabric stretch?" (required; choosing against the suggestion shows a calm note, not a block), stiff or soft, and fabric type if you know it → "Create my pattern". The old "Got it. How do you want to continue?" screen is gone.
+  - `prompt` ("What are we making?") is **the studio**: one canvas on the page where you add a photo of a garment and sketch on it or beside it (Add a photo / Undo / Clear), plus a **"Describe it"** text box. Order on the page: Describe it, then Add a photo / Undo / Clear, then the drawing pad. Use one, or mix all three. The photo and sketch are merged into one picture for the next steps; the words are shown on the garment check. Continue unlocks once there is a photo or a stroke. The link option and "Choose a pre-made pattern" are gone from this flow (pre-made patterns start from home or the Create menu). Drawing happens on the page, not in a sheet, so nothing slides away while you draw.
+  - After the studio, the garment check is **three steps with a progress header (Garment · Fit · Fabric)**, not hidden tabs: `ref`/`ai` Overview **"Let's check your garment"** (your picture, a summary, your words, and details you tap to change; each detail offers the full range a sewist expects, e.g. Length: extra mini, mini, above the knee, knee, midi, maxi; Skirt includes bodycon and pencil) → `ai` Fitting **"How should it fit?"**: the body inside a **dress silhouette** (sleeves, bodice, waist seam, flared skirt) that widens as the ease grows, from hugging the body to a big, loose dress. No number read-out under the figure. **Tight +1 · Easy +4 · Loose +8 · Oversized +16 cm**, or **your own** amount up to +30 cm (nothing pre-selected) → `ai` Fabric **"Choose your fabric"**: a suggestion based on the fit, described by behaviour not by name (e.g. "A stretchy fabric" for a tight fit, "No stretch" for loose), then "Does your fabric stretch?" (required; choosing against the suggestion shows a calm note, not a block) → "Create my pattern". "Stiff or soft" and the fabric-type chips were removed: testers did not understand them. The old "Got it. How do you want to continue?" screen is gone.
   - `generating`: everything centred; the current step shows one at a time; about 9 seconds (5 when updating), so each step can be read.
   - `garment`: "On your body / Pattern", with **Change the design** and **Looks right**. `edits` is "Change the design" with one action, **Update my pattern** (the old Regenerate / Done pair confused people).
   - `garment`: just the garment on the body, with Make edits / Looks right. No floating labels and no "Make edits before printing" line.
@@ -281,6 +287,8 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 **Third pass (4 Oct 2026):** home top on the Welcome sky with a softer grid, two start choices (Photo or sketch / Pre-made pattern), the Updates bell instead of search, and the garment check as Garment · Fit (dial) · Fabric steps.
 
 **Fourth pass (4 Oct 2026):** home block separated again with a lighter sky, new start wording, words in the studio, a garment check with full options, a visual fit step with custom ease, fabric suggestions from the fit, a centred and slower loading screen, clearer change-the-design copy, a print fabric step focused on what to buy, and the finished-pattern page.
+
+**Fifth pass (4 Oct 2026):** colour roles (dark for working, paper + violet for moments), the light home top, the dark capsule tab bar, the paper tour question, start, body-ready and pattern-complete screens, the studio order, the dress-shaped fit preview, and a simpler fabric step.
 
 **Still open from testing:** global text size +1px (a proper type scale with a 15px minimum is the better fix), "Alter" instead of "Make edits", a "Continue your {garment}" card on home, and whether to rename "body".
 

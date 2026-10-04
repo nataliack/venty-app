@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { PIECE_LABEL, templateBy, fabricAdvice, metresFor, type PieceKey } from "@/lib/data";
-import { Screen, TopBar, HS, H1, Lead, Pill, Glow, Glass, Option, Arrows, Check, cx, useToast, Split, useDesk } from "@/components/ui";
+import { Screen, TopBar, HS, H1, Lead, Pill, Glow, Glass, Option, Arrows, Check, PaperScreen, cx, useToast, Split, useDesk } from "@/components/ui";
 import { Piece, pieceSize } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { garmentName, piecesFor } from "./pattern";
@@ -200,8 +200,6 @@ export function Needs() {
   const stretch = draft.chosen?.stretch ? draft.stretch : tip.stretch;
   const rows: [string, string][] = [
     ["Stretch", { "A lot": "Stretchy", "A bit": "A little stretch", No: "No stretch" }[stretch]],
-    ["Feel", draft.drape > 0.6 ? "Soft and drapey" : draft.drape > 0.3 ? "Medium, keeps some shape" : "Crisp, holds its shape"],
-    ["Fabric you chose", draft.chosen?.fabric ? draft.fabric : "Your choice"],
     ["Width", "140 cm (the most common width)"],
   ];
   return (
@@ -295,29 +293,35 @@ export function MiniMap() {
   );
 }
 
-// The end: the pattern is done, now the sewing starts
+// The end: the pattern is done, now the sewing starts. A moment, so it uses paper and violet.
 export function Printed({ p }: { p?: Record<string, unknown> }) {
   const { home, go, draft } = useApp();
   const n = Number(p?.n ?? 9);
   const { toast, node } = useToast();
+  const desk = useDesk();
   const kind = draft.garment === "flutter" ? "dress" : ({ Dresses: "dress", Tops: "top", Pants: "trousers", Skirts: "skirt" } as const)[templateBy(draft.garment).category];
+  const pieces = piecesFor(draft.garment).slice(0, 4);
+  const art = (
+    <div className="absolute inset-0 grid place-items-center pt-[var(--top)] lg:pt-0">
+      <div className="grid grid-cols-2 gap-3 lg:gap-6">{pieces.map((k, i) => (
+        <motion.div key={k} initial={{ opacity: 0, y: 14, rotate: i % 2 ? 4 : -4 }} animate={{ opacity: 1, y: 0, rotate: i % 2 ? 3 : -3 }} transition={{ delay: 0.1 + i * 0.1, duration: 0.7 }} className="grid place-items-center rounded-[10px] bg-white/12 p-2 backdrop-blur-sm lg:p-4">
+          <Piece k={k} width={desk ? 120 : 64} />
+        </motion.div>
+      ))}</div>
+    </div>
+  );
   return (
-    <Screen footer={<Pill onClick={home}>Back to home</Pill>} bg={<div className="absolute inset-0" style={{ background: "radial-gradient(90% 45% at 30% 0%, rgba(104,126,245,.5), transparent 70%)" }} />}>
-      <TopBar left="close" onLeft={home} />
-      <Split left={<>
-      <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.5 }} className="mt-4 grid h-14 w-14 place-items-center rounded-full bg-primary"><Icon name="check" size={28} strokeWidth={2.4} /></motion.span>
-      <HS className="mt-5">Good job! Your<br />pattern is complete</HS>
-      <Lead className="mt-3">{n === 1 ? "Your sheet is printed." : `All ${n} sheets are printed.`} Now you can start making your {kind}.</Lead>
-      </>} right={<>
-      <Glow color="#8c9cf8" variant="fade" className="mt-6 rounded-[26px] p-5 lg:mt-0">
-        <div className="text-[17px] font-medium">Support resources</div><div className="text-[15px] text-white/70">Help while you cut and sew.</div>
-        <div className="mt-3 flex flex-col gap-2">{([["book", `Sewing guide for this ${kind}`], ["layers", "Sewing words, explained"], ["video", "Video: taping the sheets together"]] as const).map(([ic, t]) => (
-          <button key={t} onClick={() => toast("Opening " + t.toLowerCase())} className="flex min-h-12 items-center gap-3 rounded-[14px] bg-black/20 px-3 text-left text-[15px]"><Icon name={ic} size={18} /><span className="flex-1">{t}</span><Icon name="chevR" size={16} /></button>
-        ))}</div>
-      </Glow>
-      <Glass onClick={() => go("minimap")} className="mt-3 flex w-full items-center gap-3 rounded-[22px] p-4"><Icon name="map" size={22} /><div className="flex-1"><div className="text-[16px] font-medium">View pattern mini map</div><div className="text-[14px] text-white/60">Where each sheet goes</div></div><Icon name="chevR" size={18} className="text-white/50" /></Glass>
-      </>} />
+    <PaperScreen art={art} footer={<Pill onClick={home}>Back to home</Pill>}>
+      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-white"><Icon name="check" size={12} strokeWidth={3} /></span>{n === 1 ? "Your sheet is printed" : `All ${n} sheets are printed`}</div>
+      <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Good job! Your pattern is complete</h1>
+      <p className="lead mt-3">Now you can start making your {kind}.</p>
+      <div className="mt-5 flex flex-col gap-2">{([["book", `Sewing guide for this ${kind}`], ["layers", "Sewing words, explained"], ["video", "Video: taping the sheets together"]] as const).map(([ic, t]) => (
+        <button key={t} onClick={() => toast("Opening " + t.toLowerCase())} className="paper-card tap flex min-h-[54px] items-center gap-3 rounded-[16px] px-4 text-left text-[16px]"><Icon name={ic} size={19} className="text-primary-2" /><span className="flex-1">{t}</span><Icon name="chevR" size={16} className="text-[#12131c]/40" /></button>
+      ))}
+        <button onClick={() => go("minimap")} className="paper-card tap flex min-h-[54px] items-center gap-3 rounded-[16px] px-4 text-left text-[16px]"><Icon name="map" size={19} className="text-primary-2" /><span className="flex-1">Pattern mini map</span><Icon name="chevR" size={16} className="text-[#12131c]/40" /></button>
+      </div>
+      <div className="h-4" />
       {node}
-    </Screen>
+    </PaperScreen>
   );
 }

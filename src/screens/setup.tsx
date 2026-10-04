@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, fmt } from "@/lib/store";
 import { BASE, WIZARD, ALL_MEASURES } from "@/lib/data";
-import { Screen, TopBar, HS, Lead, Pill, Glow, Glass, RB, Check, Sheet, Option, Arrows, cx, useToast, Blob, Split, useDesk } from "@/components/ui";
+import { Screen, TopBar, HS, Lead, Pill, Glow, Glass, RB, Check, Sheet, Option, Arrows, PaperScreen, cx, useToast, Blob, Split, useDesk } from "@/components/ui";
 import { BodyFigure, Ruler } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 import { FlowHeader, bodySteps } from "./measure";
@@ -435,20 +435,24 @@ export function Ready() {
   const body = useApp((s) => s.body());
   const count = body.done.length;
   const left = 24 - count;
+  const desk = useDesk();
   useEffect(() => { set({ resumeBody: left > 0 ? activeBody : null }); }, [left, activeBody, set]);
+  // a moment, so it uses the onboarding's paper and violet
+  const art = (
+    <div className="absolute inset-0 px-6 pb-5 pt-[calc(var(--top)+8px)] lg:p-10">
+      <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }} className="h-full w-full"><BodyFigure sex={body.sex} width={desk ? 160 : 110} className="h-full w-full" /></motion.div>
+    </div>
+  );
   return (
-    <Screen footer={<><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><Pill variant="dark" className="mt-2.5" onClick={home}>Go to home</Pill></>}
-      bg={<div className="absolute inset-0" style={{ background: "radial-gradient(80% 45% at 50% 18%, rgba(104,126,245,.5), transparent 70%)" }} />}>
-      <Split left={<div className="h-[min(300px,36dvh)] pt-2 lg:h-[min(640px,72dvh)]"><motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }} className="h-full w-full"><BodyFigure sex={body.sex} width={140} className="h-full w-full" /></motion.div></div>} right={<>
-        <div className="mt-6 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
-        <HS className="mt-3">Well done!<br />Your body is ready</HS>
-        <Lead className="mt-3">Good job finishing {body.name ? `${body.name}’s` : "your"} measurements. Every pattern you make will be drafted to them.</Lead>
-        <div className="mt-6 border-t border-white/10 pt-4">
-          <div className="flex items-baseline justify-between"><span className="text-[17px]">{body.name}</span><span className="text-[15px] text-white/60"><span className="serif text-[20px] text-white">{count}</span> of 24 measurements</span></div>
-          <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-white/15")} />)}</div>
-          {left > 0 && <button onClick={() => go("wizard")} className="mt-3 flex items-center gap-1 text-[15px] font-medium text-peri">Add the other {left} for a closer fit<Icon name="chevR" size={16} /></button>}
-        </div>
-      </>} />
-    </Screen>
+    <PaperScreen art={art} footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
+      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
+      <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Well done! Your body is ready</h1>
+      <p className="lead mt-3">Good job finishing {body.name ? `${body.name}’s` : "your"} measurements. Every pattern you make will be drafted to them.</p>
+      <div className="mt-5 border-t border-[#12131c]/10 pt-4">
+        <div className="flex items-baseline justify-between"><span className="text-[17px]">{body.name}</span><span className="text-[15px] text-[#12131c]/60"><span className="serif text-[20px] text-[#12131c]">{count}</span> of 24 measurements</span></div>
+        <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-[#12131c]/12")} />)}</div>
+        {left > 0 && <button onClick={() => go("wizard")} className="mt-3 flex items-center gap-1 text-[15px] font-medium text-primary-2">Add the other {left} for a closer fit<Icon name="chevR" size={16} /></button>}
+      </div>
+    </PaperScreen>
   );
 }

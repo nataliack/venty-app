@@ -14,6 +14,7 @@ Rules that must never be broken (the full list is in §5 of that file):
 - No time estimates anywhere ("about 3 minutes", "6 hours").
 - Every measure uses the shared `MeasureStep` (`src/screens/measure.tsx`), and every flow uses `FlowProgress`.
 - Information is never styled like a button.
+- Colour has a job: dark screens are for working (measuring, the studio, flows); paper + violet screens (`PaperScreen`, the onboarding look) are for moments (tour question, start, body ready, pattern complete) and the light top of home.
 - Custom CSS outside `@layer` beats Tailwind, so never set `display`, `position` or size on those classes.
 - Run `npm run build` before committing. Check changes with screenshots at phone size (393×852) and desktop size (1440×900).
 - When a decision changes, update `docs/VENTY_CONTEXT.md` in the same commit.

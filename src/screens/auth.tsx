@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, cx, useDesk } from "@/components/ui";
+import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, PaperScreen, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
@@ -239,22 +239,25 @@ export function TourAsk() {
   const set = useApp((s) => s.set);
   const desk = useDesk();
   const skip = () => { set({ onboarded: true, tourSkipped: true }); replace("start"); };
-  // same sky and layout as Welcome, so it reads as the same place
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      <Sky />
-      <div className="relative flex h-full flex-col items-center px-6 text-center lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="mt-[13dvh] lg:mt-[10dvh]"><VentyLogo width={desk ? 200 : 120} /></motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.8 }} className="my-auto flex max-w-[620px] flex-col items-center pt-8">
-          <h1 className="h1 !text-[34px] lg:!text-[56px]">Want a quick tour?</h1>
-          <Lead className="mt-4 max-w-[340px] lg:max-w-[520px]">Three short pages on how Venty works: from your measurements to a pattern you can print at home.</Lead>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.8 }} className="flex w-full max-w-[380px] flex-col items-center gap-2 lg:mb-[6dvh]">
-          <Pill onClick={() => replace("onboarding")}>Show me how it works</Pill>
-          <button onClick={skip} className="h-11 px-4 text-[16px] font-medium text-white/90 transition-colors hover:text-white">Skip the tour</button>
-        </motion.div>
-      </div>
+  // the same paper-and-violet look as the onboarding it leads into
+  const art = (
+    <div className="absolute inset-0 grid place-items-center">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex items-end gap-4 lg:gap-8">
+        {(["slip", "wrap", "aline"] as const).map((g, i) => (
+          <motion.div key={g} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.12, duration: 0.7 }} className={cx("grid place-items-center rounded-[18px] bg-white/12 backdrop-blur-sm", i === 1 ? "h-[150px] w-[110px] lg:h-[260px] lg:w-[190px]" : "h-[118px] w-[86px] lg:h-[200px] lg:w-[150px]")}>
+            <Flat g={g} size={desk ? (i === 1 ? 160 : 120) : i === 1 ? 92 : 70} stroke="#fff" fill="rgba(255,255,255,.14)" />
+          </motion.div>
+        ))}
+      </motion.div>
     </div>
+  );
+  return (
+    <PaperScreen art={art} footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => replace("onboarding")}>Show me how it works</Pill><button onClick={skip} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Skip the tour</button></div>}>
+      <div className="text-center">
+        <h1 className="h1 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Want a quick tour?</h1>
+        <p className="lead mx-auto mt-3 max-w-[360px] [text-wrap:pretty]">Three short pages on how Venty works: from your measurements to a pattern you can print at home.</p>
+      </div>
+    </PaperScreen>
   );
 }
 
@@ -325,26 +328,24 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   );
 }
 
-// ─── After the tour: one clear next step. A pattern needs measurements, so the body comes first. ──────
+// ─── After the tour: one clear next step, still in the onboarding's paper-and-violet look. A pattern needs measurements, so the body comes first. ──────
 export function StartChoice() {
   const startBody = useApp((s) => s.startBody);
   const home = useApp((s) => s.home);
   const user = useApp((s) => s.user);
   const desk = useDesk();
   const hi = user.guest ? "Welcome." : `Welcome, ${user.name}.`;
-  const actions = <div className="flex w-full flex-col items-center gap-1 lg:max-w-[420px]"><Pill onClick={startBody}>Set up my body</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-white/70 hover:text-white">Skip for now and go to home</button></div>;
+  const art = (
+    <div className="absolute inset-0 px-6 pb-5 pt-[calc(var(--top)+8px)] lg:p-10">
+      <BodyFigure width={desk ? 150 : 100} markers={[{ kind: "ring", y: 140, w: 100 }, { kind: "ring", y: 205, w: 72 }, { kind: "ring", y: 275, w: 110 }]} className="h-full w-full" />
+    </div>
+  );
   return (
-    <Screen footer={desk ? undefined : actions}>
-      <div className="flex min-h-full flex-col items-center text-center lg:justify-center">
-        <div className="h-6 lg:h-0" />
-        <HS className="[text-wrap:balance]">{hi}<br />Let’s set up your body</HS>
-        <Lead className="mt-3 max-w-[360px] [text-wrap:pretty] lg:max-w-[480px]">Venty drafts every pattern to your measurements. Add them once and they’re saved as your body, ready for every pattern you make.</Lead>
-        <div className="relative mt-6 h-[min(330px,40dvh)] w-full lg:mt-10 lg:h-[min(440px,48dvh)]">
-          <Blob className="left-1/2 top-1/2 h-[240px] w-[200px] -translate-x-1/2 -translate-y-1/2 opacity-40" />
-          <BodyFigure width={desk ? 150 : 110} markers={[{ kind: "ring", y: 140, w: 100 }, { kind: "ring", y: 205, w: 72 }, { kind: "ring", y: 275, w: 110 }]} className="relative h-full w-full" />
-        </div>
-        {desk && <div className="mt-8 flex w-full justify-center">{actions}</div>}
+    <PaperScreen art={art} footer={<div className="flex flex-col items-center gap-1"><Pill onClick={startBody}>Set up my body</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Skip for now and go to home</button></div>}>
+      <div className="text-center">
+        <h1 className="h1 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">{hi} Let’s set up your body</h1>
+        <p className="lead mx-auto mt-3 max-w-[380px] [text-wrap:pretty]">Venty drafts every pattern to your measurements. Add them once and they’re saved as your body, ready for every pattern you make.</p>
       </div>
-    </Screen>
+    </PaperScreen>
   );
 }

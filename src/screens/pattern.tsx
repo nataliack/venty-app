@@ -119,7 +119,7 @@ export function Prompt() {
     </div>
   );
   const canvas = (
-    <div className={cx("relative overflow-hidden rounded-[28px] border border-white/15 bg-[#121427]", desk ? "h-[min(560px,58dvh)]" : "h-[min(360px,41dvh)]")} style={{ backgroundImage: "radial-gradient(rgb(255 255 255 / .12) 1px, transparent 1.3px)", backgroundSize: "18px 18px" }}>
+    <div className={cx("relative overflow-hidden rounded-[28px] border border-white/15 bg-[#121427]", desk ? "h-[min(520px,54dvh)]" : "h-[min(380px,44dvh)]")} style={{ backgroundImage: "radial-gradient(rgb(255 255 255 / .12) 1px, transparent 1.3px)", backgroundSize: "18px 18px" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {photo && <img ref={pic} src={photo} alt="Your garment photo" className="pointer-events-none absolute inset-0 h-full w-full object-contain p-4" />}
       {!photo && n === 0 && (
@@ -139,12 +139,13 @@ export function Prompt() {
       <Split cols="lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]" left={<>
         <H1 className="mt-3 lg:mt-0">What are we<br />making?</H1>
         <Lead className="mt-3 max-w-[420px]">Add a photo, sketch your idea and describe it. Use one, or mix all three.</Lead>
-        {desk && <div className="mt-8">{tools}</div>}
-      </>} right={<div className="mt-5 lg:mt-0" data-need={ready ? "0" : "1"}>{canvas}{!desk && <div className="mt-3">{tools}</div>}
-        <label className="mt-4 block">
+      </>} right={<div className="mt-5 lg:mt-0" data-need={ready ? "0" : "1"}>
+        <label className="block">
           <span className="mb-2 block text-[15px] font-medium text-white/80">Describe it</span>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="e.g. a midi wrap dress with flutter sleeves" className="field block w-full resize-none bg-transparent px-4 py-3 text-[16px] leading-snug outline-none placeholder:text-white/35" />
         </label>
+        <div className="mt-4">{tools}</div>
+        <div className="mt-3">{canvas}</div>
       </div>} />
     </Screen>
   );
@@ -157,21 +158,34 @@ const exitMake = () => {
   if (at >= 0) useApp.setState({ stack: s.stack.slice(0, at + 1), dir: -1 }); else s.back();
 };
 const MakeHeader = ({ step, sub }: { step: number; sub: number }) => <FlowHeader steps={MAKE_STEPS.map((label, i) => ({ label, value: i < step ? 1 : i === step ? sub : 0 }))} onClose={exitMake} />;
-// Fit preview: the body, with the garment's outline around it. The gap between them is the ease,
-// so "+4 cm" becomes something you can see: tight hugs the body, oversized stands well away from it.
-const dressOutline = (ease: number) => {
-  const k = Math.max(0, ease) * 1.5; // cm → drawing units
-  const pts = [[70 - k * 0.5, 92], [48 - k, 140], [62 - k * 0.9, 205], [44 - k, 275], [30 - k * 1.25, 410], [170 + k * 1.25, 410], [156 + k, 275], [138 + k * 0.9, 205], [152 + k, 140], [130 + k * 0.5, 92]];
-  return "M" + pts.map((q) => q.join(" ")).join(" L") + " Z";
+// Fit preview: the body inside a dress silhouette. The more ease, the roomier the dress: bodice, waist and skirt
+// all widen, so tight hugs the body and oversized becomes a big, loose dress.
+const smooth = (pts: number[][]) => { // Catmull-Rom through the points, as cubic curves
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    d += ` C ${p1[0] + (p2[0] - p0[0]) / 6} ${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6} ${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]} ${p2[1]}`;
+  }
+  return d;
 };
+const dressOutline = (ease: number) => {
+  const k = Math.max(0, ease); const w = (base: number, f: number) => base + k * f; // half-widths from the centre line (x = 100)
+  const side = [[86, 86], [100 - w(34, 0.25), 94], [100 - w(52, 0.75), 116], [100 - w(46, 0.75), 134], [100 - w(50, 1.1), 152], [100 - w(36, 1.25), 205], [100 - w(52, 1.5), 268], [100 - w(64, 2.0), 340], [100 - w(76, 2.4), 410]];
+  const left = smooth(side);
+  const right = smooth(side.map(([x, y]) => [200 - x, y]).reverse());
+  const hemL = side[side.length - 1], hemR = [200 - hemL[0], hemL[1]];
+  return `${left} Q 100 ${hemL[1] + 10 + k * 0.3} ${hemR[0]} ${hemR[1]} ${right.replace(/^M [^C]+/, "")} L 100 108 Z`;
+};
+const waistSeam = (ease: number) => { const x = 36 + Math.max(0, ease) * 1.25; return `M ${100 - x} 205 Q 100 210 ${100 + x} 205`; };
 function FitPreview({ ease, sex, on }: { ease: number; sex: "female" | "male"; on: boolean }) {
+  const spring = { type: "spring" as const, stiffness: 110, damping: 18 };
   return (
-    <div className="relative mx-auto h-[min(280px,31dvh)] w-full max-w-[300px] lg:h-[min(420px,46dvh)]">
-      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 50% at 50% 50%, rgb(104 126 245 / .3), transparent 75%)", filter: "blur(18px)" }} />
+    <div className="relative mx-auto h-[min(300px,33dvh)] w-full max-w-[320px] lg:h-[min(440px,48dvh)]">
+      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 50% at 50% 50%, rgb(104 126 245 / .32), transparent 75%)", filter: "blur(18px)" }} />
       <BodyFigure sex={sex} width={110} glow={false} className="absolute inset-0 h-full w-full" />
       <svg viewBox="-10 -6 220 542" className="absolute inset-0 h-full w-full" style={{ overflow: "visible" }} aria-hidden>
-        <motion.path initial={false} animate={{ d: dressOutline(ease), opacity: on ? 1 : 0.35 }} transition={{ type: "spring", stiffness: 120, damping: 18 }}
-          fill="rgb(140 156 248 / .16)" stroke="#fff" strokeWidth="2.2" strokeDasharray="6 5" strokeLinejoin="round" />
+        <motion.path initial={false} animate={{ d: dressOutline(ease), opacity: on ? 1 : 0.4 }} transition={spring} fill="rgb(140 156 248 / .3)" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+        <motion.path initial={false} animate={{ d: waistSeam(ease), opacity: on ? 0.7 : 0.25 }} transition={spring} fill="none" stroke="#fff" strokeWidth="1.2" />
       </svg>
     </div>
   );
@@ -202,9 +216,8 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
       <Screen header={<MakeHeader step={1} sub={chosen.fit ? 0.5 : 0} />} footer={<Arrows ready={!!chosen.fit} onNext={() => go("ai", { tab: "Fabric" })} />}>
         <Split left={<>
           <HS className="mt-4 lg:mt-0">How should<br />it fit?</HS>
-          <Lead className="mt-3">Ease is the extra room between your body and the garment. The dashed line shows it.</Lead>
+          <Lead className="mt-3">Ease is the extra room between your body and the garment. Watch the dress grow as you add more.</Lead>
           <div className="mt-4"><FitPreview ease={draft.ease} sex={useApp.getState().body().sex} on={!!chosen.fit} /></div>
-          <p className="text-center text-[16px] text-white/80">{chosen.fit ? <>{fitName(draft.ease)} fit · <span className="serif">+{draft.ease}</span> cm of room</> : "Choose a fit to see it"}</p>
         </>} right={<>
           <div className="mt-5 grid grid-cols-2 gap-2.5 lg:mt-0" data-need={chosen.fit ? "0" : "1"}>{FITS.map((f) => (
             <Option key={f.key} on={!!chosen.fit && preset?.key === f.key} radio={false} onClick={() => setEase(f.ease)} className="flex min-h-[86px] flex-col justify-between rounded-[20px] p-3.5">
@@ -236,7 +249,6 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
             <div className="text-[14px] text-white/80">We suggest</div>
             <div className="mt-1 text-[22px] tracking-[-.02em]">{tip.title}</div>
             <div className="mt-1.5 text-[15px] leading-snug text-white/85">{tip.why}</div>
-            <div className="mt-3 text-[15px] text-white/85">Feel: {tip.drape.toLowerCase()}</div>
           </div>
         </>} right={<>
           <div className="mt-6 text-[16px] font-medium text-white/85 lg:mt-0">Does your fabric stretch?</div>
@@ -244,14 +256,6 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
             <Option key={k} on={!!chosen.stretch && draft.stretch === k} onClick={() => choose({ stretch: k }, "stretch")} className="flex h-[58px] items-center gap-4 rounded-[16px] px-4"><span className="w-[124px] text-[16px] font-medium">{stretchLabel[k]}</span><span className="flex-1 text-[15px] text-white/60">{d}</span></Option>
           ))}</div>
           {off && <p className="mt-2.5 flex items-start gap-2 text-[15px] leading-snug text-white/65"><Icon name="info" size={18} className="mt-px shrink-0" />That works too. Your fit was planned for {tip.title.toLowerCase()}, so try the garment on as you sew.</p>}
-          <div className="mt-6 text-[16px] font-medium text-white/85">Stiff or soft?</div>
-          <div className="card-soft mt-2.5 rounded-[20px] p-4">
-            <div className="flex justify-between text-[14px] text-white/65"><span>Stiff</span><span>Drapes</span></div>
-            <input type="range" min={0} max={100} value={Math.round(draft.drape * 100)} onChange={(e) => setDraft({ drape: Number(e.target.value) / 100 })} className="mt-3 w-full accent-white" />
-            <div className="mt-1 text-[15px] text-white/75">{draft.drape > 0.6 ? "Soft: a gentle, fluid drape" : draft.drape > 0.3 ? "Medium: keeps some shape" : "Crisp: holds its shape"}</div>
-          </div>
-          <div className="mt-6 text-[16px] font-medium text-white/85">Fabric type, if you know it</div>
-          <div className="mt-2.5 flex flex-wrap gap-2">{["Cotton poplin", "Linen", "Viscose crepe", "Satin", "Jersey", "Denim"].map((f) => <Chip key={f} on={!!chosen.fabric && draft.fabric === f} onClick={() => choose({ fabric: f }, "fabric")} className="!h-11 !px-4 !text-[15px]">{f}</Chip>)}</div>
         </>} />
       </Screen>
     );

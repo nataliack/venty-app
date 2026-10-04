@@ -7,33 +7,28 @@ import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar
 import { BodyFigure, Flat } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
-// Phone navigation: a light floating bar (the same family as the home hero) with one raised Create button in a notch.
-// The current tab sits in a soft periwinkle capsule, so where you are reads at a glance.
+// Phone navigation: a solid dark capsule. The current tab grows into a periwinkle pill with its name, the others
+// are icons. Create is its own round button beside the capsule: always visible, never competing with the tabs.
 function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
   const items: [typeof tab, IconName, string][] = [["home", "home", "Home"], ["bodies", "body", "Bodies"], ["patterns", "scissors", "Patterns"], ["you", "user", "You"]];
-  const btn = ([k, ic, l]: (typeof items)[number]) => {
-    const on = tab === k;
-    return (
-      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] transition-colors", on ? "font-semibold text-[#252c66]" : "font-medium text-[#252c66]/50")}>
-        <span className="relative grid h-8 w-14 place-items-center">
-          {on && <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.35, duration: 0.45 }} className="absolute inset-0 rounded-full bg-[#687ef5]/22" />}
-          <Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} className="relative" />
-        </span>
-        {l}
-      </button>
-    );
-  };
   return (
     <>
-      <div className="relative mt-3">
-        <nav className="tabbar flex h-[72px] items-stretch rounded-[28px] px-1.5">
-          {items.slice(0, 2).map(btn)}
-          <span className="w-[78px] shrink-0" />
-          {items.slice(2).map(btn)}
+      <div className="mt-2 flex items-center gap-2.5 pb-1">
+        <nav className="tabdock flex h-[64px] flex-1 items-center gap-1 rounded-full p-1.5">
+          {items.map(([k, ic, l]) => {
+            const on = tab === k;
+            return (
+              <motion.button key={k} layout onClick={() => replace(k)} aria-label={l} aria-current={on ? "page" : undefined} transition={{ type: "spring", bounce: 0.2, duration: 0.45 }}
+                className={cx("relative flex h-full items-center justify-center gap-2 rounded-full text-[15px] font-medium", on ? "tabpill flex-[2.2] px-4 text-white" : "flex-1 text-white/60 hover:text-white")}>
+                <Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.8} />
+                {on && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }} className="truncate">{l}</motion.span>}
+              </motion.button>
+            );
+          })}
         </nav>
-        <button onClick={() => setOpen(true)} aria-label="Create" className="createbtn tap absolute left-1/2 top-0 grid h-[62px] w-[62px] -translate-x-1/2 -translate-y-[36%] place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></button>
+        <button onClick={() => setOpen(true)} aria-label="Create" className="createbtn tap grid h-[64px] w-[64px] shrink-0 place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></button>
       </div>
       <CreateSheet open={open} onClose={() => setOpen(false)} />
     </>
@@ -53,8 +48,8 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
     <Sheet open={open} onClose={onClose}>
       <div className="mb-4 flex items-center justify-between"><span className="text-[20px] font-semibold">Create</span><RB icon="close" size={38} onClick={onClose} /></div>
       <div className="flex flex-col gap-2.5">
-        {row("scissors", "Create something new", "From a photo, a sketch or your own words", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
-        {row("dress", "Select from pre-made patterns", "Dresses, tops, trousers and skirts", "#4f63e0", () => go("templates"))}
+        {row("scissors", "Design your own", "From a photo, a sketch or your own words", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
+        {row("dress", "Use a pre-made pattern", "Dresses, tops, trousers and skirts", "#4f63e0", () => go("templates"))}
         {row("body", "Make a body", "Measure yourself or someone you sew for", "#4d5e85", () => { startBody(); })}
       </div>
     </Sheet>
@@ -122,9 +117,9 @@ function UpdatesButton() {
   const list = useUpdates();
   return (
     <>
-      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/12 text-white backdrop-blur-md">
+      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[#4f63e0]/15 bg-white text-[#4f63e0] shadow-[0_6px_16px_-10px_rgba(79,99,224,.6)]">
         <Icon name="bell" size={21} />
-        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-[#8794c4] bg-white" />}
+        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-white bg-[#687ef5]" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
         <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Updates</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
@@ -149,33 +144,35 @@ export function Home() {
   const make = () => { newDraft(); go("patSelectBody"); };
   return (
     <Screen noPad footer={desk ? undefined : <TabBar tab="home" />}>
-      <section className="home-hero relative px-5 pb-6 lg:px-12 lg:py-12">
-        <div className="sky sky-hero"><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /></div>
-        <div className="hero-mat" aria-hidden />
+      {/* the dark page sits behind the rounded corners, so nothing grey shows through */}
+      <div className="bg-bg">
+      <section className="home-hero light-hero relative px-5 pb-6 lg:px-12 lg:py-12">
+        <div className="light-mat" aria-hidden />
         <div className="relative">
           <div className="flex h-12 items-center gap-3 pt-1">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/15 text-[17px] font-medium backdrop-blur-md">{name[0].toUpperCase()}</span>
-            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-white/75">{greet()}</div><div className="truncate text-[17px] font-medium">{name}</div></div>
+            <span className="violet-panel grid h-11 w-11 shrink-0 place-items-center rounded-full text-[17px] font-medium">{name[0].toUpperCase()}</span>
+            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-[#5c68b0]">{greet()}</div><div className="truncate text-[17px] font-medium text-[#3d4bb3]">{name}</div></div>
             <UpdatesButton />
           </div>
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-end lg:gap-12">
             <div>
-              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[36px] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
-              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-white/85 lg:text-[18px]">Create something new, or start from one of our pre‑made patterns.</p>
+              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[36px] text-[#3d4bb3] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
+              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#5c68b0] lg:text-[18px]">Design your own, or start from one of our pre‑made patterns.</p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
-              <button onClick={make} className="start-main tap flex min-h-[152px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
-                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/20"><Icon name="image" size={21} /></span><Icon name="chevR" size={20} className="text-white/80" /></span>
-                <span><span className="block text-[17px] font-medium leading-tight lg:text-[19px]">Create something new</span><span className="mt-1 block text-[14px] leading-snug text-white/85">From a photo, a sketch or your own words</span></span>
+              <button onClick={make} className="violet-panel grain tap relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
+                <span className="relative flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/20"><Icon name="pencil" size={20} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
+                <span className="relative"><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/85">Photo, sketch or words</span></span>
               </button>
-              <button onClick={() => go("templates")} className="start-alt tap flex min-h-[152px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
-                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/15"><Icon name="dress" size={21} /></span><Icon name="chevR" size={20} className="text-white/70" /></span>
-                <span><span className="block text-[17px] font-medium leading-tight lg:text-[19px]">Select from pre‑made patterns</span><span className="mt-1 block text-[14px] leading-snug text-white/80">Ready to fit to a body</span></span>
+              <button onClick={() => go("templates")} className="paper-card tap flex min-h-[132px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[170px] lg:p-6">
+                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-[#687ef5]/12 text-[#4f63e0]"><Icon name="dress" size={20} /></span><Icon name="chevR" size={20} className="text-[#4f63e0]/70" /></span>
+                <span><span className="block text-[18px] font-medium leading-tight text-[#3d4bb3] lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-[#5c68b0]">Ready-to-fit patterns</span></span>
               </button>
             </div>
           </div>
         </div>
       </section>
+      </div>
 
       <div className="px-6 lg:px-0">
         <Notices />
@@ -327,8 +324,7 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
   const shop: [string, string][] = [
     ["Fabric to buy", `${sp.metres} metres, 140 cm wide`],
     ["Stretch", { "A lot": "Stretchy", "A bit": "A little stretch", No: "No stretch" }[stretch as "A lot" | "A bit" | "No"] ?? stretch],
-    ["Feel", sp.drape > 0.6 ? "Soft and drapey" : sp.drape > 0.3 ? "Medium, keeps some shape" : "Crisp, holds its shape"],
-    ["Fabric you chose", sp.fabric ?? "Not chosen yet"],
+    ...(sp.fabric ? [["Fabric you chose", sp.fabric] as [string, string]] : []),
   ];
   const made: [string, string][] = [
     ["Fit", `${fitName(sp.ease)}, +${sp.ease} cm of room`],
@@ -350,8 +346,7 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
       <Split cols="lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" left={<>
         <div className="mt-2 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className={cx("h-2 w-2 rounded-full", STATUS_DOT[pat.status])} />{pat.status === "Printed" ? "Printed" : pat.status === "Fitting" ? "Ready to print" : "Draft"} · drafted to {pat.body}</div>
         <H1 className="mt-2">{pat.name}</H1>
-        <div className="relative mt-4 h-[min(300px,34dvh)] lg:h-[min(560px,62dvh)]">
-          <Blob className="left-1/2 top-1/3 h-[240px] w-[200px] -translate-x-1/2 opacity-35" />
+        <div className="violet-panel grain relative mt-4 h-[min(300px,34dvh)] overflow-hidden rounded-[28px] py-4 lg:h-[min(560px,62dvh)] lg:rounded-[36px]">
           <BodyFigure sex={body?.sex ?? "female"} width={desk ? 200 : 130} variant="solid" garment={pat.garment} glow={false} className="relative h-full w-full" />
         </div>
       </>} right={<>
