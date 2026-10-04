@@ -177,6 +177,16 @@ input { font: inherit; color: inherit; }
   .device[data-top="light"] .fakestatus { color: #26335f; }
 }
 
+/* opened from the home screen (html.pwa, set in layout.tsx): no browser bars, so the app fills the whole screen and
+   stops reserving the full home-indicator area. Buttons sit just above the indicator; the tab bar goes to the edge.
+   In Safari (no .pwa) nothing changes. */
+@media (max-width: 639px) {
+  html.pwa, html.pwa body { bottom: auto; height: var(--app-h, 100lvh); }
+  html.pwa .device { bottom: auto; height: var(--app-h, 100lvh);
+    --bottom: max(calc(env(safe-area-inset-bottom) - 20px), 12px);
+    --dock: 2px; }
+}
+
 /* desktop: full-screen app with sidebar */
 @media (min-width: 1024px) {
   .device { position: fixed; inset: 0; --top: 36px; --bottom: 28px; width: auto; height: auto; border-radius: 0; box-shadow: none; }

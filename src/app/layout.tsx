@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 
 const grotesk = localFont({
@@ -36,10 +37,23 @@ export const viewport: Viewport = {
   themeColor: "#0b0c15",
 };
 
+const PWA_BOOT = `(function(){try{
+var standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+if(!standalone)return;var d=document.documentElement;d.classList.add("pwa");
+function fit(){var portrait=window.innerHeight>=window.innerWidth,a=screen.width,b=screen.height;
+d.style.setProperty("--app-h",(portrait?Math.max(a,b):Math.min(a,b))+"px");}
+fit();window.addEventListener("resize",fit);window.addEventListener("orientationchange",function(){setTimeout(fit,300);});
+}catch(e){}})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-AU" className={`${grotesk.variable} ${num.variable}`}>
-      <body>{children}</body>
+    <html lang="en-AU" className={`${grotesk.variable} ${num.variable}`} suppressHydrationWarning>
+      <body>
+        {children}
+        {/* Opened from the home screen (no browser bars)? Mark it before the app starts, and size the app to the
+            full screen, so the layout can run edge to edge instead of leaving room for Safari's toolbar. */}
+        <Script id="pwa-boot" strategy="beforeInteractive">{PWA_BOOT}</Script>
+      </body>
     </html>
   );
 }
