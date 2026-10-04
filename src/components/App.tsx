@@ -75,27 +75,6 @@ function useStatusTint(id: string) {
   }, [id]);
 }
 
-// TEMPORARY: measures the real viewport in the home-screen app (html.pwa only). Remove after the layout fix.
-function PwaProbe() {
-  const [info, setInfo] = useState("");
-  useEffect(() => {
-    if (!document.documentElement.classList.contains("pwa")) return;
-    const probe = document.createElement("div");
-    probe.style.cssText = "position:fixed;left:0;right:0;bottom:0;height:env(safe-area-inset-bottom);top:auto;pointer-events:none";
-    document.body.appendChild(probe);
-    const f = () => {
-      const dev = document.querySelector(".device")?.getBoundingClientRect();
-      setInfo(`inner ${innerWidth}x${innerHeight} · screen ${screen.width}x${screen.height} · vv ${Math.round(visualViewport?.height ?? 0)} · client ${document.documentElement.clientHeight} · safeB ${Math.round(probe.getBoundingClientRect().height)} · device ${Math.round(dev?.top ?? -1)}→${Math.round(dev?.bottom ?? -1)} · appH ${getComputedStyle(document.documentElement).getPropertyValue("--app-h")}`);
-    };
-    f(); const t = setInterval(f, 1000); return () => { clearInterval(t); probe.remove(); };
-  }, []);
-  if (!info) return null;
-  return (<>
-    <div className="pointer-events-none fixed left-2 right-2 top-[60px] z-[999] rounded bg-black/80 p-2 text-[11px] leading-tight text-lime-300">{info}</div>
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[999] h-[3px] bg-red-500" />
-  </>);
-}
-
 export default function App() {
   const [ready, setReady] = useState(false);
   const stack = useApp((s) => s.stack);
@@ -152,7 +131,6 @@ export default function App() {
 
   return (
     <div className="stage">
-      <PwaProbe />
       <div className="device">
         <StatusBar />
         <div className="flex h-full">
