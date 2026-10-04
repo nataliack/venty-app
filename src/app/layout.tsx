@@ -24,9 +24,10 @@ export const metadata: Metadata = {
   title: "Venty — AI pattern studio",
   description: "See a dress you love. Wear it, made for you. Sewing patterns drafted to your exact measurements.",
   manifest: "/manifest.webmanifest",
-  // "black", not "black-translucent": iOS 26 shortens home-screen apps by the status-bar height when it is translucent
-  // (WebKit bug 301108), leaving a dead strip at the bottom. With "black" the app starts under the status bar and reaches the bottom edge.
-  appleWebApp: { capable: true, statusBarStyle: "black", title: "Venty" },
+  // Transparent status bar (black-translucent). On iOS 26 this makes iOS stop a home-screen app 47pt above the bottom edge
+  // (WebKit bug 301108); that strip is filled with the screen's own background colour (see useStatusTint in App.tsx),
+  // and the tab bar sits right above it, clear of the home indicator.
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Venty" },
   icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon-192.png", type: "image/png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
 };
 

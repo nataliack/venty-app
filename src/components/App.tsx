@@ -70,6 +70,10 @@ function useStatusTint(id: string) {
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
+    // the strip iOS leaves under a home-screen app shows the page background, so match each screen's bottom
+    const PAPER = new Set(["tourAsk", "onboarding", "start", "ready", "printed"]);
+    const bottom = PAPER.has(id) ? "#f3f1ec" : id === "welcome" ? "#131523" : "#0b0c15";
+    document.documentElement.style.background = bottom; document.body.style.background = bottom;
     const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", LIGHT_TOP.has(id) ? "light" : "dark"), 0);
     return () => clearTimeout(t);
   }, [id]);

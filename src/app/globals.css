@@ -180,7 +180,8 @@ input { font: inherit; color: inherit; }
 /* opened from the home screen (html.pwa, set in layout.tsx): no browser bars, so stop reserving the full home-indicator
    area. Buttons sit just above the indicator; the tab bar goes to the edge. In Safari (no .pwa) nothing changes. */
 @media (max-width: 639px) {
-  html.pwa .device { --bottom: max(calc(env(safe-area-inset-bottom) - 20px), 12px); --dock: 2px; }
+  /* iOS already stops the app above the home indicator (see layout.tsx), so only a small margin is needed */
+  html.pwa .device { --bottom: 8px; --dock: 0px; }
 }
 
 /* desktop: full-screen app with sidebar */
