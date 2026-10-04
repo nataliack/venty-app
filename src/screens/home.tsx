@@ -145,7 +145,7 @@ export function Home() {
   const desk = useDesk();
   const make = () => { newDraft(); go("patSelectBody"); };
   return (
-    <Screen noPad footer={desk ? undefined : <TabBar tab="home" />}>
+    <Screen noPad dock footer={desk ? undefined : <TabBar tab="home" />}>
       {/* the dark page sits behind the rounded corners, so nothing grey shows through */}
       <div className="bg-bg">
       <section className="home-hero light-hero relative px-5 pb-6 lg:px-12 lg:py-12">
@@ -224,7 +224,7 @@ export function Bodies() {
   const list = bodies.filter((b) => f === "All" || (f === "Me" ? b.name.toLowerCase().startsWith("me") : f === "Family" ? ["mum", "sister", "tom", "dad"].some((x) => b.name.toLowerCase().includes(x)) : b.name.toLowerCase().includes("client")));
   const desk = useDesk();
   return (
-    <Screen footer={desk ? undefined : <TabBar tab="bodies" />}>
+    <Screen dock footer={desk ? undefined : <TabBar tab="bodies" />}>
       <div className="flex h-12 items-center"><Eyebrow>Library</Eyebrow><span className="flex-1" /><RB icon="search" /></div>
       <H1 className="mt-3">Body library</H1>
       <div className="mt-4 flex gap-2">{["All", "Me", "Family", "Clients"].map((c) => <Chip key={c} on={f === c} onClick={() => setF(c)}>{c}</Chip>)}</div>
@@ -252,7 +252,7 @@ export function Patterns() {
   const list = patterns.filter((p) => f === "All" || (f === "Printed" ? p.status === "Printed" : p.status !== "Printed"));
   const desk = useDesk();
   return (
-    <Screen footer={desk ? undefined : <TabBar tab="patterns" />}>
+    <Screen dock footer={desk ? undefined : <TabBar tab="patterns" />}>
       <div className="flex h-12 items-center"><Eyebrow>Library</Eyebrow><span className="flex-1" /><RB icon="search" /></div>
       <H1 className="mt-3">Pattern library</H1>
       <div className="mt-4 flex h-11 rounded-full glass p-1 lg:max-w-[420px]">{["All", "In progress", "Printed"].map((c) => <button key={c} onClick={() => setF(c)} className={cx("flex-1 rounded-full text-[14px] font-medium", f === c ? "bg-white text-bg" : "text-white/70")}>{c}</button>)}</div>
@@ -279,7 +279,7 @@ export function You() {
   const { toast, node } = useToast();
   const desk = useDesk();
   return (
-    <Screen footer={desk ? undefined : <TabBar tab="you" />}>
+    <Screen dock footer={desk ? undefined : <TabBar tab="you" />}>
       <div className="flex h-12 items-center"><Eyebrow>Profile</Eyebrow></div>
       <div className="lg:mt-4 lg:grid lg:grid-cols-2 lg:gap-12"><div>
       <div className="mt-3 flex items-center gap-4">

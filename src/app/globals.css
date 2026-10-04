@@ -168,9 +168,12 @@ input { font: inherit; color: inherit; }
 .animate-floaty { animation: floaty 5s ease-in-out infinite; }
 
 /* safe areas: phones use real insets; the desktop phone frame shows a fake status bar */
-.device { --top: calc(max(env(safe-area-inset-top), 10px) + 6px); --bottom: max(env(safe-area-inset-bottom), 18px); }
+.device { --top: calc(max(env(safe-area-inset-top), 10px) + 6px); --bottom: max(env(safe-area-inset-bottom), 18px);
+  /* the floating tab bar only needs to clear the home indicator, not the whole safe area:
+     low in the home-screen app (big inset), unchanged in Safari (no inset, its toolbar sits below) */
+  --dock: max(calc(env(safe-area-inset-bottom) - 16px), 12px); }
 @media (min-width: 640px) and (max-width: 1023px) and (min-height: 720px) {
-  .device { --top: 52px; --bottom: 26px; }
+  .device { --top: 52px; --bottom: 26px; --dock: 16px; }
   .fakestatus { display: flex !important; }
   .device[data-top="light"] .fakestatus { color: #26335f; }
 }

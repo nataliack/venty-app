@@ -9,7 +9,7 @@ export const cx = (...a: (string | false | null | undefined)[]) => a.filter(Bool
 
 // ─── Screen shell ─────────────────────────────────────────────────────
 // header (optional, pinned) · scroll area (only scrolls, and only fades, when content overflows) · footer (pinned, no backdrop).
-export function Screen({ children, footer, header, className, bg, noPad, wide }: { children: ReactNode; footer?: ReactNode; header?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean; wide?: boolean }) {
+export function Screen({ children, footer, header, className, bg, noPad, wide, dock }: { children: ReactNode; footer?: ReactNode; header?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean; wide?: boolean; dock?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [over, setOver] = useState(false);
   useEffect(() => {
@@ -31,7 +31,7 @@ export function Screen({ children, footer, header, className, bg, noPad, wide }:
         </div>
       </div>
       {footer && (
-        <div className="relative z-10 shrink-0 px-6 pt-2 lg:px-14" style={{ paddingBottom: "var(--bottom)" }}>
+        <div className="relative z-10 shrink-0 px-6 pt-2 lg:px-14" style={{ paddingBottom: dock ? "var(--dock)" : "var(--bottom)" }}>
           <div className={cx("lg:mx-auto lg:flex lg:w-full lg:justify-end", max)}>
             <div className="lg:w-[480px]">{footer}</div>
           </div>
