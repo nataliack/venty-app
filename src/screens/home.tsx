@@ -7,28 +7,30 @@ import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar
 import { BodyFigure, Flat } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
-// Phone navigation: a solid dark capsule. The current tab grows into a periwinkle pill with its name, the others
-// are icons. Create is its own round button beside the capsule: always visible, never competing with the tabs.
+// Phone navigation: a light floating bar with the Create button raised in a notch in the centre.
+// The current tab sits in a soft periwinkle capsule. No glows.
 function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
   const items: [typeof tab, IconName, string][] = [["home", "home", "Home"], ["bodies", "body", "Bodies"], ["patterns", "scissors", "Patterns"], ["you", "user", "You"]];
+  const btn = ([k, ic, l]: (typeof items)[number]) => {
+    const on = tab === k;
+    return (
+      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] transition-colors", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/50")}>
+        <span className={cx("grid h-8 w-14 place-items-center rounded-full transition-colors", on && "bg-[#687ef5]/18")}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
+        {l}
+      </button>
+    );
+  };
   return (
     <>
-      <div className="mt-2 flex items-center gap-2.5 pb-1">
-        <nav className="tabdock flex h-[64px] flex-1 items-center gap-1 rounded-full p-1.5">
-          {items.map(([k, ic, l]) => {
-            const on = tab === k;
-            return (
-              <motion.button key={k} layout onClick={() => replace(k)} aria-label={l} aria-current={on ? "page" : undefined} transition={{ type: "spring", bounce: 0.2, duration: 0.45 }}
-                className={cx("relative flex h-full items-center justify-center gap-2 rounded-full text-[15px] font-medium", on ? "tabpill flex-[2.2] px-4 text-white" : "flex-1 text-white/60 hover:text-white")}>
-                <Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.8} />
-                {on && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }} className="truncate">{l}</motion.span>}
-              </motion.button>
-            );
-          })}
+      <div className="relative mt-3">
+        <nav className="tabbar flex h-[72px] items-stretch rounded-[28px] px-1.5">
+          {items.slice(0, 2).map(btn)}
+          <span className="w-[78px] shrink-0" />
+          {items.slice(2).map(btn)}
         </nav>
-        <button onClick={() => setOpen(true)} aria-label="Create" className="createbtn tap grid h-[64px] w-[64px] shrink-0 place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></button>
+        <button onClick={() => setOpen(true)} aria-label="Create" className="createbtn tap absolute left-1/2 top-0 grid h-[62px] w-[62px] -translate-x-1/2 -translate-y-[36%] place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></button>
       </div>
       <CreateSheet open={open} onClose={() => setOpen(false)} />
     </>
@@ -151,13 +153,13 @@ export function Home() {
         <div className="relative">
           <div className="flex h-12 items-center gap-3 pt-1">
             <span className="violet-panel grid h-11 w-11 shrink-0 place-items-center rounded-full text-[17px] font-medium">{name[0].toUpperCase()}</span>
-            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-[#5c68b0]">{greet()}</div><div className="truncate text-[17px] font-medium text-[#3d4bb3]">{name}</div></div>
+            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-[#3f4c80]">{greet()}</div><div className="truncate text-[17px] font-medium text-[#26335f]">{name}</div></div>
             <UpdatesButton />
           </div>
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-end lg:gap-12">
             <div>
-              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[36px] text-[#3d4bb3] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
-              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#5c68b0] lg:text-[18px]">Design your own, or start from one of our pre‑made patterns.</p>
+              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[36px] text-[#26335f] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
+              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#3f4c80] lg:text-[18px]">Design your own, or start from one of our pre‑made patterns.</p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
               <button onClick={make} className="tap relative isolate flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
@@ -167,7 +169,7 @@ export function Home() {
               </button>
               <button onClick={() => go("templates")} className="paper-card tap flex min-h-[132px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[170px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-[#687ef5]/12 text-[#4f63e0]"><Icon name="dress" size={20} /></span><Icon name="chevR" size={20} className="text-[#4f63e0]/70" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight text-[#3d4bb3] lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-[#5c68b0]">Ready-to-fit patterns</span></span>
+                <span><span className="block text-[18px] font-medium leading-tight text-[#26335f] lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-[#3f4c80]">Ready-to-fit patterns</span></span>
               </button>
             </div>
           </div>

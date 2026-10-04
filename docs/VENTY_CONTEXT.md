@@ -118,6 +118,8 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - decorative chips that look clickable but aren't;
 - arrow characters like "→" in buttons.
 
+**Status bar tint:** the browser's `theme-color` follows the top of each screen (`useStatusTint` in `App.tsx`): light (`#f6f7fd`) on home, Crown's top (`#a7b1d3`) on Welcome, the tour, onboarding, start, body ready and pattern complete, and dark elsewhere. In the desktop phone frame the fake status bar turns navy on home. (In an installed iPhone app the status text stays white; iOS does not allow changing it per screen.)
+
 **Gradient: Crown only (4 Oct 2026).** The app's one big gradient is **Crown**, ported as-is from the landing page (`nataliack/Venty-landing-page`, `/gradients`, "Light, locked"): light from the top centre, a blue halo rising from below, four slowly drifting lights. Use the `<Crown />` component (animated, `.sky.sky-light`) for screens and panels, and `.violet-panel` (Crown's static layers) for small things like the avatar. It is on Welcome, the onboarding pictures, every `PaperScreen` panel (tour question, start, body ready, pattern complete), the "Design your own" card and the finished-pattern panel. **Never use the old violet radial gradient** (`#8c9cf8 → #4f63e0 → #1c2252`) anywhere.
 
 **Colour roles (4 Oct 2026):** the app was monotonous because every screen was the same dark navy. Colour now has a job:
@@ -239,12 +241,12 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - "Open any group to see your measurements. Tap a measurement to change it." Button: "Save body".
 
 **Home (`home`):**
-- **Top: a light rounded block** (`.home-hero.light-hero`): pale periwinkle with a soft periwinkle grid fading down, rounded bottom corners over the dark page (a dark wrapper sits behind the corners so nothing grey shows). Text in soft indigo.
+- **Top: a light rounded block** (`.home-hero.light-hero`): pale periwinkle with a soft periwinkle grid fading down, rounded bottom corners over the dark page (a dark wrapper sits behind the corners so nothing grey shows). Text in navy (`#26335f`, secondary `#3f4c80`).
   - Violet avatar, greeting and name, and a white **Updates bell** (replaced search).
   - "What are we making today?" on two lines, and "Design your own, or start from one of our pre-made patterns."
   - **Two ways to start**: **Design your own** ("Photo, sketch or words"; violet card, picks the body, then the studio) and **Use a pre-made** ("Ready-to-fit patterns"; white card, the library). The Create menu uses the same words.
 - **Below, on the dark page:** notices (finish your measurements, take the tour), **Your bodies** (a horizontal row with a dashed "+" first), **Your patterns** (the three latest, with a status dot) and a Pre-made patterns row. All are solid `.card-soft` cards. Each section has a "View all".
-- **Phone tab bar:** a solid dark capsule (`.tabdock`); the current tab grows into a periwinkle pill with its name (`.tabpill`), the others are icons. Create is its own round periwinkle button beside the capsule.
+- **Phone tab bar:** back to the light floating bar (`.tabbar`) with the Create button raised in a notch in the centre. The current tab sits in a soft periwinkle capsule. No glows (the dark capsule version was tried and dropped).
 - **Library pages** (Body library, Pattern library) no longer show a big count next to the title. Counts live on the profile page.
 - **A saved pattern opens as its own page (`pattern`)**, not the making flow: the garment on the body, its status ("Printed", "Ready to print", "Draft") and who it was drafted to, a **Shopping list** to show at the fabric shop (metres, stretch, feel, the fabric you chose, and why), and **How it was made** (fit and ease, seam allowance, pieces, paper, garment details). Actions: **Print again** (or Print it) and **Change the design**. Patterns save these details (`pattern.spec`) when made and printed.
 

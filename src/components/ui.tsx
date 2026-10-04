@@ -48,7 +48,7 @@ export const Crown = ({ className }: { className?: string }) => (
 
 // A "moment" screen in the onboarding style: a violet picture panel and warm paper below (side by side on desktop).
 // Used where something starts or finishes, so those screens stand apart from the dark working screens.
-export function PaperScreen({ art, children, footer, top }: { art: ReactNode; children: ReactNode; footer: ReactNode; top?: ReactNode }) {
+export function PaperScreen({ art, children, footer, top, artH = "h-[42%]" }: { art: ReactNode; children: ReactNode; footer: ReactNode; top?: ReactNode; artH?: string }) {
   const desk = useDesk();
   if (desk) return (
     <div className="paper absolute inset-0 grid grid-cols-[1.05fr_0.95fr]">
@@ -58,7 +58,7 @@ export function PaperScreen({ art, children, footer, top }: { art: ReactNode; ch
   );
   return (
     <div className="paper absolute inset-0 flex flex-col">
-      <div className="relative h-[42%] shrink-0 overflow-hidden rounded-b-[32px] text-white"><Crown />{art}{top && <div className="absolute inset-x-0 top-0 px-5" style={{ paddingTop: "var(--top)" }}>{top}</div>}</div>
+      <div className={cx("relative shrink-0 overflow-hidden rounded-b-[32px] text-white", artH)}><Crown />{art}{top && <div className="absolute inset-x-0 top-0 px-5" style={{ paddingTop: "var(--top)" }}>{top}</div>}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-6 noscroll">{children}</div>
       <div className="shrink-0 px-6 pt-3" style={{ paddingBottom: "var(--bottom)" }}>{footer}</div>
     </div>

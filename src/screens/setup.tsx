@@ -444,7 +444,7 @@ export function Ready() {
     </div>
   );
   return (
-    <PaperScreen art={art} footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
+    <PaperScreen art={art} artH="h-[31%]" footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
       <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
       <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Well done! Your body is ready</h1>
       <p className="lead mt-3">Good job finishing {body.name ? `${body.name}’s` : "your"} measurements. Every pattern you make will be drafted to them.</p>

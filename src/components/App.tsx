@@ -61,6 +61,20 @@ function StatusBar() {
   );
 }
 
+const LIGHT_TOP = new Set(["home"]);
+const CROWN_TOP = new Set(["welcome", "tourAsk", "onboarding", "start", "ready", "printed"]);
+function useStatusTint(id: string) {
+  useEffect(() => {
+    const desk = window.matchMedia("(min-width: 1024px)").matches;
+    const color = desk ? "#0b0c15" : LIGHT_TOP.has(id) ? "#f6f7fd" : CROWN_TOP.has(id) ? "#a7b1d3" : "#0b0c15";
+    let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+    m.content = color;
+    const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", LIGHT_TOP.has(id) ? "light" : "dark"), 0);
+    return () => clearTimeout(t);
+  }, [id]);
+}
+
 export default function App() {
   const [ready, setReady] = useState(false);
   const stack = useApp((s) => s.stack);
@@ -68,6 +82,7 @@ export default function App() {
   const kiosk = useApp((s) => s.kiosk);
   const top = stack[stack.length - 1] ?? { id: "home" };
   const S = SCREENS[top.id] ?? Home;
+  useStatusTint(top.id);
   const depth = useRef(stack.length);
   const [resetAsk, setResetAsk] = useState(false);
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
