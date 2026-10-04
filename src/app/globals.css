@@ -302,6 +302,9 @@ input { font: inherit; color: inherit; }
 /* home shortcuts share the Create button's periwinkle fill */
 .herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
+/* small icon badges in the same periwinkle as the Create (+) button, white line icon, a fine light outline */
+.iconbadge { color: #fff; background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .45), inset 0 1px 0 rgb(255 255 255 / .5), 0 6px 14px -6px rgb(53 66 170 / .7); }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: 0 0 0 6px #0b0c15, inset 0 1px 0 rgb(255 255 255 / .45); }

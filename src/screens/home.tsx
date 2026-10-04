@@ -50,8 +50,12 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
     <Sheet open={open} onClose={onClose}>
       <div className="mb-4 flex items-center justify-between"><span className="text-[20px] font-semibold">Create</span><RB icon="close" size={38} onClick={onClose} /></div>
       <div className="flex flex-col gap-2.5">
-        {row("scissors", "Design your own", "From a photo, a sketch or your own words", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
-        {row("dress", "Use a pre-made pattern", "Dresses, tops, trousers and skirts", "#4f63e0", () => go("templates"))}
+        {row("pencil", "Design your own", "From a photo, a sketch or your own words", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
+        <button onClick={() => { onClose(); go("templates"); }} className="paper-card tap flex w-full items-center gap-4 rounded-[24px] p-5 text-left">
+          <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name="dress" size={22} strokeWidth={2} /></span>
+          <span className="flex-1"><span className="block text-[17px] font-semibold text-[#26335f]">Use a pre-made pattern</span><span className="block text-[13px] text-[#3f4c80]">Dresses, tops, trousers and skirts</span></span>
+          <Icon name="chevR" size={20} className="text-[#4f63e0]/70" />
+        </button>
         {row("body", "Make a body", "Measure yourself or someone you sew for", "#4d5e85", () => { startBody(); })}
       </div>
     </Sheet>
@@ -164,11 +168,11 @@ export function Home() {
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
               <button onClick={make} className="tap relative isolate flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
                 <Crown className="-z-10" />
-                <span className="relative flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/20"><Icon name="pencil" size={20} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
+                <span className="relative flex items-center justify-between"><span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
                 <span className="relative"><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/85">Photo, sketch or words</span></span>
               </button>
               <button onClick={() => go("templates")} className="paper-card tap flex min-h-[132px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[170px] lg:p-6">
-                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-[#687ef5]/12 text-[#4f63e0]"><Icon name="dress" size={20} /></span><Icon name="chevR" size={20} className="text-[#4f63e0]/70" /></span>
+                <span className="flex items-center justify-between"><span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-[#4f63e0]/70" /></span>
                 <span><span className="block text-[18px] font-medium leading-tight text-[#26335f] lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-[#3f4c80]">Ready-to-fit patterns</span></span>
               </button>
             </div>
