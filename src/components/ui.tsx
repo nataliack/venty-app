@@ -31,7 +31,7 @@ export function Screen({ children, footer, header, className, bg, noPad, wide, d
         </div>
       </div>
       {footer && (
-        <div className={cx("relative z-10 shrink-0 lg:px-14", dock ? "pt-0" : "px-6 pt-2")} style={{ paddingBottom: dock ? 0 : "var(--bottom)" }}>
+        <div className="relative z-10 shrink-0 px-6 pt-2 lg:px-14" style={{ paddingBottom: dock ? "var(--dock)" : "var(--bottom)" }}>
           <div className={cx("lg:mx-auto lg:flex lg:w-full lg:justify-end", max)}>
             <div className="lg:w-[480px]">{footer}</div>
           </div>

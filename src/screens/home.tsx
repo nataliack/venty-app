@@ -16,17 +16,16 @@ function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const btn = ([k, ic, l]: (typeof items)[number]) => {
     const on = tab === k;
     return (
-      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] transition-colors", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/50")}>
-        <span className={cx("grid h-8 w-14 place-items-center rounded-full transition-colors", on && "bg-[#687ef5]/18")}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
+      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] transition-colors", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")}>
+        <span className={cx("grid h-8 w-14 place-items-center rounded-full transition-colors", on && "bg-[#687ef5]/25")}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
         {l}
       </button>
     );
   };
   return (
     <>
-      <div className="relative mt-5">
-        {/* docked flush to the bottom edge; the padding keeps the icons above the home indicator */}
-        <nav className="tabbar flex items-stretch rounded-t-[28px] px-2" style={{ height: "calc(64px + var(--dock))", paddingBottom: "var(--dock)" }}>
+      <div className="relative mt-3">
+        <nav className="tabbar flex h-[68px] items-stretch rounded-[28px] px-1.5">
           {items.slice(0, 2).map(btn)}
           <span className="w-[78px] shrink-0" />
           {items.slice(2).map(btn)}
