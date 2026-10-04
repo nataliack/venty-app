@@ -84,35 +84,19 @@ input { font: inherit; color: inherit; }
 .chip { height: 34px; padding: 0 15px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.85); white-space: nowrap; transition: background .2s, color .2s; }
 .chip.on { background: #fff; color: #0b0c15; border-color: #fff; }
 
-/* ─── micro-interactions: a slow, symmetrical gradient that swirls inside anything you can press ─── */
+/* ─── micro-interactions: kept deliberately plain. Hover lifts the surface a touch; a press dips it.
+   No swirls, glows or rainbows, and nothing that stays behind after a tap on a touch screen. ─── */
 .pill, .rb, .chip, .glass.tap, .tplcard { position: relative; isolation: isolate; overflow: hidden; }
-.pill::after, .rb::after, .chip::after, .glass.tap::after, .tplcard::after {
-  content: ""; position: absolute; left: 50%; top: 50%; width: max(180%, 260px); aspect-ratio: 1; translate: -50% -50%;
-  z-index: -1; pointer-events: none; border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0 8%, rgb(140 156 248 / .7) 18%, transparent 30% 50%, rgb(193 200 217 / .5) 68%, transparent 80%);
-  filter: blur(22px); opacity: 0; transition: opacity .5s ease;
-  animation: v-swirl 6s linear infinite; animation-play-state: paused;
-}
-.pill-primary::after { background: conic-gradient(from 0deg, transparent 0 6%, rgb(255 255 255 / .45) 18%, transparent 32% 50%, rgb(60 75 210 / .7) 68%, transparent 82%); }
-.chip.on::after { background: conic-gradient(from 0deg, transparent 0 10%, rgb(140 156 248 / .4) 22%, transparent 36% 50%, rgb(140 156 248 / .4) 72%, transparent 86%); }
 @media (hover: hover) {
-  .pill:hover::after, .rb:hover::after, .chip:hover::after, .glass.tap:hover::after, .tplcard:hover::after { opacity: 1; animation-play-state: running; }
-  .pill:hover { transform: translateY(-2px); }
-  .pill-primary:hover { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .4), inset 0 1px 0 rgb(255 255 255 / .7), inset 0 0 22px 4px rgb(214 222 255 / .65), 0 18px 44px -8px rgb(104 126 245 / .65); }
-  .rb:hover { transform: scale(1.06); border-color: rgba(255,255,255,.3); box-shadow: 0 0 0 4px rgba(104,126,245,.14); }
-  .chip:hover { border-color: rgba(255,255,255,.3); }
-  .glass.tap { transition: transform .45s cubic-bezier(.2,1.2,.4,1), border-color .3s, background-color .3s; }
-  .glass.tap:hover { border-color: rgba(255,255,255,.22); background-color: rgba(255,255,255,.08); }
-  .glow.tap { transition: transform .45s cubic-bezier(.2,1.2,.4,1), box-shadow .4s; }
-  .glow.tap:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 22px 60px -18px color-mix(in srgb, var(--gc, #687ef5) 70%, transparent); }
-  .glow.tap:hover::before { animation: v-drift 5s ease-in-out infinite alternate; }
+  .pill-primary:hover { filter: brightness(1.06); }
+  .pill-glass:hover, .pill-dark:hover { background-color: rgb(255 255 255 / .12); }
+  .rb:hover { border-color: rgb(255 255 255 / .28); background-color: rgb(255 255 255 / .12); }
+  .chip:hover { border-color: rgb(255 255 255 / .3); }
+  .glass.tap { transition: transform .3s ease, border-color .25s, background-color .25s; }
+  .glass.tap:hover { border-color: rgb(255 255 255 / .22); background-color: rgb(255 255 255 / .08); }
+  .glow.tap { transition: transform .3s ease, filter .25s; }
+  .glow.tap:hover { filter: brightness(1.06); }
 }
-/* pressing: the swirl blooms instantly, the element dips, then springs back */
-.pill:active::after, .rb:active::after, .chip:active::after, .glass.tap:active::after, .tplcard:active::after { opacity: 1; animation-play-state: running; transition-duration: .1s; }
-.glow.tap:active::before { animation: v-drift 1.6s ease-in-out infinite alternate; }
-@keyframes v-swirl { to { rotate: 360deg; } }
-@keyframes v-drift { 0% { translate: 0 0; scale: 1; } 50% { translate: 7% -5%; scale: 1.1; } 100% { translate: -7% 4%; scale: .95; } }
-
 
 /* ─── per-card hover effects (see <FX/>). Each sits under the content, fades in, and only moves while hovered/pressed ─── */
 .fx { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .6s ease; }
@@ -168,7 +152,7 @@ input { font: inherit; color: inherit; }
 @keyframes v-beam { from { translate: 0 0; } to { translate: 3% 2%; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .pill::after, .rb::after, .chip::after, .glass.tap::after, .tplcard::after, .sky::before, .glow.tap:hover::before, .glow.tap:active::before { animation: none !important; }
+  .sky::before { animation: none !important; }
 }
 
 }
@@ -206,7 +190,7 @@ input { font: inherit; color: inherit; }
 .opt::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .45s ease;
   background: radial-gradient(90% 120% at 50% 110%, rgb(104 126 245 / .55), rgb(79 99 224 / .18) 55%, transparent 80%), linear-gradient(180deg, rgb(255 255 255 / .06), transparent 50%); }
 .opt:active { transform: scale(.985); }
-@media (hover: hover) { .opt:hover { border-color: rgba(255,255,255,.24); } .opt:hover::before { opacity: .45; } }
+@media (hover: hover) { .opt:not(.on):hover { border-color: rgba(255,255,255,.26); background-color: rgba(255,255,255,.07); } }
 .opt.on { border-color: #687ef5; box-shadow: inset 0 0 0 .5px #687ef5, 0 14px 40px -18px rgb(104 126 245 / .7); }
 .opt.on::before { opacity: 1; }
 .radio { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.35); display: grid; place-items: center; flex-shrink: 0; transition: all .25s; }
@@ -248,12 +232,21 @@ input { font: inherit; color: inherit; }
 /* ─── home: periwinkle hero that bleeds under the status bar, then the dark page ─── */
 @layer components {
 .home-hero { color: #131523; margin-top: calc(-1 * var(--top)); padding-top: var(--top); border-radius: 0 0 36px 36px;
-  background-image: radial-gradient(rgb(255 255 255 / .2) .8px, transparent 1.1px),
-    radial-gradient(70% 55% at 12% 0%, rgb(255 255 255 / .6), transparent 70%),
-    radial-gradient(70% 70% at 100% 100%, rgb(79 99 224 / .45), transparent 70%),
-    linear-gradient(180deg, #bcc5fc 0%, #9dabf9 48%, #8295f7 100%);
-  background-size: 6px 6px, auto, auto, auto;
+  background-image: radial-gradient(60% 50% at 8% 0%, rgb(255 255 255 / .7), transparent 70%),
+    radial-gradient(55% 60% at 78% 38%, rgb(255 255 255 / .35), transparent 70%),
+    radial-gradient(70% 70% at 100% 100%, rgb(79 99 224 / .5), transparent 70%),
+    linear-gradient(180deg, #c3cbfc 0%, #a3b0fa 50%, #8497f7 100%);
   box-shadow: 0 30px 80px -40px rgb(104 126 245 / .6); }
+/* the hero is a cutting mat: fine and coarse grid lines fading out, and a ruler along the bottom edge */
+.hero-mat { position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgb(255 255 255 / .2) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .2) 1px, transparent 1px),
+    linear-gradient(rgb(255 255 255 / .09) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .09) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px; background-position: -1px -1px;
+  mask-image: radial-gradient(110% 85% at 75% 35%, #000 25%, transparent 80%); -webkit-mask-image: radial-gradient(110% 85% at 75% 35%, #000 25%, transparent 80%); }
+.hero-ticks { opacity: .55; }
+/* solid, softly lit cards on the dark page (no see-through glass) */
+.card-soft { background: linear-gradient(180deg, #1b1e33 0%, #15172a 100%); border: 1px solid rgb(255 255 255 / .08); box-shadow: inset 0 1px 0 rgb(255 255 255 / .05), 0 10px 30px -18px rgb(0 0 0 / .8); }
+@media (hover: hover) { .card-soft.tap:hover { border-color: rgb(255 255 255 / .16); background: linear-gradient(180deg, #202440 0%, #181a2f 100%); } }
 .hero-card { background: rgb(255 255 255 / .32); border: 1px solid rgb(255 255 255 / .55); box-shadow: inset 0 1px 0 rgb(255 255 255 / .7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 @media (min-width: 1024px) { .home-hero { margin-top: 0; padding-top: 0; border-radius: 36px; } }
 
@@ -275,8 +268,8 @@ input { font: inherit; color: inherit; }
 .rb.rb-plain:active { transform: scale(.94); background: #fff; border-color: #fff; color: #0b0c15; transition: transform .08s, background-color .08s, color .08s; }
 
 /* phone tab bar: light, same family as the hero; Create sits raised in a notch */
-.tabbar { background: linear-gradient(180deg, #e8ecff, #cdd5fd); color: #131523;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .8), 0 20px 40px -16px rgb(0 0 0 / .7); }
+.tabbar { background: linear-gradient(180deg, #f1f3ff 0%, #d6dcfd 100%); color: #252c66; border: 1px solid rgb(255 255 255 / .7);
+  box-shadow: inset 0 -1px 0 rgb(104 126 245 / .18), 0 24px 44px -18px rgb(0 0 0 / .85), 0 0 0 1px rgb(11 12 21 / .4); }
 /* home shortcuts share the Create button's periwinkle fill */
 .herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }

@@ -46,6 +46,7 @@ export type Draft = {
   seam: number | null;
   printer: "A4" | "A0";
   sheets?: number; // sheets the arranged layout prints on
+  layout?: { garment: string; printer: string; at: Record<string, { x: number; y: number; r: number }> }; // where you put each piece: centre in % of the sheet area, rotation in degrees
   lengthCm: number;
   neckline: number;
   sleeve: string;

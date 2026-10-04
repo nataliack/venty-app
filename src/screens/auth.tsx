@@ -32,7 +32,7 @@ export function Splash() {
 const Sky = () => <div className="sky"><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /></div>;
 
 const WELCOME_T = <>See a dress you love.<br />Create it. Wear it.</>;
-const WELCOME_B = "Any photo, screenshot, magazine page or link. Venty drafts a sewing pattern to your exact measurements, ready to print at home.";
+const WELCOME_B = "Any photo, screenshot, magazine page or sketch. Venty drafts a sewing pattern to your exact measurements, ready to print at home.";
 
 export function Welcome() {
   const go = useApp((s) => s.go);
@@ -184,7 +184,7 @@ export function SignedIn() {
 
 // ─── Onboarding: light, editorial, cinematic. Looks nothing like the app inside. ──────────────
 const SLIDES = [
-  { t: "Start with any look you love", b: "A photo, a screenshot, a magazine page, a link or your own sketch. If you can picture it, Venty can draft it.", fig: "Any picture, any source" },
+  { t: "Start with any look you love", b: "A photo, a screenshot, a magazine page or your own sketch. If you can picture it, Venty can draft it.", fig: "Any picture, any source" },
   { t: "Drafted to your exact body", b: "Venty turns the look into a sewing pattern built from your own measurements, not a standard size.", fig: "Your measurements, not a size chart" },
   { t: "Tweak the fit, then print at home", b: "Adjust ease and length, see it on your body, then print on A4 sheets that tape together.", fig: "Printed on A4, taped together" },
 ];
@@ -207,8 +207,6 @@ function Plate({ i, big }: { i: number; big: boolean }) {
             <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#12131c] px-2 py-0.5 text-[10px] text-white">Screenshot</span>
           </div>
         </motion.div>
-        {/* link */}
-        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 }} className="absolute flex items-center gap-1.5 rounded-[8px] bg-white/85 px-2.5 py-1.5 text-[12px] text-[#12131c]/80 shadow-xl" style={{ left: 40 * k, top: 205 * k }}><Icon name="link" size={13} />pin.it/midi-dress</motion.div>
         {/* sketch */}
         <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="absolute rounded-[6px] bg-[#f3f1ec] shadow-xl" style={{ left: 205 * k, top: 182 * k, width: 74 * k, height: 70 * k, rotate: "4deg" }}><svg viewBox="0 0 74 70" className="h-full w-full"><path d="M30 12 Q37 18 44 12 L46 30 L56 60 Q37 64 18 60 L28 30 Z M28 30 Q37 33 46 30" fill="none" stroke="#2a2f48" strokeWidth="1.6" strokeLinejoin="round" /></svg></motion.div>
       </div>
@@ -239,19 +237,22 @@ function Plate({ i, big }: { i: number; big: boolean }) {
 export function TourAsk() {
   const replace = useApp((s) => s.replace);
   const set = useApp((s) => s.set);
+  const desk = useDesk();
   const skip = () => { set({ onboarded: true, tourSkipped: true }); replace("start"); };
+  // same sky and layout as Welcome, so it reads as the same place
   return (
-    <div className="paper absolute inset-0 flex flex-col items-center px-6 text-center" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
-      <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="grain relative grid h-[148px] w-[148px] place-items-center overflow-hidden rounded-full lg:h-[200px] lg:w-[200px]" style={{ background: "radial-gradient(90% 70% at 30% 20%, #8c9cf8 0%, #4f63e0 45%, #1c2252 100%)" }}>
-          <Flat g="flutter" size={96} stroke="#fff" fill="rgba(255,255,255,.18)" />
-        </div>
-        <h1 className="h1 mt-8 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Want a quick tour?</h1>
-        <p className="lead mt-3 max-w-[340px] [text-wrap:pretty] lg:max-w-[440px]">Three short pages on how Venty works: from your measurements to a pattern you can print at home.</p>
-      </div>
-      <div className="flex w-full max-w-[380px] flex-col items-center gap-1">
-        <Pill onClick={() => replace("onboarding")}>Show me how it works</Pill>
-        <button onClick={skip} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/70 hover:text-[#12131c]">Skip the tour</button>
+    <div className="absolute inset-0 overflow-hidden">
+      <Sky />
+      <div className="relative flex h-full flex-col items-center px-6 text-center lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="mt-[13dvh] lg:mt-[10dvh]"><VentyLogo width={desk ? 200 : 120} /></motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.8 }} className="my-auto flex max-w-[620px] flex-col items-center pt-8">
+          <h1 className="h1 !text-[34px] lg:!text-[56px]">Want a quick tour?</h1>
+          <Lead className="mt-4 max-w-[340px] lg:max-w-[520px]">Three short pages on how Venty works: from your measurements to a pattern you can print at home.</Lead>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.8 }} className="flex w-full max-w-[380px] flex-col items-center gap-2 lg:mb-[6dvh]">
+          <Pill onClick={() => replace("onboarding")}>Show me how it works</Pill>
+          <button onClick={skip} className="h-11 px-4 text-[16px] font-medium text-white/90 transition-colors hover:text-white">Skip the tour</button>
+        </motion.div>
       </div>
     </div>
   );
@@ -299,9 +300,12 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
     </AnimatePresence>
   );
   const controls = (
-    <div className="flex items-center gap-3">
-      <button onClick={prev} aria-label="Previous" className={cx("tap grid h-[56px] w-[56px] shrink-0 place-items-center rounded-full border border-[#12131c]/15 text-[#12131c]", i === 0 && "invisible")}><Icon name="back" size={22} /></button>
-      <Pill className="flex-1" onClick={next}>{i === 2 ? (fromApp ? "Done" : "Get started") : "Next"}</Pill>
+    <div className="flex items-center">
+      <AnimatePresence initial={false}>{i > 0 && (
+        <motion.button key="prev" onClick={prev} aria-label="Previous" initial={{ width: 0, marginRight: 0, opacity: 0 }} animate={{ width: 56, marginRight: 12, opacity: 1 }} exit={{ width: 0, marginRight: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+          className="tap grid h-[56px] shrink-0 place-items-center overflow-hidden rounded-full border border-[#12131c]/15 text-[#12131c]"><Icon name="back" size={22} /></motion.button>
+      )}</AnimatePresence>
+      <Pill className="min-w-0 flex-1" onClick={next}>{i === 2 ? (fromApp ? "Done" : "Get started") : "Next"}</Pill>
     </div>
   );
   if (desk) return (

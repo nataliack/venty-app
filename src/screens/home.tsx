@@ -3,25 +3,32 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
 import type { GarmentKey } from "@/lib/data";
-import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, cx, useToast, useDesk , FX } from "@/components/ui";
-import { BodyFigure, Flat } from "@/components/art";
+import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, cx, useToast, useDesk } from "@/components/ui";
+import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
-// Phone navigation: a light bar (the same family as the home hero) with one raised Create button in a notch.
-// Create is the one action that matters most, so it is the only thing that sits above the bar.
+// Phone navigation: a light floating bar (the same family as the home hero) with one raised Create button in a notch.
+// The current tab sits in a soft periwinkle capsule, so where you are reads at a glance.
 function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
   const items: [typeof tab, IconName, string][] = [["home", "home", "Home"], ["bodies", "body", "Bodies"], ["patterns", "scissors", "Patterns"], ["you", "user", "You"]];
-  const btn = ([k, ic, l]: (typeof items)[number]) => (
-    <button key={k} onClick={() => replace(k)} aria-current={tab === k ? "page" : undefined} className={cx("flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] font-medium transition-colors", tab === k ? "text-ink" : "text-ink/45")}>
-      <Icon name={ic} size={22} strokeWidth={tab === k ? 2.1 : 1.7} />{l}
-    </button>
-  );
+  const btn = ([k, ic, l]: (typeof items)[number]) => {
+    const on = tab === k;
+    return (
+      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] transition-colors", on ? "font-semibold text-[#252c66]" : "font-medium text-[#252c66]/50")}>
+        <span className="relative grid h-8 w-14 place-items-center">
+          {on && <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.35, duration: 0.45 }} className="absolute inset-0 rounded-full bg-[#687ef5]/22" />}
+          <Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} className="relative" />
+        </span>
+        {l}
+      </button>
+    );
+  };
   return (
     <>
       <div className="relative mt-3">
-        <nav className="tabbar flex h-[68px] items-stretch rounded-[26px] px-1.5">
+        <nav className="tabbar flex h-[72px] items-stretch rounded-[28px] px-1.5">
           {items.slice(0, 2).map(btn)}
           <span className="w-[78px] shrink-0" />
           {items.slice(2).map(btn)}
@@ -46,7 +53,7 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
     <Sheet open={open} onClose={onClose}>
       <div className="mb-4 flex items-center justify-between"><span className="text-[20px] font-semibold">Create</span><RB icon="close" size={38} onClick={onClose} /></div>
       <div className="flex flex-col gap-2.5">
-        {row("scissors", "Make a pattern", "Photo, link, sketch or style", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
+        {row("scissors", "Make a pattern", "From a photo, a sketch or both", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
         {row("dress", "Choose a pre-made pattern", "Dresses, tops, pants, skirts", "#4f63e0", () => go("templates"))}
         {row("body", "Make a body", "Measure yourself or someone you sew for", "#4d5e85", () => { startBody(); })}
       </div>
@@ -62,15 +69,15 @@ function Notices() {
   return (
     <div className="mt-5 flex flex-col gap-2.5 lg:max-w-[720px]">
       {b && (
-        <Glass onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="flex w-full items-center gap-3.5 rounded-[22px] border-primary/70 p-4">
+        <button onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="card-soft tap flex w-full items-center gap-3.5 rounded-[22px] !border-primary/60 p-4 text-left">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/25 text-peri"><Icon name="ruler" size={22} /></span>
           <div className="min-w-0 flex-1"><div className="text-[16px] font-medium">Continue finishing your measurements</div><div className="text-[14px] text-white/55">{b.name} · {b.done.length} of 24 saved</div>
             <div className="mt-2 flex gap-[2px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < b.done.length ? "bg-primary" : "bg-white/15")} />)}</div></div>
           <Icon name="chevR" size={18} className="text-white/50" />
-        </Glass>
+        </button>
       )}
       {tourSkipped && (
-        <div className="relative flex items-center gap-3.5 rounded-[22px] border border-white/12 bg-white/[.04] p-4">
+        <div className="card-soft relative flex items-center gap-3.5 rounded-[22px] p-4">
           <button onClick={() => go("onboarding", { from: "app" })} className="flex flex-1 items-center gap-3.5 text-left">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10"><Icon name="video" size={20} /></span>
             <span><span className="block text-[16px] font-medium">New here? Take the tour</span><span className="block text-[14px] text-white/55">See how a photo becomes your pattern.</span></span>
@@ -95,39 +102,55 @@ function SectionHead({ title, onAll }: { title: string; onAll: () => void }) {
   );
 }
 
-// Home: a coloured hero on top holds the one main job (start a pattern, from any source);
-// everything else sits below it on the dark page: bodies, recent patterns, templates.
+// Home: a coloured hero holds the one main job (start a pattern), set like a cutting mat: grid lines,
+// a ruler edge, the body you sew for and a pattern piece drifting beside it. Everything else sits below on the dark page.
 export function Home() {
   const { go, user, bodies, patterns, newDraft, setDraft, startBody, set } = useApp();
   const body = useApp((s) => s.body());
   const name = user.guest ? "Guest" : user.name;
   const desk = useDesk();
-  const startFrom = (start?: "link" | "sketch") => { newDraft(start ? { start } : undefined); go("patSelectBody"); };
+  const make = () => { newDraft(); go("patSelectBody"); };
   const actions: [IconName, string, () => void][] = [
-    ["image", "Photo", () => startFrom()],
-    ["link", "Link", () => startFrom("link")],
-    ["pencil", "Sketch", () => startFrom("sketch")],
+    ["image", "Photo", make],
+    ["pencil", "Sketch", make],
     ["dress", "Pre-made", () => go("templates")],
   ];
+  const rings = [{ kind: "ring" as const, y: 140, w: 100 }, { kind: "ring" as const, y: 205, w: 72 }, { kind: "ring" as const, y: 275, w: 110 }];
   return (
     <Screen noPad footer={desk ? undefined : <TabBar tab="home" />}>
-      <section className="home-hero relative overflow-hidden px-5 pb-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-12 lg:px-12 lg:py-11">
-        <div>
+      <section className="home-hero relative overflow-hidden px-5 pb-10 lg:px-12 lg:pb-14 lg:pt-8">
+        <div className="hero-mat" aria-hidden />
+        <span className="ticks hero-ticks" aria-hidden />
+        <div className="relative">
           <div className="flex h-12 items-center gap-3 pt-1">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-[17px] font-medium text-white">{name[0].toUpperCase()}</span>
-            <div className="min-w-0 flex-1 leading-tight"><div className="text-[13px] text-ink/60">{greet()}</div><div className="truncate text-[17px] font-medium">{name}</div></div>
-            <button onClick={() => go("templates")} aria-label="Search templates" className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white lg:hidden"><Icon name="search" size={20} /></button>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#252c66] text-[17px] font-medium text-white">{name[0].toUpperCase()}</span>
+            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-[#252c66]/65">{greet()}</div><div className="truncate text-[17px] font-medium text-[#252c66]">{name}</div></div>
+            <button onClick={() => go("templates")} aria-label="Search patterns" className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/40 text-[#252c66] lg:hidden"><Icon name="search" size={20} /></button>
           </div>
-          <h1 className="h1 mt-6 !text-[34px] text-[#252c66] lg:mt-10 lg:!text-[56px]">What are we<br className="lg:hidden" /> making?</h1>
-          <p className="mt-2 max-w-[420px] text-[16px] leading-snug text-[#252c66]/75 lg:text-[18px]">Start from any look you love. We draft it to {body.name || "your body"}.</p>
-        </div>
-        <div className="hero-card mt-5 grid grid-cols-4 gap-2 rounded-[28px] p-3 lg:mt-0 lg:gap-3 lg:p-4">
-          {actions.map(([ic, l, fn]) => (
-            <button key={l} onClick={fn} className="tap group flex flex-col items-center gap-2 rounded-[20px] py-2 lg:py-4">
-              <span className="herotile grid h-[56px] w-[56px] place-items-center rounded-[18px] text-white transition-transform group-hover:-translate-y-0.5 lg:h-[76px] lg:w-[76px] lg:rounded-[24px]"><Icon name={ic} size={24} /></span>
-              <span className="text-[14px] font-medium text-[#252c66] lg:text-[15px]">{l}</span>
-            </button>
-          ))}
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-end lg:gap-12">
+            <div className="mt-2 flex items-end gap-1 lg:mt-6">
+              <div className="min-w-0 flex-1 pb-3">
+                <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 !text-[40px] !leading-[1.02] text-[#252c66] [text-wrap:balance] lg:!text-[68px]">What are we making today?</motion.h1>
+                <button onClick={() => go("bodies")} className="tap mt-4 flex items-center gap-1.5 rounded-full bg-white/35 py-1.5 pl-3 pr-2 text-[14px] font-medium text-[#252c66]">
+                  Drafted to {body.name || "your body"}<Icon name="chevR" size={15} />
+                </button>
+              </div>
+              <div className="relative h-[220px] w-[124px] shrink-0 lg:h-[330px] lg:w-[190px]">
+                <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }} className="absolute inset-0">
+                  <BodyFigure sex={body.sex} width={120} markers={rings} className="h-full w-full" />
+                </motion.div>
+                <div className="animate-floaty absolute -left-9 bottom-6 rotate-[-14deg] opacity-90 lg:-left-14 lg:bottom-10"><Piece k="bodiceFront" width={desk ? 70 : 46} /></div>
+              </div>
+            </div>
+            <div className="hero-card mt-3 grid grid-cols-3 gap-2 rounded-[28px] p-3 lg:mt-0 lg:gap-3 lg:p-4">
+              {actions.map(([ic, l, fn]) => (
+                <button key={l} onClick={fn} className="tap flex flex-col items-center gap-2 rounded-[20px] py-2 lg:py-4">
+                  <span className="herotile grid h-[58px] w-[58px] place-items-center rounded-[19px] text-white lg:h-[78px] lg:w-[78px] lg:rounded-[24px]"><Icon name={ic} size={25} /></span>
+                  <span className="text-[15px] font-medium text-[#252c66]">{l}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -141,10 +164,10 @@ export function Home() {
                 <Icon name="plus" size={22} /><span className="hidden lg:inline">New body</span>
               </button>
               {bodies.map((b) => (
-                <Glass key={b.id} onClick={() => { set({ activeBody: b.id }); go("preview"); }} className="flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4">
+                <button key={b.id} onClick={() => { set({ activeBody: b.id }); go("preview"); }} className="card-soft tap flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4 text-left">
                   <span className="grid h-[60px] w-11 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-primary/20"><BodyFigure sex={b.sex} width={20} glow={false} className="h-[52px] w-full" /></span>
-                  <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/50">{b.done.length} of 24 measurements</span></span>
-                </Glass>
+                  <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/55">{b.done.length} of 24 measurements</span></span>
+                </button>
               ))}
             </div>
           </div>
@@ -153,19 +176,19 @@ export function Home() {
             <div className="mt-2 flex flex-col">
               {patterns.slice(0, 3).map((p) => (
                 <button key={p.id} onClick={() => { setDraft({ garment: p.garment as GarmentKey }); go("garment"); }} className="tap flex items-center gap-3.5 border-b border-white/8 py-3 text-left last:border-0">
-                  <span className="grid h-[52px] w-[48px] shrink-0 place-items-center rounded-[14px] border border-white/10 bg-white/[.06]"><Flat g={p.garment as GarmentKey} size={32} /></span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-[16px] font-medium">{p.name}</span><span className="block truncate text-[14px] text-white/50">{p.body}</span></span>
+                  <span className="card-soft grid h-[52px] w-[48px] shrink-0 place-items-center rounded-[14px]"><Flat g={p.garment as GarmentKey} size={32} /></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-[16px] font-medium">{p.name}</span><span className="block truncate text-[14px] text-white/55">{p.body}</span></span>
                   <span className="flex items-center gap-1.5 text-[14px] text-white/70"><span className={cx("h-2 w-2 rounded-full", STATUS_DOT[p.status])} />{p.status}</span>
                 </button>
               ))}
             </div>
           </div>
         </div>
-        <Glass onClick={() => go("templates")} className="mt-5 flex w-full items-center gap-3 rounded-[22px] p-3 lg:mt-8 lg:p-4">
-          <div className="flex shrink-0 -space-x-3"><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-primary/25"><Flat g="slip" size={30} /></span><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-denim/60"><Flat g="tee" size={30} /></span></div>
+        <button onClick={() => go("templates")} className="card-soft tap mt-5 flex w-full items-center gap-3 rounded-[22px] p-3 text-left lg:mt-8 lg:p-4">
+          <div className="flex shrink-0 -space-x-3"><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-[#2b3266]"><Flat g="slip" size={30} /></span><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-[#343c63]"><Flat g="tee" size={30} /></span></div>
           <div className="flex-1"><div className="text-[16px] font-medium">Pre-made patterns</div><div className="text-[14px] text-white/55">10 patterns, ready to fit to a body</div></div>
           <Icon name="chevR" size={18} className="text-white/50" />
-        </Glass>
+        </button>
         <div className="h-4" />
       </div>
     </Screen>
@@ -180,7 +203,7 @@ export function Bodies() {
   return (
     <Screen footer={desk ? undefined : <TabBar tab="bodies" />}>
       <div className="flex h-12 items-center"><Eyebrow>Library</Eyebrow><span className="flex-1" /><RB icon="search" /></div>
-      <div className="mt-3 flex items-baseline justify-between"><H1>Body library</H1><span className="serif text-[36px]">{String(bodies.length).padStart(2, "0")}</span></div>
+      <H1 className="mt-3">Body library</H1>
       <div className="mt-4 flex gap-2">{["All", "Me", "Family", "Clients"].map((c) => <Chip key={c} on={f === c} onClick={() => setF(c)}>{c}</Chip>)}</div>
       <div className="mt-4 grid grid-cols-2 gap-3 lg:mt-7 lg:grid-cols-4 lg:gap-5">
         {list.map((b, i) => (
@@ -208,7 +231,7 @@ export function Patterns() {
   return (
     <Screen footer={desk ? undefined : <TabBar tab="patterns" />}>
       <div className="flex h-12 items-center"><Eyebrow>Library</Eyebrow><span className="flex-1" /><RB icon="search" /></div>
-      <div className="mt-3 flex items-baseline justify-between"><H1>Pattern library</H1><span className="serif text-[36px]">{String(patterns.length).padStart(2, "0")}</span></div>
+      <H1 className="mt-3">Pattern library</H1>
       <div className="mt-4 flex h-11 rounded-full glass p-1 lg:max-w-[420px]">{["All", "In progress", "Printed"].map((c) => <button key={c} onClick={() => setF(c)} className={cx("flex-1 rounded-full text-[14px] font-medium", f === c ? "bg-white text-bg" : "text-white/70")}>{c}</button>)}</div>
       <div className="mt-4 flex flex-col gap-2.5 lg:mt-7 lg:grid lg:grid-cols-2 lg:gap-4">
         {list.map((p) => (

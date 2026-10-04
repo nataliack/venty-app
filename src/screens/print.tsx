@@ -86,21 +86,48 @@ export function Seam() {
 }
 
 // 3 · arrange the pieces on the sheets. The grid is the real paper: each cell is one A4 sheet.
-// Drag pieces closer together and the count of sheets to print goes down.
+// Drag pieces closer together and the count of sheets to print goes down. The layout is saved, and the
+// mini map later draws exactly this arrangement.
 const COLS = 4, ROWS = 4, SHEET_W = 210, SHEET_H = 297; // mm
 const MM_PER_UNIT = 1.8; // pattern-piece units to mm
 const W_MM = COLS * SHEET_W, H_MM = ROWS * SHEET_H;
-function pack(pieces: PieceKey[]) {
-  // simple shelf packing, left to right, in mm
-  const gap = 24; let x = gap, y = gap, row = 0;
-  return pieces.map((k) => {
+type At = Record<string, { x: number; y: number; r: number }>;
+const pieceW = (k: PieceKey) => ((pieceSize(k).w * MM_PER_UNIT) / W_MM) * 100; // width, % of the sheet area
+function pack(pieces: PieceKey[]): At {
+  // simple shelf packing, left to right, in mm; stored as piece centres in %
+  const gap = 24; let x = gap, y = gap, row = 0; const out: At = {};
+  pieces.forEach((k) => {
     const { w, h } = pieceSize(k); const pw = w * MM_PER_UNIT, ph = h * MM_PER_UNIT;
     if (x + pw > W_MM - gap) { x = gap; y += row + gap; row = 0; }
-    const at = { left: (x / W_MM) * 100, top: (y / H_MM) * 100 };
+    out[k] = { x: ((x + pw / 2) / W_MM) * 100, y: ((y + ph / 2) / H_MM) * 100, r: 0 };
     x += pw + gap; row = Math.max(row, ph);
-    return at;
   });
+  return out;
 }
+// which sheets a set of piece boxes touches
+function sheetsUsed(box: DOMRect, rects: DOMRect[]) {
+  const cw = box.width / COLS, ch = box.height / ROWS, on = new Set<string>();
+  rects.forEach((r) => {
+    for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
+      const x0 = box.left + col * cw, y0 = box.top + row * ch;
+      if (r.right > x0 + 2 && r.left < x0 + cw - 2 && r.bottom > y0 + 2 && r.top < y0 + ch - 2) on.add(`${row}-${col}`);
+    }
+  });
+  return on;
+}
+// the paper: A4 cells (A1 … D4), tinted where a piece lands; or one A0 sheet
+function Sheets({ a4, used }: { a4: boolean; used: Set<string> }) {
+  if (!a4) return <span className="absolute left-2 top-1.5 text-[11px] text-white/45">A0 sheet</span>;
+  return <>{Array.from({ length: ROWS * COLS }, (_, n) => {
+    const row = Math.floor(n / COLS), col = n % COLS, on = used.has(`${row}-${col}`);
+    return (
+      <div key={n} className={cx("absolute border transition-colors duration-300", on ? "border-white/35 bg-primary/15" : "border-dashed border-white/12")} style={{ left: `${(col / COLS) * 100}%`, top: `${(row / ROWS) * 100}%`, width: `${100 / COLS}%`, height: `${100 / ROWS}%` }}>
+        <span className="absolute left-1.5 top-1 text-[11px] text-white/45">{"ABCD"[row]}{col + 1}</span>
+      </div>
+    );
+  })}</>;
+}
+const paperStyle = (desk: boolean, reserve: number) => ({ width: `min(100%, calc((100dvh - ${desk ? 220 : reserve}px) * ${W_MM / H_MM}))`, aspectRatio: `${W_MM} / ${H_MM}` });
 
 export function Arrange() {
   const { go, draft, setDraft } = useApp();
@@ -108,65 +135,56 @@ export function Arrange() {
   const pieces = piecesFor(draft.garment);
   const area = useRef<HTMLDivElement>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
+  const saved = draft.layout && draft.layout.garment === draft.garment && draft.layout.printer === draft.printer ? draft.layout.at : null;
+  const [start, setStart] = useState<At>(() => saved ?? pack(pieces));
   const [seed, setSeed] = useState(0);
-  const [rot, setRot] = useState<Record<string, number>>({});
+  const [rot, setRot] = useState<Record<string, number>>(() => Object.fromEntries(Object.entries(start).map(([k, v]) => [k, v.r])));
   const [sel, setSel] = useState<string | null>(null);
   const [used, setUsed] = useState<Set<string>>(new Set());
   const desk = useDesk();
-  const start = pack(pieces);
+  const rotRef = useRef(rot); rotRef.current = rot;
 
-  // which sheets does any piece touch?
+  // read where every piece is now, save it, and count the sheets it touches
   const measure = useCallback(() => {
     const box = area.current?.getBoundingClientRect(); if (!box) return;
-    const cw = box.width / COLS, ch = box.height / ROWS, on = new Set<string>();
-    Object.values(refs.current).forEach((el) => {
-      if (!el) return; const r = el.getBoundingClientRect();
-      for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
-        const x0 = box.left + col * cw, y0 = box.top + row * ch;
-        if (r.right > x0 + 2 && r.left < x0 + cw - 2 && r.bottom > y0 + 2 && r.top < y0 + ch - 2) on.add(`${row}-${col}`);
-      }
+    const at: At = {}; const rects: DOMRect[] = [];
+    Object.entries(refs.current).forEach(([k, el]) => {
+      if (!el) return; const r = el.getBoundingClientRect(); rects.push(r);
+      at[k] = { x: ((r.left + r.width / 2 - box.left) / box.width) * 100, y: ((r.top + r.height / 2 - box.top) / box.height) * 100, r: rotRef.current[k] ?? 0 };
     });
+    const on = sheetsUsed(box, rects);
     setUsed(on);
-  }, []);
+    setDraft({ layout: { garment: draft.garment, printer: draft.printer, at }, sheets: a4 ? on.size : 1 });
+  }, [a4, draft.garment, draft.printer, setDraft]);
   useEffect(() => { const t = setTimeout(measure, 350); return () => clearTimeout(t); }, [measure, seed]);
-  useEffect(() => { if (a4 && used.size) setDraft({ sheets: used.size }); }, [a4, used, setDraft]);
 
   const sheets = a4 ? used.size : 1;
+  const restart = () => { const fresh = pack(pieces); setStart(fresh); setRot({}); setSel(null); setSeed(seed + 1); };
   const tools = (
-    <div className="mt-3 flex justify-center gap-2">
+    <div className="mt-3 flex justify-center gap-2 lg:justify-start">
       <button onClick={() => { if (!sel) return; setRot({ ...rot, [sel]: ((rot[sel] ?? 0) + 90) % 360 }); }} className={cx("tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium", !sel && "opacity-40")}><Icon name="rotate" size={18} />Rotate piece</button>
-      <button onClick={() => { setRot({}); setSel(null); setSeed(seed + 1); }} className="tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium"><Icon name="grid" size={18} />Start over</button>
+      <button onClick={restart} className="tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium"><Icon name="grid" size={18} />Start over</button>
     </div>
   );
   return (
-    <Screen header={<PrintHeader step={2} sub={0.5} />} footer={<Arrows onNext={() => go("needs")} />}>
+    <Screen header={<PrintHeader step={2} sub={0.5} />} footer={<Arrows onNext={() => { measure(); go("needs"); }} />}>
       <Split cols="lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]" left={<>
         <H1 className="mt-4 lg:mt-0">Arrange your pieces</H1>
         <Lead className="mt-2">{a4 ? "Each box is one A4 sheet. Drag pieces closer together to print fewer sheets." : "This is your A0 sheet. Drag the pieces to where you want them."}</Lead>
         <div className="mt-3 flex items-baseline gap-2"><span className="serif text-[34px] leading-none lg:text-[56px]">{sheets}</span><span className="text-[16px] text-white/65">{a4 ? `of ${COLS * ROWS} A4 sheets to print` : "A0 sheet to print"}</span></div>
         {desk && tools}
       </>} right={<>
-        <div key={seed} ref={area} className="relative mx-auto mt-4 overflow-hidden rounded-[10px] border border-white/20 bg-white/[.03] lg:mt-0" style={{ width: `min(100%, calc((100dvh - ${desk ? 220 : 400}px) * ${W_MM / H_MM}))`, aspectRatio: `${W_MM} / ${H_MM}` }}>
-          {a4 && Array.from({ length: ROWS * COLS }, (_, n) => {
-            const row = Math.floor(n / COLS), col = n % COLS, on = used.has(`${row}-${col}`);
-            return (
-              <div key={n} className={cx("absolute border transition-colors duration-300", on ? "border-white/35 bg-primary/15" : "border-dashed border-white/12")} style={{ left: `${(col / COLS) * 100}%`, top: `${(row / ROWS) * 100}%`, width: `${100 / COLS}%`, height: `${100 / ROWS}%` }}>
-                <span className="absolute left-1.5 top-1 text-[11px] text-white/45">{"ABCD"[row]}{col + 1}</span>
-              </div>
-            );
-          })}
-          {pieces.map((k, i) => {
-            const { w } = pieceSize(k);
-            return (
-              <motion.div key={k} ref={(el) => { refs.current[k] = el; }} drag dragConstraints={area} dragMomentum={false} dragElastic={0}
-                onDragStart={() => setSel(k)} onDragEnd={() => requestAnimationFrame(measure)} onTap={() => setSel(k)} onAnimationComplete={measure}
-                whileDrag={{ scale: 1.04, zIndex: 10 }} animate={{ rotate: rot[k] ?? 0 }}
-                className={cx("absolute cursor-grab touch-none rounded-md active:cursor-grabbing", sel === k && "outline outline-1 outline-offset-2 outline-peri")}
-                style={{ left: `${start[i].left}%`, top: `${start[i].top}%`, width: `${((w * MM_PER_UNIT) / W_MM) * 100}%` }}>
-                <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
-              </motion.div>
-            );
-          })}
+        <div key={seed} ref={area} className="relative mx-auto mt-4 overflow-hidden rounded-[10px] border border-white/20 bg-white/[.03] lg:mt-0" style={paperStyle(desk, 400)}>
+          <Sheets a4={a4} used={used} />
+          {pieces.map((k) => (
+            <motion.div key={k} ref={(el) => { refs.current[k] = el; }} drag dragConstraints={area} dragMomentum={false} dragElastic={0}
+              onDragStart={() => setSel(k)} onDragEnd={() => requestAnimationFrame(measure)} onTap={() => setSel(k)} onAnimationComplete={measure}
+              whileDrag={{ scale: 1.04, zIndex: 10 }} animate={{ rotate: rot[k] ?? 0 }}
+              className={cx("absolute cursor-grab touch-none rounded-md active:cursor-grabbing", sel === k && "outline outline-1 outline-offset-2 outline-peri")}
+              style={{ left: `${start[k]?.x ?? 50}%`, top: `${start[k]?.y ?? 50}%`, width: `${pieceW(k)}%`, translate: "-50% -50%" }}>
+              <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
+            </motion.div>
+          ))}
         </div>
         {!desk && tools}
       </>} />
@@ -239,23 +257,35 @@ export function PrintReady() {
   );
 }
 
-// Mini map: where each sheet goes (reached from the end screen)
-const ROW_L = ["A", "B", "C", "D"];
+// Mini map: exactly the layout you arranged, with the sheets it prints on (reached from the end screen)
 export function MiniMap() {
   const { back, draft } = useApp();
+  const a4 = draft.printer !== "A0";
   const pieces = piecesFor(draft.garment);
+  const at = draft.layout?.garment === draft.garment ? draft.layout.at : pack(pieces);
+  const area = useRef<HTMLDivElement>(null);
+  const refs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [used, setUsed] = useState<Set<string>>(new Set());
+  const desk = useDesk();
+  useEffect(() => {
+    const t = setTimeout(() => { const box = area.current?.getBoundingClientRect(); if (box) setUsed(sheetsUsed(box, Object.values(refs.current).filter(Boolean).map((el) => el!.getBoundingClientRect()))); }, 200);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <Screen footer={<Pill variant="dark" onClick={back}>Back</Pill>}>
       <TopBar left="back" />
       <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<>
       <H1 className="mt-4">Pattern mini map</H1>
-      <Lead className="mt-2">Tape each row first, then join the rows. Match the triangles on the edges.</Lead>
-      </>} right={<>
-      <div className="relative mt-4 grid grid-cols-4 grid-rows-4 overflow-hidden rounded-[20px] border border-white/15 lg:mx-auto lg:w-[min(480px,54dvh)]" style={{ aspectRatio: "3 / 4" }}>
-        {ROW_L.flatMap((r) => [1, 2, 3, 4].map((c) => <div key={r + c} className="relative border border-dashed border-white/15"><span className="absolute left-1 top-0.5 text-[11px] text-white/45">{r + c}</span></div>))}
-        <div className="absolute inset-0 grid grid-cols-3 place-items-center p-4">{pieces.map((k) => <Piece key={k} k={k} width={78} label={PIECE_LABEL[k]} />)}</div>
-      </div>
-      </>} />
+      <Lead className="mt-2">{a4 ? "Where every piece sits on your sheets. Tape each row first, then join the rows. Match the triangles on the edges." : "Where every piece sits on your A0 sheet."}</Lead>
+      </>} right={
+      <div ref={area} className="relative mx-auto mt-4 overflow-hidden rounded-[10px] border border-white/20 bg-white/[.03] lg:mt-0" style={paperStyle(desk, 300)}>
+        <Sheets a4={a4} used={used} />
+        {pieces.map((k) => (
+          <div key={k} ref={(el) => { refs.current[k] = el; }} className="absolute" style={{ left: `${at[k]?.x ?? 50}%`, top: `${at[k]?.y ?? 50}%`, width: `${pieceW(k)}%`, translate: "-50% -50%", rotate: `${at[k]?.r ?? 0}deg` }}>
+            <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
+          </div>
+        ))}
+      </div>} />
     </Screen>
   );
 }

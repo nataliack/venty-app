@@ -1,6 +1,6 @@
 "use client";
 import { haptic } from "@/lib/haptics";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { FLUTTER, templateBy, type GarmentKey, type PieceKey } from "@/lib/data";
@@ -50,85 +50,82 @@ export function PatSelectBody() {
   );
 }
 
-// P02 · what are we making: photo, link, sketch or a pre-made pattern. Big, equal choices; nothing pre-filled.
+// P02 · the studio: one canvas. Add a photo of the garment, sketch on it or beside it, or both.
+// The canvas lives on the page (not in a sheet), so drawing never drags anything away.
+type Stroke = [number, number][]; // points, normalised 0..1 so the drawing survives a resize
 export function Prompt() {
   const { go, setDraft } = useApp();
   const file = useRef<HTMLInputElement>(null);
-  const [sheet, setSheet] = useState<null | "link" | "sketch">(null);
-  const [link, setLink] = useState("");
-  // arriving from a home shortcut (Link / Sketch): open that input once
-  useEffect(() => { const st = useApp.getState().draft.start; if (st) { setSheet(st); setDraft({ start: undefined }); } }, [setDraft]);
-  const onFile = (f?: File) => {
-    if (!f) return;
-    let url: string | undefined; try { url = URL.createObjectURL(f); } catch { url = undefined; }
-    setDraft({ photo: url, source: "photo", garment: "flutter" });
-    go("ref");
-  };
-  const desk = useDesk();
-  const [over, setOver] = useState(false);
-  const tile = (icon: IconName, t: string, d: string, fn: () => void) => (
-    <Glass onClick={fn} className="flex min-h-[132px] flex-col justify-between rounded-[26px] p-5 lg:min-h-[170px] lg:p-6">
-      <span className="grid h-12 w-12 place-items-center rounded-full bg-white/12"><Icon name={icon} size={24} /></span>
-      <span><span className="block text-[18px] font-medium">{t}</span><span className="mt-0.5 block text-[15px] leading-snug text-white/60">{d}</span></span>
-    </Glass>
-  );
-  return (
-    <Screen>
-      <input ref={file} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-      <TopBar left="back" />
-      <Split left={<>
-        <H1 className="mt-3 lg:mt-0">What are we<br />making?</H1>
-        <Lead className="mt-3 max-w-[420px]">Start from a photo or link of a garment you love, sketch it, or choose one of our pre-made patterns.</Lead>
-      </>} right={<>
-        <Glow as="button" color="#8c9cf8" variant="fade" onClick={() => file.current?.click()} className={cx("mt-6 block h-[min(250px,30dvh)] w-full rounded-[30px] lg:mt-0 lg:h-[min(380px,44dvh)] lg:rounded-[36px]", over && "ring-2 ring-white")}
-          {...(desk ? { onDragOver: (e: React.DragEvent) => { e.preventDefault(); setOver(true); }, onDragLeave: () => setOver(false), onDrop: (e: React.DragEvent) => { e.preventDefault(); setOver(false); onFile(e.dataTransfer.files?.[0]); } } : {})}>
-          <div className="absolute inset-3 rounded-[24px] border border-dashed border-white/40" />
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-            <span className="grid h-14 w-14 place-items-center rounded-full bg-white text-bg"><Icon name="upload" size={26} /></span>
-            <div className="mt-3 text-[20px] font-normal lg:text-[26px]">Add a photo you love</div>
-            <div className="mt-1 text-[15px] text-white/75 lg:text-[16px]">{desk ? "Drag an image here, or click to choose one." : "From Pinterest, a magazine or the street."}</div>
-          </div>
-        </Glow>
-        <div className="mt-3 grid grid-cols-2 gap-3 lg:mt-4 lg:gap-4">
-          {tile("link", "Paste a link", "From Pinterest or a shop", () => setSheet("link"))}
-          {tile("pencil", "Sketch it", "Draw the shape", () => setSheet("sketch"))}
-        </div>
-        <Glass onClick={() => go("templates", { picked: true })} className="mt-3 flex min-h-[88px] w-full items-center gap-4 rounded-[26px] px-5 py-4 lg:mt-4 lg:min-h-[110px] lg:px-6">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/12"><Icon name="dress" size={24} /></span>
-          <span className="flex-1"><span className="block text-[18px] font-medium">Choose a pre-made pattern</span><span className="mt-0.5 block text-[15px] leading-snug text-white/60">Dresses, tops, trousers and skirts</span></span>
-          <Icon name="chevR" size={20} className="text-white/50" />
-        </Glass>
-      </>} />
-      <Sheet open={sheet === "link"} onClose={() => setSheet(null)}>
-        <h3 className="text-[22px] font-normal tracking-[-.02em]">Paste a link</h3><p className="mt-1 text-[15px] text-white/60">Pinterest, Instagram or any shop page.</p>
-        <div className="mt-4"><Field label="Link" value={link} onChange={setLink} placeholder="https://" /></div>
-        <Pill className="mt-4" disabled={!link.trim()} onClick={() => { if (!link.trim()) return; setSheet(null); setDraft({ source: "link", photo: undefined, garment: "flutter" }); go("ref"); }}>Use this link</Pill>
-      </Sheet>
-      <SketchSheet open={sheet === "sketch"} onClose={() => setSheet(null)} onDone={() => { setSheet(null); setDraft({ source: "sketch", photo: undefined, garment: "flutter" }); go("ref", { note: "From your sketch: fitted bodice, flared midi skirt." }); }} />
-    </Screen>
-  );
-}
-
-function SketchSheet({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
   const cv = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef(false);
+  const strokes = useRef<Stroke[]>([]);
+  const cur = useRef<Stroke | null>(null);
+  const [n, setN] = useState(0); // number of strokes, for the UI
+  const [photo, setPhoto] = useState<string | null>(null);
+  const desk = useDesk();
+
+  const ctx = () => { const c = cv.current; const g = c?.getContext("2d"); if (!c || !g) return null; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#fff"; g.lineWidth = 2.6 * (window.devicePixelRatio || 1); return { c, g }; };
+  const redraw = useCallback(() => {
+    const k = ctx(); if (!k) return; const { c, g } = k;
+    g.clearRect(0, 0, c.width, c.height);
+    strokes.current.forEach((st) => { g.beginPath(); st.forEach(([x, y], i) => (i ? g.lineTo(x * c.width, y * c.height) : g.moveTo(x * c.width, y * c.height))); if (st.length === 1) g.lineTo(st[0][0] * c.width + 0.1, st[0][1] * c.height); g.stroke(); });
+  }, []);
   useEffect(() => {
-    if (!open) return; const c = cv.current; if (!c) return; const r = c.getBoundingClientRect(); c.width = r.width * 2; c.height = r.height * 2;
-    const ctx = c.getContext("2d"); if (!ctx) return; ctx.scale(2, 2); ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.strokeStyle = "#fff";
-  }, [open]);
-  const pos = (e: React.PointerEvent) => { const r = cv.current!.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    const c = cv.current; if (!c) return;
+    const fit = () => { const r = c.getBoundingClientRect(); const d = window.devicePixelRatio || 1; c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); redraw(); };
+    const ro = new ResizeObserver(fit); ro.observe(c); fit();
+    return () => ro.disconnect();
+  }, [redraw]);
+  const at = (e: React.PointerEvent): [number, number] => { const r = cv.current!.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+  const down = (e: React.PointerEvent) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); cur.current = [at(e)]; strokes.current.push(cur.current); redraw(); };
+  const move = (e: React.PointerEvent) => {
+    const st = cur.current; const k = ctx(); if (!st || !k) return;
+    const p = at(e); const [lx, ly] = st[st.length - 1]; st.push(p);
+    k.g.beginPath(); k.g.moveTo(lx * k.c.width, ly * k.c.height); k.g.lineTo(p[0] * k.c.width, p[1] * k.c.height); k.g.stroke();
+  };
+  const up = () => { if (cur.current) { cur.current = null; setN(strokes.current.length); } };
+  const undo = () => { strokes.current.pop(); redraw(); setN(strokes.current.length); };
+  const clear = () => { strokes.current = []; redraw(); setN(0); setPhoto(null); };
+  const onFile = (f?: File) => { if (!f) return; try { setPhoto(URL.createObjectURL(f)); } catch { /* ignore */ } };
+  const ready = !!photo || n > 0;
+  const next = () => {
+    setDraft({ photo: photo ?? undefined, source: photo ? "photo" : "sketch", garment: "flutter" });
+    go("ref", photo && n ? { note: "From your photo and sketch: fitted bodice, flared midi skirt." } : photo ? undefined : { note: "From your sketch: fitted bodice, flared midi skirt." });
+  };
+
+  const tool = (icon: IconName, label: string, fn: () => void, on = true) => (
+    <button onClick={fn} disabled={!on} className={cx("tap flex h-12 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium transition-opacity", !on && "opacity-35")}><Icon name={icon} size={18} />{label}</button>
+  );
+  const tools = (
+    <div className="flex flex-wrap gap-2">
+      <button onClick={() => file.current?.click()} className="tap flex h-12 items-center gap-2 rounded-full bg-white px-4 text-[15px] font-medium text-bg"><Icon name="image" size={18} />{photo ? "Change photo" : "Add a photo"}</button>
+      {tool("refresh", "Undo", undo, n > 0)}
+      {tool("trash", "Clear", clear, ready)}
+    </div>
+  );
+  const canvas = (
+    <div className={cx("relative overflow-hidden rounded-[28px] border border-white/15 bg-[#121427]", desk ? "h-[min(640px,70dvh)]" : "h-[min(430px,50dvh)]")} style={{ backgroundImage: "radial-gradient(rgb(255 255 255 / .12) 1px, transparent 1.3px)", backgroundSize: "18px 18px" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {photo && <img src={photo} alt="Your garment photo" className="pointer-events-none absolute inset-0 h-full w-full object-contain p-4" />}
+      {!ready && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-white/10"><Icon name="pencil" size={24} /></span>
+          <div className="mt-3 text-[19px]">Sketch here, or add a photo</div>
+          <div className="mt-1 max-w-[280px] text-[15px] leading-snug text-white/60">Draw on top of a photo to show what you would change.</div>
+        </div>
+      )}
+      <canvas ref={cv} aria-label="Sketch area" className="absolute inset-0 h-full w-full cursor-crosshair touch-none" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+    </div>
+  );
   return (
-    <Sheet open={open} onClose={onClose}>
-      <h3 className="text-[20px] font-semibold">Sketch the shape</h3><p className="mt-1 text-[14px] text-white/60">A rough outline is plenty.</p>
-      <div className="glass relative mt-4 h-[300px] overflow-hidden rounded-[24px]">
-        <div className="pointer-events-none absolute inset-0 grid place-items-center opacity-15"><BodyFigure width={100} glow={false} /></div>
-        <canvas ref={cv} className="absolute inset-0 h-full w-full touch-none"
-          onPointerDown={(e) => { drawing.current = true; const ctx = cv.current!.getContext("2d")!; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); (e.target as HTMLElement).setPointerCapture(e.pointerId); }}
-          onPointerMove={(e) => { if (!drawing.current) return; const ctx = cv.current!.getContext("2d")!; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); }}
-          onPointerUp={() => (drawing.current = false)} />
-      </div>
-      <Pill className="mt-4" onClick={onDone}>Use my sketch</Pill>
-    </Sheet>
+    <Screen footer={<Arrows ready={ready} onNext={next} label="Continue" />}>
+      <input ref={file} type="file" accept="image/*" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
+      <TopBar left="back" />
+      <Split cols="lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]" left={<>
+        <H1 className="mt-3 lg:mt-0">What are we<br />making?</H1>
+        <Lead className="mt-3 max-w-[420px]">Add a photo of a garment you love, sketch your idea, or do both on the same page.</Lead>
+        {desk && <div className="mt-8">{tools}</div>}
+      </>} right={<div className="mt-5 lg:mt-0" data-need={ready ? "0" : "1"}>{canvas}{!desk && <div className="mt-3">{tools}</div>}</div>} />
+    </Screen>
   );
 }
 

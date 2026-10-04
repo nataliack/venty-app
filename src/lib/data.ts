@@ -53,11 +53,11 @@ export const WIZARD: Measure[] = [
 ];
 
 export const GROUPS = [
-  // sewing terms: circumferences go around the body, lengths run top to bottom, widths run side to side, the rise is taken sitting down
+  // sewing terms, named by the direction the tape runs; the short labels sit in the progress bar
   { key: "around", title: "Circumferences", short: "Around", desc: "Measured around your body: neck, ribs, arm, wrist, hip and thigh" },
-  { key: "down", title: "Lengths", short: "Lengths", desc: "Measured from top to bottom: back, front, arm and leg" },
-  { key: "across", title: "Widths", short: "Widths", desc: "Measured from side to side: shoulders, back and chest" },
-  { key: "sitting", title: "Rise", short: "Rise", desc: "One measurement, sitting on a hard chair" },
+  { key: "down", title: "Vertical lengths", short: "Down", desc: "Measured from top to bottom: back, front, arm and leg" },
+  { key: "across", title: "Horizontal widths", short: "Across", desc: "Measured from side to side: shoulders, back and chest" },
+  { key: "sitting", title: "Seated rise", short: "Seated", desc: "One measurement, sitting on a hard chair" },
 ] as const;
 
 export type GroupKey = (typeof GROUPS)[number]["key"];

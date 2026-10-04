@@ -3,78 +3,86 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
 import { TEMPLATES, CATEGORIES, LEVELS, templateBy, type Category, type GarmentKey } from "@/lib/data";
-import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, cx, useToast } from "@/components/ui";
-import { Split, useDesk, FX } from "@/components/ui";
+import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, Option, Sheet, cx, useToast } from "@/components/ui";
+import { Split, useDesk } from "@/components/ui";
 import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
 
-// Every template card looks the same at rest; the glow "expanded" look appears on hover / focus / press.
+// Card: the flat drawing, the name, and one quiet line (level · pieces). Hover only lifts the edge.
 function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: boolean; onClick: () => void }) {
   return (
-    <div role="button" tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
-      className={cx("tplcard nofx group glass relative cursor-pointer select-none overflow-hidden outline-none transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_24px_60px_-20px_rgba(104,126,245,.55)] focus-visible:-translate-y-1 active:scale-[.985]",
-        desk ? "h-[min(440px,56dvh)] rounded-[30px] p-6" : "h-[220px] rounded-[24px] p-4")}>
-      <div className="glow fade pointer-events-none absolute inset-0 rounded-[inherit] border-0 opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 group-active:opacity-100" style={{ ["--gc" as string]: t.color } as React.CSSProperties} />
-      <FX kind="ripple" />
-      <div className={cx("relative flex justify-center transition-transform duration-500 ease-out group-hover:scale-[1.06]", desk ? "pt-6" : "")}><Flat g={t.key} size={desk ? 170 : 84} /></div>
-      <div className={cx("absolute", desk ? "bottom-6 left-6 right-6" : "bottom-4 left-4 right-4")}>
-        <div className={cx("font-semibold", desk ? "text-[20px]" : "text-[16px]")}>{t.name}</div>
-        <div className={cx("text-white/55 transition-colors group-hover:text-white/80", desk ? "text-[14px]" : "text-[11px]")}>{t.level} · {t.pieces} pieces</div>
+    <button onClick={onClick} className={cx("card-soft tap flex w-full flex-col overflow-hidden text-left transition-transform duration-300 ease-out lg:hover:-translate-y-1", desk ? "h-[min(420px,52dvh)] rounded-[30px] p-6" : "h-[236px] rounded-[24px] p-4")}>
+      <div className="grid min-h-0 flex-1 place-items-center"><Flat g={t.key} size={desk ? 170 : 96} className="max-h-full" /></div>
+      <div className="mt-2 shrink-0">
+        <div className={cx("font-medium leading-tight", desk ? "text-[20px]" : "text-[17px]")}>{t.name}</div>
+        <div className={cx("mt-1 flex items-center gap-2 text-white/60", desk ? "text-[15px]" : "text-[14px]")}><Level n={LEVELS.indexOf(t.level) + 1} /><span className="truncate">{t.level} · {t.pieces} pieces</span></div>
       </div>
-    </div>
+    </button>
   );
 }
+// difficulty as three small bars, like the bars on a pattern envelope
+const Level = ({ n }: { n: number }) => <span className="flex items-end gap-[2px]" aria-hidden>{[1, 2, 3].map((k) => <span key={k} className={cx("w-[3px] rounded-full", k <= n ? "bg-peri" : "bg-white/20")} style={{ height: 4 + k * 3 }} />)}</span>;
+
+const CAT_LABEL: Record<Category, string> = { Dresses: "Dresses", Tops: "Tops", Pants: "Trousers", Skirts: "Skirts" };
 
 export function Templates({ p }: { p?: Record<string, unknown> }) {
   const { go } = useApp();
   const [cat, setCat] = useState<Category>((p?.cat as Category) ?? "Dresses");
   const [q, setQ] = useState<string | null>(null);
-  const [level, setLevel] = useState("All");
-  const picked = !!p?.picked; // came from "What are we making?" with a body already chosen
-  const list = TEMPLATES.filter((t) => t.category === cat && (level === "All" || t.level === level) && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
+  const [level, setLevel] = useState<string>("Any level");
+  const [pickLevel, setPickLevel] = useState(false);
+  const picked = !!p?.picked; // came with a body already chosen
+  const list = TEMPLATES.filter((t) => t.category === cat && (level === "Any level" || t.level === level) && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
   const open = (key: GarmentKey) => go("template", { key, picked });
-  const levels = <Segmented className="lg:w-[440px]" items={["All", ...LEVELS]} value={level} onChange={setLevel} />;
-  const empty = <p className="col-span-full py-6 text-[16px] text-white/60">No {level === "All" ? "" : level.toLowerCase() + " "}{cat.toLowerCase()} yet.</p>;
   const { toast, node } = useToast();
   const desk = useDesk();
+  // one row of text tabs with a sliding underline: no stacked pills
+  const tabs = (
+    <div className="noscroll -mx-6 flex gap-6 overflow-x-auto border-b border-white/10 px-6 lg:mx-0 lg:gap-8 lg:px-0">
+      {CATEGORIES.map((c) => (
+        <button key={c} onClick={() => setCat(c)} className={cx("relative shrink-0 pb-3 text-[17px] transition-colors lg:text-[19px]", c === cat ? "text-white" : "text-white/45 hover:text-white/75")}>
+          {CAT_LABEL[c]}
+          {c === cat && <motion.span layoutId="cat-line" className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-white" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
+        </button>
+      ))}
+    </div>
+  );
+  const bar = (
+    <div className="mt-4 flex items-center justify-between">
+      <span className="text-[15px] text-white/60">{list.length} {list.length === 1 ? "pattern" : "patterns"}</span>
+      <button onClick={() => setPickLevel(true)} className="tap flex h-10 items-center gap-1.5 rounded-full border border-white/15 px-4 text-[15px] font-medium">{level}<Icon name="chevD" size={16} /></button>
+    </div>
+  );
   const request = (
-    <button onClick={() => toast("Thanks — we’ll add more soon")} className={cx("tap flex flex-col items-center justify-center border border-dashed border-white/25 transition-colors hover:border-white/45", desk ? "h-[min(440px,56dvh)] rounded-[30px]" : "h-[220px] rounded-[24px]")}>
-      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[15px] font-medium text-white/75">Request a pattern</span><span className="text-[11px] text-white/45">More coming soon</span>
+    <button onClick={() => toast("Thanks, we’ll add more soon")} className={cx("tap flex w-full flex-col items-center justify-center border border-dashed border-white/25 transition-colors hover:border-white/45", desk ? "h-[min(420px,52dvh)] rounded-[30px]" : "h-[236px] rounded-[24px]")}>
+      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[15px] font-medium text-white/75">Request a pattern</span>
     </button>
   );
-  if (desk) return (
-    <Screen wide>
-      <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
-      <div className="mt-3 flex items-end justify-between gap-6">
-        <div><H1>Pre-made patterns</H1><Lead className="mt-2">Choose one, fit it to a body and get the pattern.</Lead></div>
-        <div className="flex items-center gap-2">
-          {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass h-10 w-[200px] rounded-full px-4 text-[15px] outline-none" />}
-          {CATEGORIES.map((c) => <Chip key={c} on={c === cat} onClick={() => setCat(c)}>{c}</Chip>)}
-        </div>
-      </div>
-      <div className="mt-5">{levels}</div>
-      <motion.div key={cat + level} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-6 grid grid-cols-4 gap-5">
-        {list.map((t) => <TplCard key={t.key} t={t} desk onClick={() => open(t.key)} />)}
-        {!list.length && empty}
-        {list.length < 4 && request}
-      </motion.div>
-      {node}
-    </Screen>
+  const grid = (
+    <motion.div key={cat + level} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={cx("grid", desk ? "mt-6 grid-cols-4 gap-5" : "mt-4 grid-cols-2 gap-3")}>
+      {list.map((t) => <TplCard key={t.key} t={t} desk={desk} onClick={() => open(t.key)} />)}
+      {!list.length && <p className="col-span-full py-6 text-[16px] text-white/60">No {level === "Any level" ? "" : level.toLowerCase() + " "}{CAT_LABEL[cat].toLowerCase()} yet.</p>}
+      {(desk ? list.length < 4 : list.length % 2 === 1) && request}
+    </motion.div>
   );
   return (
-    <Screen>
+    <Screen wide={desk}>
       <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
-      {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none" />}
+      {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none lg:max-w-[420px]" />}
       <H1 className="mt-4">Pre-made patterns</H1>
       <Lead className="mt-2">Choose one, fit it to a body and get the pattern.</Lead>
-      <div className="-mx-6 mt-4 flex gap-2 overflow-x-auto px-6 noscroll">{CATEGORIES.map((c) => <Chip key={c} on={c === cat} onClick={() => setCat(c)}>{c}</Chip>)}</div>
-      <div className="mt-3">{levels}</div>
-      <motion.div key={cat + level} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
-        {list.map((t) => <TplCard key={t.key} t={t} desk={false} onClick={() => open(t.key)} />)}
-        {!list.length && empty}
-        {list.length % 2 === 1 && request}
-      </motion.div>
+      <div className="mt-6">{tabs}</div>
+      {bar}
+      {grid}
       <div className="h-6" />
+      <Sheet open={pickLevel} onClose={() => setPickLevel(false)}>
+        <h3 className="text-[22px] font-normal tracking-[-.02em]">Sewing level</h3>
+        <div className="mt-4 flex flex-col gap-2">{["Any level", ...LEVELS].map((l) => (
+          <Option key={l} on={level === l} onClick={() => { setLevel(l); setPickLevel(false); }} className="flex h-[60px] items-center gap-3 rounded-[18px] px-4">
+            {l !== "Any level" && <Level n={LEVELS.indexOf(l as (typeof LEVELS)[number]) + 1} />}<span className="text-[17px]">{l}</span>
+          </Option>
+        ))}</div>
+      </Sheet>
       {node}
     </Screen>
   );
