@@ -157,7 +157,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 
 **Body figure centring:** to centre a `BodyFigure` in a box, give the svg `h-full w-full` (the viewBox centres the figure itself). Never use `h-full w-auto` inside a flex box: Safari sizes the box from the svg's width attribute and the figure drifts off-centre.
 
-**Navigation (phones):** a light periwinkle tab bar (`.tabbar`, the same colour family as the home hero) with Home, Bodies, Patterns and You, plus one raised round **Create** button sitting in a notch in the middle (`.createbtn`). Create is the single most important action, so it is the only thing raised. Desktop keeps the sidebar.
+**Navigation (phones):** a light periwinkle tab bar (`.tabbar`, the same colour family as the home hero) with Home, Bodies, Patterns and You, plus one round **Create** button (`.createbtn`) sitting in a real **notch** cut into the bar: the bar's outline is an SVG (`NotchShape` in home.tsx) with a round cut-out around the button and rounded shoulders where the cut meets the top edge, so the bar cradles the button. Create is the single most important action, so it is the only thing raised. Desktop keeps the sidebar.
 
 **Styling pitfall:** custom classes in `globals.css` written **outside** `@layer` beat Tailwind utilities.
 - Never put `display`, `position` or size on those classes (`.field`, `.opt`, `.nextbtn`, …), or utilities like `flex` stop working.
@@ -166,18 +166,18 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 ## 6. Flows (current, after the overhaul)
 
 **Getting in:**
-- **Splash:** the logo only. It auto-advances.
+- **Splash:** the Welcome screen without its words or buttons: the same Crown sky, the logo in the same place, and a slim loader in the slot where the buttons will appear. It auto-advances and cross-fades into Welcome (the logo stays put; splash, Welcome and "Welcome, Ana" cross-fade instead of sliding).
 - **Welcome:**
   - Logo, then the headline **"See a dress you love. Create it. Wear it."** and body text, centred between the logo and the buttons.
   - A slowly drifting gradient background (`.sky` with `.drift` lights).
   - "Get started" and "I already have an account".
-- **Sign up (`signup`):** exactly three buttons: Apple, Google, Continue with email.
+- **Sign up (`signup`):** **Continue with email** first (white), then a hairline with "or", then Continue with Apple and Continue with Google below it.
   - The guest option is the top-right **"Skip for now"**. It was decided to keep guest here, not on Welcome, and as text with no arrow.
-- **Log in (`login`):** the same three buttons, plus "New to Venty? Create an account".
+- **Log in (`login`):** the same buttons in the same order, plus "New to Venty? Create an account".
 - **Email step (`email`, mode `signup` or `login`):**
   - Sign-up asks for name, email and password (at least 8 characters, with a show/hide toggle). Log-in asks for email and password, plus "Forgot password".
   - The button stays disabled until the form is valid.
-- **Signed in:** a "Welcome, {name}" moment, then the tour question.
+- **Signed in:** on the same sky as Welcome, with the logo in place: a calm frosted check, "Welcome, {name}." and "Your account is ready. Let's show you around.", and the same slim loader. Then the tour question.
 
 **Tour question (`tourAsk`):** before any tour, a page on the same sky background and layout as Welcome asks "Want a quick tour?" with **"Show me how it works"** and **"Skip the tour"**. Skipping sets `tourSkipped` (home then offers the tour) and goes to `start`.
 
@@ -248,7 +248,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 **Home (`home`):**
 - **Top: a light rounded block** (`.home-hero.light-hero`): pale periwinkle with a soft periwinkle grid fading down, rounded bottom corners over the dark page (a dark wrapper sits behind the corners so nothing grey shows). Text in navy (`#26335f`, secondary `#3f4c80`).
   - Violet avatar, greeting and name, and the **Updates bell** (replaced search), drawn as the same dark-blue badge as the card icons, with a periwinkle dot for unread.
-  - The top is kept short: "What are we making today?" (32px) and one line under it, "Design your own, or use a pre-made pattern.", then the two cards.
+  - The top is balanced, not cramped: "What are we making today?" (34px, two lines) with room above it, one line under it ("Design your own, or use a pre-made pattern."), then the two cards (128px tall).
   - **One icon style:** every icon circle (home cards, bell, Updates rows, Create menu, install steps) is `.iconbadge`: the app's own dark blue (#262b4b → #14172a, the page background lifted a touch) with a white line icon and a fine light edge.
   - **Updates sheet:** a quiet feed, not a stack of buttons. Plain rows split by hairlines, no card backgrounds; rows that lead somewhere are still tappable.
   - **Create menu (+):** title "Create" and "What would you like to start?", one large Crown card "Design your own" (the main action), then two equal dark tiles: "Use a pre-made" (Ready-to-fit patterns) and "Make a body" (Add measurements). Only Crown and the dark card, no other colours.
@@ -257,6 +257,10 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **Below, on the dark page:** notices (finish your measurements, take the tour), **Your bodies** (a horizontal row with a dashed "+" first), **Your patterns** (the three latest, with a status dot) and a Pre-made patterns row. All are solid `.card-soft` cards. Each section has a "View all".
 - **Phone tab bar:** back to the light floating bar (`.tabbar`) with the Create button raised in a notch in the centre. The current tab sits in a soft periwinkle capsule. No glows (the dark capsule version was tried and dropped). The bar stays a **fully rounded floating pill** in a muted periwinkle (not bright white), set right down by the bottom edge: tab screens use `<Screen dock>`, which leaves only a few pixels below it (`--dock`), in the home-screen app and in Safari.
 - **Library pages** (Body library, Pattern library) no longer show a big count next to the title. Counts live on the profile page.
+  - Both have an **Edit** button (top right). In edit mode you tick items and "Delete N" replaces the tab bar; deleting asks once ("This can't be undone").
+  - **Body library** has a working search field (filters by name) above the All / Me / Family / Clients chips.
+  - **Pattern library** has no search. Each pattern is a large card: the garment on a small Crown swatch, a status line that says something useful ("Ready to print", "Printed on 9 A4 sheets", "Printed at a print shop", "Draft, not finished yet"), the name, "Drafted to {body}", and two small facts (fit and metres of fabric). Piece counts were dropped: they didn't help anyone decide anything.
+- **Settings** always has "Add Venty to your home screen" (except inside the home-screen app), so people who said "Not now" in "Before we begin" can find it later.
 - **A saved pattern opens as its own page (`pattern`)**, not the making flow: the garment on the body, its status ("Printed", "Ready to print", "Draft") and who it was drafted to, a **Shopping list** to show at the fabric shop (metres, stretch, feel, the fabric you chose, and why), and **How it was made** (fit and ease, seam allowance, pieces, paper, garment details). Actions: **Print again** (or Print it) and **Change the design**. Patterns save these details (`pattern.spec`) when made and printed.
 
 **Elsewhere:**

@@ -6,26 +6,43 @@ import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, PaperScreen, Crown, cx, 
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
-export function Splash() {
-  const replace = useApp((s) => s.replace);
-  useEffect(() => { const t = setTimeout(() => replace("welcome"), 2200); return () => clearTimeout(t); }, [replace]);
+// Splash and "Welcome, Ana": the same Crown sky and logo position as Welcome, so the app opens straight into it.
+// Only a slim loader sits at the bottom, where Welcome's buttons will appear.
+let fromSplash = false;
+function Loader({ ms }: { ms: number }) {
   return (
-    <button className="absolute inset-0 overflow-hidden text-left" onClick={() => replace("welcome")} aria-label="Continue">
-      <div className="absolute inset-y-0 left-1/2 w-[402px] -translate-x-1/2 lg:scale-125">
-        <Blob className="left-[-60px] top-[170px] h-[360px] w-[360px] opacity-80" />
-        <Blob className="left-[150px] top-[300px] h-[300px] w-[300px] opacity-50" color="#a0abca" />
-        <Blob className="left-[40px] top-[430px] h-[220px] w-[260px] opacity-90" color="#4d5e85" />
+    <div className="flex w-full max-w-[380px] flex-col items-center gap-2 lg:mb-[6dvh]" aria-label="Loading">
+      <div className="grid h-14 w-full place-items-center">
+        <div className="h-[3px] w-[132px] overflow-hidden rounded-full bg-white/25">
+          <motion.div className="h-full rounded-full bg-white" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: ms / 1000, ease: "easeInOut" }} />
+        </div>
       </div>
-      <div className="absolute inset-x-0 top-[38%] flex flex-col items-center">
-        <motion.div initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }}>
-          <VentyLogo width={230} className="lg:h-auto lg:w-[320px]" />
+      <div className="h-11" />
+    </div>
+  );
+}
+function SkyFrame({ children, onTap, logoIn = true }: { children?: ReactNode; onTap: () => void; logoIn?: boolean }) {
+  const desk = useDesk();
+  return (
+    <button className="absolute inset-0 overflow-hidden text-center" onClick={onTap} aria-label="Continue">
+      <Crown />
+      <div className="relative flex h-full flex-col items-center px-6 lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
+        <motion.div initial={logoIn ? { opacity: 0, y: 14 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
+          <VentyLogo width={desk ? 300 : 190} />
         </motion.div>
-      </div>
-      <div className="absolute bottom-[110px] left-1/2 h-[2px] w-[120px] -translate-x-1/2 overflow-hidden rounded bg-white/15">
-        <motion.div className="h-full bg-white" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 2.1, ease: "easeInOut" }} />
+        <div className="my-auto flex max-w-[620px] flex-col items-center pt-8">{children}</div>
+        {/* the slot Welcome's buttons use */}
+        <Loader ms={1900} />
       </div>
     </button>
   );
+}
+
+export function Splash() {
+  const replace = useApp((s) => s.replace);
+  const go = () => { fromSplash = true; replace("welcome"); };
+  useEffect(() => { const t = setTimeout(() => { fromSplash = true; replace("welcome"); }, 2100); return () => clearTimeout(t); }, [replace]);
+  return <SkyFrame onTap={go} />;
 }
 
 // Welcome: the Crown gradient (from the landing page).
@@ -47,7 +64,7 @@ export function Welcome() {
     <div className="absolute inset-0 overflow-hidden">
       <Sky />
       <div className="relative flex h-full flex-col items-center px-6 text-center lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
+        <motion.div initial={fromSplash ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
           <VentyLogo width={desk ? 300 : 190} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.8 }} className="my-auto flex max-w-[620px] flex-col items-center pt-8">
@@ -95,10 +112,13 @@ function useAuthDone() {
 // Three clear ways in. Email opens its own step.
 function Ways({ onSocial, onEmail }: { onSocial: () => void; onEmail: () => void }) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <Pill variant="white" onClick={onSocial} icon={<AppleLogo />}>Continue with Apple</Pill>
-      <Pill variant="glass" onClick={onSocial} icon={<span className="grid h-6 w-6 place-items-center rounded-full bg-white"><GoogleLogo size={15} /></span>}>Continue with Google</Pill>
-      <Pill variant="glass" onClick={onEmail} icon={<Icon name="mail" size={20} />}>Continue with email</Pill>
+    <div className="flex flex-col">
+      <Pill variant="white" onClick={onEmail} icon={<Icon name="mail" size={20} />}>Continue with email</Pill>
+      <div className="my-6 flex items-center gap-4 text-[14px] text-white/45"><span className="h-px flex-1 bg-white/15" />or<span className="h-px flex-1 bg-white/15" /></div>
+      <div className="flex flex-col gap-2.5">
+        <Pill variant="glass" onClick={onSocial} icon={<AppleLogo />}>Continue with Apple</Pill>
+        <Pill variant="glass" onClick={onSocial} icon={<span className="grid h-6 w-6 place-items-center rounded-full bg-white"><GoogleLogo size={15} /></span>}>Continue with Google</Pill>
+      </div>
     </div>
   );
 }
@@ -169,16 +189,13 @@ export function SignedIn() {
   const name = useApp((s) => s.user.name);
   useEffect(() => { const t = setTimeout(() => replace("tourAsk"), 1900); return () => clearTimeout(t); }, [replace]);
   return (
-    <button className="absolute inset-0 flex flex-col items-center justify-center" onClick={() => replace("tourAsk")}>
-      <Blob className="left-1/2 top-[26%] h-[260px] w-[260px] -translate-x-[65%] opacity-80" />
-      <Blob className="left-1/2 top-[32%] h-[200px] w-[200px] -translate-x-[10%] opacity-50" color="#a0abca" />
-      <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.45 }} className="relative grid h-[88px] w-[88px] place-items-center rounded-full bg-primary shadow-[0_0_60px_rgba(104,126,245,.7)]">
-        <span className="absolute inset-0 rounded-full border-2 border-white/40" style={{ animation: "pulse-ring 1.6s ease-out infinite" }} />
-        <Icon name="check" size={44} strokeWidth={2.4} />
-      </motion.div>
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="h1 mt-24 !text-[42px] lg:!text-[64px]">Welcome, {name}.</motion.div>
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="lead mt-2">Your studio is ready. Let’s show you around.</motion.p>
-    </button>
+    <SkyFrame onTap={() => replace("tourAsk")} logoIn={false}>
+      <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.35, duration: 0.7 }} className="grid h-16 w-16 place-items-center rounded-full border border-white/50 bg-white/15 backdrop-blur-md">
+        <Icon name="check" size={30} strokeWidth={2.4} />
+      </motion.span>
+      <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="h1 mt-6 !text-[36px] lg:!text-[56px]">Welcome, {name}.</motion.h2>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="lead mt-2">Your account is ready. Let’s show you around.</motion.p>
+    </SkyFrame>
   );
 }
 

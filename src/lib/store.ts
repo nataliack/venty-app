@@ -101,6 +101,8 @@ type State = {
   startBody: () => void;
   exitFlow: () => void;
   savePattern: (status?: Pattern["status"]) => void;
+  removePatterns: (ids: string[]) => void;
+  removeBodies: (ids: string[]) => void;
 };
 
 const initial = () => ({
@@ -163,6 +165,11 @@ export const useApp = create<State>()(
         const existing = s.patterns.find((p) => p.name === name && p.body === bodyName);
         if (existing) return { patterns: s.patterns.map((p) => (p === existing ? { ...p, status, spec } : p)) };
         return { patterns: [{ id: "n" + Date.now().toString(36), name, garment: d.garment, body: bodyName, pieces: 6, status, spec }, ...s.patterns] };
+      }),
+      removePatterns: (ids) => set((s) => ({ patterns: s.patterns.filter((p) => !ids.includes(p.id)) })),
+      removeBodies: (ids) => set((s) => {
+        const bodies = s.bodies.filter((b) => !ids.includes(b.id));
+        return { bodies, activeBody: bodies.some((b) => b.id === s.activeBody) ? s.activeBody : bodies[0]?.id ?? "me", resumeBody: s.resumeBody && ids.includes(s.resumeBody) ? null : s.resumeBody };
       }),
     }),
     {

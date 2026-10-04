@@ -296,9 +296,9 @@ input { font: inherit; color: inherit; }
 @media (hover: hover) { .rb.rb-plain:hover { transform: none; box-shadow: none; background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .26); } }
 .rb.rb-plain:active { transform: scale(.94); background: #fff; border-color: #fff; color: #0b0c15; transition: transform .08s, background-color .08s, color .08s; }
 
-/* phone tab bar: light, same family as the hero; Create sits raised in a notch */
-.tabbar { background: linear-gradient(180deg, #cdd3ef 0%, #bac3e8 100%); color: #26335f; border: 1px solid rgb(255 255 255 / .35);
-  box-shadow: 0 18px 36px -20px rgb(0 0 0 / .8); }
+/* phone tab bar: light, same family as the hero. Its shape (with the round notch for Create) is an SVG, see NotchShape */
+.tabbar { color: #26335f; }
+.tabbar-shape { filter: drop-shadow(0 14px 18px rgb(0 0 0 / .45)); }
 /* home shortcuts share the Create button's periwinkle fill */
 .herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
@@ -317,7 +317,7 @@ input { font: inherit; color: inherit; }
 @media (hover: hover) { .tool:not(.on):not(:disabled):hover { background: rgb(255 255 255 / .1); border-color: rgb(255 255 255 / .2); } }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
-  box-shadow: 0 0 0 6px #0b0c15, inset 0 1px 0 rgb(255 255 255 / .45); }
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 0 0 1px rgb(255 255 255 / .2), 0 10px 20px -8px rgb(53 66 170 / .7); }
 }
 
 /* ─── colour roles: dark screens are for working (focus); paper + violet screens are for moments

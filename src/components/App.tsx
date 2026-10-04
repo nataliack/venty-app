@@ -64,7 +64,9 @@ function StatusBar() {
 }
 
 const LIGHT_TOP = new Set(["home"]);
-const CROWN_TOP = new Set(["welcome", "tourAsk", "onboarding", "start", "ready", "printed"]);
+// splash, welcome and "Welcome, Ana" share one sky, so they cross-fade in place instead of sliding
+const SKY = new Set(["splash", "welcome", "signedin"]);
+const CROWN_TOP = new Set(["splash", "signedin", "welcome", "tourAsk", "onboarding", "start", "ready", "printed"]);
 function useStatusTint(id: string) {
   useEffect(() => {
     const desk = window.matchMedia("(min-width: 1024px)").matches;
@@ -74,7 +76,7 @@ function useStatusTint(id: string) {
     m.content = color;
     // the strip iOS leaves under a home-screen app shows the page background, so match each screen's bottom
     const PAPER = new Set(["tourAsk", "onboarding", "start", "ready", "printed"]);
-    const bottom = PAPER.has(id) ? "#f3f1ec" : id === "welcome" ? "#131523" : "#0b0c15";
+    const bottom = PAPER.has(id) ? "#f3f1ec" : ["welcome", "splash", "signedin"].includes(id) ? "#131523" : "#0b0c15";
     document.documentElement.style.background = bottom; document.body.style.background = bottom;
     const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", LIGHT_TOP.has(id) ? "light" : "dark"), 0);
     return () => clearTimeout(t);
@@ -145,7 +147,7 @@ export default function App() {
         {ready && (
           <AnimatePresence initial={false} custom={dir} mode="popLayout">
             <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={dir} className="absolute inset-0"
-              initial={{ x: dir > 0 ? 60 : -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: dir > 0 ? -60 : 60, opacity: 0 }}
+              initial={{ x: SKY.has(top.id) ? 0 : dir > 0 ? 60 : -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: SKY.has(top.id) ? 0 : dir > 0 ? -60 : 60, opacity: 0 }}
               transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}>
               <Guard k={top.id + stack.length}><S p={top.p} /></Guard>
             </motion.div>
