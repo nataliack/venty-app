@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { FLUTTER, templateBy, type GarmentKey, type PieceKey } from "@/lib/data";
-import { Screen, TopBar, Eyebrow, H1, Lead, Pill, Glow, Glass, Chip, RB, Arrows, Check, Segmented, Sheet, cx, Blob, Field, Split, useDesk } from "@/components/ui";
+import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, RB, Arrows, Check, Option, Segmented, Sheet, cx, Blob, Field, Split, useDesk } from "@/components/ui";
 import { BodyFigure, Piece, Ruler } from "@/components/art";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 
 export const garmentName = (g: GarmentKey) => (g === "flutter" ? FLUTTER.name : templateBy(g).name);
 export const piecesFor = (g: GarmentKey): PieceKey[] => (g === "flutter" ? ["bodiceFront", "bodiceBack", "sleeve", "skirtFront", "skirtBack", "facing"] : templateBy(g).pieceSet);
@@ -25,59 +25,37 @@ export function RefImage({ className }: { className?: string }) {
   );
 }
 
-// P01 · who is this for
+// P01 · who is this for: a plain vertical list, so every body is visible without swiping
 export function PatSelectBody() {
-  const { bodies, activeBody, set, go, setDraft, newBody, startBody } = useApp();
-  const idx = Math.max(0, bodies.findIndex((b) => b.id === activeBody));
-  const [i, setI] = useState(idx); // carousel position
-  const [pick, setPick] = useState<number | null>(null); // nothing chosen until tapped
-  const choose = (k: number) => { setI(k); setPick(k); };
-  const next = () => { if (pick === null) return; const b = bodies[pick]; set({ activeBody: b.id }); setDraft({ bodyId: b.id }); go("prompt"); };
-  const desk = useDesk();
-  if (desk) return (
-    <Screen footer={<Arrows ready={pick !== null} onNext={next} />}>
-      <div className="h-12" />
-      <div className="flex items-end justify-between"><div><Eyebrow>New pattern</Eyebrow><H1 className="mt-4">Who is this for?</H1><Lead className="mt-2">Patterns are drafted to the body you pick.</Lead></div>
-        <Chip icon="plus" onClick={() => { startBody(); }}>New body</Chip></div>
-      <div className="mt-8 grid grid-cols-4 gap-5">
-        {bodies.map((x, k) => (
-          <Glow key={x.id} onClick={() => choose(k)} color={k === pick ? "#687ef5" : "#3c4b63"} variant={k === pick ? "fade" : "dim"} className={cx("relative h-[min(460px,56dvh)] rounded-[32px] transition-all", k === pick ? "ring-1 ring-primary" : "hover:opacity-90")}>
-            {k === pick ? <Check className="absolute right-4 top-4" /> : <span className="radio absolute right-4 top-4" />}
-            <div className="flex h-[76%] justify-center pt-8"><BodyFigure sex={x.sex} width={110} variant="solid" glow={false} className="h-full w-auto" /></div>
-            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between"><div><div className="text-[17px] font-semibold">{x.name}</div><div className="eyebrow">Measures</div></div><span className="serif text-[38px] leading-none">{x.done.length}/24</span></div>
-          </Glow>
-        ))}
-      </div>
-    </Screen>
-  );
+  const { bodies, set, go, setDraft, startBody } = useApp();
+  const [pick, setPick] = useState<string | null>(null); // nothing chosen until tapped
+  const next = () => { if (!pick) return; set({ activeBody: pick }); setDraft({ bodyId: pick }); go("prompt", { picked: true }); };
   return (
-    <Screen footer={<Arrows ready={pick !== null} onNext={next} />} noPad>
-      <div className="px-6"><div className="h-12" /><Eyebrow>New pattern</Eyebrow><H1 className="mt-4">Who is this for?</H1><Lead className="mt-2 text-[15px]">Patterns are drafted to the body you pick.</Lead></div>
-      <motion.div className="mt-6 flex touch-pan-y" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.3} onDragEnd={(_, info) => { if (info.offset.x < -50) setI(Math.min(bodies.length - 1, i + 1)); if (info.offset.x > 50) setI(Math.max(0, i - 1)); }}>
-        <motion.div className="flex gap-4 px-[44px]" animate={{ x: -i * (294 + 16) }} transition={{ type: "spring", bounce: 0.15 }}>
-          {bodies.map((x, k) => (
-            <Glow key={x.id} as="button" onClick={() => choose(k)} color={k === pick ? "#687ef5" : "#3c4b63"} variant={k === pick ? "fade" : "dim"} className={cx("relative h-[min(380px,44dvh)] w-[294px] shrink-0 rounded-[32px] transition-all", k === pick ? "ring-1 ring-primary" : k !== i && "opacity-60")}>
-              {k === pick ? <Check className="absolute right-4 top-4" /> : <span className="radio absolute right-4 top-4" />}
-              <div className="flex h-[78%] justify-center pt-6"><BodyFigure sex={x.sex} width={90} variant="solid" glow={false} className="h-full w-auto" /></div>
-              <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between"><div><div className="text-[16px] font-semibold">{x.name}</div><div className="eyebrow">Measures</div></div><span className="serif text-[34px] leading-none">{x.done.length}/24</span></div>
-            </Glow>
+    <Screen footer={<Arrows ready={pick !== null} onNext={next} />}>
+      <TopBar left="back" />
+      <Split left={<>
+        <HS className="mt-3 lg:mt-0">Who is this<br />pattern for?</HS>
+        <Lead className="mt-3">Pick a body. The pattern is drafted to its measurements.</Lead>
+      </>} right={
+        <div className="mt-6 flex flex-col gap-2.5 lg:mt-0 lg:gap-3" data-need={pick ? "0" : "1"}>
+          {bodies.map((x) => (
+            <Option key={x.id} on={pick === x.id} onClick={() => setPick(x.id)} className="flex h-[84px] items-center gap-4 rounded-[24px] px-4 pr-14 lg:h-[96px] lg:px-6">
+              <span className="grid h-[64px] w-12 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-primary/20"><BodyFigure sex={x.sex} width={22} glow={false} className="h-[56px] w-full" /></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-[17px] font-medium">{x.name}</span><span className="block text-[15px] text-white/60">{x.done.length} of 24 measurements</span></span>
+            </Option>
           ))}
-        </motion.div>
-      </motion.div>
-      <div className="mt-4 flex justify-center gap-1.5">{bodies.map((_, k) => <span key={k} className={cx("h-1.5 rounded-full bg-white transition-all", k === i ? "w-5" : "w-1.5 opacity-30")} />)}</div>
-      <div className="mt-4 flex justify-center"><Chip icon="plus" onClick={() => { startBody(); }}>New body</Chip></div>
+          <button onClick={() => startBody()} className="tap flex h-16 items-center gap-3 rounded-[22px] border border-dashed border-white/25 px-5 text-[16px] font-medium text-white/75 hover:border-white/50"><Icon name="plus" size={20} />New body</button>
+        </div>} />
     </Screen>
   );
 }
 
-// P02 · prompt hub
+// P02 · what are we making: photo, link, sketch or a pre-made pattern. Big, equal choices; nothing pre-filled.
 export function Prompt() {
   const { go, setDraft } = useApp();
   const file = useRef<HTMLInputElement>(null);
-  const [sheet, setSheet] = useState<null | "link" | "sketch" | "describe">(null);
-  const [link, setLink] = useState("https://pin.it/flutter-midi-dress");
-  const [text, setText] = useState("Midi wrap dress, flutter sleeves, V neck");
-  const [listening, setListening] = useState(false);
+  const [sheet, setSheet] = useState<null | "link" | "sketch">(null);
+  const [link, setLink] = useState("");
   // arriving from a home shortcut (Link / Sketch): open that input once
   useEffect(() => { const st = useApp.getState().draft.start; if (st) { setSheet(st); setDraft({ start: undefined }); } }, [setDraft]);
   const onFile = (f?: File) => {
@@ -86,64 +64,45 @@ export function Prompt() {
     setDraft({ photo: url, source: "photo", garment: "flutter" });
     go("ref");
   };
-  const voice = () => { setListening(true); setTimeout(() => { setListening(false); setDraft({ source: "voice", garment: "flutter" }); go("ref", { note: "Midi length, flutter sleeves, fitted waist, V neck." }); }, 2600); };
   const desk = useDesk();
   const [over, setOver] = useState(false);
+  const tile = (icon: IconName, t: string, d: string, fn: () => void) => (
+    <Glass onClick={fn} className="flex min-h-[132px] flex-col justify-between rounded-[26px] p-5 lg:min-h-[170px] lg:p-6">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-white/12"><Icon name={icon} size={24} /></span>
+      <span><span className="block text-[18px] font-medium">{t}</span><span className="mt-0.5 block text-[15px] leading-snug text-white/60">{d}</span></span>
+    </Glass>
+  );
   return (
-    <Screen footer={desk ? undefined : 
-      <div className="flex items-center justify-between pb-1">
-        <RB icon="keyboard" onClick={() => setSheet("describe")} />
-        <button onClick={voice} className={cx("tap flex h-12 w-24 items-center justify-center rounded-full bg-primary shadow-[0_8px_30px_rgba(104,126,245,.5)]", listening && "animate-pulse")} aria-label="Speak"><Icon name="mic" size={22} /></button>
-        <RB icon="camera" onClick={() => file.current?.click()} />
-      </div>}>
+    <Screen>
       <input ref={file} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-      <TopBar left="back" eyebrow="New pattern · 02" />
+      <TopBar left="back" />
       <Split left={<>
-      <H1 className="mt-4 lg:mt-0">What are we<br />making?</H1>
-      <div className="hidden lg:block">
-        <Lead className="mt-4 max-w-[420px]">Drop in a photo, paste a link, sketch the shape, describe it — or just say it.</Lead>
-        <Glass onClick={() => setSheet("describe")} className="mt-8 flex h-[60px] w-full items-center gap-3 rounded-[20px] px-5 text-[16px] text-white/45"><Icon name="sparkle" size={20} className="text-peri" />Describe it — “midi wrap dress, flutter…”</Glass>
-        <div className="mt-4 flex items-center gap-3">
-          <button onClick={voice} className={cx("tap flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-[16px] font-semibold shadow-[0_8px_30px_rgba(104,126,245,.5)]", listening && "animate-pulse")}><Icon name="mic" size={20} />Say it</button>
-          <RB icon="keyboard" size={56} onClick={() => setSheet("describe")} />
-          <RB icon="camera" size={56} onClick={() => file.current?.click()} />
-        </div>
-      </div>
+        <H1 className="mt-3 lg:mt-0">What are we<br />making?</H1>
+        <Lead className="mt-3 max-w-[420px]">Start from a photo or link of a garment you love, sketch it, or choose one of our pre-made patterns.</Lead>
       </>} right={<>
-      <Glow as="button" color="#8c9cf8" variant="fade" onClick={() => file.current?.click()} className={cx("mt-5 block h-[min(230px,28dvh)] w-full rounded-[30px] lg:mt-0 lg:h-[min(400px,48dvh)] lg:rounded-[36px]", over && "ring-2 ring-white")}
-        {...(desk ? { onDragOver: (e: React.DragEvent) => { e.preventDefault(); setOver(true); }, onDragLeave: () => setOver(false), onDrop: (e: React.DragEvent) => { e.preventDefault(); setOver(false); onFile(e.dataTransfer.files?.[0]); } } : {})}>
-        <div className="absolute inset-3 rounded-[24px] border border-dashed border-white/40" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-white text-bg"><Icon name="upload" size={22} /></span>
-          <div className="mt-3 text-[17px] font-normal lg:text-[24px]">Drop a photo you love</div>
-          <div className="mt-1 text-[13px] text-white/70 lg:text-[15px]">{desk ? "Drag an image here, or click to choose one." : "From Pinterest, a magazine, or the street."}</div>
-          <div className="mt-3 flex gap-2">
-            <span className="chip !h-8 !bg-white/15" onClick={(e) => { e.stopPropagation(); file.current?.click(); }}><Icon name="image" size={14} />Photos</span>
-            <span className="chip !h-8 !bg-white/15" onClick={(e) => { e.stopPropagation(); setSheet("link"); }}><Icon name="link" size={14} />Paste link</span>
+        <Glow as="button" color="#8c9cf8" variant="fade" onClick={() => file.current?.click()} className={cx("mt-6 block h-[min(250px,30dvh)] w-full rounded-[30px] lg:mt-0 lg:h-[min(380px,44dvh)] lg:rounded-[36px]", over && "ring-2 ring-white")}
+          {...(desk ? { onDragOver: (e: React.DragEvent) => { e.preventDefault(); setOver(true); }, onDragLeave: () => setOver(false), onDrop: (e: React.DragEvent) => { e.preventDefault(); setOver(false); onFile(e.dataTransfer.files?.[0]); } } : {})}>
+          <div className="absolute inset-3 rounded-[24px] border border-dashed border-white/40" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-white text-bg"><Icon name="upload" size={26} /></span>
+            <div className="mt-3 text-[20px] font-normal lg:text-[26px]">Add a photo you love</div>
+            <div className="mt-1 text-[15px] text-white/75 lg:text-[16px]">{desk ? "Drag an image here, or click to choose one." : "From Pinterest, a magazine or the street."}</div>
           </div>
+        </Glow>
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:mt-4 lg:gap-4">
+          {tile("link", "Paste a link", "From Pinterest or a shop", () => setSheet("link"))}
+          {tile("pencil", "Sketch it", "Draw the shape", () => setSheet("sketch"))}
         </div>
-      </Glow>
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:mt-4 lg:gap-4">
-        <Glow as="button" color="#687ef5" variant="side" onClick={() => setSheet("sketch")} className="h-[110px] rounded-[24px] p-4 lg:h-[150px] lg:p-6"><Icon name="pencil" size={20} /><div className="absolute bottom-4 left-4"><div className="text-[15px] font-semibold">Sketch it</div><div className="eyebrow">Draw the shape</div></div></Glow>
-        <Glow as="button" color="#4d5e85" variant="dim" onClick={() => go("templates")} className="h-[110px] rounded-[24px] p-4 lg:h-[150px] lg:p-6"><Icon name="grid" size={20} /><div className="absolute bottom-4 left-4"><div className="text-[15px] font-semibold">Start from a style</div><div className="eyebrow">10 templates</div></div></Glow>
-      </div>
-      <Glass onClick={() => setSheet("describe")} className="mt-3 flex h-[52px] w-full items-center gap-3 rounded-[18px] px-4 text-[14px] text-white/45 lg:hidden"><Icon name="sparkle" size={18} className="text-peri" />Describe it — “midi wrap dress, flutter…”</Glass>
+        <Glass onClick={() => go("templates", { picked: true })} className="mt-3 flex min-h-[88px] w-full items-center gap-4 rounded-[26px] px-5 py-4 lg:mt-4 lg:min-h-[110px] lg:px-6">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/12"><Icon name="dress" size={24} /></span>
+          <span className="flex-1"><span className="block text-[18px] font-medium">Choose a pre-made pattern</span><span className="mt-0.5 block text-[15px] leading-snug text-white/60">Dresses, tops, trousers and skirts</span></span>
+          <Icon name="chevR" size={20} className="text-white/50" />
+        </Glass>
       </>} />
-      <AnimatePresence>{listening && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-30 grid place-items-center bg-bg/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center"><div className="flex h-16 items-center gap-1.5">{Array.from({ length: 9 }, (_, k) => <motion.span key={k} className="w-1.5 rounded-full bg-primary" animate={{ height: [12, 44, 18, 36, 12] }} transition={{ duration: 1, repeat: Infinity, delay: k * 0.08 }} />)}</div>
-            <div className="mt-4 text-[16px] font-medium">Listening…</div><div className="mt-1 text-[14px] text-white/60">“Midi length, flutter sleeves, fitted waist”</div></div>
-        </motion.div>)}</AnimatePresence>
       <Sheet open={sheet === "link"} onClose={() => setSheet(null)}>
-        <h3 className="text-[20px] font-semibold">Paste a link</h3><p className="mt-1 text-[14px] text-white/60">Pinterest, Instagram or any shop page.</p>
-        <div className="mt-4"><Field label="Link" value={link} onChange={setLink} /></div>
-        <Pill className="mt-4" onClick={() => { setSheet(null); setDraft({ source: "link", photo: undefined, garment: "flutter" }); go("ref"); }}>Use this link</Pill>
-      </Sheet>
-      <Sheet open={sheet === "describe"} onClose={() => setSheet(null)}>
-        <h3 className="text-[20px] font-semibold">Describe it</h3>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} className="glass mt-4 w-full resize-none rounded-[20px] p-4 text-[16px] outline-none" />
-        <div className="mt-3 flex flex-wrap gap-2">{["Flutter sleeves", "Midi", "V neck", "Tie waist"].map((c) => <Chip key={c} onClick={() => setText((t) => (t.includes(c) ? t : t + ", " + c.toLowerCase()))}>+ {c}</Chip>)}</div>
-        <Pill className="mt-4" onClick={() => { setSheet(null); setDraft({ source: "voice", photo: undefined, garment: "flutter" }); go("ref", { note: text }); }}>Continue</Pill>
+        <h3 className="text-[22px] font-normal tracking-[-.02em]">Paste a link</h3><p className="mt-1 text-[15px] text-white/60">Pinterest, Instagram or any shop page.</p>
+        <div className="mt-4"><Field label="Link" value={link} onChange={setLink} placeholder="https://" /></div>
+        <Pill className="mt-4" disabled={!link.trim()} onClick={() => { if (!link.trim()) return; setSheet(null); setDraft({ source: "link", photo: undefined, garment: "flutter" }); go("ref"); }}>Use this link</Pill>
       </Sheet>
       <SketchSheet open={sheet === "sketch"} onClose={() => setSheet(null)} onDone={() => { setSheet(null); setDraft({ source: "sketch", photo: undefined, garment: "flutter" }); go("ref", { note: "From your sketch: fitted bodice, flared midi skirt." }); }} />
     </Screen>
@@ -321,9 +280,8 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   const pieces = piecesFor(draft.garment);
   useEffect(() => { savePattern("Fitting"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const desk = useDesk();
-  const isDress = draft.garment === "flutter" || templateBy(draft.garment).category === "Dresses";
   if (desk) return (
-    <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Make edits</Pill><Pill className="flex-1" onClick={() => go("seam")}>Looks right</Pill></div>}>
+    <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Make edits</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Looks right</Pill></div>}>
       <TopBar left="back" onLeft={() => useApp.getState().home()} eyebrow={`AI garment · V${draft.version}`} right="more" onRight={() => go("edits")} />
       <div className="mt-4 grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] items-start gap-14">
         <AnimatePresence mode="wait">
@@ -331,11 +289,6 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
             <motion.div key="r" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Glow color="#4d5e85" variant="fade" className="relative flex h-[min(640px,72dvh)] justify-center rounded-[36px] pt-6">
                 <BodyFigure sex={b.sex} width={240} variant="solid" garment={draft.garment} glow={false} className="h-[94%] w-auto" />
-                {isDress ? (<>
-                  <span className="glass-2 absolute left-8 top-[22%] rounded-full px-4 py-2 text-[14px]">{draft.sleeve} sleeve</span>
-                  <span className="glass-2 absolute right-8 top-[38%] rounded-full px-4 py-2 text-[14px]">Fitted waist · +{draft.ease} cm</span>
-                  <span className="glass-2 absolute bottom-[26%] left-8 rounded-full px-4 py-2 text-[14px]">Midi · {draft.lengthCm} cm</span>
-                </>) : <span className="glass-2 absolute right-8 top-[38%] rounded-full px-4 py-2 text-[14px]">Graded to {b.name}</span>}
               </Glow>
             </motion.div>
           ) : (
@@ -357,13 +310,12 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
             <Eyebrow>Details</Eyebrow>
             <div className="mt-2 divide-y divide-white/6 text-[15px]">{[["Fabric", draft.fabric], ["Stretch", draft.stretch], ["Sleeve", draft.sleeve], ["Length", `${draft.lengthCm} cm`]].map(([k, v]) => <div key={k} className="flex justify-between py-2.5"><span className="text-white/60">{k}</span><span>{v}</span></div>)}</div>
           </Glass>
-          <p className="mt-4 text-[14px] text-white/45">Make edits before printing, or continue if it looks right.</p>
         </div>
       </div>
     </Screen>
   );
   return (
-    <Screen footer={<><Eyebrow className="mb-2 text-center">Make edits before printing?</Eyebrow><div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Make edits</Pill><Pill className="flex-1" onClick={() => go("seam")}>Looks right</Pill></div></>}>
+    <Screen footer={<><div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Make edits</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Looks right</Pill></div></>}>
       <TopBar left="back" onLeft={() => useApp.getState().home()} eyebrow={`AI garment · V${draft.version}`} right="more" onRight={() => go("edits")} />
       <h1 className="mt-2 text-center text-[24px] font-normal tracking-tight">{name}</h1>
       <div className="mt-3 flex justify-center"><div className="w-[220px]"><Segmented items={["Realistic", "Pattern"]} value={view} onChange={setView} /></div></div>
@@ -372,15 +324,6 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
           <motion.div key="r" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative mt-3 flex h-[min(470px,54dvh)] justify-center">
             <Blob className="left-1/2 top-1/3 h-[260px] w-[220px] -translate-x-1/2 opacity-40" />
             <BodyFigure sex={b.sex} width={180} variant="solid" garment={draft.garment} glow={false} className="h-full w-auto" />
-            {draft.garment === "flutter" || templateBy(draft.garment).category === "Dresses" ? (
-              <>
-                <span className="glass-2 absolute left-0 top-[20%] rounded-full px-3 py-1.5 text-[11px]">{draft.sleeve} sleeve</span>
-                <span className="glass-2 absolute right-0 top-[36%] rounded-full px-3 py-1.5 text-[11px]">Fitted waist · +{draft.ease} cm</span>
-                <span className="glass-2 absolute bottom-[26%] left-0 rounded-full px-3 py-1.5 text-[11px]">Midi · {draft.lengthCm} cm</span>
-              </>
-            ) : (
-              <span className="glass-2 absolute right-0 top-[38%] rounded-full px-3 py-1.5 text-[11px]">Graded to {b.name}</span>
-            )}
           </motion.div>
         ) : (
           <motion.div key="p" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

@@ -32,7 +32,7 @@ function GroupList({ open: initial = [], editable }: { open?: string[]; editable
   const { body, doneIn, cur } = useProgress();
   const [open, setOpen] = useState<string[]>(initial);
   const rows: { key: string; title: string; desc: string; list: Measure[]; done: number }[] = [
-    { key: "base", title: "Base measures", desc: "Height, bust, waist, hips", list: BASE, done: BASE.filter((b) => body.done.includes(b.key)).length },
+    { key: "base", title: "Base measurements", desc: "Height, bust, waist and hips", list: BASE, done: BASE.filter((b) => body.done.includes(b.key)).length },
     ...GROUPS.map((g) => ({ key: g.key, title: g.title, desc: g.desc, list: inGroup(g.key), done: doneIn(g.key) })),
   ];
   const edit = (m: Measure) => (m.group === "base" ? go("measure", { key: m.key, edit: true }) : go("wstep", { i: WIZARD.findIndex((w) => w.key === m.key), edit: true }));
@@ -56,7 +56,7 @@ function GroupList({ open: initial = [], editable }: { open?: string[]; editable
             {complete && (
               <>
                 <button onClick={() => setOpen(isOpen ? open.filter((k) => k !== r.key) : [...open, r.key])} aria-expanded={isOpen} className="flex w-full items-center justify-between border-t border-white/8 px-4 py-2.5 text-[14px] text-white/70">
-                  View my measures<motion.span animate={{ rotate: isOpen ? 180 : 0 }}><Icon name="chevD" size={18} /></motion.span>
+                  View my measurements<motion.span animate={{ rotate: isOpen ? 180 : 0 }}><Icon name="chevD" size={18} /></motion.span>
                 </button>
                 <AnimatePresence initial={false}>{isOpen && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -84,10 +84,10 @@ export function Wizard() {
   const startAt = () => { const g = GROUPS[cur]; const idx = WIZARD.findIndex((w) => w.group === g.key && !body.done.includes(w.key)); go("wstep", { i: idx }); };
   return (
     <Screen header={<FlowHeader steps={steps} onClose={takeBreak} />}
-      footer={<Arrows ready onNext={cur === -1 ? () => go("alldone") : startAt} label={cur === -1 ? "Review all 24" : `Continue with ${GROUPS[cur].title}`} />}>
+      footer={<Arrows ready onNext={cur === -1 ? () => go("alldone") : startAt} label={cur === -1 ? "Review all 24" : `Continue with ${GROUPS[cur].title.toLowerCase()}`} />}>
       <Split left={<>
-        <HS className="mt-4 lg:mt-0">Let’s finish<br />your measures</HS>
-        <Lead className="mt-3">{scan ? "AI estimated these from your photos. Check each one, in order." : "One at a time, in order. We show you where the tape goes, and save as you go."}</Lead>
+        <HS className="mt-4 lg:mt-0">Let’s finish<br />your measurements</HS>
+        <Lead className="mt-3">{scan ? "AI estimated these from your photos. Check each one, in order." : "In order, group by group. We show you where the tape goes, and save as you go."}</Lead>
         {!scan && <ul className="mt-6 flex flex-col gap-3">{TIPS.map(([ic, t]) => <li key={t} className="flex items-center gap-3 text-[16px] text-white/80"><Icon name={ic} size={22} className="shrink-0 text-peri" />{t}</li>)}</ul>}
       </>} right={<div className="mt-7 lg:mt-0"><GroupList /></div>} />
     </Screen>
@@ -100,7 +100,6 @@ export function WizardStep({ p }: { p?: Record<string, unknown> }) {
   const i = Math.min(WIZARD.length - 1, Math.max(0, Number(p?.i ?? 0)));
   const edit = !!p?.edit;
   const m = WIZARD[i];
-  const g = GROUPS.find((x) => x.key === m.group)!;
   const list = inGroup(m.group);
   const k = list.findIndex((x) => x.key === m.key);
   const next = WIZARD[i + 1];
@@ -109,7 +108,7 @@ export function WizardStep({ p }: { p?: Record<string, unknown> }) {
   const onNext = () => (edit ? back() : lastOfGroup ? replace("wdone", { g: m.group }) : replace("wstep", { i: i + 1 }));
   const onPrev = () => (edit || k === 0 ? back() : replace("wstep", { i: i - 1 }));
   return <MeasureStep key={m.key} m={m} header={<FlowHeader steps={steps} onClose={edit ? back : takeBreak} />} onNext={onNext} onPrev={onPrev}
-    nextLabel={edit ? "Save" : lastOfGroup ? `Finish ${g.title.toLowerCase()}` : `Next: ${next.label}`} />;
+    nextLabel={edit ? "Save" : lastOfGroup ? "Finish" : `Next: ${next.label}`} />;
 }
 
 export function GroupDone({ p }: { p?: Record<string, unknown> }) {
@@ -125,11 +124,11 @@ export function GroupDone({ p }: { p?: Record<string, unknown> }) {
   const cont = () => (N ? replace("wstep", { i: WIZARD.findIndex((w) => w.group === N.key && !body.done.includes(w.key)) }) : replace("alldone"));
   return (
     <Screen header={<FlowHeader steps={steps} onClose={takeBreak} />}
-      footer={<><Arrows ready hidePrev onNext={cont} label={N ? `Continue with ${N.title}` : "Review all 24"} />{N && <button className="mt-1 h-11 w-full text-[15px] text-white/70" onClick={takeBreak}>Take a break, finish later</button>}</>}>
+      footer={<><Arrows ready hidePrev onNext={cont} label={N ? `Continue with ${N.title.toLowerCase()}` : "Review all 24"} />{N && <button className="mt-1 h-12 w-full text-[16px] text-white/70" onClick={takeBreak}>Take a break, finish later</button>}</>}>
       <Split left={<>
         <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.5 }} className="mt-4 grid h-12 w-12 place-items-center rounded-full bg-primary lg:mt-0"><Icon name="check" size={24} strokeWidth={2.4} /></motion.span>
         <HS className="mt-4">{G.title} done</HS>
-        <Lead className="mt-3">{doneIn(g)} of {inGroup(g).length} saved. {N ? `Next up: ${N.title.toLowerCase()}, about ${N.mins} minute${N.mins > 1 ? "s" : ""}.` : "That was the last group."} Your progress is saved if you stop now.</Lead>
+        <Lead className="mt-3">{doneIn(g)} of {inGroup(g).length} saved. {N ? `Next up: ${N.title.toLowerCase()}.` : "That was the last group."} Your progress is saved if you stop now.</Lead>
       </>} right={<div className="mt-7 lg:mt-0"><GroupList /></div>} />
     </Screen>
   );
@@ -144,9 +143,9 @@ export function AllDone() {
     <Screen header={<FlowHeader steps={steps} onClose={() => go("ready")} />} bg={<div className="absolute inset-0" style={{ background: "radial-gradient(90% 40% at 50% 0%, rgba(104,126,245,.4), transparent 70%)" }} />}
       footer={<Pill onClick={() => go("ready")}>Save body</Pill>}>
       <Split left={<>
-        <div className="mt-4 flex items-baseline gap-2 lg:mt-0"><span className="serif text-[64px] leading-none lg:text-[120px]">{total}/24</span><span className="text-[15px] text-white/60">measures saved</span></div>
+        <div className="mt-4 flex items-baseline gap-2 lg:mt-0"><span className="serif text-[64px] leading-none lg:text-[120px]">{total}/24</span><span className="text-[15px] text-white/60">measurements saved</span></div>
         <HS className="mt-4">{total === 24 ? <>Fully<br />measured</> : "Nearly there"}</HS>
-        <Lead className="mt-3">Open any group to see your numbers. Tap a number to change it.</Lead>
+        <Lead className="mt-3">Open any group to see your measurements. Tap a measurement to change it.</Lead>
       </>} right={<div className="mt-7 lg:mt-0"><GroupList editable /></div>} />
     </Screen>
   );

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useApp, fmt } from "@/lib/store";
 import { BASE, WIZARD, GROUPS, type Measure } from "@/lib/data";
 import { Screen, RB, Arrows, Sheet, Pill, FlowProgress, Glass, cx, useDesk } from "@/components/ui";
-import { BodyFigure, Ruler } from "@/components/art";
+import { BodyFigure, SeatedFigure, Ruler } from "@/components/art";
 import { Icon } from "@/components/icons";
 
 // ─── Flow header: exit on the left, then labelled progress running to the right edge ───
@@ -41,7 +41,7 @@ export function HowSheet({ open, onClose, m }: { open: boolean; onClose: () => v
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="flex gap-4">
-        <div className="glass grid h-[190px] w-[120px] shrink-0 place-items-center rounded-[22px]"><BodyFigure sex={body.sex} width={70} markers={[m.marker]} /></div>
+        <div className="glass grid h-[190px] w-[120px] shrink-0 place-items-center overflow-hidden rounded-[22px] p-2">{m.group === "sitting" ? <SeatedFigure className="h-full w-full" /> : <BodyFigure sex={body.sex} width={70} markers={[m.marker]} />}</div>
         <div>
           <div className="text-[14px] text-white/55">How to measure</div>
           <h3 className="mt-1 text-[26px] font-normal tracking-[-.03em]">{m.label}</h3>
@@ -61,7 +61,7 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
   const step = 0.5;
   const bump = (d: number) => { set(Math.min(m.max, Math.max(m.min, (val === null ? m.value : base + d)))); onSet(); };
   return (
-    <div className={cx("field relative overflow-hidden !rounded-[26px] px-3 pt-2.5", val === null && "!border-white/25")}>
+    <div data-need={val === null ? "1" : "0"} className={cx("field relative overflow-hidden !rounded-[26px] px-3 pt-2.5", val === null && "!border-white/25")}>
       <div className="flex items-center justify-between gap-2">
         <RB icon="minus" size={48} onClick={() => bump(-step)} label={`Minus ${step} ${units}`} className="rb-plain" />
         <button onClick={() => setTyping(true)} className="flex min-w-0 flex-1 flex-col items-center" aria-label="Type a value">
@@ -114,7 +114,7 @@ export function MeasureStep({ m, header, nextLabel, onNext, onPrev }: { m: Measu
   // the how-to steps live only in the help sheet; the screen shows the figure, full width and centred
   // (svg fills its box and centres itself through the viewBox, so it never drifts off-centre)
   const figure = (h: string) => (
-    <Glass className={cx("overflow-hidden", h)}><BodyFigure sex={body.sex} width={120} markers={[m.marker]} className="h-full w-full py-[4%]" /></Glass>
+    <Glass className={cx("overflow-hidden", h)}>{m.group === "sitting" ? <SeatedFigure className="h-full w-full p-[7%]" /> : <BodyFigure sex={body.sex} width={120} markers={[m.marker]} className="h-full w-full py-[4%]" />}</Glass>
   );
   const est = isEst && (
     <div className="mt-3 flex items-center gap-2 text-[14px] text-peri"><Icon name="sparkle" size={16} className="shrink-0" />AI estimate from your photos. Check it, change it if needed.</div>

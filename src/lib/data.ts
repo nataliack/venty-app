@@ -26,7 +26,7 @@ export const BASE: Measure[] = [
 ];
 
 export const WIZARD: Measure[] = [
-  // Wraps
+  // Circumferences
   { key: "neck", label: "Neck", group: "around", value: 34.5, min: 28, max: 48, hint: "Around the base of your neck.", how: ["Stand tall and look straight ahead.", "Wrap the tape round the base of your neck.", "Slip one finger under the tape, then read."], marker: { kind: "ring", y: 78, w: 26 } },
   { key: "underbust", label: "Underbust", group: "around", value: 76, min: 60, max: 110, hint: "Around your ribcage, just under the bust.", how: ["Find the band just under your bust.", "Wrap the tape snug round your ribcage.", "Keep it level at the back."], marker: { kind: "ring", y: 162, w: 88 } },
   { key: "upperArm", label: "Upper arm", group: "around", value: 28.5, min: 20, max: 45, hint: "Around the fullest part of your upper arm.", how: ["Relax your arm by your side.", "Wrap the tape round the fullest part, between shoulder and elbow.", "Keep it snug, not tight. Read where it meets."], marker: { kind: "ring", y: 150, w: 20, x: 155 } },
@@ -48,15 +48,16 @@ export const WIZARD: Measure[] = [
   { key: "acrossBack", label: "Across back", group: "across", value: 34.5, min: 28, max: 44, hint: "Across your back, halfway between neck and underarm.", how: ["Let your arms hang naturally.", "Measure across your back…", "…between the two arm creases."], marker: { kind: "line", x1: 58, y1: 122, x2: 142, y2: 122 } },
   { key: "acrossFront", label: "Across front", group: "across", value: 33, min: 26, max: 42, hint: "Across your chest between the arm creases.", how: ["Find the crease where arm meets chest.", "Measure straight across the front.", "Stay above the bust."], marker: { kind: "line", x1: 60, y1: 118, x2: 140, y2: 118 } },
   { key: "apexApex", label: "Apex to apex", group: "across", value: 18.5, min: 14, max: 26, hint: "Between the fullest points of your bust.", how: ["Find the fullest point of each side.", "Measure straight across between them.", "Keep the tape flat."], marker: { kind: "line", x1: 80, y1: 140, x2: 120, y2: 140 } },
-  // Seated
-  { key: "rise", label: "Rise", group: "sitting", value: 27, min: 20, max: 36, hint: "Sitting on a hard chair: from your waist down to the seat.", how: ["Sit up straight on a hard, flat chair.", "Measure down your side from your waist…", "…to the chair seat."], marker: { kind: "line", x1: 154, y1: 205, x2: 156, y2: 290 } },
+  // Rise (seated)
+  { key: "rise", label: "Rise", group: "sitting", value: 27, min: 20, max: 36, hint: "Sit on a hard chair. Measure down your side, from your waist to the seat.", how: ["Sit up straight on a hard, flat chair.", "Measure down your side from your waist…", "…to the chair seat."], marker: { kind: "line", x1: 154, y1: 205, x2: 156, y2: 290 } },
 ];
 
 export const GROUPS = [
-  { key: "around", title: "Wraps", short: "Wraps", desc: "Tape wrapped around your neck, ribs, arm, wrist, hip and thigh", mins: 2 },
-  { key: "down", title: "Lengths", short: "Lengths", desc: "Tape running top to bottom: back, front, arm and leg", mins: 3 },
-  { key: "across", title: "Widths", short: "Widths", desc: "Tape running side to side: shoulders, back and chest", mins: 2 },
-  { key: "sitting", title: "Seated", short: "Seated", desc: "One measure, sitting on a hard chair", mins: 1 },
+  // sewing terms: circumferences go around the body, lengths run top to bottom, widths run side to side, the rise is taken sitting down
+  { key: "around", title: "Circumferences", short: "Around", desc: "Measured around your body: neck, ribs, arm, wrist, hip and thigh" },
+  { key: "down", title: "Lengths", short: "Lengths", desc: "Measured from top to bottom: back, front, arm and leg" },
+  { key: "across", title: "Widths", short: "Widths", desc: "Measured from side to side: shoulders, back and chest" },
+  { key: "sitting", title: "Rise", short: "Rise", desc: "One measurement, sitting on a hard chair" },
 ] as const;
 
 export type GroupKey = (typeof GROUPS)[number]["key"];
@@ -75,9 +76,8 @@ export type Template = {
   key: GarmentKey;
   name: string;
   category: Category;
-  level: "Beginner" | "Intermediate" | "Advanced";
+  level: "Easy" | "Intermediate" | "Hard";
   pieces: number;
-  hours: string;
   tag: string;
   blurb: string;
   lengths: string[];
@@ -89,19 +89,20 @@ export type Template = {
 export type PieceKey = "bodiceFront" | "bodiceBack" | "skirtFront" | "skirtBack" | "sleeve" | "facing" | "trouserFront" | "trouserBack" | "waistband" | "collar";
 
 export const TEMPLATES: Template[] = [
-  { key: "slip", name: "Slip dress", category: "Dresses", level: "Beginner", pieces: 3, hours: "≈ 3 hrs", tag: "Bias cut", blurb: "A bias-cut slip with thin straps and a soft V neck. It skims the body, so Venty adds a little ease at the hip.", lengths: ["Mini", "Midi", "Maxi"], defaultLength: "Midi", color: "#687ef5", pieceSet: ["bodiceFront", "bodiceBack", "facing"] },
-  { key: "wrap", name: "Wrap dress", category: "Dresses", level: "Intermediate", pieces: 6, hours: "≈ 6 hrs", tag: "Tie waist", blurb: "A true wrap with a crossover bodice, flutter sleeves and a tie at the waist. Adjusts to you as you wear it.", lengths: ["Knee", "Midi", "Maxi"], defaultLength: "Midi", color: "#4f63e0", pieceSet: ["bodiceFront", "bodiceBack", "skirtFront", "skirtBack", "sleeve", "waistband"] },
-  { key: "aline", name: "A-line midi", category: "Dresses", level: "Beginner", pieces: 5, hours: "≈ 4 hrs", tag: "Fitted bodice", blurb: "A fitted, sleeveless bodice with a softly flared A-line skirt. A calm first dress with a waist seam.", lengths: ["Knee", "Midi", "Maxi"], defaultLength: "Midi", color: "#8c9cf8", pieceSet: ["bodiceFront", "bodiceBack", "skirtFront", "skirtBack", "facing"] },
-  { key: "cami", name: "Cami", category: "Tops", level: "Beginner", pieces: 3, hours: "≈ 2 hrs", tag: "Thin straps", blurb: "A simple cami with a curved neckline and spaghetti straps. Cut on the bias so it drapes.", lengths: ["Cropped", "Hip"], defaultLength: "Hip", color: "#4f63e0", pieceSet: ["bodiceFront", "bodiceBack", "facing"] },
-  { key: "tee", name: "Boxy tee", category: "Tops", level: "Beginner", pieces: 4, hours: "≈ 2 hrs", tag: "Relaxed", blurb: "A relaxed, boxy tee with dropped shoulders and a neat neckband. Perfect for your first knit.", lengths: ["Cropped", "Hip"], defaultLength: "Hip", color: "#687ef5", pieceSet: ["bodiceFront", "bodiceBack", "sleeve", "facing"] },
-  { key: "shirt", name: "Shirt", category: "Tops", level: "Advanced", pieces: 9, hours: "≈ 8 hrs", tag: "Collared", blurb: "A classic button-up shirt with a two-piece collar, placket and long sleeves. A project to be proud of.", lengths: ["Hip", "Long"], defaultLength: "Hip", color: "#8c9cf8", pieceSet: ["bodiceFront", "bodiceBack", "sleeve", "collar", "facing"] },
-  { key: "wideleg", name: "Wide-leg trouser", category: "Pants", level: "Intermediate", pieces: 6, hours: "≈ 6 hrs", tag: "High waist", blurb: "High-waisted trousers with a wide, fluid leg and front pleats. Graded to your waist, hip and rise.", lengths: ["Cropped", "Full"], defaultLength: "Full", color: "#3e4db8", pieceSet: ["trouserFront", "trouserBack", "waistband"] },
-  { key: "straight", name: "Straight pant", category: "Pants", level: "Intermediate", pieces: 6, hours: "≈ 5 hrs", tag: "Pockets", blurb: "An everyday straight-leg pant with slant pockets and a fly front. Fitted through the seat.", lengths: ["Ankle", "Full"], defaultLength: "Full", color: "#4f63e0", pieceSet: ["trouserFront", "trouserBack", "waistband"] },
-  { key: "biasskirt", name: "Bias midi skirt", category: "Skirts", level: "Beginner", pieces: 2, hours: "≈ 2 hrs", tag: "Elastic waist", blurb: "A bias-cut midi skirt that moves beautifully. Two pieces and an elastic waist.", lengths: ["Knee", "Midi", "Maxi"], defaultLength: "Midi", color: "#8c9cf8", pieceSet: ["skirtFront", "skirtBack"] },
-  { key: "mini", name: "A-line mini", category: "Skirts", level: "Beginner", pieces: 3, hours: "≈ 2 hrs", tag: "Zip back", blurb: "A crisp A-line mini with a contour waistband and centre-back zip.", lengths: ["Micro", "Mini"], defaultLength: "Mini", color: "#687ef5", pieceSet: ["skirtFront", "skirtBack", "waistband"] },
+  { key: "slip", name: "Slip dress", category: "Dresses", level: "Easy", pieces: 3, tag: "Bias cut", blurb: "A bias-cut slip with thin straps and a soft V neck. It skims the body, so Venty adds a little ease at the hip.", lengths: ["Mini", "Midi", "Maxi"], defaultLength: "Midi", color: "#687ef5", pieceSet: ["bodiceFront", "bodiceBack", "facing"] },
+  { key: "wrap", name: "Wrap dress", category: "Dresses", level: "Intermediate", pieces: 6, tag: "Tie waist", blurb: "A true wrap with a crossover bodice, flutter sleeves and a tie at the waist. Adjusts to you as you wear it.", lengths: ["Knee", "Midi", "Maxi"], defaultLength: "Midi", color: "#4f63e0", pieceSet: ["bodiceFront", "bodiceBack", "skirtFront", "skirtBack", "sleeve", "waistband"] },
+  { key: "aline", name: "A-line midi", category: "Dresses", level: "Easy", pieces: 5, tag: "Fitted bodice", blurb: "A fitted, sleeveless bodice with a softly flared A-line skirt. A calm first dress with a waist seam.", lengths: ["Knee", "Midi", "Maxi"], defaultLength: "Midi", color: "#8c9cf8", pieceSet: ["bodiceFront", "bodiceBack", "skirtFront", "skirtBack", "facing"] },
+  { key: "cami", name: "Cami", category: "Tops", level: "Easy", pieces: 3, tag: "Thin straps", blurb: "A simple cami with a curved neckline and spaghetti straps. Cut on the bias so it drapes.", lengths: ["Cropped", "Hip"], defaultLength: "Hip", color: "#4f63e0", pieceSet: ["bodiceFront", "bodiceBack", "facing"] },
+  { key: "tee", name: "Boxy tee", category: "Tops", level: "Easy", pieces: 4, tag: "Relaxed", blurb: "A relaxed, boxy tee with dropped shoulders and a neat neckband. Perfect for your first knit.", lengths: ["Cropped", "Hip"], defaultLength: "Hip", color: "#687ef5", pieceSet: ["bodiceFront", "bodiceBack", "sleeve", "facing"] },
+  { key: "shirt", name: "Shirt", category: "Tops", level: "Hard", pieces: 9, tag: "Collared", blurb: "A classic button-up shirt with a two-piece collar, placket and long sleeves. A project to be proud of.", lengths: ["Hip", "Long"], defaultLength: "Hip", color: "#8c9cf8", pieceSet: ["bodiceFront", "bodiceBack", "sleeve", "collar", "facing"] },
+  { key: "wideleg", name: "Wide-leg trouser", category: "Pants", level: "Intermediate", pieces: 6, tag: "High waist", blurb: "High-waisted trousers with a wide, fluid leg and front pleats. Graded to your waist, hip and rise.", lengths: ["Cropped", "Full"], defaultLength: "Full", color: "#3e4db8", pieceSet: ["trouserFront", "trouserBack", "waistband"] },
+  { key: "straight", name: "Straight pant", category: "Pants", level: "Intermediate", pieces: 6, tag: "Pockets", blurb: "An everyday straight-leg pant with slant pockets and a fly front. Fitted through the seat.", lengths: ["Ankle", "Full"], defaultLength: "Full", color: "#4f63e0", pieceSet: ["trouserFront", "trouserBack", "waistband"] },
+  { key: "biasskirt", name: "Bias midi skirt", category: "Skirts", level: "Easy", pieces: 2, tag: "Elastic waist", blurb: "A bias-cut midi skirt that moves beautifully. Two pieces and an elastic waist.", lengths: ["Knee", "Midi", "Maxi"], defaultLength: "Midi", color: "#8c9cf8", pieceSet: ["skirtFront", "skirtBack"] },
+  { key: "mini", name: "A-line mini", category: "Skirts", level: "Easy", pieces: 3, tag: "Zip back", blurb: "A crisp A-line mini with a contour waistband and centre-back zip.", lengths: ["Micro", "Mini"], defaultLength: "Mini", color: "#687ef5", pieceSet: ["skirtFront", "skirtBack", "waistband"] },
 ];
 
 export const CATEGORIES: Category[] = ["Dresses", "Tops", "Pants", "Skirts"];
+export const LEVELS = ["Easy", "Intermediate", "Hard"] as const;
 export const templateBy = (k: GarmentKey) => TEMPLATES.find((t) => t.key === k) ?? TEMPLATES[0];
 
 // The "photo" garment: what the fake AI reads from an uploaded photo.

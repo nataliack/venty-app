@@ -26,7 +26,7 @@ export function Sidebar({ route }: { route: string }) {
   const items: [string, IconName, string, (() => void)?][] = [
     ["home", "home", "Home"],
     ["make", "sparkle", "Make a pattern", () => { newDraft(); go("patSelectBody"); }],
-    ["templates", "dress", "Templates", () => go("templates")],
+    ["templates", "dress", "Pre-made patterns", () => go("templates")],
     ["bodies", "body", "Body library", () => go("bodies")],
     ["patterns", "scissors", "Pattern library", () => go("patterns")],
     ["you", "user", "You", () => go("you")],

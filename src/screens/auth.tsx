@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, Option, Arrows, cx, useDesk } from "@/components/ui";
+import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
@@ -31,7 +31,7 @@ export function Splash() {
 // Welcome sky: a periwinkle haze with three soft lights that drift slowly.
 const Sky = () => <div className="sky"><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /></div>;
 
-const WELCOME_T = <>See a dress you love.<br />Wear it, made for you.</>;
+const WELCOME_T = <>See a dress you love.<br />Create it. Wear it.</>;
 const WELCOME_B = "Any photo, screenshot, magazine page or link. Venty drafts a sewing pattern to your exact measurements, ready to print at home.";
 
 export function Welcome() {
@@ -50,11 +50,11 @@ export function Welcome() {
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
           <VentyLogo width={desk ? 300 : 190} />
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.8 }} className="mt-auto flex max-w-[620px] flex-col items-center">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.8 }} className="my-auto flex max-w-[620px] flex-col items-center pt-8">
           <h2 className="h1 !text-[32px] lg:!text-[56px]">{WELCOME_T}</h2>
           <Lead className="mt-4 max-w-[340px] lg:max-w-[520px]">{WELCOME_B}</Lead>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }} className="mt-8 w-full max-w-[380px] lg:mb-6">{actions}</motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }} className="w-full max-w-[380px] lg:mb-[6dvh]">{actions}</motion.div>
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ function useAuthDone() {
     const clean = (name || email.split("@")[0] || "Ana").trim();
     const nice = clean.charAt(0).toUpperCase() + clean.slice(1);
     set({ user: { name: guest ? "there" : nice.split(/[\s._-]/)[0] || "Ana", email, guest } });
-    replace(guest ? "onboarding" : "signedin");
+    replace(guest ? "tourAsk" : "signedin");
   };
 }
 
@@ -167,9 +167,9 @@ export function EmailStep({ p }: { p?: Record<string, unknown> }) {
 export function SignedIn() {
   const replace = useApp((s) => s.replace);
   const name = useApp((s) => s.user.name);
-  useEffect(() => { const t = setTimeout(() => replace("onboarding"), 1900); return () => clearTimeout(t); }, [replace]);
+  useEffect(() => { const t = setTimeout(() => replace("tourAsk"), 1900); return () => clearTimeout(t); }, [replace]);
   return (
-    <button className="absolute inset-0 flex flex-col items-center justify-center" onClick={() => replace("onboarding")}>
+    <button className="absolute inset-0 flex flex-col items-center justify-center" onClick={() => replace("tourAsk")}>
       <Blob className="left-1/2 top-[26%] h-[260px] w-[260px] -translate-x-[65%] opacity-80" />
       <Blob className="left-1/2 top-[32%] h-[200px] w-[200px] -translate-x-[10%] opacity-50" color="#a0abca" />
       <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.45 }} className="relative grid h-[88px] w-[88px] place-items-center rounded-full bg-primary shadow-[0_0_60px_rgba(104,126,245,.7)]">
@@ -188,7 +188,6 @@ const SLIDES = [
   { t: "Drafted to your exact body", b: "Venty turns the look into a sewing pattern built from your own measurements, not a standard size.", fig: "Your measurements, not a size chart" },
   { t: "Tweak the fit, then print at home", b: "Adjust ease and length, see it on your body, then print on A4 sheets that tape together.", fig: "Printed on A4, taped together" },
 ];
-const SLIDE_MS = 7000;
 
 function Plate({ i, big }: { i: number; big: boolean }) {
   const k = big ? 1.5 : 1;
@@ -209,9 +208,9 @@ function Plate({ i, big }: { i: number; big: boolean }) {
           </div>
         </motion.div>
         {/* link */}
-        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 }} className="absolute flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-[13px] font-medium text-[#12131c] shadow-xl" style={{ left: 40 * k, top: 205 * k }}><Icon name="link" size={15} />Paste a link</motion.div>
+        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 }} className="absolute flex items-center gap-1.5 rounded-[8px] bg-white/85 px-2.5 py-1.5 text-[12px] text-[#12131c]/80 shadow-xl" style={{ left: 40 * k, top: 205 * k }}><Icon name="link" size={13} />pin.it/midi-dress</motion.div>
         {/* sketch */}
-        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="absolute grid place-items-center rounded-[14px] border border-dashed border-white/70 bg-white/10" style={{ left: 205 * k, top: 190 * k, width: 74 * k, height: 64 * k }}><Icon name="pencil" size={20} /><span className="text-[11px]">Sketch</span></motion.div>
+        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="absolute rounded-[6px] bg-[#f3f1ec] shadow-xl" style={{ left: 205 * k, top: 182 * k, width: 74 * k, height: 70 * k, rotate: "4deg" }}><svg viewBox="0 0 74 70" className="h-full w-full"><path d="M30 12 Q37 18 44 12 L46 30 L56 60 Q37 64 18 60 L28 30 Z M28 30 Q37 33 46 30" fill="none" stroke="#2a2f48" strokeWidth="1.6" strokeLinejoin="round" /></svg></motion.div>
       </div>
     </div>
   );
@@ -236,6 +235,28 @@ function Plate({ i, big }: { i: number; big: boolean }) {
   );
 }
 
+// ─── Before the tour: ask. Nobody is pushed through it. ─────────────────────────────────────
+export function TourAsk() {
+  const replace = useApp((s) => s.replace);
+  const set = useApp((s) => s.set);
+  const skip = () => { set({ onboarded: true, tourSkipped: true }); replace("start"); };
+  return (
+    <div className="paper absolute inset-0 flex flex-col items-center px-6 text-center" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <div className="grain relative grid h-[148px] w-[148px] place-items-center overflow-hidden rounded-full lg:h-[200px] lg:w-[200px]" style={{ background: "radial-gradient(90% 70% at 30% 20%, #8c9cf8 0%, #4f63e0 45%, #1c2252 100%)" }}>
+          <Flat g="flutter" size={96} stroke="#fff" fill="rgba(255,255,255,.18)" />
+        </div>
+        <h1 className="h1 mt-8 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Want a quick tour?</h1>
+        <p className="lead mt-3 max-w-[340px] [text-wrap:pretty] lg:max-w-[440px]">Three short pages on how Venty works: from your measurements to a pattern you can print at home.</p>
+      </div>
+      <div className="flex w-full max-w-[380px] flex-col items-center gap-1">
+        <Pill onClick={() => replace("onboarding")}>Show me how it works</Pill>
+        <button onClick={skip} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/70 hover:text-[#12131c]">Skip the tour</button>
+      </div>
+    </div>
+  );
+}
+
 export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   const replace = useApp((s) => s.replace);
   const set = useApp((s) => s.set);
@@ -248,18 +269,15 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   };
   const next = () => (i < 2 ? setI(i + 1) : finish(false));
   const prev = () => setI(Math.max(0, i - 1));
-  // stories-style: each chapter plays for a few seconds, then moves on (stops on the last)
-  useEffect(() => { if (i >= 2) return; const t = setTimeout(() => setI((v) => Math.min(2, v + 1)), SLIDE_MS); return () => clearTimeout(t); }, [i]);
   const s = SLIDES[i];
 
+  // progress: each bar fills as the reader reaches that page. Nothing moves on by itself; only Next and Back do.
   const bars = (
-    <div className="flex flex-1 gap-1.5">
+    <div className="flex flex-1 gap-1.5" aria-label={`Page ${i + 1} of 3`}>
       {SLIDES.map((_, k) => (
-        <button key={k} onClick={() => setI(k)} aria-label={`Chapter ${k + 1}`} className="h-6 flex-1 py-[10px]">
-          <span className="block h-[3px] overflow-hidden rounded-full bg-white/30">
-            {k < i ? <span className="block h-full w-full bg-white" /> : k === i ? <motion.span key={"b" + i} className="block h-full bg-white" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: i < 2 ? SLIDE_MS / 1000 : 0.6, ease: "linear" }} /> : null}
-          </span>
-        </button>
+        <span key={k} className="block h-[3px] flex-1 overflow-hidden rounded-full bg-white/30">
+          <motion.span className="block h-full bg-white" initial={false} animate={{ width: k <= i ? "100%" : "0%" }} transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }} />
+        </span>
       ))}
     </div>
   );
@@ -267,7 +285,7 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
 
   const image = (
     <div className="grain relative h-full overflow-hidden" style={{ background: "radial-gradient(90% 70% at 30% 20%, #8c9cf8 0%, #4f63e0 45%, #1c2252 100%)" }}>
-      <AnimatePresence mode="wait"><motion.div key={i} className="absolute inset-0" initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}><Plate i={i} big={desk} /></motion.div></AnimatePresence>
+      <AnimatePresence mode="wait"><motion.div key={i} className="pointer-events-none absolute inset-0" initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}><Plate i={i} big={desk} /></motion.div></AnimatePresence>
       <div className="absolute inset-x-0 top-0 flex items-center gap-4 px-5 lg:px-8" style={{ paddingTop: "var(--top)" }}>{bars}{skip}</div>
       <div className="absolute bottom-5 left-5 right-5 flex items-baseline gap-2 text-white/85 lg:bottom-8 lg:left-8"><span className="text-[14px]">Fig.&nbsp;<span className="serif">{i + 1}</span></span><span className="text-[14px] italic">{s.fig}</span></div>
     </div>
@@ -281,9 +299,9 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
     </AnimatePresence>
   );
   const controls = (
-    <div className="flex items-center justify-between gap-3">
-      <button onClick={prev} aria-label="Previous" className={cx("tap grid h-[52px] w-[52px] place-items-center rounded-full border border-[#12131c]/15 text-[#12131c]", i === 0 && "invisible")}><Icon name="back" size={22} /></button>
-      <button onClick={next} className="tap flex h-[52px] items-center gap-2 rounded-full bg-[#12131c] pl-6 pr-4 text-[16px] font-medium text-white">{i === 2 ? (fromApp ? "Done" : "Get started") : "Next"}<Icon name="chevR" size={20} /></button>
+    <div className="flex items-center gap-3">
+      <button onClick={prev} aria-label="Previous" className={cx("tap grid h-[56px] w-[56px] shrink-0 place-items-center rounded-full border border-[#12131c]/15 text-[#12131c]", i === 0 && "invisible")}><Icon name="back" size={22} /></button>
+      <Pill className="flex-1" onClick={next}>{i === 2 ? (fromApp ? "Done" : "Get started") : "Next"}</Pill>
     </div>
   );
   if (desk) return (
@@ -293,46 +311,35 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
     </div>
   );
   return (
-    <motion.div className="paper absolute inset-0 flex flex-col" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.15} onDragEnd={(_, info) => { if (info.offset.x < -60) next(); else if (info.offset.x > 60) prev(); }}>
+    <div className="paper absolute inset-0 flex flex-col">
       <div className="h-[56%] shrink-0 overflow-hidden rounded-b-[32px]">{image}</div>
       <div className="flex min-h-0 flex-1 flex-col px-6 pt-7" style={{ paddingBottom: "var(--bottom)" }}>
         {words}
         <div className="mt-auto pt-4">{controls}</div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-// ─── "Where do you want to start?" — two real choices, nothing pre-selected ─────────────────
+// ─── After the tour: one clear next step. A pattern needs measurements, so the body comes first. ──────
 export function StartChoice() {
-  const go = useApp((s) => s.go);
   const startBody = useApp((s) => s.startBody);
+  const home = useApp((s) => s.home);
+  const user = useApp((s) => s.user);
   const desk = useDesk();
-  const [pick, setPick] = useState<"body" | "templates" | null>(null);
-  const next = () => (pick === "body" ? startBody() : go("templates"));
+  const hi = user.guest ? "Welcome." : `Welcome, ${user.name}.`;
+  const actions = <div className="flex w-full flex-col items-center gap-1 lg:max-w-[420px]"><Pill onClick={startBody}>Set up my body</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-white/70 hover:text-white">Skip for now and go to home</button></div>;
   return (
-    <Screen footer={<Arrows hidePrev ready={!!pick} onNext={next} label={pick === "templates" ? "Explore templates" : "Set up my body"} />}>
-      <div className="h-6 lg:h-12" />
-      <div className="lg:mx-auto lg:max-w-[980px]">
-        <HS>Where do you<br />want to start?</HS>
-        <Lead className="mt-3">You’re in. Pick one, you can do the other any time.</Lead>
-        <div className="mt-7 flex flex-col gap-3 lg:mt-10 lg:grid lg:grid-cols-[1.2fr_1fr] lg:gap-5">
-          <Option on={pick === "body"} onClick={() => setPick("body")} className="h-[214px] rounded-[28px] p-5 lg:h-[380px] lg:p-8">
-            <div className="max-w-[236px] lg:max-w-[300px]">
-              <div className="text-[22px] font-medium tracking-[-.02em] lg:text-[30px]">Set up my body</div>
-              <div className="mt-1.5 text-[15px] leading-snug text-white/65 lg:text-[17px]">Add your measurements once. Every pattern is drafted to them.</div>
-            </div>
-            <div className="absolute bottom-5 left-5 flex items-center gap-1.5 text-[14px] text-white/55 lg:bottom-8 lg:left-8"><Icon name="ruler" size={16} />About 3 minutes</div>
-            <div className="absolute bottom-0 right-6 opacity-95 lg:right-12"><BodyFigure width={desk ? 120 : 70} glow={false} /></div>
-          </Option>
-          <Option on={pick === "templates"} onClick={() => setPick("templates")} className="h-[160px] rounded-[28px] p-5 lg:h-[380px] lg:p-8">
-            <div className="max-w-[190px] lg:max-w-[280px]">
-              <div className="text-[22px] font-medium tracking-[-.02em] lg:text-[30px]">Explore templates</div>
-              <div className="mt-1.5 text-[15px] leading-snug text-white/65 lg:text-[17px]">Dresses, tops, pants and skirts, ready to fit to a body.</div>
-            </div>
-            <div className="absolute bottom-3 right-5 lg:bottom-8 lg:right-8"><Flat g="aline" size={desk ? 170 : 84} /></div>
-          </Option>
+    <Screen footer={desk ? undefined : actions}>
+      <div className="flex min-h-full flex-col items-center text-center lg:justify-center">
+        <div className="h-6 lg:h-0" />
+        <HS className="[text-wrap:balance]">{hi}<br />Let’s set up your body</HS>
+        <Lead className="mt-3 max-w-[360px] [text-wrap:pretty] lg:max-w-[480px]">Venty drafts every pattern to your measurements. Add them once and they’re saved as your body, ready for every pattern you make.</Lead>
+        <div className="relative mt-6 h-[min(330px,40dvh)] w-full lg:mt-10 lg:h-[min(440px,48dvh)]">
+          <Blob className="left-1/2 top-1/2 h-[240px] w-[200px] -translate-x-1/2 -translate-y-1/2 opacity-40" />
+          <BodyFigure width={desk ? 150 : 110} markers={[{ kind: "ring", y: 140, w: 100 }, { kind: "ring", y: 205, w: 72 }, { kind: "ring", y: 275, w: 110 }]} className="relative h-full w-full" />
         </div>
+        {desk && <div className="mt-8 flex w-full justify-center">{actions}</div>}
       </div>
     </Screen>
   );

@@ -47,7 +47,7 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
       <div className="mb-4 flex items-center justify-between"><span className="text-[20px] font-semibold">Create</span><RB icon="close" size={38} onClick={onClose} /></div>
       <div className="flex flex-col gap-2.5">
         {row("scissors", "Make a pattern", "Photo, link, sketch or style", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
-        {row("dress", "Start from a template", "Dresses, tops, pants, skirts", "#4f63e0", () => go("templates"))}
+        {row("dress", "Choose a pre-made pattern", "Dresses, tops, pants, skirts", "#4f63e0", () => go("templates"))}
         {row("body", "Make a body", "Measure yourself or someone you sew for", "#4d5e85", () => { startBody(); })}
       </div>
     </Sheet>
@@ -64,7 +64,7 @@ function Notices() {
       {b && (
         <Glass onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="flex w-full items-center gap-3.5 rounded-[22px] border-primary/70 p-4">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/25 text-peri"><Icon name="ruler" size={22} /></span>
-          <div className="min-w-0 flex-1"><div className="text-[16px] font-medium">Continue finishing your measures</div><div className="text-[14px] text-white/55">{b.name} · {b.done.length} of 24 saved</div>
+          <div className="min-w-0 flex-1"><div className="text-[16px] font-medium">Continue finishing your measurements</div><div className="text-[14px] text-white/55">{b.name} · {b.done.length} of 24 saved</div>
             <div className="mt-2 flex gap-[2px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < b.done.length ? "bg-primary" : "bg-white/15")} />)}</div></div>
           <Icon name="chevR" size={18} className="text-white/50" />
         </Glass>
@@ -107,7 +107,7 @@ export function Home() {
     ["image", "Photo", () => startFrom()],
     ["link", "Link", () => startFrom("link")],
     ["pencil", "Sketch", () => startFrom("sketch")],
-    ["dress", "Template", () => go("templates")],
+    ["dress", "Pre-made", () => go("templates")],
   ];
   return (
     <Screen noPad footer={desk ? undefined : <TabBar tab="home" />}>
@@ -118,14 +118,14 @@ export function Home() {
             <div className="min-w-0 flex-1 leading-tight"><div className="text-[13px] text-ink/60">{greet()}</div><div className="truncate text-[17px] font-medium">{name}</div></div>
             <button onClick={() => go("templates")} aria-label="Search templates" className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white lg:hidden"><Icon name="search" size={20} /></button>
           </div>
-          <h1 className="h1 mt-6 !text-[34px] text-ink lg:mt-10 lg:!text-[56px]">What are we<br className="lg:hidden" /> making?</h1>
-          <p className="mt-2 max-w-[420px] text-[16px] leading-snug text-ink/65 lg:text-[18px]">Start from any look you love. We draft it to {body.name || "your body"}.</p>
+          <h1 className="h1 mt-6 !text-[34px] text-[#252c66] lg:mt-10 lg:!text-[56px]">What are we<br className="lg:hidden" /> making?</h1>
+          <p className="mt-2 max-w-[420px] text-[16px] leading-snug text-[#252c66]/75 lg:text-[18px]">Start from any look you love. We draft it to {body.name || "your body"}.</p>
         </div>
         <div className="hero-card mt-5 grid grid-cols-4 gap-2 rounded-[28px] p-3 lg:mt-0 lg:gap-3 lg:p-4">
           {actions.map(([ic, l, fn]) => (
             <button key={l} onClick={fn} className="tap group flex flex-col items-center gap-2 rounded-[20px] py-2 lg:py-4">
-              <span className="grid h-[56px] w-[56px] place-items-center rounded-[18px] bg-ink text-white shadow-[0_10px_24px_-10px_rgba(19,21,35,.7)] transition-transform group-hover:-translate-y-0.5 lg:h-[76px] lg:w-[76px] lg:rounded-[24px]"><Icon name={ic} size={24} /></span>
-              <span className="text-[14px] font-medium text-ink lg:text-[15px]">{l}</span>
+              <span className="herotile grid h-[56px] w-[56px] place-items-center rounded-[18px] text-white transition-transform group-hover:-translate-y-0.5 lg:h-[76px] lg:w-[76px] lg:rounded-[24px]"><Icon name={ic} size={24} /></span>
+              <span className="text-[14px] font-medium text-[#252c66] lg:text-[15px]">{l}</span>
             </button>
           ))}
         </div>
@@ -143,7 +143,7 @@ export function Home() {
               {bodies.map((b) => (
                 <Glass key={b.id} onClick={() => { set({ activeBody: b.id }); go("preview"); }} className="flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4">
                   <span className="grid h-[60px] w-11 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-primary/20"><BodyFigure sex={b.sex} width={20} glow={false} className="h-[52px] w-full" /></span>
-                  <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/50">{b.done.length} of 24 measures</span></span>
+                  <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/50">{b.done.length} of 24 measurements</span></span>
                 </Glass>
               ))}
             </div>
@@ -163,7 +163,7 @@ export function Home() {
         </div>
         <Glass onClick={() => go("templates")} className="mt-5 flex w-full items-center gap-3 rounded-[22px] p-3 lg:mt-8 lg:p-4">
           <div className="flex shrink-0 -space-x-3"><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-primary/25"><Flat g="slip" size={30} /></span><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-denim/60"><Flat g="tee" size={30} /></span></div>
-          <div className="flex-1"><div className="text-[16px] font-medium">Templates</div><div className="text-[14px] text-white/55">10 styles, ready to fit to a body</div></div>
+          <div className="flex-1"><div className="text-[16px] font-medium">Pre-made patterns</div><div className="text-[14px] text-white/55">10 patterns, ready to fit to a body</div></div>
           <Icon name="chevR" size={18} className="text-white/50" />
         </Glass>
         <div className="h-4" />

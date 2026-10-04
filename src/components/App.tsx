@@ -3,30 +3,30 @@ import { haptic } from "@/lib/haptics";
 import { Component, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { Splash, Welcome, SignUp, LogIn, EmailStep, SignedIn, Onboarding, StartChoice } from "@/screens/auth";
+import { Splash, Welcome, SignUp, LogIn, EmailStep, SignedIn, TourAsk, Onboarding, StartChoice } from "@/screens/auth";
 import { Prefs, Method, NameBody, BaseMeasures, MeasureBase, ScanPrep, ScanCam, Preview, EditMeasures, Ready } from "@/screens/setup";
 import { Wizard, WizardStep, GroupDone, AllDone } from "@/screens/wizard";
 import { Home, Bodies, Patterns, You } from "@/screens/home";
 import { PatSelectBody, Prompt, Reference, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
-import { Seam, Arrange, PrintMethod, Needs, PrintReady, Pages, MiniMap, Printed } from "@/screens/print";
+import { Seam, Arrange, PrintMethod, Needs, PrintReady, MiniMap, Printed } from "@/screens/print";
 import { Pill, cx } from "./ui";
 import { Sidebar } from "./Sidebar";
 
 // Screens shown full-bleed on desktop (no sidebar)
-const FULL = new Set(["splash", "welcome", "signup", "login", "email", "signedin", "onboarding", "start", "scanCam"]);
+const FULL = new Set(["splash", "welcome", "signup", "login", "email", "signedin", "tourAsk", "onboarding", "start", "scanCam"]);
 import { Icon } from "./icons";
 
 type ScreenC = ComponentType<{ p?: Record<string, unknown> }>;
 const SCREENS: Record<string, ScreenC> = {
-  splash: Splash, welcome: Welcome, signup: SignUp, login: LogIn, email: EmailStep, signedin: SignedIn, onboarding: Onboarding, start: StartChoice,
+  splash: Splash, welcome: Welcome, signup: SignUp, login: LogIn, email: EmailStep, signedin: SignedIn, tourAsk: TourAsk, onboarding: Onboarding, start: StartChoice,
   prefs: Prefs, name: NameBody, method: Method, measure: MeasureBase, base: BaseMeasures,
   scanPrep: ScanPrep, scanCam: ScanCam, preview: Preview, edit: EditMeasures, ready: Ready,
   wizard: Wizard, wstep: WizardStep, wdone: GroupDone, alldone: AllDone,
   home: Home, bodies: Bodies, patterns: Patterns, you: You,
   patSelectBody: PatSelectBody, prompt: Prompt, ref: Reference, ai: AIRead, generating: Generating, garment: Garment, edits: Edits,
   templates: Templates, template: TemplateDetail, tplBody: TplBody, tplFit: TplFit, tplResult: TplResult,
-  seam: Seam, arrange: Arrange, printMethod: PrintMethod, needs: Needs, print: PrintReady, pages: Pages, minimap: MiniMap, printed: Printed,
+  seam: Seam, arrange: Arrange, printMethod: PrintMethod, needs: Needs, print: PrintReady, minimap: MiniMap, printed: Printed,
 };
 
 // If any screen throws, never show a broken page: offer a way home.

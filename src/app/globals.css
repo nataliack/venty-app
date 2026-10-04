@@ -257,6 +257,18 @@ input { font: inherit; color: inherit; }
 .hero-card { background: rgb(255 255 255 / .32); border: 1px solid rgb(255 255 255 / .55); box-shadow: inset 0 1px 0 rgb(255 255 255 / .7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 @media (min-width: 1024px) { .home-hero { margin-top: 0; padding-top: 0; border-radius: 36px; } }
 
+/* primary button before a choice is made: still the primary button, just faded and without the hover glow */
+.pill-primary.is-off { opacity: .38; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .25); cursor: default; }
+.pill-primary.is-off::after { display: none; }
+@media (hover: hover) { .pill-primary.is-off:hover { transform: none; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .25); } }
+.pill-primary.is-off:active { transform: none; }
+
+/* a blocked Next points at what is missing: a small side-to-side nudge and a violet edge that fades */
+.need-flash { animation: v-need .5s cubic-bezier(.36,.07,.19,.97); }
+.need-flash.opt, .need-flash .opt, .need-flash.field, .need-flash .field { border-color: #8c9cf8 !important; box-shadow: 0 0 0 3px rgb(140 156 248 / .22); transition: border-color .2s, box-shadow .2s; }
+@keyframes v-need { 0%, 100% { translate: 0 0; } 20% { translate: -5px 0; } 40% { translate: 4px 0; } 60% { translate: -3px 0; } 80% { translate: 2px 0; } }
+@media (prefers-reduced-motion: reduce) { .need-flash { animation: none; } }
+
 /* measuring − / + buttons: no swirl or glow; hover lifts the fill a little, a press flashes solid white like a key */
 .rb.rb-plain::after { display: none; }
 @media (hover: hover) { .rb.rb-plain:hover { transform: none; box-shadow: none; background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .26); } }
@@ -265,6 +277,9 @@ input { font: inherit; color: inherit; }
 /* phone tab bar: light, same family as the hero; Create sits raised in a notch */
 .tabbar { background: linear-gradient(180deg, #e8ecff, #cdd5fd); color: #131523;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .8), 0 20px 40px -16px rgb(0 0 0 / .7); }
+/* home shortcuts share the Create button's periwinkle fill */
+.herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: 0 0 0 6px #0b0c15, inset 0 1px 0 rgb(255 255 255 / .5), 0 14px 30px -8px rgb(104 126 245 / .8); }

@@ -45,6 +45,7 @@ export type Draft = {
   drape: number; // 0..1
   seam: number | null;
   printer: "A4" | "A0";
+  sheets?: number; // sheets the arranged layout prints on
   lengthCm: number;
   neckline: number;
   sleeve: string;

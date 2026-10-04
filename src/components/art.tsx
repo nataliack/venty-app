@@ -100,6 +100,50 @@ export function BodyFigure({ sex = "female", width = 140, markers = [], garment 
   );
 }
 
+// ─── Seated figure (side view, on a hard chair) for the rise: the tape runs down the side, waist to seat ───
+export function SeatedFigure({ className, width = 170 }: { className?: string; width?: number }) {
+  const id = useId().replace(/:/g, "");
+  return (
+    <svg viewBox="36 6 176 272" width={width} height={(width * 272) / 176} className={className} style={{ overflow: "visible" }} aria-hidden>
+      <defs>
+        <linearGradient id={`sb${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#262b45" /><stop offset=".45" stopColor="#171a2e" /><stop offset="1" stopColor="#0f1122" /></linearGradient>
+        <filter id={`sg${id}`} x="-10%" y="-5%" width="120%" height="110%" colorInterpolationFilters="sRGB">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="3.5" result="h" />
+          <feSpecularLighting in="h" surfaceScale="6" specularConstant="1.1" specularExponent="22" lightingColor="#dfe3ff" result="sp"><fePointLight x="160" y="-40" z="120" /></feSpecularLighting>
+          <feComposite in="sp" in2="SourceAlpha" operator="in" result="sp2" />
+          <feDiffuseLighting in="h" surfaceScale="5" diffuseConstant="1" lightingColor="#6f82f0" result="df"><feDistantLight azimuth="200" elevation="18" /></feDiffuseLighting>
+          <feComposite in="df" in2="SourceAlpha" operator="in" result="df2" />
+          <feComposite in="SourceGraphic" in2="df2" operator="arithmetic" k1="0" k2="1" k3=".32" k4="0" result="lit" />
+          <feComposite in="lit" in2="sp2" operator="arithmetic" k1="0" k2="1" k3=".55" k4="0" />
+        </filter>
+        <filter id={`sglow${id}`} x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur stdDeviation="12" /></filter>
+        <filter id={`smk${id}`} x="-200%" y="-50%" width="500%" height="200%"><feGaussianBlur stdDeviation="2.2" /></filter>
+      </defs>
+      {/* chair */}
+      <g stroke="rgb(255 255 255 / .32)" strokeWidth="3" strokeLinecap="round" fill="none">
+        <path d="M60 96 L60 184" /><path d="M58 186 L170 186" /><path d="M64 188 L64 270" /><path d="M164 188 L164 270" />
+      </g>
+      <g>
+        <g fill="#687ef5" opacity=".35" filter={`url(#sglow${id})`}><ellipse cx="94" cy="40" rx="16" ry="20" /><rect x="68" y="70" width="52" height="112" rx="22" /><rect x="78" y="152" width="104" height="30" rx="15" /><rect x="158" y="160" width="22" height="106" rx="11" /></g>
+        <g fill={`url(#sb${id})`} filter={`url(#sg${id})`}>
+          <ellipse cx="94" cy="40" rx="16" ry="20" />
+          <rect x="87" y="54" width="14" height="22" rx="6" />
+          <path d="M80 72 C70 75 68 92 70 112 C72 132 70 152 68 168 C68 178 76 184 90 184 L120 184 C128 176 124 156 116 142 C111 132 114 118 117 106 C120 92 113 79 104 74 C96 70 88 70 80 72 Z" />
+          <rect x="78" y="154" width="104" height="30" rx="15" />
+          <rect x="158" y="162" width="22" height="104" rx="11" />
+          <rect x="154" y="256" width="44" height="14" rx="7" />
+          <path d="M84 80 C76 100 80 124 92 142 L104 138 C96 122 93 102 98 84 Z" />
+          <rect x="94" y="134" width="52" height="13" rx="6.5" />
+        </g>
+      </g>
+      {/* tape: down the side, from the waist to the chair seat */}
+      <line x1="96" y1="132" x2="96" y2="185" stroke="#8c9cf8" strokeWidth="5" opacity=".55" filter={`url(#smk${id})`} />
+      <line x1="96" y1="132" x2="96" y2="185" stroke="#fff" strokeWidth="1.6" strokeDasharray="3 2.4" />
+      <circle cx="96" cy="132" r="3" fill="#fff" /><circle cx="96" cy="185" r="3" fill="#fff" />
+    </svg>
+  );
+}
+
 // ─── Garment flats (viewBox 120 × 160) ────────────────────────────────
 type Flat = { outline: string; details: string; extra?: React.ReactNode };
 export const FLATS: Record<GarmentKey, Flat> = {
@@ -240,6 +284,8 @@ const PIECES: Record<PieceKey, { w: number; h: number; d: string; grain: [number
   waistband: { w: 170, h: 40, d: "M6 8 L164 8 L164 32 L6 32 Z", grain: [20, 20, 150, 20] },
   collar: { w: 150, h: 60, d: "M8 20 Q75 4 142 20 L136 48 Q75 36 14 48 Z", grain: [40, 30, 110, 30] },
 };
+
+export const pieceSize = (k: PieceKey) => ({ w: PIECES[k].w, h: PIECES[k].h });
 
 export function Piece({ k, label, className, showGrid = false, allowance = false, width }: { k: PieceKey; label?: string; className?: string; showGrid?: boolean; allowance?: boolean; width?: number }) {
   const p = PIECES[k];

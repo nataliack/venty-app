@@ -10,7 +10,8 @@ Rules that must never be broken (the full list is in §5 of that file):
 - One font family, Familjen Grotesk. Headings are Regular 400 with tight letter spacing. Bigilla Bold is for numbers only.
 - No uppercase labels with wide letter spacing, no "Recommended" badges, no "01 / 03" step counters, and no "→" arrows. Santiago calls these "AI flop".
 - Nothing is pre-selected and no value is pre-filled. Units are the one exception and default to cm.
-- Every step screen uses `Arrows` / `NextButton`. It shows a quiet chevron until the user makes a choice, then grows into "Next ›" with a violet outline.
+- Every step screen uses `Arrows` / `NextButton`: the filled primary button, faded until the user makes a choice. Tapping it early nudges the empty inputs marked `data-need="1"`.
+- No time estimates anywhere ("about 3 minutes", "6 hours").
 - Every measure uses the shared `MeasureStep` (`src/screens/measure.tsx`), and every flow uses `FlowProgress`.
 - Information is never styled like a button.
 - Custom CSS outside `@layer` beats Tailwind, so never set `display`, `position` or size on those classes.

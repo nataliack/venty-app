@@ -88,26 +88,36 @@ export function RB({ icon, onClick, label, variant = "glass", size = 44, classNa
   );
 }
 
-// Bottom bar for steps: back on the left, the decision button on the right.
-// Until something is chosen (ready=false) it is a quiet chevron; once chosen it grows into "Next ›" with a violet edge.
-export function Arrows({ onPrev, onNext, hidePrev, ready = true, label = "Next", nudge }: { onPrev?: () => void; onNext?: () => void; hidePrev?: boolean; ready?: boolean; label?: string; nudge?: boolean; nextLabel?: string }) {
+// Bottom bar for steps: round back button on the left, the primary button filling the rest of the row.
+// With no back button the primary button runs full width. Until a choice is made it is greyed out;
+// tapping it then points at what is still missing (see showNeeded).
+export function Arrows({ onPrev, onNext, hidePrev, ready = true, label = "Next" }: { onPrev?: () => void; onNext?: () => void; hidePrev?: boolean; ready?: boolean; label?: string; nudge?: boolean; nextLabel?: string }) {
   const back = useApp((s) => s.back);
   return (
-    <div className="flex items-center justify-between gap-3 pb-1">
-      {hidePrev ? <span /> : <RB icon="back" variant="dark" size={52} onClick={onPrev ?? back} label="Back" />}
-      <NextButton ready={ready} onClick={onNext} label={label} nudge={nudge} />
+    <div className="flex items-center gap-3 pb-1">
+      {!hidePrev && <RB icon="back" variant="dark" size={56} onClick={onPrev ?? back} label="Back" />}
+      <NextButton ready={ready} onClick={onNext} label={label} className="flex-1" />
     </div>
   );
 }
 
-export function NextButton({ ready, onClick, label = "Next", nudge, className }: { ready: boolean; onClick?: () => void; label?: string; nudge?: boolean; className?: string }) {
+export function NextButton({ ready, onClick, label = "Next", className }: { ready: boolean; onClick?: () => void; label?: string; nudge?: boolean; className?: string }) {
   return (
-    <motion.button layout aria-label={label} aria-disabled={!ready} onClick={() => ready && onClick?.()} transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
-      className={cx("nextbtn", ready && "ready", ready && nudge && "nudge", className)} style={{ width: ready ? "auto" : 52, paddingLeft: ready ? 22 : 0, paddingRight: ready ? 16 : 0, justifyContent: ready ? "flex-end" : "center" }}>
-      <AnimatePresence initial={false}>{ready && <motion.span key="l" initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="max-w-[230px] truncate">{label}</motion.span>}</AnimatePresence>
-      <Icon name="chevR" size={20} />
-    </motion.button>
+    <button aria-disabled={!ready} onClick={(e) => (ready ? onClick?.() : showNeeded(e.currentTarget))}
+      className={cx("pill pill-primary min-w-0 px-6", !ready && "is-off", className)}>
+      <span className="truncate">{label}</span>
+    </button>
   );
+}
+
+// A blocked Next: briefly mark every still-empty required input on the current screen ([data-need="1"])
+// with a small shake and a violet edge, then let it settle. Quiet, and only on demand.
+export function showNeeded(from: Element) {
+  const root = from.closest(".device") ?? document;
+  const els = Array.from(root.querySelectorAll<HTMLElement>('[data-need="1"]'));
+  els.forEach((el) => { el.classList.remove("need-flash"); void el.offsetWidth; el.classList.add("need-flash"); setTimeout(() => el.classList.remove("need-flash"), 900); });
+  if (els[0]) els[0].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  try { navigator.vibrate?.(12); } catch {}
 }
 
 // Selectable option card (no option is ever pre-selected): radio ring idle, violet edge + gradient when chosen.

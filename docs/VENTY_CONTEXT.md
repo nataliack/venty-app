@@ -121,10 +121,11 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 **Choices and buttons:**
 - **Nothing is ever pre-selected.** The user picks, then continues.
   - **The only exception: units default to cm**, and units can never be empty.
-- **Decision button pattern** (`Arrows` / `NextButton`), used on every step screen:
-  - Back is a round button on the left.
-  - On the right is a quiet chevron that is disabled until a choice is made.
-  - Once the user chooses, it grows into "Next ›" (or a specific label, for example "Next: Bust"), with the same dark fill, a **violet outline and the selected gradient**.
+- **Decision button pattern** (`Arrows` / `NextButton`), used on every step screen (changed 4 Oct 2026 after user testing):
+  - It is the **filled primary button** (`.pill-primary`), the same one as "Get started" on Welcome. The old outlined chevron with a glow is gone; testers read it as secondary and "AI".
+  - Back is a round button on the left and the primary button fills the rest of the row. With no back button (`hidePrev`) it runs full width, centred.
+  - Before a choice is made it is still visible but faded (`.is-off`). Tapping it then calls `showNeeded()`: every still-empty required input on the screen (anything marked `data-need="1"`) gives a small side-to-side nudge and a violet edge for a moment. Mark required inputs with `data-need`.
+- **No time estimates anywhere** ("about 3 minutes", "6 hours"). Measuring and sewing take as long as each person takes, and testers found the numbers stressful.
 - **Option cards** (`Option`):
   - Unselected: quiet glass with a radio ring.
   - Hover: a light gradient preview.
@@ -150,7 +151,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 **Getting in:**
 - **Splash:** the logo only. It auto-advances.
 - **Welcome:**
-  - Logo and headline, with text centred.
+  - Logo, then the headline **"See a dress you love. Create it. Wear it."** and body text, centred between the logo and the buttons.
   - A slowly drifting gradient background (`.sky` with `.drift` lights).
   - "Get started" and "I already have an account".
 - **Sign up (`signup`):** exactly three buttons: Apple, Google, Continue with email.
@@ -159,36 +160,32 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **Email step (`email`, mode `signup` or `login`):**
   - Sign-up asks for name, email and password (at least 8 characters, with a show/hide toggle). Log-in asks for email and password, plus "Forgot password".
   - The button stays disabled until the form is valid.
-- **Signed in:** a "Welcome, {name}" moment.
+- **Signed in:** a "Welcome, {name}" moment, then the tour question.
+
+**Tour question (`tourAsk`):** before any tour, a light page asks "Want a quick tour?" with **"Show me how it works"** and **"Skip the tour"**. Skipping sets `tourSkipped` (home then offers the tour) and goes to `start`.
 
 **Onboarding (`onboarding`):**
 - **Light and editorial:** paper background, a 56% picture panel, and a "Fig. 1 …" caption. It is meant to look nothing like the dark app.
 - **Heading and body text are centre-aligned** on these light pages only (the rest of the app stays left-aligned).
 - **Three chapters:** any look you love (photo, screenshot, link, sketch; not just Pinterest), drafted to your body, then tweak and print.
-- **Stories-style progress bars** that auto-advance every 7 seconds and stop on the last chapter.
-- **A prominent white "Skip" button.** Skipping sets `tourSkipped`, which shows a dismissable "New here? Take the tour" card on home.
+- **Manual only.** Nothing advances by itself (testers felt rushed). Progress bars at the top fill as the reader reaches each page; they are not buttons. Back (round) and Next (primary) at the bottom, plus a white "Skip" at the top.
+- The pictures contain nothing that looks like a button (the link is drawn as a URL snippet, the sketch as a paper drawing), because testers tried to tap them.
 - Replayable from Profile → App tour, opened with `{ from: "app" }`, which returns to where the user was.
 
-**Start (`start`) — "Where do you want to start?":**
-- Two `Option` cards: **Set up my body** (larger, first) and **Explore templates**. Neither is pre-selected.
-- The recommendation followed: no permanently gradient-filled card. Hierarchy comes from size and order, and the gradient appears only on hover or selection.
+**Start (`start`):** "Welcome, {name}. Let's set up your body", with one line on why (every pattern is drafted to your measurements) and a body figure. One primary button, **"Set up my body"**, and a quiet **"Skip for now and go to home"**. "Explore templates" was removed: testers did not understand "Where do you want to start?", and a pattern cannot exist without a body.
 
 **Preferences (`prefs`):**
-- Shown **once, app-wide**, before the first body. It is not part of each body.
-- Units: cm or in, as compact cards with full-width tick strips (`.ticks`) on the bottom edge.
-- Sewing experience: 3 cards with no default.
-  - Unselected: content vertically centred.
-  - Selected: the card expands, title, description and number align to the top, chips and a check appear at the bottom, with space between.
+- Shown **once, app-wide**, before the first body. Heading **"Before we begin"**, no body text.
+- "Do you measure in centimetres or inches?": compact cards with full-width tick strips (`.ticks`). cm is the default.
+- "What's your sewing level?": **Beginner / Intermediate / Advanced**, plain radio cards with one line each. No numbers, no extra tags. Nothing pre-selected.
 - Both can be edited in Profile.
 
 **Body setup:**
 - A progress header on every step: close (X), then "Body · Method · Measures · Review". The bar runs full width to the right edge (no spacer on the right).
-1. **`name`:** "Who is this body for?"
-   - An empty name field (placeholder "e.g. Me, Mum or Ana").
-   - A pattern block choice: Women's block or Men's block, neither pre-selected.
-   - An info note: "The block is only the starting shape…"
-   - The old "general body", "Who are we fitting?", suggestion chips and initials box are gone.
-2. **`method`:** **Scan with my camera** (AI estimates, then the user checks each value) or **Measure by hand**.
+1. **`name`:** "Who are you measuring?" / "Give this body a name, so you can find it later."
+   - An empty name field (placeholder "Enter a name").
+   - "Start the body with a" **Female form** or **Male form**, neither pre-selected, no sub-text and no note underneath.
+2. **`method`:** "Choose how to measure" (no body text). **Scan with my camera** ("Take 3 photos. AI estimates your measurements, then you check each one.") or **Measure by hand** ("Use a soft measuring tape. We guide you through 4 measurements.").
 3. **By hand:** `measure`, one measure at a time: height → bust → waist → hips.
    - Each starts **empty** ("—"), and Next stays disabled until a value is set.
    - The screen shows only the title, a **full-width, centred body figure** with the tape marker, and the value control. The how-to steps live **only in the "?" sheet** (on phone and desktop), so they are never shown twice.
@@ -199,7 +196,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
    - On AI-estimated values, the note "AI estimate from your photos…" sits **under** the measuring card.
    - Reset, the misleading neighbouring numbers, and the old "Save · next" bar are gone.
 4. **Scan:**
-   - **`scanPrep`:** plain tips (not cards) and a privacy note.
+   - **`scanPrep`:** "You'll take 3 photos of yourself: front, back and side." Three plain tips (fitted clothes, a plain wall, phone at hip height) and a privacy note. No "step back", no underwear mention.
    - **`scanCam`:**
      - Front / Back / Side tabs that can be tapped.
      - Shutter, flash (torch where the device supports it) and library picker sit low.
@@ -210,14 +207,16 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
    - Four field-like rows. Rows still marked AI-estimated show a white **"Check"**, and tapping one opens the measure step with "Looks right · Save".
    - Confirmed rows show a small tick before the label and a quiet **"Edit"**. Decision: AI estimates must each be checked once (a wrong bust or hip estimate ruins the pattern, and it is only four taps); values the user measured or already confirmed just offer Edit.
    - Continue stays disabled until all 4 are confirmed.
-   - Continue opens a sheet: "Add the other 20 now?" → **Yes, continue** (to `wizard`) or **Later** (to `ready`).
+   - Continue opens a sheet: "4 measurements saved", **"Great job getting this far"**, "Would you like to add 20 more measurements to make your body even more precise?" → **Yes, add 20 more** (to `wizard`) or **Later** (to `ready`).
 6. **`ready`:**
-   - "Saved to your bodies", "Your body is ready", and a summary line with a progress bar (not a card).
-   - Buttons: Start a pattern and Go to home.
+   - "Saved to your bodies", **"Well done! Your body is ready"**, "Good job finishing {name}'s measurements…", and a summary line with a progress bar.
+   - Buttons: **Choose what to make** (straight to the prompt screen with this body) and Go to home. Testers asked "a pattern of what?" when the button said "Start a pattern": the garment comes before the pattern.
+7. **Rise** (the seated measurement) shows a **seated side-view figure on a chair** (`SeatedFigure`) with the tape from waist to seat.
 
 **The other 20 measures:**
-- **Groups:** **Wraps, Lengths, Widths, Seated**. These replace "Around / Down / Across / Sitting", which Santiago disliked.
-- **Progress:** "Base · Wraps · Lengths · Widths · Seated".
+- **Groups (sewing terms):** **Circumferences** (measured around the body), **Lengths** (top to bottom), **Widths** (side to side) and **Rise** (sitting on a hard chair). Testers did not understand "Wraps". Each group's description says which way the tape goes.
+- **Progress:** "Base · Around · Lengths · Widths · Rise" (short labels).
+- The last step of a group says just **"Finish"**. Copy says "measurements", not "measures" or "numbers".
 - **`wizard`:** prep tips (tape, a friend, fitted clothes), then the group list.
   - Base measures show as done.
   - The next group is outlined "Up next". The list is a guide, not a menu.
@@ -227,21 +226,30 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - "Continue with {next}" and "Take a break, finish later".
   - Taking a break goes **home**, which then shows a **"Continue finishing your measures"** card (`resumeBody`).
 - **`alldone`:** the count, then every group including base, each with a dropdown of values. Tapping a value edits it.
-  - Button: "Save body". There is no "Edit dimension" button.
+  - "Open any group to see your measurements. Tap a measurement to change it." Button: "Save body".
 
 **Home (`home`), redesigned so it looks nothing like the setup flows:**
-- **Top: a periwinkle hero** (`.home-hero`) that bleeds under the status bar and ends in rounded bottom corners. Dark ink text on it.
+- **Top: a periwinkle hero** (`.home-hero`) that bleeds under the status bar and ends in rounded bottom corners. Text on it is a deep indigo (`#252c66`), softer than black.
   - Avatar, greeting and name, and a search button.
   - "What are we making?" and "Start from any look you love. We draft it to {body}."
-  - A frosted card (`.hero-card`) with four dark square shortcuts: **Photo, Link, Sketch, Template**. Photo, Link and Sketch start a pattern (pick the body, then the prompt screen opens the matching input through `draft.start`). Template opens templates.
+  - A frosted card (`.hero-card`) with four shortcuts filled with the Create button's periwinkle (`.herotile`): **Photo, Link, Sketch, Pre-made**. Photo, Link and Sketch start a pattern (pick the body, then the prompt screen opens the matching input through `draft.start`). Pre-made opens the pattern library.
 - **Below, on the dark page:** notices (finish your measures, take the tour), **Your bodies** (a horizontal row with a dashed "+" first, then each body), **Your patterns** (the three latest, with a status dot), and a Templates row. Each section has a "View all".
 - Desktop uses the same structure: the hero becomes a rounded card with the shortcuts on the right, and bodies and patterns sit side by side.
 
 **Elsewhere:**
 - **home, bodies, patterns, you:** tab bar on phones, sidebar on desktop.
 - **Pattern flow:** `patSelectBody` → `prompt` → `ref` → `ai` → `generating` → `garment` → `edits`.
-- **Templates:** `templates` → `template` → `tplBody` → `tplFit` → `tplResult`.
-- **Print:** `seam` → `arrange` → `printMethod` → `needs` → `print` → `pages` → `minimap` → `printed`.
+  - `patSelectBody`: "Who is this pattern for?", a **vertical list** of bodies (no swiping), plus "New body".
+  - `prompt` ("What are we making?"): a big photo drop area, then **Paste a link** and **Sketch it** tiles, then **Choose a pre-made pattern**. Voice, "describe it" and the three bottom buttons were removed. Nothing pre-filled, no step counter.
+  - `garment`: just the garment on the body, with Make edits / Looks right. No floating labels and no "Make edits before printing" line.
+- **Pre-made patterns (`templates`):** renamed from templates/styles. Category chips plus a **level filter: All / Easy / Intermediate / Hard**. Cards show level and pieces; the detail page shows pieces and a tag only (no level, no hours).
+  - Opened from the prompt screen (`{ picked: true }`), the body is already known, so the detail button says "Fit to {name}" and skips `tplBody`.
+- **Print, in dependency order, with a progress header** (Printer · Seams · Layout · Fabric · Print; X returns to the garment):
+  - `printMethod` "How are you printing it?" (A4 at home or A0 at a print shop) → `seam` → `arrange` → `needs` → `print` → `printed`.
+  - `arrange`: the real paper. A 4 × 4 grid where each cell is one A4 sheet; pieces are drawn to scale and draggable, and sheets that a piece touches are tinted. The count "N of 16 A4 sheets to print" updates as you drag (stored as `draft.sheets`). Rotate piece and Start over.
+  - `needs`: "Fabric to buy: 2.4 metres" in plain words, then "Fabrics that work well". Notions and the "Best" badge were removed.
+  - `print`: a summary (pattern, body, paper, seam allowance), "Print N sheets", and "Save as PDF instead". The old "Pages to print" picker was removed.
+  - `printed`: "Good job! Your pattern is complete. Now you can start making your {dress}." Support resources and the mini map stay here.
 - Body, seam and printer choices are no longer pre-selected.
 
 ## 7. State model (`src/lib/store.ts`)
@@ -257,7 +265,11 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - `photoScan`.
 - `activeBody`, `patterns`, `draft` (the pattern being made).
 
-## 8. Status (updated 3 Oct 2026, second round)
+## 8. Status (updated 4 Oct 2026, user-testing round)
+
+**User-testing round (done, 4 Oct 2026):** after interviews with a hobbyist sewist, everything in §5–§6 marked as changed: the primary button everywhere with the `showNeeded` hint, no time estimates, the tour question and manual onboarding, the new start page, plainer preferences, the body naming page, method and scan copy, the "add 20 more" sheet, sewing-term group names with a seated Rise figure, the ready screen's "Choose what to make", the softer home colours, the vertical body list, the cleaned-up prompt screen, the pre-made pattern library with levels, and the reordered print flow with a real A4 layout.
+
+**Still open from testing:** global text size +1px (a proper type scale with a 15px minimum is the better fix), slower loading screens, "Alter" instead of "Make edits", a "Continue your {garment}" card on home, and whether to rename "body".
 
 **Second review round (done):** centred onboarding text, full-width progress bars, centred wizard numbers, how-to steps moved into the "?" sheet only, full-width centred body figures (measure and ready screens), Check/Edit on the base review, the new home and the new tab bar.
 

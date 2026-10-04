@@ -16,19 +16,18 @@ const Note = ({ icon = "info", children, className }: { icon?: IconName; childre
 
 // ─── App preferences: asked once, before the first body. Units default to cm (never "none"). ─────────
 const EXP = [
-  { t: "New to sewing", d: "Never made a garment", n: "01", chips: ["Step-by-step help", "Plain language"] },
-  { t: "I’ve made a few things", d: "Sews from patterns, doesn’t draft", n: "02", chips: ["Guided steps", "Plain language"] },
-  { t: "I sew professionally", d: "Drafts, alters, knows the terms", n: "03", chips: ["Pattern terms", "Fewer tips"] },
+  { t: "Beginner", d: "I’m new to sewing" },
+  { t: "Intermediate", d: "I’ve made a few things from patterns" },
+  { t: "Advanced", d: "I sew often, or professionally" },
 ];
 export function Prefs() {
   const { units, experience, set, go } = useApp();
   return (
     <Screen header={<TopBar left="close" onLeft={useApp.getState().exitFlow} />} footer={<Arrows ready={experience !== null} onNext={() => { set({ prefsDone: true }); go("name"); }} />}>
       <Split left={<>
-        <HS className="mt-2 lg:mt-0">Two quick<br />preferences</HS>
-        <Lead className="mt-3">They apply to every body and pattern. Change them any time in Profile.</Lead>
+        <HS className="mt-2 lg:mt-0">Before we begin</HS>
       </>} right={<>
-        <Label className="mt-7 lg:mt-0">Measure in</Label>
+        <Label className="mt-7 lg:mt-0">Do you measure in centimetres or inches?</Label>
         <div className="mt-2.5 grid grid-cols-2 gap-3">
           {(["cm", "in"] as const).map((u) => (
             <Option key={u} on={units === u} onClick={() => set({ units: u })} className="h-[104px] rounded-[22px] p-4 lg:h-[150px]">
@@ -38,31 +37,20 @@ export function Prefs() {
             </Option>
           ))}
         </div>
-        <Label className="mt-6">How much have you sewn?</Label>
-        <div className="mt-2.5 flex flex-col gap-2.5">
-          {EXP.map((e, i) => {
-            const on = experience === i;
-            return (
-              <Option key={i} on={on} radio={false} onClick={() => set({ experience: i })} className={cx("flex flex-col rounded-[22px] px-4 py-3.5 transition-[min-height] duration-300", on ? "min-h-[132px] justify-between" : "min-h-[76px] justify-center")}>
-                <div className={cx("flex justify-between gap-3", on ? "items-start" : "items-center")}>
-                  <div><div className="text-[17px] font-medium">{e.t}</div><div className="mt-0.5 text-[14px] text-white/55">{e.d}</div></div>
-                  <span className={cx("serif text-[28px] leading-none", on ? "text-white" : "text-white/40")}>{e.n}</span>
-                </div>
-                <AnimatePresence initial={false}>{on && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3 flex items-center justify-between">
-                    <div className="flex flex-wrap gap-1.5">{e.chips.map((c) => <span key={c} className="rounded-full bg-white/15 px-2.5 py-1 text-[13px]">{c}</span>)}</div>
-                    <Check size={22} />
-                  </motion.div>)}</AnimatePresence>
-              </Option>
-            );
-          })}
+        <Label className="mt-6">What’s your sewing level?</Label>
+        <div className="mt-2.5 flex flex-col gap-2.5" data-need={experience === null ? "1" : "0"}>
+          {EXP.map((e, i) => (
+            <Option key={i} on={experience === i} onClick={() => set({ experience: i })} className="flex min-h-[76px] flex-col justify-center rounded-[22px] px-4 py-3.5 pr-12">
+              <div className="text-[17px] font-medium">{e.t}</div><div className="mt-0.5 text-[15px] text-white/60">{e.d}</div>
+            </Option>
+          ))}
         </div>
       </>} />
     </Screen>
   );
 }
 
-// ─── Step 1 · Body: name + pattern block on one screen. Nothing pre-filled. ───────────────────────
+// ─── Step 1 · Body: a name and a starting form, on one screen. Nothing pre-filled. ───────────────────
 export function NameBody() {
   const { go } = useApp();
   const body = useApp((s) => s.body());
@@ -72,28 +60,27 @@ export function NameBody() {
   const ready = name.trim().length > 0 && sex !== null;
   const next = () => { update({ name: name.trim(), sex: sex! }); go("method"); };
   return (
-    <Screen header={<FlowHeader steps={bodySteps(0, (name.trim() ? 0.5 : 0) + (sex ? 0.5 : 0))} />} footer={<Arrows ready={ready} onNext={next} hidePrev />}>
+    <Screen header={<FlowHeader steps={bodySteps(0, (name.trim() ? 0.5 : 0) + (sex ? 0.5 : 0))} />} footer={<Arrows ready={ready} onNext={next} hidePrev label="Next" />}>
       <Split left={<>
-        <HS className="mt-4 lg:mt-0">Who is this<br />body for?</HS>
-        <Lead className="mt-3">Make one for each person you sew for: you, family or clients.</Lead>
+        <HS className="mt-4 lg:mt-0">Who are you<br />measuring?</HS>
+        <Lead className="mt-3">Give this body a name, so you can find it later.</Lead>
       </>} right={<>
         <label className="mt-7 block lg:mt-0">
           <Label>Name</Label>
-          <span className="field mt-2.5 flex h-[60px] items-center px-4">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Me, Mum or Ana" maxLength={28} autoComplete="off" enterKeyHint="next" className="text-[19px]" />
+          <span className="field mt-2.5 flex h-[60px] items-center px-4" data-need={name.trim() ? "0" : "1"}>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter a name" maxLength={28} autoComplete="off" enterKeyHint="next" className="text-[19px]" />
             {name && <button onClick={() => setName("")} aria-label="Clear" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-white/70"><Icon name="close" size={14} /></button>}
           </span>
         </label>
-        <Label className="mt-6">Start the pattern from a</Label>
-        <div className="mt-2.5 grid grid-cols-2 gap-3">
+        <Label className="mt-6">Start the body with a</Label>
+        <div className="mt-2.5 grid grid-cols-2 gap-3" data-need={sex ? "0" : "1"}>
           {(["female", "male"] as const).map((s) => (
             <Option key={s} on={sex === s} onClick={() => setSex(s)} className="flex h-[150px] items-end rounded-[22px] p-4 lg:h-[220px]">
               <div className="absolute left-4 top-3 h-[86px] lg:h-[150px]"><BodyFigure sex={s} width={36} glow={false} className="h-full w-auto" /></div>
-              <div><div className="text-[17px] font-medium">{s === "female" ? "Women’s block" : "Men’s block"}</div><div className="text-[14px] text-white/55">{s === "female" ? "Shaped for a bust" : "Straighter chest"}</div></div>
+              <div className="text-[17px] font-medium">{s === "female" ? "Female form" : "Male form"}</div>
             </Option>
           ))}
         </div>
-        <Note className="mt-4">The block is only the starting shape. The measurements you enter always take over.</Note>
       </>} />
     </Screen>
   );
@@ -108,23 +95,21 @@ export function Method() {
     if (m === "scan") go("scanPrep");
     else { update({ photoScan: false, est: [] }); go("measure", { key: "height" }); }
   };
-  const opt = (k: "scan" | "hand", icon: IconName, t: string, d: string, time: string) => (
+  const opt = (k: "scan" | "hand", icon: IconName, t: string, d: string) => (
     <Option on={m === k} onClick={() => setM(k)} className="rounded-[24px] p-5 lg:p-7">
       <span className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Icon name={icon} size={22} /></span>
       <div className="mt-4 text-[19px] font-medium tracking-[-.01em]">{t}</div>
-      <div className="mt-1 max-w-[280px] text-[15px] leading-snug text-white/60">{d}</div>
-      <div className="mt-3 text-[14px] text-white/45">{time}</div>
+      <div className="mt-1 max-w-[290px] text-[16px] leading-snug text-white/65">{d}</div>
     </Option>
   );
   return (
-    <Screen header={<FlowHeader steps={bodySteps(1, m ? 0.5 : 0)} />} footer={<Arrows ready={!!m} onNext={next} label={m === "scan" ? "Open photo scan" : "Start measuring"} />}>
+    <Screen header={<FlowHeader steps={bodySteps(1, m ? 0.5 : 0)} />} footer={<Arrows ready={!!m} onNext={next} label={m === "scan" ? "Open photo scan" : m === "hand" ? "Start measuring" : "Next"} />}>
       <Split left={<>
-        <HS className="mt-4 lg:mt-0">How do you want<br />to add measures?</HS>
-        <Lead className="mt-3">Either way, you check every number before it’s saved.</Lead>
+        <HS className="mt-4 lg:mt-0">Choose how<br />to measure</HS>
       </>} right={
-        <div className="mt-7 flex flex-col gap-3 lg:mt-0">
-          {opt("scan", "camera", "Scan with my camera", "Take three photos. AI estimates your measures, then you check each one.", "About 2 minutes")}
-          {opt("hand", "tape", "Measure by hand", "Grab a soft tape. We guide you through four measures, one at a time.", "About 4 minutes")}
+        <div className="mt-7 flex flex-col gap-3 lg:mt-0" data-need={m ? "0" : "1"}>
+          {opt("scan", "camera", "Scan with my camera", "Take 3 photos. AI estimates your measurements, then you check each one.")}
+          {opt("hand", "tape", "Measure by hand", "Use a soft measuring tape. We guide you through 4 measurements.")}
         </div>} />
     </Screen>
   );
@@ -142,7 +127,7 @@ export function BaseMeasures() {
   return (
     <Screen header={<FlowHeader steps={bodySteps(3, all ? 1 : checked / 4)} />} footer={<Arrows ready={all} onNext={() => setSheet(true)} label="Continue" />}>
       <Split left={<>
-        <HS className="mt-4 lg:mt-0">{scan ? <>Check your<br />measures</> : <>Your base<br />measures</>}</HS>
+        <HS className="mt-4 lg:mt-0">{scan ? <>Check your<br />measurements</> : <>Your base<br />measurements</>}</HS>
         <Lead className="mt-3">{scan ? `AI estimated these from your photos. Tap each one to check it. ${checked} of 4 checked.` : "Tap any one to change it."}</Lead>
         <div className="mt-10 hidden justify-center lg:flex"><BodyFigure sex={body.sex} width={170} markers={[BASE[1].marker, BASE[2].marker, BASE[3].marker]} /></div>
       </>} right={<>
@@ -193,11 +178,11 @@ function FinishSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
   const n = body.done.length;
   return (
     <Sheet open={open} onClose={onClose}>
-      <div className="flex items-baseline gap-2"><span className="serif text-[52px] leading-none">{n}/24</span><span className="text-[15px] text-white/60">measures saved</span></div>
-      <div className="mt-3 flex gap-[4px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1.5 flex-1 rounded-full", i < n ? "bg-primary" : "bg-white/15")} />)}</div>
-      <h3 className="mt-6 text-[26px] font-normal leading-tight tracking-[-.03em]">Add the other 20 now?</h3>
-      <p className="mt-2 text-[16px] leading-snug text-white/60">{body.photoScan ? "AI estimated them from your photos too. You just check each one, about 3 minutes." : "They give the closest fit. About 8 minutes with a tape, and you can stop any time."}</p>
-      <Pill className="mt-6" onClick={() => { onClose(); go("wizard"); }}>Yes, continue</Pill>
+      <div className="flex items-center gap-2.5 text-[16px] text-white/75"><span className="grid h-6 w-6 place-items-center rounded-full bg-primary"><Icon name="check" size={14} strokeWidth={3} /></span>{n} measurements saved</div>
+      <h3 className="mt-5 text-[26px] font-normal leading-tight tracking-[-.03em]">Great job getting this far</h3>
+      <p className="mt-2 text-[17px] leading-snug text-white/85">Would you like to add 20 more measurements to make your body even more precise?</p>
+      <p className="mt-2 text-[16px] leading-snug text-white/60">{body.photoScan ? "AI estimated them from your photos too. You just check each one." : "They give the closest fit. You can stop any time and finish later."}</p>
+      <Pill className="mt-6" onClick={() => { onClose(); go("wizard"); }}>Yes, add 20 more</Pill>
       <Pill className="mt-2.5" variant="glass" onClick={() => { onClose(); set({ resumeBody: activeBody }); go("ready"); }}>Later</Pill>
     </Sheet>
   );
@@ -205,10 +190,9 @@ function FinishSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
 
 // ─── Photo scan ───────────────────────────────────────────────────────
 const TIPS: [IconName, string, string][] = [
-  ["shirt", "Wear fitted clothes", "Leggings and a fitted top, or underwear."],
+  ["shirt", "Wear fitted clothes", "Leggings or a fitted top."],
   ["wall", "Stand against a plain wall", "Good, even light. No mirrors behind you."],
-  ["phone", "Prop the phone at hip height", "Or ask a friend to hold it level."],
-  ["body", "Step back", "Your whole body, head to feet, fits the frame."],
+  ["phone", "Place the phone at hip height", "Prop it up, or ask a friend to hold it for you."],
 ];
 export function ScanPrep() {
   const { go } = useApp();
@@ -216,7 +200,7 @@ export function ScanPrep() {
     <Screen header={<FlowHeader steps={bodySteps(2, 0)} />} footer={<Arrows ready onNext={() => go("scanCam")} label="Open camera" />}>
       <Split left={<>
         <HS className="mt-4 lg:mt-0">Before you scan</HS>
-        <Lead className="mt-3">Three photos: front, back and side. Takes about a minute.</Lead>
+        <Lead className="mt-3">You’ll take 3 photos of yourself: one from the front, one from the back and one from the side.</Lead>
       </>} right={<>
         <ul className="mt-7 flex flex-col gap-5 lg:mt-0">{TIPS.map(([ic, t, d]) => (
           <li key={t} className="flex items-start gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center text-peri"><Icon name={ic} size={26} /></span><div><div className="text-[17px] font-medium">{t}</div><div className="text-[15px] text-white/55">{d}</div></div></li>
@@ -383,7 +367,7 @@ export function Preview() {
       <div className="lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-16">
         <div className="lg:order-2">
           <HS className="mt-3">{body.name || "Body"}</HS>
-          <div className="mt-1 text-[15px] text-white/55">{count} of 24 measures{body.photoScan ? " · from photo scan" : ""}</div>
+          <div className="mt-1 text-[15px] text-white/55">{count} of 24 measurements{body.photoScan ? " · from photo scan" : ""}</div>
           <p className="mt-4 hidden max-w-[400px] text-[16px] text-white/60 lg:block">Drag the figure or use the arrows to turn it. Tap any number to change it.</p>
           <div className="mt-4 hidden grid-cols-2 gap-3 lg:grid">{BASE.map((b) => (
             <Glass key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className="rounded-[22px] px-5 py-5"><div className="text-[14px] text-white/60">{b.label}</div><div className="mt-3 flex items-baseline gap-2"><span className="serif text-[48px] leading-none" translate="no">{fmt(M[b.key], units).replace(/\.0$/, "")}</span><span className="unit" translate="no">{units}</span></div></Glass>
@@ -453,14 +437,14 @@ export function Ready() {
   const left = 24 - count;
   useEffect(() => { set({ resumeBody: left > 0 ? activeBody : null }); }, [left, activeBody, set]);
   return (
-    <Screen footer={<><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt"); }}>Start a pattern</Pill><Pill variant="dark" className="mt-2.5" onClick={home}>Go to home</Pill></>}
+    <Screen footer={<><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><Pill variant="dark" className="mt-2.5" onClick={home}>Go to home</Pill></>}
       bg={<div className="absolute inset-0" style={{ background: "radial-gradient(80% 45% at 50% 18%, rgba(104,126,245,.5), transparent 70%)" }} />}>
       <Split left={<div className="h-[min(300px,36dvh)] pt-2 lg:h-[min(640px,72dvh)]"><motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }} className="h-full w-full"><BodyFigure sex={body.sex} width={140} className="h-full w-full" /></motion.div></div>} right={<>
         <div className="mt-6 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
-        <HS className="mt-3">Your body<br />is ready</HS>
-        <Lead className="mt-3">Turn a dress you love into a pattern drafted to {body.name || "this body"}.</Lead>
+        <HS className="mt-3">Well done!<br />Your body is ready</HS>
+        <Lead className="mt-3">Good job finishing {body.name ? `${body.name}’s` : "your"} measurements. Every pattern you make will be drafted to them.</Lead>
         <div className="mt-6 border-t border-white/10 pt-4">
-          <div className="flex items-baseline justify-between"><span className="text-[17px]">{body.name}</span><span className="text-[15px] text-white/60"><span className="serif text-[20px] text-white">{count}</span> of 24 measures</span></div>
+          <div className="flex items-baseline justify-between"><span className="text-[17px]">{body.name}</span><span className="text-[15px] text-white/60"><span className="serif text-[20px] text-white">{count}</span> of 24 measurements</span></div>
           <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-white/15")} />)}</div>
           {left > 0 && <button onClick={() => go("wizard")} className="mt-3 flex items-center gap-1 text-[15px] font-medium text-peri">Add the other {left} for a closer fit<Icon name="chevR" size={16} /></button>}
         </div>

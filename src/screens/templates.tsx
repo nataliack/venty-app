@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
-import { TEMPLATES, CATEGORIES, templateBy, type Category, type GarmentKey } from "@/lib/data";
+import { TEMPLATES, CATEGORIES, LEVELS, templateBy, type Category, type GarmentKey } from "@/lib/data";
 import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, cx, useToast } from "@/components/ui";
 import { Split, useDesk, FX } from "@/components/ui";
 import { BodyFigure, Flat, Piece } from "@/components/art";
@@ -19,7 +19,7 @@ function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: bo
       <div className={cx("relative flex justify-center transition-transform duration-500 ease-out group-hover:scale-[1.06]", desk ? "pt-6" : "")}><Flat g={t.key} size={desk ? 170 : 84} /></div>
       <div className={cx("absolute", desk ? "bottom-6 left-6 right-6" : "bottom-4 left-4 right-4")}>
         <div className={cx("font-semibold", desk ? "text-[20px]" : "text-[16px]")}>{t.name}</div>
-        <div className={cx("text-white/55 transition-colors group-hover:text-white/80", desk ? "text-[14px]" : "text-[11px]")}>{t.level} · {t.pieces} pieces<span className="hidden group-hover:inline"> · {t.hours}</span></div>
+        <div className={cx("text-white/55 transition-colors group-hover:text-white/80", desk ? "text-[14px]" : "text-[11px]")}>{t.level} · {t.pieces} pieces</div>
       </div>
     </div>
   );
@@ -29,27 +29,33 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
   const { go } = useApp();
   const [cat, setCat] = useState<Category>((p?.cat as Category) ?? "Dresses");
   const [q, setQ] = useState<string | null>(null);
-  const found = TEMPLATES.filter((t) => t.category === cat && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
-  const list = found.length ? found : TEMPLATES.filter((t) => t.category === cat);
+  const [level, setLevel] = useState("All");
+  const picked = !!p?.picked; // came from "What are we making?" with a body already chosen
+  const list = TEMPLATES.filter((t) => t.category === cat && (level === "All" || t.level === level) && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
+  const open = (key: GarmentKey) => go("template", { key, picked });
+  const levels = <Segmented className="lg:w-[440px]" items={["All", ...LEVELS]} value={level} onChange={setLevel} />;
+  const empty = <p className="col-span-full py-6 text-[16px] text-white/60">No {level === "All" ? "" : level.toLowerCase() + " "}{cat.toLowerCase()} yet.</p>;
   const { toast, node } = useToast();
   const desk = useDesk();
   const request = (
     <button onClick={() => toast("Thanks — we’ll add more soon")} className={cx("tap flex flex-col items-center justify-center border border-dashed border-white/25 transition-colors hover:border-white/45", desk ? "h-[min(440px,56dvh)] rounded-[30px]" : "h-[220px] rounded-[24px]")}>
-      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[15px] font-medium text-white/75">Request a style</span><span className="text-[11px] text-white/45">More coming soon</span>
+      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[15px] font-medium text-white/75">Request a pattern</span><span className="text-[11px] text-white/45">More coming soon</span>
     </button>
   );
   if (desk) return (
     <Screen wide>
-      <TopBar left="back" eyebrow="Templates · 10 styles" right="search" onRight={() => setQ(q === null ? "" : null)} />
+      <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
       <div className="mt-3 flex items-end justify-between gap-6">
-        <div><H1>Start from a template</H1><Lead className="mt-2">Pick a style, fit it to a body, get the pattern.</Lead></div>
+        <div><H1>Pre-made patterns</H1><Lead className="mt-2">Choose one, fit it to a body and get the pattern.</Lead></div>
         <div className="flex items-center gap-2">
-          {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search styles" className="glass h-10 w-[200px] rounded-full px-4 text-[15px] outline-none" />}
+          {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass h-10 w-[200px] rounded-full px-4 text-[15px] outline-none" />}
           {CATEGORIES.map((c) => <Chip key={c} on={c === cat} onClick={() => setCat(c)}>{c}</Chip>)}
         </div>
       </div>
-      <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-8 grid grid-cols-4 gap-5">
-        {list.map((t) => <TplCard key={t.key} t={t} desk onClick={() => go("template", { key: t.key })} />)}
+      <div className="mt-5">{levels}</div>
+      <motion.div key={cat + level} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-6 grid grid-cols-4 gap-5">
+        {list.map((t) => <TplCard key={t.key} t={t} desk onClick={() => open(t.key)} />)}
+        {!list.length && empty}
         {list.length < 4 && request}
       </motion.div>
       {node}
@@ -57,13 +63,15 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
   );
   return (
     <Screen>
-      <TopBar left="back" eyebrow="Templates · 10 styles" right="search" onRight={() => setQ(q === null ? "" : null)} />
-      {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search styles" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none" />}
-      <H1 className="mt-4">Start from a template</H1>
-      <Lead className="mt-2 text-[15px]">Pick a style, fit it to a body, get the pattern.</Lead>
+      <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
+      {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none" />}
+      <H1 className="mt-4">Pre-made patterns</H1>
+      <Lead className="mt-2">Choose one, fit it to a body and get the pattern.</Lead>
       <div className="-mx-6 mt-4 flex gap-2 overflow-x-auto px-6 noscroll">{CATEGORIES.map((c) => <Chip key={c} on={c === cat} onClick={() => setCat(c)}>{c}</Chip>)}</div>
-      <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
-        {list.map((t) => <TplCard key={t.key} t={t} desk={false} onClick={() => go("template", { key: t.key })} />)}
+      <div className="mt-3">{levels}</div>
+      <motion.div key={cat + level} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
+        {list.map((t) => <TplCard key={t.key} t={t} desk={false} onClick={() => open(t.key)} />)}
+        {!list.length && empty}
         {list.length % 2 === 1 && request}
       </motion.div>
       <div className="h-6" />
@@ -73,21 +81,23 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
 }
 
 export function TemplateDetail({ p }: { p?: Record<string, unknown> }) {
-  const { go, newDraft } = useApp();
+  const { go, newDraft, draft, bodies } = useApp();
   const t = templateBy((p?.key as GarmentKey) ?? "slip");
+  const picked = !!p?.picked && !!draft.bodyId;
+  const forName = bodies.find((x) => x.id === draft.bodyId)?.name.split(",")[0];
   const [len, setLen] = useState(t.defaultLength);
   const [fav, setFav] = useState(false);
   const desk = useDesk();
   return (
-    <Screen footer={<Pill onClick={() => { newDraft({ garment: t.key, source: "template", length: len }); go("tplBody"); }}>Fit to my body</Pill>}>
-      <TopBar left="back" eyebrow={`${t.category} · Template`} right="heart" onRight={() => setFav(!fav)} />
+    <Screen footer={<Pill onClick={() => { newDraft({ garment: t.key, source: "template", length: len, ...(picked ? { bodyId: draft.bodyId } : {}) }); go(picked ? "tplFit" : "tplBody"); }}>{picked && forName ? `Fit to ${forName}` : "Fit to a body"}</Pill>}>
+      <TopBar left="back" eyebrow={t.category} right="heart" onRight={() => setFav(!fav)} />
       <Split left={
       <Glow color={t.color} variant="edge" className="mt-3 grid h-[min(330px,38dvh)] place-items-center rounded-[30px] lg:mt-0 lg:h-[min(620px,70dvh)] lg:rounded-[40px]">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="animate-floaty"><Flat g={t.key} size={desk ? 320 : 200} /></motion.div>
         {fav && <span className="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1 text-[11px]">♥ Saved</span>}
       </Glow>} right={<>
       <HS className="mt-5 text-[46px] lg:mt-0 lg:text-[72px]">{t.name}</HS>
-      <div className="mt-3 flex flex-wrap gap-2">{[t.level, `${t.pieces} pieces`, t.hours, t.tag].map((c) => <span key={c} className="chip">{c}</span>)}</div>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">{[`${t.pieces} pieces`, t.tag].map((c) => <span key={c} className="text-[15px] text-white/60">{c}</span>)}</div>
       <p className="mt-4 text-[15px] leading-relaxed text-white/60 lg:max-w-[460px] lg:text-[16px]">{t.blurb}</p>
       <Eyebrow className="mt-5">Length</Eyebrow>
       <div className="mt-2 flex gap-2">{t.lengths.map((l) => <Chip key={l} on={l === len} onClick={() => setLen(l)}>{l}</Chip>)}</div>
@@ -117,7 +127,7 @@ export function TplBody() {
         {bodies.map((x) => (
           <Glass key={x.id} onClick={() => setSel(x.id)} selected={x.id === sel} className="flex h-[84px] w-full items-center gap-4 rounded-[24px] px-4 lg:h-[100px] lg:px-6">
             <BodyFigure sex={x.sex} width={26} glow={false} />
-            <div className="flex-1"><div className="text-[16px] font-semibold">{x.name}</div><div className="text-[13px] text-white/55">{x.done.length} / 24 measures</div></div>
+            <div className="flex-1"><div className="text-[16px] font-semibold">{x.name}</div><div className="text-[14px] text-white/55">{x.done.length} of 24 measurements</div></div>
             <Check on={x.id === sel} className={x.id === sel ? "!bg-primary !text-white" : ""} />
           </Glass>
         ))}
@@ -172,7 +182,7 @@ export function TplResult() {
     t.category === "Tops" ? [["Bust", M.bust, "+6 ease"], ["Across back", M.acrossBack, "Graded"], ["Arm", M.upperArm, "+3 ease"], ["Length", 58, draft.length ?? t.defaultLength]] :
     [["Bust", M.bust, "+2 ease"], ["Waist", M.waist, "+4 ease"], ["Hip", M.hips, "+6 ease"], ["Length", 112, draft.length ?? t.defaultLength]];
   return (
-    <Screen footer={<div className="flex gap-3"><Pill variant="glass" className="flex-1" onClick={() => go("edits")}>Tweak fit</Pill><Pill className="flex-1" onClick={() => go("seam")}>Get pattern</Pill></div>}>
+    <Screen footer={<div className="flex gap-3"><Pill variant="glass" className="flex-1" onClick={() => go("edits")}>Tweak fit</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Get pattern</Pill></div>}>
       <TopBar left="back" eyebrow={`Fitted to ${b.name}`} />
       <div className="lg:flex lg:items-end lg:justify-between">
       <H1 className="mt-3">{t.name}, on you</H1>
