@@ -231,11 +231,10 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - "Open any group to see your measurements. Tap a measurement to change it." Button: "Save body".
 
 **Home (`home`):**
-- **Top: a periwinkle hero styled as a cutting mat** (`.home-hero` + `.hero-mat`): fine and coarse grid lines fading out, a ruler strip along the bottom edge, rounded bottom corners, bleeding under the status bar. Text is deep indigo (`#252c66`).
-  - Avatar, greeting and name, and a search button.
-  - "What are we making today?" in large type, and a "Drafted to {body}" chip that opens the body library.
-  - On the right, the active body's mannequin with dashed tape rings, and a pattern piece drifting beside it.
-  - A frosted dock (`.hero-card`) with three periwinkle shortcuts (`.herotile`): **Photo** and **Sketch** (both start a pattern: pick the body, then the studio) and **Pre-made** (the pattern library).
+- **Top: the Welcome sky** (`.sky.sky-hero`, the same periwinkle haze and drifting lights, compressed and fading into the page) with a **soft graph-paper grid** (`.hero-mat`) that is strongest at the top and fades out. No ruler edge, no mannequin or floating pieces, no "drafted to" chip (home is generic, not tied to one body). White text.
+  - Avatar, greeting and name, and an **Updates bell** (replaced search). The bell shows a dot until opened; its sheet lists only things that matter: measurements to finish, a pattern ready to print, new pre-made patterns, what's new.
+  - "What are we making today?" on two lines, and one line under it.
+  - **Two ways to start**, side by side: **Photo or sketch** (periwinkle, `.start-main`; picks the body, then the studio) and **Pre-made pattern** (frosted, `.start-alt`; the library).
 - **Below, on the dark page:** notices (finish your measurements, take the tour), **Your bodies** (a horizontal row with a dashed "+" first), **Your patterns** (the three latest, with a status dot) and a Pre-made patterns row. All are solid `.card-soft` cards. Each section has a "View all".
 - **Phone tab bar:** a light floating bar; the current tab sits in a soft periwinkle capsule; the raised Create button sits in a notch.
 - **Library pages** (Body library, Pattern library) no longer show a big count next to the title. Counts live on the profile page.
@@ -245,6 +244,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **Pattern flow:** `patSelectBody` → `prompt` → `ref` → `ai` → `generating` → `garment` → `edits`.
   - `patSelectBody`: "Who is this pattern for?", a **vertical list** of bodies (no swiping), plus "New body".
   - `prompt` ("What are we making?") is **the studio**: one canvas on the page where you add a photo of a garment, sketch on it or beside it, or both (Add a photo / Undo / Clear). Continue unlocks once there is a photo or a stroke. The link option and "Choose a pre-made pattern" are gone from this flow (pre-made patterns start from home or the Create menu). Drawing happens on the page, not in a sheet, so nothing slides away while you draw.
+  - After the studio, the garment check is **three steps with a progress header (Garment · Fit · Fabric)**, not hidden tabs: `ref`/`ai` Overview "Here's what we read" (your photo and sketch merged into one picture, the garment summary, and details you tap to change; the old "92 match" is gone) → `ai` Fitting "How should it fit?" with a **dial**: a needle swings to Close, Easy or Loose (nothing pre-selected) → `ai` Fabric (fabric type, stretch, stiff or soft) → "Create my pattern". The old "Got it. How do you want to continue?" screen is gone.
   - `garment`: just the garment on the body, with Make edits / Looks right. No floating labels and no "Make edits before printing" line.
 - **Pre-made patterns (`templates`):** one row of **text tabs with a sliding underline** (Dresses, Tops, Trousers, Skirts), then "N patterns" and a single **"Any level ▾"** button that opens a small sheet (Any / Easy / Intermediate / Hard). No stacked pills. Cards are solid, with the drawing above the name and a quiet line: three small level bars, level and pieces. The detail page shows pieces and a tag only.
   - Opened from the prompt screen (`{ picked: true }`), the body is already known, so the detail button says "Fit to {name}" and skips `tplBody`.
@@ -274,6 +274,8 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 **User-testing round (done, 4 Oct 2026):** after interviews with a hobbyist sewist, everything in §5–§6 marked as changed: the primary button everywhere with the `showNeeded` hint, no time estimates, the tour question and manual onboarding, the new start page, plainer preferences, the body naming page, method and scan copy, the "add 20 more" sheet, sewing-term group names with a seated Rise figure, the ready screen's "Choose what to make", the softer home colours, the vertical body list, the cleaned-up prompt screen, the pre-made pattern library with levels, and the reordered print flow with a real A4 layout.
 
 **Same day, second pass:** tour question on the Welcome sky, full-width first Next in onboarding, a richer home hero (cutting mat, mannequin, three shortcuts), solid cards, a better tab bar, new group names, the redesigned pattern library, plain hover effects, the photo-and-sketch studio (no link option, no pre-made inside the flow), no counts on library titles, and a mini map that matches your layout.
+
+**Third pass (4 Oct 2026):** home top on the Welcome sky with a softer grid, two start choices (Photo or sketch / Pre-made pattern), the Updates bell instead of search, and the garment check as Garment · Fit (dial) · Fabric steps.
 
 **Still open from testing:** global text size +1px (a proper type scale with a 15px minimum is the better fix), slower loading screens, "Alter" instead of "Make edits", a "Continue your {garment}" card on home, and whether to rename "body".
 

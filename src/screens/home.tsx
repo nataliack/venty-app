@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
 import type { GarmentKey } from "@/lib/data";
 import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, cx, useToast, useDesk } from "@/components/ui";
-import { BodyFigure, Flat, Piece } from "@/components/art";
+import { BodyFigure, Flat } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
 // Phone navigation: a light floating bar (the same family as the home hero) with one raised Create button in a notch.
@@ -102,53 +102,76 @@ function SectionHead({ title, onAll }: { title: string; onAll: () => void }) {
   );
 }
 
-// Home: a coloured hero holds the one main job (start a pattern), set like a cutting mat: grid lines,
-// a ruler edge, the body you sew for and a pattern piece drifting beside it. Everything else sits below on the dark page.
+// Updates behind the bell: only things that matter to you (work waiting, patterns ready, what's new). No marketing.
+function useUpdates() {
+  const { bodies, patterns, resumeBody, set, go } = useApp();
+  const unfinished = bodies.find((x) => x.id === resumeBody && x.done.length < 24);
+  const ready = patterns.find((x) => x.status === "Fitting");
+  const list: { icon: IconName; t: string; d: string; when: string; go?: () => void }[] = [];
+  if (unfinished) list.push({ icon: "ruler", t: `Finish ${unfinished.name}’s measurements`, d: `${unfinished.done.length} of 24 saved. Pick up where you left off.`, when: "Today", go: () => { set({ activeBody: unfinished.id }); go("wizard"); } });
+  if (ready) list.push({ icon: "printer", t: `${ready.name} is ready to print`, d: `Drafted to ${ready.body}. Lay it out on your sheets when you’re ready.`, when: "Today", go: () => { useApp.getState().setDraft({ garment: ready.garment as GarmentKey }); go("garment"); } });
+  list.push({ icon: "dress", t: "New pre-made patterns", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", go: () => go("templates") });
+  list.push({ icon: "pencil", t: "New: sketch on your photos", d: "Add a photo and draw your changes on top of it.", when: "This week" });
+  return list;
+}
+
+function UpdatesButton() {
+  const seen = useApp((s) => s.updatesSeen);
+  const set = useApp((s) => s.set);
+  const [open, setOpen] = useState(false);
+  const list = useUpdates();
+  return (
+    <>
+      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/12 text-white backdrop-blur-md">
+        <Icon name="bell" size={21} />
+        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-[#8794c4] bg-white" />}
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)}>
+        <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Updates</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
+        <div className="flex flex-col gap-2">{list.map((u) => {
+          const body = <><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary/20 text-peri"><Icon name={u.icon} size={20} /></span>
+            <span className="min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px] font-medium">{u.t}</span><span className="shrink-0 text-[13px] text-white/45">{u.when}</span></span><span className="mt-0.5 block text-[15px] leading-snug text-white/60">{u.d}</span></span></>;
+          return u.go
+            ? <button key={u.t} onClick={() => { setOpen(false); u.go!(); }} className="card-soft tap flex items-start gap-3.5 rounded-[20px] p-4 text-left">{body}</button>
+            : <div key={u.t} className="flex items-start gap-3.5 rounded-[20px] border border-white/8 p-4">{body}</div>;
+        })}</div>
+      </Sheet>
+    </>
+  );
+}
+
+// Home: the top keeps the Welcome sky (with a soft graph-paper grid fading down) and holds the one main job,
+// starting a pattern, as two clear choices. Everything else sits below on the dark page.
 export function Home() {
   const { go, user, bodies, patterns, newDraft, setDraft, startBody, set } = useApp();
-  const body = useApp((s) => s.body());
   const name = user.guest ? "Guest" : user.name;
   const desk = useDesk();
   const make = () => { newDraft(); go("patSelectBody"); };
-  const actions: [IconName, string, () => void][] = [
-    ["image", "Photo", make],
-    ["pencil", "Sketch", make],
-    ["dress", "Pre-made", () => go("templates")],
-  ];
-  const rings = [{ kind: "ring" as const, y: 140, w: 100 }, { kind: "ring" as const, y: 205, w: 72 }, { kind: "ring" as const, y: 275, w: 110 }];
   return (
     <Screen noPad footer={desk ? undefined : <TabBar tab="home" />}>
-      <section className="home-hero relative overflow-hidden px-5 pb-10 lg:px-12 lg:pb-14 lg:pt-8">
+      <section className="home-hero relative px-5 pb-7 lg:px-12 lg:py-12">
+        <div className="sky sky-hero"><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /></div>
         <div className="hero-mat" aria-hidden />
-        <span className="ticks hero-ticks" aria-hidden />
         <div className="relative">
           <div className="flex h-12 items-center gap-3 pt-1">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#252c66] text-[17px] font-medium text-white">{name[0].toUpperCase()}</span>
-            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-[#252c66]/65">{greet()}</div><div className="truncate text-[17px] font-medium text-[#252c66]">{name}</div></div>
-            <button onClick={() => go("templates")} aria-label="Search patterns" className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/40 text-[#252c66] lg:hidden"><Icon name="search" size={20} /></button>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/15 text-[17px] font-medium backdrop-blur-md">{name[0].toUpperCase()}</span>
+            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-white/75">{greet()}</div><div className="truncate text-[17px] font-medium">{name}</div></div>
+            <UpdatesButton />
           </div>
-          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:items-end lg:gap-12">
-            <div className="mt-2 flex items-end gap-1 lg:mt-6">
-              <div className="min-w-0 flex-1 pb-3">
-                <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 !text-[40px] !leading-[1.02] text-[#252c66] [text-wrap:balance] lg:!text-[68px]">What are we making today?</motion.h1>
-                <button onClick={() => go("bodies")} className="tap mt-4 flex items-center gap-1.5 rounded-full bg-white/35 py-1.5 pl-3 pr-2 text-[14px] font-medium text-[#252c66]">
-                  Drafted to {body.name || "your body"}<Icon name="chevR" size={15} />
-                </button>
-              </div>
-              <div className="relative h-[220px] w-[124px] shrink-0 lg:h-[330px] lg:w-[190px]">
-                <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }} className="absolute inset-0">
-                  <BodyFigure sex={body.sex} width={120} markers={rings} className="h-full w-full" />
-                </motion.div>
-                <div className="animate-floaty absolute -left-9 bottom-6 rotate-[-14deg] opacity-90 lg:-left-14 lg:bottom-10"><Piece k="bodiceFront" width={desk ? 70 : 46} /></div>
-              </div>
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-end lg:gap-12">
+            <div>
+              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[36px] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
+              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-white/75 lg:text-[18px]">Start from a photo or a sketch, or pick one of our pre‑made patterns.</p>
             </div>
-            <div className="hero-card mt-3 grid grid-cols-3 gap-2 rounded-[28px] p-3 lg:mt-0 lg:gap-3 lg:p-4">
-              {actions.map(([ic, l, fn]) => (
-                <button key={l} onClick={fn} className="tap flex flex-col items-center gap-2 rounded-[20px] py-2 lg:py-4">
-                  <span className="herotile grid h-[58px] w-[58px] place-items-center rounded-[19px] text-white lg:h-[78px] lg:w-[78px] lg:rounded-[24px]"><Icon name={ic} size={25} /></span>
-                  <span className="text-[15px] font-medium text-[#252c66]">{l}</span>
-                </button>
-              ))}
+            <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
+              <button onClick={make} className="start-main tap flex min-h-[136px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
+                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/20"><Icon name="image" size={21} /></span><Icon name="chevR" size={20} className="text-white/80" /></span>
+                <span><span className="block text-[17px] font-medium lg:text-[19px]">Photo or sketch</span><span className="mt-0.5 block text-[14px] leading-snug text-white/80">Upload a look or draw your idea</span></span>
+              </button>
+              <button onClick={() => go("templates")} className="start-alt tap flex min-h-[136px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
+                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/15"><Icon name="dress" size={21} /></span><Icon name="chevR" size={20} className="text-white/70" /></span>
+                <span><span className="block text-[17px] font-medium lg:text-[19px]">Pre-made pattern</span><span className="mt-0.5 block text-[14px] leading-snug text-white/75">Choose from our library</span></span>
+              </button>
             </div>
           </div>
         </div>

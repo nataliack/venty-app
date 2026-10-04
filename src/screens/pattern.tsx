@@ -7,20 +7,20 @@ import { FLUTTER, templateBy, type GarmentKey, type PieceKey } from "@/lib/data"
 import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, RB, Arrows, Check, Option, Segmented, Sheet, cx, Blob, Field, Split, useDesk } from "@/components/ui";
 import { BodyFigure, Piece, Ruler } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
+import { FlowHeader } from "./measure";
 
 export const garmentName = (g: GarmentKey) => (g === "flutter" ? FLUTTER.name : templateBy(g).name);
 export const piecesFor = (g: GarmentKey): PieceKey[] => (g === "flutter" ? ["bodiceFront", "bodiceBack", "sleeve", "skirtFront", "skirtBack", "facing"] : templateBy(g).pieceSet);
 
-// Reference thumbnail: the uploaded photo, or an illustrated stand-in.
+// Reference thumbnail: your photo and sketch (merged into one image in the studio), or an illustrated stand-in.
 export function RefImage({ className }: { className?: string }) {
   const draft = useApp((s) => s.draft);
   // eslint-disable-next-line @next/next/no-img-element
-  if (draft.photo) return <img src={draft.photo} alt="Your reference" className={cx("h-full w-full object-cover", className)} />;
+  if (draft.photo) return <img src={draft.photo} alt="Your photo and sketch" className={cx("h-full w-full bg-[#121427] object-contain", className)} />;
   return (
     <div className={cx("relative grid h-full w-full place-items-center overflow-hidden", className)} style={{ background: "linear-gradient(160deg,#8c9cf8,#4f63e0 60%,#2b3470)" }}>
       <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,.5) 1px, transparent 1.2px)", backgroundSize: "6px 6px" }} />
       <BodyFigure width={90} variant="solid" garment={draft.garment} glow={false} dim={0.35} />
-      {draft.source === "link" && <span className="absolute bottom-2 left-2 rounded-full bg-black/40 px-2 py-1 text-[9px]">pinterest.com</span>}
     </div>
   );
 }
@@ -61,6 +61,7 @@ export function Prompt() {
   const cur = useRef<Stroke | null>(null);
   const [n, setN] = useState(0); // number of strokes, for the UI
   const [photo, setPhoto] = useState<string | null>(null);
+  const pic = useRef<HTMLImageElement>(null);
   const desk = useDesk();
 
   const ctx = () => { const c = cv.current; const g = c?.getContext("2d"); if (!c || !g) return null; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#fff"; g.lineWidth = 2.6 * (window.devicePixelRatio || 1); return { c, g }; };
@@ -87,9 +88,23 @@ export function Prompt() {
   const clear = () => { strokes.current = []; redraw(); setN(0); setPhoto(null); };
   const onFile = (f?: File) => { if (!f) return; try { setPhoto(URL.createObjectURL(f)); } catch { /* ignore */ } };
   const ready = !!photo || n > 0;
+  // merge the photo (fitted the way it is shown) and the sketch into one picture for the next steps
+  const merge = () => {
+    const c = cv.current; if (!c || !c.width) return undefined;
+    const out = document.createElement("canvas"); out.width = c.width; out.height = c.height;
+    const g = out.getContext("2d"); if (!g) return undefined;
+    g.fillStyle = "#121427"; g.fillRect(0, 0, out.width, out.height);
+    const img = pic.current;
+    if (photo && img?.naturalWidth) {
+      const pad = 16 * (window.devicePixelRatio || 1), k = Math.min((out.width - pad * 2) / img.naturalWidth, (out.height - pad * 2) / img.naturalHeight);
+      const w = img.naturalWidth * k, h = img.naturalHeight * k; g.drawImage(img, (out.width - w) / 2, (out.height - h) / 2, w, h);
+    }
+    g.drawImage(c, 0, 0);
+    try { return out.toDataURL("image/jpeg", 0.82); } catch { return photo ?? undefined; }
+  };
   const next = () => {
-    setDraft({ photo: photo ?? undefined, source: photo ? "photo" : "sketch", garment: "flutter" });
-    go("ref", photo && n ? { note: "From your photo and sketch: fitted bodice, flared midi skirt." } : photo ? undefined : { note: "From your sketch: fitted bodice, flared midi skirt." });
+    setDraft({ photo: merge(), source: photo ? "photo" : "sketch", garment: "flutter", chosen: {} });
+    go("ref");
   };
 
   const tool = (icon: IconName, label: string, fn: () => void, on = true) => (
@@ -105,7 +120,7 @@ export function Prompt() {
   const canvas = (
     <div className={cx("relative overflow-hidden rounded-[28px] border border-white/15 bg-[#121427]", desk ? "h-[min(640px,70dvh)]" : "h-[min(430px,50dvh)]")} style={{ backgroundImage: "radial-gradient(rgb(255 255 255 / .12) 1px, transparent 1.3px)", backgroundSize: "18px 18px" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {photo && <img src={photo} alt="Your garment photo" className="pointer-events-none absolute inset-0 h-full w-full object-contain p-4" />}
+      {photo && <img ref={pic} src={photo} alt="Your garment photo" className="pointer-events-none absolute inset-0 h-full w-full object-contain p-4" />}
       {!ready && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
           <span className="grid h-14 w-14 place-items-center rounded-full bg-white/10"><Icon name="pencil" size={24} /></span>
@@ -129,106 +144,122 @@ export function Prompt() {
   );
 }
 
-// P04 · reference added
-export function Reference({ p }: { p?: Record<string, unknown> }) {
-  const { go } = useApp();
-  const note = (p?.note as string) ?? "Midi length, flutter sleeves, fitted waist, V neck.";
-  const [edit, setEdit] = useState(false);
-  const [n, setN] = useState(note);
+// P04–P07 · check the garment, then choose the fit, then the fabric. One step each, with a progress bar.
+const MAKE_STEPS = ["Garment", "Fit", "Fabric"];
+const exitMake = () => {
+  const s = useApp.getState(); const at = s.stack.map((r) => r.id).lastIndexOf("prompt");
+  if (at >= 0) useApp.setState({ stack: s.stack.slice(0, at + 1), dir: -1 }); else s.back();
+};
+const MakeHeader = ({ step, sub }: { step: number; sub: number }) => <FlowHeader steps={MAKE_STEPS.map((label, i) => ({ label, value: i < step ? 1 : i === step ? sub : 0 }))} onClose={exitMake} />;
+const FITS = [["Close", 1, "Skims the body"], ["Easy", 4, "A little room to move"], ["Loose", 8, "Relaxed and flowing"]] as const;
+const fitOf = (ease: number) => (ease <= 2 ? 0 : ease >= 7 ? 2 : 1);
+
+// Fit dial: a needle on a half circle points at Close, Easy or Loose and swings when you change it.
+function FitDial({ pick }: { pick: number | null }) {
+  const angles = [-58, 0, 58];
+  const ox = 150, oy = 150, r = 112;
+  const pt = (deg: number, rad: number) => [ox + rad * Math.sin((deg * Math.PI) / 180), oy - rad * Math.cos((deg * Math.PI) / 180)];
   return (
-    <Screen footer={<Arrows onNext={() => go("generating")} />}>
-      <div className="h-12" />
-      <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<div className="hidden h-[min(600px,68dvh)] overflow-hidden rounded-[32px] border border-white/15 lg:block"><RefImage /></div>} right={<>
-      <Eyebrow>New pattern</Eyebrow>
-      <H1 className="mt-4">Got it. How do you<br />want to continue?</H1>
-      <div className="mt-5 grid grid-cols-[150px_1fr] gap-3 lg:grid-cols-1">
-        <div className="h-[190px] overflow-hidden rounded-[22px] border border-white/15 lg:hidden"><RefImage /></div>
-        <Glass className="relative rounded-[22px] p-4 lg:min-h-[130px] lg:p-5">
-          <Eyebrow>Your note</Eyebrow>
-          {edit ? <textarea autoFocus value={n} onChange={(e) => setN(e.target.value)} onBlur={() => setEdit(false)} className="mt-2 h-[100px] w-full resize-none bg-transparent text-[14px] outline-none" /> : <p className="mt-2 text-[14px] leading-snug">{n}</p>}
-          <button onClick={() => setEdit(true)} className="chip absolute bottom-3 left-3 !h-8"><Icon name="pencil" size={13} />Edit</button>
-        </Glass>
+    <div className="relative mx-auto w-full max-w-[340px]">
+      <div className="pointer-events-none absolute inset-x-[-20%] top-[10%] h-[120%]" style={{ background: "radial-gradient(50% 50% at 50% 55%, rgb(104 126 245 / .38), rgb(104 126 245 / .12) 45%, transparent 75%)", filter: "blur(24px)" }} />
+      <div className="relative">
+      <svg viewBox="0 0 300 172" className="relative w-full" aria-hidden>
+        <path d={`M ${pt(-90, r).join(" ")} A ${r} ${r} 0 0 1 ${pt(90, r).join(" ")}`} fill="none" stroke="rgb(255 255 255 / .14)" strokeWidth="14" strokeLinecap="round" />
+        {Array.from({ length: 19 }, (_, i) => -90 + i * 10).map((d) => { const [x1, y1] = pt(d, r - 22); const [x2, y2] = pt(d, r - (d % 30 === 0 ? 32 : 27)); return <line key={d} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgb(255 255 255 / .3)" strokeWidth="1.4" />; })}
+        {FITS.map(([l], i) => { const [x, y] = pt(angles[i], r + 0); return <circle key={l} cx={x} cy={y} r={pick === i ? 7 : 4} fill={pick === i ? "#fff" : "rgb(255 255 255 / .45)"} style={{ transition: "r .3s, fill .3s" }} />; })}
+      </svg>
+      {/* the needle is an HTML element so it always turns around the dial's centre */}
+      <motion.span initial={false} animate={{ rotate: pick === null ? 0 : angles[pick], opacity: pick === null ? 0.25 : 1 }} transition={{ type: "spring", stiffness: 140, damping: 14 }}
+        className="absolute w-[4px] rounded-full bg-white" style={{ left: "50%", bottom: `${((172 - oy) / 172) * 100}%`, height: `${((r - 30) / 172) * 100}%`, translate: "-50% 0", transformOrigin: "50% 100%", marginBottom: 0 }} />
+      <span className="absolute grid h-[22px] w-[22px] place-items-center rounded-full bg-white" style={{ left: "50%", bottom: `${((172 - oy) / 172) * 100}%`, translate: "-50% 50%" }}><span className="h-2 w-2 rounded-full bg-primary" /></span>
       </div>
-      <Glow as="button" color="#687ef5" variant="side" onClick={() => go("generating")} className="relative mt-4 block w-full rounded-[26px] p-5 lg:p-7">
-        <div className="flex items-center gap-2 text-[16px] font-semibold"><Icon name="sparkle" size={18} />Generate now</div>
-        <div className="mt-1 text-[13px] text-white/65">Venty decides the details. Edit anything after.</div>
-        <Check className="absolute right-4 top-4" />
-      </Glow>
-      <Glass onClick={() => go("ai")} className="mt-3 block w-full rounded-[26px] p-5 lg:p-7">
-        <div className="flex items-center gap-2 text-[16px] font-semibold"><Icon name="sliders" size={18} />See details before creating</div>
-        <div className="mt-1 text-[13px] text-white/55">Check what we read: type, fit and fabric.</div>
-      </Glass>
-      </>} />
-    </Screen>
+      <div className="relative -mt-1 grid grid-cols-3 text-center text-[15px]">{FITS.map(([l], i) => <span key={l} className={cx("transition-colors", pick === i ? "font-medium text-white" : "text-white/50")}>{l}</span>)}</div>
+    </div>
   );
 }
 
-// P05–P07 · AI assumed values (Overview / Fitting / Fabric)
 export function AIRead({ p }: { p?: Record<string, unknown> }) {
   const { go, draft, setDraft } = useApp();
-  const [tab, setTab] = useState((p?.tab as string) ?? "Overview");
+  const tab = (p?.tab as string) ?? "Overview";
+  const chosen = draft.chosen ?? {};
   const [pick, setPick] = useState<string | null>(null);
   const [read, setRead] = useState(FLUTTER.read);
   const opts: Record<string, string[]> = { Sleeves: ["Flutter", "Short", "Cap", "None"], Neckline: ["V-neck", "Round", "Square"], Length: ["Knee", "Midi", "Maxi"], Waist: ["Fitted", "Relaxed", "Tie"], Skirt: ["A-line", "Straight", "Bias"], Fastening: ["Back zip", "Buttons", "Pull-on"] };
-  const next = () => (tab === "Overview" ? setTab("Fitting") : tab === "Fitting" ? setTab("Fabric") : go("generating"));
-  const fits = [["Close", 1], ["Easy", 4], ["Loose", 8]] as const;
-  return (
-    <Screen footer={tab === "Fabric" ? <Pill onClick={() => go("generating")}>Generate garment</Pill> : <Arrows onNext={next} />}>
-      <TopBar left={tab === "Fabric" ? "back" : null} eyebrow={tab === "Overview" ? "AI read · Assumed values" : tab === "Fitting" ? "AI read · Fitting" : "AI read · Fabric"} />
-      <Split center={false} className="lg:mt-6" left={<>
-      <H1 className="mt-4 lg:mt-0">{tab === "Overview" ? "Here’s what we read" : tab === "Fitting" ? "How should it fit?" : "Tell us about the fabric"}</H1>
-      <Segmented className="mt-4 lg:mt-6" items={["Overview", "Fitting", "Fabric"]} value={tab} onChange={setTab} />
-      <div className="mt-6 hidden h-[min(380px,42dvh)] overflow-hidden rounded-[28px] border border-white/15 lg:block"><RefImage /></div>
-      </>} right={<div className="lg:-mt-4">
-      {tab === "Overview" && (
-        <>
-          <Glow color="#687ef5" variant="side" className="relative mt-4 rounded-[26px] p-5">
-            <Eyebrow className=" text-white/70">Garment</Eyebrow>
-            <div className="mt-1 text-[24px] font-normal">Dress</div>
-            <div className="mt-1 max-w-[170px] text-[13px] text-white/70">Midi, flutter sleeves, fitted waist, A-line skirt.</div>
-            <div className="absolute right-5 top-1/2 grid h-[78px] w-[78px] -translate-y-1/2 place-items-center rounded-full border border-white/50"><span className="serif text-[34px]">{FLUTTER.match}</span></div>
-            <div className="eyebrow absolute bottom-3 right-7">Match</div>
-          </Glow>
-          <Glass className="mt-3 rounded-[24px] p-4">
-            <Eyebrow>Details · tap to change</Eyebrow>
-            <div className="mt-2 divide-y divide-white/6">{read.map(([k, v]) => (
-              <button key={k} onClick={() => setPick(k)} className="flex w-full items-center justify-between py-2.5 text-[15px]"><span className="text-white/80">{k}</span><span className="flex items-center gap-2"><span className="rounded-full bg-white/10 px-2.5 py-1 text-[13px]">{v}</span><Icon name="chevR" size={16} className="text-white/40" /></span></button>
-            ))}</div>
-          </Glass>
-        </>
-      )}
-      {tab === "Fitting" && (
-        <>
-          <Glow color="#4d5e85" variant="edge" className="relative mt-4 grid h-[min(300px,34dvh)] place-items-center rounded-[28px] lg:h-[min(440px,50dvh)]">
-            <span className="eyebrow absolute top-4">Easy</span><span className="eyebrow absolute left-4 top-1/2">Close</span><span className="eyebrow absolute right-4 top-1/2">Loose</span>
-            <motion.div className="h-[150px] w-[150px] rounded-full lg:h-[220px] lg:w-[220px]" style={{ background: "conic-gradient(from 200deg, #fff, #8c9cf8, #4f63e0, #1a1f3a, #fff)", boxShadow: "0 0 60px rgba(104,126,245,.5)" }} animate={{ rotate: draft.ease * 18 }} transition={{ type: "spring" }} />
-            <div className="absolute bottom-5 text-center"><div className="serif text-[46px] leading-none">+{draft.ease.toFixed(1)}</div><div className="eyebrow mt-1">cm ease at waist</div></div>
-          </Glow>
-          <div className="mt-3 grid grid-cols-3 gap-2">{fits.map(([l, e]) => (
-            <button key={l} onClick={() => setDraft({ ease: e })} className={cx("tap rounded-[18px] p-3 text-left transition-colors", draft.ease === e ? "bg-white text-bg" : "glass")}><div className="text-[15px] font-semibold">{l}</div><div className={cx("text-[11px]", draft.ease === e ? "text-bg/60" : "text-white/50")}>+{e} cm</div></button>
+  const fit = chosen.fit ? fitOf(draft.ease) : null;
+  const choose = (patch: Partial<typeof draft>, key: "fit" | "fabric" | "stretch") => setDraft({ ...patch, chosen: { ...chosen, [key]: true } });
+  const ref = <div className="h-full overflow-hidden rounded-[24px] border border-white/15"><RefImage /></div>;
+  const val = (k: string) => read.find(([x]) => x === k)?.[1] ?? "";
+
+  if (tab === "Fitting") return (
+    <Screen header={<MakeHeader step={1} sub={fit === null ? 0 : 0.5} />} footer={<Arrows ready={fit !== null} onNext={() => go("ai", { tab: "Fabric" })} />}>
+      <Split left={<>
+        <HS className="mt-4 lg:mt-0">How should<br />it fit?</HS>
+        <Lead className="mt-3">Ease is the extra room between your body and the fabric.</Lead>
+      </>} right={<>
+        <div className="mt-6 lg:mt-0"><FitDial pick={fit} /></div>
+        <div className="mt-6 grid grid-cols-3 gap-2.5" data-need={fit === null ? "1" : "0"}>{FITS.map(([l, e, d], i) => (
+          <Option key={l} on={fit === i} radio={false} onClick={() => choose({ ease: e }, "fit")} className="flex min-h-[104px] flex-col justify-between rounded-[20px] p-3.5">
+            <span className="text-[17px] font-medium">{l}</span>
+            <span><span className="block text-[14px] text-white/60">+{e} cm</span><span className="block text-[13px] leading-snug text-white/45">{d}</span></span>
+          </Option>
+        ))}</div>
+      </>} />
+    </Screen>
+  );
+
+  if (tab === "Fabric") {
+    const ready = !!chosen.fabric && !!chosen.stretch;
+    return (
+      <Screen header={<MakeHeader step={2} sub={(chosen.fabric ? 0.5 : 0) + (chosen.stretch ? 0.4 : 0)} />} footer={<Arrows ready={ready} onNext={() => go("generating")} label="Create my pattern" />}>
+        <Split center={false} className="lg:mt-6" left={<>
+          <HS className="mt-4 lg:mt-0">Tell us about<br />the fabric</HS>
+          <Lead className="mt-3">It changes how much room and drape we build into the pattern.</Lead>
+        </>} right={<>
+          <div className="mt-6 text-[16px] font-medium text-white/85 lg:mt-0">Fabric type</div>
+          <div className="mt-2.5 flex flex-wrap gap-2" data-need={chosen.fabric ? "0" : "1"}>{["Cotton poplin", "Linen", "Viscose crepe", "Satin", "Jersey", "Denim"].map((f) => <Chip key={f} on={!!chosen.fabric && draft.fabric === f} onClick={() => choose({ fabric: f }, "fabric")} className="!h-11 !px-4 !text-[15px]">{f}</Chip>)}</div>
+          <div className="mt-6 text-[16px] font-medium text-white/85">Does it stretch?</div>
+          <div className="mt-2.5 flex flex-col gap-2" data-need={chosen.stretch ? "0" : "1"}>{([["No", "It doesn’t move"], ["A bit", "It gives when you pull"], ["A lot", "Stretches and springs back"]] as const).map(([k, d]) => (
+            <Option key={k} on={!!chosen.stretch && draft.stretch === k} onClick={() => choose({ stretch: k }, "stretch")} className="flex h-[56px] items-center gap-4 rounded-[16px] px-4"><span className="w-14 text-[16px] font-medium">{k}</span><span className="flex-1 text-[15px] text-white/60">{d}</span></Option>
           ))}</div>
-        </>
-      )}
-      {tab === "Fabric" && (
-        <>
-          <Eyebrow className="mt-5">Fabric type</Eyebrow>
-          <div className="mt-2 flex flex-wrap gap-2">{["Cotton poplin", "Linen", "Viscose crepe", "Satin", "Jersey", "Denim"].map((f) => <Chip key={f} on={draft.fabric === f} onClick={() => setDraft({ fabric: f })}>{f}</Chip>)}</div>
-          <Eyebrow className="mt-5">Does it stretch?</Eyebrow>
-          <div className="mt-2 flex flex-col gap-2">{([["No", "It doesn’t move"], ["A bit", "It gives when you pull"], ["A lot", "Stretches and springs back"]] as const).map(([k, d]) => (
-            <Glass key={k} onClick={() => setDraft({ stretch: k })} selected={draft.stretch === k} className="flex h-[48px] w-full items-center gap-4 rounded-[16px] px-4"><span className="w-12 text-[15px] font-semibold">{k}</span><span className="flex-1 text-[13px] text-white/55">{d}</span>{draft.stretch === k && <span className="h-2 w-2 rounded-full bg-primary" />}</Glass>
-          ))}</div>
-          <Eyebrow className="mt-5">Stiff or soft?</Eyebrow>
-          <Glow color="#687ef5" variant="fade" className="mt-2 rounded-[22px] p-4">
-            <div className="flex justify-between text-[10px] text-white/70"><span>Stiff</span><span>Drapes</span></div>
+          <div className="mt-6 text-[16px] font-medium text-white/85">Stiff or soft?</div>
+          <div className="card-soft mt-2.5 rounded-[20px] p-4">
+            <div className="flex justify-between text-[14px] text-white/65"><span>Stiff</span><span>Drapes</span></div>
             <input type="range" min={0} max={100} value={Math.round(draft.drape * 100)} onChange={(e) => setDraft({ drape: Number(e.target.value) / 100 })} className="mt-3 w-full accent-white" />
-            <div className="mt-1 text-[13px] text-white/75">{draft.drape > 0.6 ? "Soft — holds a gentle, fluid drape" : draft.drape > 0.3 ? "Medium — keeps some shape" : "Crisp — holds its shape"}</div>
-          </Glow>
-        </>
-      )}
-      </div>} />
+            <div className="mt-1 text-[15px] text-white/75">{draft.drape > 0.6 ? "Soft: a gentle, fluid drape" : draft.drape > 0.3 ? "Medium: keeps some shape" : "Crisp: holds its shape"}</div>
+          </div>
+        </>} />
+      </Screen>
+    );
+  }
+
+  // Overview: what we read from your photo or sketch. Tap a detail to change it.
+  return (
+    <Screen header={<MakeHeader step={0} sub={0.5} />} footer={<Arrows onNext={() => go("ai", { tab: "Fitting" })} label="Looks right" />}>
+      <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<>
+        <HS className="mt-4 lg:mt-0">Here’s what<br />we read</HS>
+        <Lead className="mt-3">Check the garment. Tap any detail to change it.</Lead>
+        <div className="mt-6 hidden h-[min(420px,46dvh)] lg:block">{ref}</div>
+      </>} right={<>
+        <div className="mt-5 flex gap-3 lg:mt-0">
+          <div className="h-[150px] w-[118px] shrink-0 lg:hidden">{ref}</div>
+          <div className="card-soft flex-1 rounded-[24px] p-4 lg:p-6">
+            <div className="text-[14px] text-white/60">Garment</div>
+            <div className="mt-1 text-[24px] tracking-[-.02em] lg:text-[30px]">{val("Length")} dress</div>
+            <div className="mt-1 text-[15px] leading-snug text-white/65">{val("Sleeves")} sleeves, {val("Neckline").toLowerCase()}, {val("Length").toLowerCase()} length, {val("Waist").toLowerCase()} waist.</div>
+          </div>
+        </div>
+        <div className="card-soft mt-3 rounded-[24px] px-4 pb-1 pt-3 lg:px-6">
+          <div className="text-[14px] text-white/60">Details</div>
+          <div className="mt-1 divide-y divide-white/8">{read.map(([k, v]) => (
+            <button key={k} onClick={() => setPick(k)} className="flex min-h-[52px] w-full items-center justify-between text-[16px]"><span className="text-white/80">{k}</span><span className="flex items-center gap-2"><span className="rounded-full bg-white/10 px-3 py-1 text-[15px]">{v}</span><Icon name="chevR" size={16} className="text-white/40" /></span></button>
+          ))}</div>
+        </div>
+      </>} />
       <Sheet open={!!pick} onClose={() => setPick(null)}>
-        <h3 className="text-[20px] font-semibold">{pick}</h3>
-        <div className="mt-4 flex flex-wrap gap-2">{pick && opts[pick].map((o) => <Chip key={o} on={read.find(([k]) => k === pick)?.[1] === o} onClick={() => { setRead(read.map(([k, v]) => [k, k === pick ? o : v])); setPick(null); }}>{o}</Chip>)}</div>
+        <h3 className="text-[22px] font-normal tracking-[-.02em]">{pick}</h3>
+        <div className="mt-4 flex flex-col gap-2">{pick && opts[pick].map((o) => (
+          <Option key={o} on={read.find(([k]) => k === pick)?.[1] === o} onClick={() => { setRead(read.map(([k, v]) => [k, k === pick ? o : v])); setPick(null); }} className="flex h-[56px] items-center rounded-[16px] px-4"><span className="text-[16px]">{o}</span></Option>
+        ))}</div>
       </Sheet>
     </Screen>
   );

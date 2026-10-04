@@ -46,6 +46,7 @@ export type Draft = {
   seam: number | null;
   printer: "A4" | "A0";
   sheets?: number; // sheets the arranged layout prints on
+  chosen?: { fit?: boolean; fabric?: boolean; stretch?: boolean }; // which garment settings the user has picked (nothing is pre-selected)
   layout?: { garment: string; printer: string; at: Record<string, { x: number; y: number; r: number }> }; // where you put each piece: centre in % of the sheet area, rotation in degrees
   lengthCm: number;
   neckline: number;
@@ -69,6 +70,7 @@ type State = {
   experience: number | null;
   prefsDone: boolean; // units + experience chosen once, app-wide
   tourSkipped: boolean; // skipped onboarding: home offers the tour later
+  updatesSeen: boolean; // the home bell has been opened
   resumeBody: string | null; // body whose extra measures were paused ("Take a break")
   bodies: Body[];
   activeBody: string; // body being edited / selected
@@ -104,6 +106,7 @@ const initial = () => ({
   experience: null as number | null,
   prefsDone: false,
   tourSkipped: false,
+  updatesSeen: false,
   resumeBody: null as string | null,
   bodies: [ME, ...seedBodies()],
   activeBody: "me",
