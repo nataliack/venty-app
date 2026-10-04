@@ -3,7 +3,7 @@ import { haptic } from "@/lib/haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { FABRICS, PIECE_LABEL, templateBy, type PieceKey } from "@/lib/data";
+import { PIECE_LABEL, templateBy, fabricAdvice, metresFor, type PieceKey } from "@/lib/data";
 import { Screen, TopBar, HS, H1, Lead, Pill, Glow, Glass, Option, Arrows, Check, cx, useToast, Split, useDesk } from "@/components/ui";
 import { Piece, pieceSize } from "@/components/art";
 import { Icon } from "@/components/icons";
@@ -192,27 +192,32 @@ export function Arrange() {
   );
 }
 
-// 4 · what you'll need to buy
+// 4 · the fabric to buy for this pattern: how much, and what kind (from the fit and fabric you chose)
 export function Needs() {
-  const { go, draft, setDraft } = useApp();
+  const { go, draft } = useApp();
+  const tip = fabricAdvice(draft.ease);
+  const m = metresFor(draft.garment, draft.ease);
+  const stretch = draft.chosen?.stretch ? draft.stretch : tip.stretch;
+  const rows: [string, string][] = [
+    ["Stretch", { "A lot": "Stretchy", "A bit": "A little stretch", No: "No stretch" }[stretch]],
+    ["Feel", draft.drape > 0.6 ? "Soft and drapey" : draft.drape > 0.3 ? "Medium, keeps some shape" : "Crisp, holds its shape"],
+    ["Fabric you chose", draft.chosen?.fabric ? draft.fabric : "Your choice"],
+    ["Width", "140 cm (the most common width)"],
+  ];
   return (
     <Screen header={<PrintHeader step={3} sub={0.5} />} footer={<Arrows onNext={() => go("print")} />}>
-      <Split center={false} className="lg:pt-6" left={<>
-      <H1 className="mt-4 lg:mt-0">What you’ll need</H1>
+      <Split left={<>
+      <HS className="mt-4 lg:mt-0">Fabric to buy</HS>
+      <Lead className="mt-3">For your {garmentName(draft.garment).toLowerCase()}. Show this at the fabric shop.</Lead>
       <Glow color="#687ef5" variant="side" className="relative mt-5 rounded-[26px] p-5 lg:mt-8 lg:p-8">
-        <div className="text-[16px] font-medium text-white/85">Fabric to buy</div>
-        <div className="mt-2 flex items-baseline gap-2"><span className="serif text-[64px] leading-none">2.4</span><span className="text-[18px] font-medium text-white/80" translate="no">metres</span></div>
-        <div className="mt-2 text-[15px] leading-snug text-white/75">Of fabric 140 cm wide. This includes 10% extra in case it shrinks when you wash it.</div>
+        <div className="text-[16px] text-white/85">You need</div>
+        <div className="mt-1 flex items-baseline gap-2"><span className="serif text-[64px] leading-none">{m}</span><span className="text-[18px] font-medium text-white/85" translate="no">metres</span></div>
+        <div className="mt-2 text-[15px] leading-snug text-white/80">Includes 10% extra in case it shrinks when you wash it.</div>
       </Glow>
-      </>} right={<>
-      <div className="mt-6 text-[16px] font-medium text-white/85 lg:mt-16">Fabrics that work well</div>
-      <div className="mt-2.5 flex flex-col gap-2">{FABRICS.map((f) => (
-        <Glass key={f.name} onClick={() => setDraft({ fabric: f.name })} selected={draft.fabric === f.name} className="flex min-h-[64px] w-full items-center gap-3 rounded-[18px] px-3 py-2">
-          <span className="h-10 w-10 shrink-0 rounded-[10px]" style={{ background: f.swatch }} />
-          <span className="flex-1"><span className="block text-[16px] font-medium">{f.name}</span><span className="block text-[14px] text-white/60">{f.note}</span></span>
-        </Glass>
-      ))}</div>
-      </>} />
+      </>} right={
+      <div className="card-soft mt-4 divide-y divide-white/8 rounded-[24px] px-5 lg:mt-0">
+        {rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-4"><span className="text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}
+      </div>} />
     </Screen>
   );
 }

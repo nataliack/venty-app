@@ -231,16 +231,15 @@ input { font: inherit; color: inherit; }
 
 /* ─── home: periwinkle hero that bleeds under the status bar, then the dark page ─── */
 @layer components {
-.home-hero { color: #fff; margin-top: calc(-1 * var(--top)); padding-top: var(--top); }
-/* the Welcome sky, compressed for the top of home: periwinkle haze at the top falling into night, so it melts into the page */
+.home-hero { color: #fff; margin-top: calc(-1 * var(--top)); padding-top: var(--top); border-radius: 0 0 36px 36px; overflow: hidden; isolation: isolate;
+  box-shadow: 0 28px 60px -34px rgb(104 126 245 / .55); }
+/* the Welcome sky, lighter and contained in the rounded block, so the top half reads as its own shape */
 .sky.sky-hero { background:
-    linear-gradient(90deg, transparent 55%, rgb(20 24 45 / .3) 100%),
-    linear-gradient(180deg, #9aa6cd 0%, #8794c4 14%, #7484b9 28%, #5d6e9e 42%, #44507a 56%, #2c3456 70%, #1a1f35 84%, #0b0c15 100%); }
-@media (min-width: 1024px) { .home-hero { margin-top: 0; padding-top: 0; border-radius: 36px; overflow: hidden; } .sky.sky-hero { background: linear-gradient(90deg, transparent 55%, rgb(20 24 45 / .3) 100%), linear-gradient(180deg, #9aa6cd 0%, #7484b9 30%, #44507a 62%, #1d2340 100%); } }
-.sky.sky-hero { mask-image: linear-gradient(180deg, #000 72%, transparent 100%); -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
-@media (min-width: 1024px) { .sky.sky-hero { mask-image: none; -webkit-mask-image: none; } }
-.sky.sky-hero::before { opacity: .5; }
-.sky.sky-hero .drift { opacity: .7; }
+    linear-gradient(90deg, transparent 55%, rgb(20 24 45 / .18) 100%),
+    linear-gradient(180deg, #919dc9 0%, #8592c2 22%, #7686b8 46%, #6878ad 70%, #5c6ca2 100%); }
+.sky.sky-hero::before { opacity: .35; }
+.sky.sky-hero .drift { opacity: .65; }
+@media (min-width: 1024px) { .home-hero { margin-top: 0; padding-top: 0; border-radius: 36px; } }
 /* a soft graph-paper grid that grows from the top and fades out */
 .hero-mat { position: absolute; inset: 0; pointer-events: none;
   background-image: linear-gradient(rgb(255 255 255 / .1) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .1) 1px, transparent 1px),

@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import { motion } from "motion/react";
-import { useApp } from "@/lib/store";
-import type { GarmentKey } from "@/lib/data";
-import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, cx, useToast, useDesk } from "@/components/ui";
+import { useApp, type Pattern } from "@/lib/store";
+import { fabricAdvice, fitName, metresFor, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
+import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar, Split, Blob, cx, useToast, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
@@ -53,8 +53,8 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
     <Sheet open={open} onClose={onClose}>
       <div className="mb-4 flex items-center justify-between"><span className="text-[20px] font-semibold">Create</span><RB icon="close" size={38} onClick={onClose} /></div>
       <div className="flex flex-col gap-2.5">
-        {row("scissors", "Make a pattern", "From a photo, a sketch or both", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
-        {row("dress", "Choose a pre-made pattern", "Dresses, tops, pants, skirts", "#4f63e0", () => go("templates"))}
+        {row("scissors", "Create something new", "From a photo, a sketch or your own words", "#687ef5", () => { newDraft(); go("patSelectBody"); })}
+        {row("dress", "Select from pre-made patterns", "Dresses, tops, trousers and skirts", "#4f63e0", () => go("templates"))}
         {row("body", "Make a body", "Measure yourself or someone you sew for", "#4d5e85", () => { startBody(); })}
       </div>
     </Sheet>
@@ -109,7 +109,7 @@ function useUpdates() {
   const ready = patterns.find((x) => x.status === "Fitting");
   const list: { icon: IconName; t: string; d: string; when: string; go?: () => void }[] = [];
   if (unfinished) list.push({ icon: "ruler", t: `Finish ${unfinished.name}’s measurements`, d: `${unfinished.done.length} of 24 saved. Pick up where you left off.`, when: "Today", go: () => { set({ activeBody: unfinished.id }); go("wizard"); } });
-  if (ready) list.push({ icon: "printer", t: `${ready.name} is ready to print`, d: `Drafted to ${ready.body}. Lay it out on your sheets when you’re ready.`, when: "Today", go: () => { useApp.getState().setDraft({ garment: ready.garment as GarmentKey }); go("garment"); } });
+  if (ready) list.push({ icon: "printer", t: `${ready.name} is ready to print`, d: `Drafted to ${ready.body}. Lay it out on your sheets when you’re ready.`, when: "Today", go: () => go("pattern", { id: ready.id }) });
   list.push({ icon: "dress", t: "New pre-made patterns", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", go: () => go("templates") });
   list.push({ icon: "pencil", t: "New: sketch on your photos", d: "Add a photo and draw your changes on top of it.", when: "This week" });
   return list;
@@ -149,7 +149,7 @@ export function Home() {
   const make = () => { newDraft(); go("patSelectBody"); };
   return (
     <Screen noPad footer={desk ? undefined : <TabBar tab="home" />}>
-      <section className="home-hero relative px-5 pb-7 lg:px-12 lg:py-12">
+      <section className="home-hero relative px-5 pb-6 lg:px-12 lg:py-12">
         <div className="sky sky-hero"><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /></div>
         <div className="hero-mat" aria-hidden />
         <div className="relative">
@@ -161,16 +161,16 @@ export function Home() {
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-end lg:gap-12">
             <div>
               <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[36px] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
-              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-white/75 lg:text-[18px]">Start from a photo or a sketch, or pick one of our pre‑made patterns.</p>
+              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-white/85 lg:text-[18px]">Create something new, or start from one of our pre‑made patterns.</p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
-              <button onClick={make} className="start-main tap flex min-h-[136px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
+              <button onClick={make} className="start-main tap flex min-h-[152px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/20"><Icon name="image" size={21} /></span><Icon name="chevR" size={20} className="text-white/80" /></span>
-                <span><span className="block text-[17px] font-medium lg:text-[19px]">Photo or sketch</span><span className="mt-0.5 block text-[14px] leading-snug text-white/80">Upload a look or draw your idea</span></span>
+                <span><span className="block text-[17px] font-medium leading-tight lg:text-[19px]">Create something new</span><span className="mt-1 block text-[14px] leading-snug text-white/85">From a photo, a sketch or your own words</span></span>
               </button>
-              <button onClick={() => go("templates")} className="start-alt tap flex min-h-[136px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
+              <button onClick={() => go("templates")} className="start-alt tap flex min-h-[152px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[176px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/15"><Icon name="dress" size={21} /></span><Icon name="chevR" size={20} className="text-white/70" /></span>
-                <span><span className="block text-[17px] font-medium lg:text-[19px]">Pre-made pattern</span><span className="mt-0.5 block text-[14px] leading-snug text-white/75">Choose from our library</span></span>
+                <span><span className="block text-[17px] font-medium leading-tight lg:text-[19px]">Select from pre‑made patterns</span><span className="mt-1 block text-[14px] leading-snug text-white/80">Ready to fit to a body</span></span>
               </button>
             </div>
           </div>
@@ -198,7 +198,7 @@ export function Home() {
             <div className="mt-7"><SectionHead title="Your patterns" onAll={() => go("patterns")} /></div>
             <div className="mt-2 flex flex-col">
               {patterns.slice(0, 3).map((p) => (
-                <button key={p.id} onClick={() => { setDraft({ garment: p.garment as GarmentKey }); go("garment"); }} className="tap flex items-center gap-3.5 border-b border-white/8 py-3 text-left last:border-0">
+                <button key={p.id} onClick={() => go("pattern", { id: p.id })} className="tap flex items-center gap-3.5 border-b border-white/8 py-3 text-left last:border-0">
                   <span className="card-soft grid h-[52px] w-[48px] shrink-0 place-items-center rounded-[14px]"><Flat g={p.garment as GarmentKey} size={32} /></span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-[16px] font-medium">{p.name}</span><span className="block truncate text-[14px] text-white/55">{p.body}</span></span>
                   <span className="flex items-center gap-1.5 text-[14px] text-white/70"><span className={cx("h-2 w-2 rounded-full", STATUS_DOT[p.status])} />{p.status}</span>
@@ -258,7 +258,7 @@ export function Patterns() {
       <div className="mt-4 flex h-11 rounded-full glass p-1 lg:max-w-[420px]">{["All", "In progress", "Printed"].map((c) => <button key={c} onClick={() => setF(c)} className={cx("flex-1 rounded-full text-[14px] font-medium", f === c ? "bg-white text-bg" : "text-white/70")}>{c}</button>)}</div>
       <div className="mt-4 flex flex-col gap-2.5 lg:mt-7 lg:grid lg:grid-cols-2 lg:gap-4">
         {list.map((p) => (
-          <Glass key={p.id} onClick={() => { setDraft({ garment: p.garment as GarmentKey }); go("garment"); }} className="flex w-full items-center gap-3 rounded-[22px] p-3 lg:gap-5 lg:rounded-[26px] lg:p-5">
+          <Glass key={p.id} onClick={() => go("pattern", { id: p.id })} className="flex w-full items-center gap-3 rounded-[22px] p-3 lg:gap-5 lg:rounded-[26px] lg:p-5">
             <div className="grid h-[60px] w-[52px] lg:h-[96px] lg:w-[84px] place-items-center rounded-[14px] bg-primary/35"><Flat g={p.garment as GarmentKey} size={38} /></div>
             <div className="flex-1">
               <div className="text-[15px] font-semibold">{p.name}</div><div className="text-[13px] text-white/50">{p.body}</div>
@@ -312,3 +312,53 @@ export function You() {
   );
 }
 
+
+// A finished (or in-progress) pattern, as a complete page you can come back to: the garment on the body,
+// where it stands, and a shopping list you can show at the fabric shop.
+export function PatternView({ p }: { p?: Record<string, unknown> }) {
+  const { go, patterns, bodies, set, newDraft } = useApp();
+  const pat = patterns.find((x) => x.id === p?.id) ?? patterns[0];
+  const desk = useDesk();
+  if (!pat) return null;
+  const body = bodies.find((b) => b.name === pat.body);
+  const sp: NonNullable<Pattern["spec"]> = pat.spec ?? SEED_PATTERNS.find((x) => x.id === pat.id)?.spec ?? { ease: 4, drape: 0.6, seam: 1.5, printer: "A4" as const, metres: metresFor(pat.garment, 4) };
+  const tip = fabricAdvice(sp.ease);
+  const stretch = sp.stretch ?? tip.stretch;
+  const shop: [string, string][] = [
+    ["Fabric to buy", `${sp.metres} metres, 140 cm wide`],
+    ["Stretch", { "A lot": "Stretchy", "A bit": "A little stretch", No: "No stretch" }[stretch as "A lot" | "A bit" | "No"] ?? stretch],
+    ["Feel", sp.drape > 0.6 ? "Soft and drapey" : sp.drape > 0.3 ? "Medium, keeps some shape" : "Crisp, holds its shape"],
+    ["Fabric you chose", sp.fabric ?? "Not chosen yet"],
+  ];
+  const made: [string, string][] = [
+    ["Fit", `${fitName(sp.ease)}, +${sp.ease} cm of room`],
+    ["Seam allowance", sp.seam ? `${sp.seam} cm, on every piece` : "Not added, add your own"],
+    ["Pieces", String(pat.pieces)],
+    ["Paper", sp.printer === "A0" ? "1 A0 sheet, print shop" : `${sp.sheets ?? 9} A4 sheets, at home`],
+    ...(sp.details ?? []).slice(0, 4),
+  ];
+  const open = (to: string) => { if (body) set({ activeBody: body.id }); newDraft({ garment: pat.garment, ease: sp.ease, seam: sp.seam, printer: sp.printer, drape: sp.drape, ...(sp.fabric ? { fabric: sp.fabric } : {}), ...(sp.stretch ? { stretch: sp.stretch as "No" | "A bit" | "A lot" } : {}), chosen: { fit: true, fabric: !!sp.fabric, stretch: !!sp.stretch }, details: sp.details }); go(to); };
+  const list = (title: string, rows: [string, string][]) => (
+    <div className="card-soft mt-3 rounded-[24px] px-5 pb-1 pt-4">
+      <div className="text-[15px] font-medium text-white/85">{title}</div>
+      <div className="mt-1 divide-y divide-white/8">{rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-3"><span className="text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}</div>
+    </div>
+  );
+  return (
+    <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => open("garment")}>Change the design</Pill><Pill className="flex-1" onClick={() => open("printMethod")}>{pat.status === "Printed" ? "Print again" : "Print it"}</Pill></div>}>
+      <TopBar left="back" />
+      <Split cols="lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" left={<>
+        <div className="mt-2 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className={cx("h-2 w-2 rounded-full", STATUS_DOT[pat.status])} />{pat.status === "Printed" ? "Printed" : pat.status === "Fitting" ? "Ready to print" : "Draft"} · drafted to {pat.body}</div>
+        <H1 className="mt-2">{pat.name}</H1>
+        <div className="relative mt-4 h-[min(300px,34dvh)] lg:h-[min(560px,62dvh)]">
+          <Blob className="left-1/2 top-1/3 h-[240px] w-[200px] -translate-x-1/2 opacity-35" />
+          <BodyFigure sex={body?.sex ?? "female"} width={desk ? 200 : 130} variant="solid" garment={pat.garment} glow={false} className="relative h-full w-full" />
+        </div>
+      </>} right={<>
+        {list("Shopping list", shop)}
+        <p className="mt-2 px-1 text-[14px] leading-snug text-white/50">{tip.why}</p>
+        {list("How it was made", made)}
+      </>} />
+    </Screen>
+  );
+}

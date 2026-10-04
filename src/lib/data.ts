@@ -140,8 +140,33 @@ export const FABRICS = [
 ];
 
 export const SEED_PATTERNS = [
-  { id: "p1", name: "Flutter midi dress", garment: "flutter" as GarmentKey, body: "Me, Spring 26", pieces: 6, status: "Printed" },
+  { id: "p1", name: "Flutter midi dress", garment: "flutter" as GarmentKey, body: "Me, Spring 26", pieces: 6, status: "Printed", spec: { ease: 4, fabric: "Viscose crepe", stretch: "No", drape: 0.72, seam: 1.5, printer: "A4" as const, sheets: 9, metres: 2.6 } },
   { id: "p2", name: "Bias slip skirt", garment: "biasskirt" as GarmentKey, body: "Me, Spring 26", pieces: 4, status: "Fitting" },
   { id: "p3", name: "Camp collar shirt", garment: "shirt" as GarmentKey, body: "Tom", pieces: 7, status: "Draft" },
-  { id: "p4", name: "Wide-leg trousers", garment: "wideleg" as GarmentKey, body: "Mum", pieces: 5, status: "Printed" },
+  { id: "p4", name: "Wide-leg trousers", garment: "wideleg" as GarmentKey, body: "Mum", pieces: 5, status: "Printed", spec: { ease: 8, fabric: "Linen", stretch: "No", drape: 0.5, seam: 1.5, printer: "A0" as const, sheets: 1, metres: 2.9 } },
 ];
+
+// ─── Fit and fabric advice ────────────────────────────────────────────
+// Ease = the extra room (cm) between the body and the garment.
+export const FITS = [
+  { key: "tight", label: "Tight", ease: 1, note: "Close to the body" },
+  { key: "easy", label: "Easy", ease: 4, note: "A little room to move" },
+  { key: "loose", label: "Loose", ease: 8, note: "Relaxed and flowing" },
+  { key: "oversized", label: "Oversized", ease: 16, note: "Big and roomy" },
+] as const;
+export const fitName = (ease: number) => (ease <= 2 ? "Tight" : ease <= 6 ? "Easy" : ease <= 12 ? "Loose" : "Oversized");
+
+// What fabric suits a fit. Described by how it behaves, not by name, so people can find their own.
+export function fabricAdvice(ease: number): { stretch: "A lot" | "A bit" | "No"; title: string; why: string; drape: string } {
+  if (ease <= 2) return { stretch: "A lot", title: "A stretchy fabric", why: "A tight fit needs fabric that stretches and springs back, so you can move and get it on.", drape: "Soft or medium" };
+  if (ease <= 6) return { stretch: "A bit", title: "Little or no stretch", why: "With a little room, a fabric with a bit of give or none at all works well.", drape: "Soft to medium" };
+  if (ease <= 12) return { stretch: "No", title: "A fabric with no stretch", why: "A loose fit has room built in, so the fabric does not need to stretch. Soft fabrics hang nicely.", drape: "Soft and drapey" };
+  return { stretch: "No", title: "A fabric with no stretch", why: "An oversized fit holds its shape best in fabric that does not stretch. Crisp or soft both work.", drape: "Crisp or soft" };
+}
+
+// Fabric to buy, at 140 cm wide, with 10% extra for shrinkage
+export function metresFor(garment: GarmentKey, ease: number) {
+  const cat = garment === "flutter" ? "Dresses" : templateBy(garment).category;
+  const base = { Dresses: 2.2, Tops: 1.3, Pants: 2.4, Skirts: 1.5 }[cat];
+  return Math.round((base + Math.max(0, ease) * 0.03) * 1.1 * 10) / 10;
+}

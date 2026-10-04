@@ -6,7 +6,7 @@ import { useApp } from "@/lib/store";
 import { Splash, Welcome, SignUp, LogIn, EmailStep, SignedIn, TourAsk, Onboarding, StartChoice } from "@/screens/auth";
 import { Prefs, Method, NameBody, BaseMeasures, MeasureBase, ScanPrep, ScanCam, Preview, EditMeasures, Ready } from "@/screens/setup";
 import { Wizard, WizardStep, GroupDone, AllDone } from "@/screens/wizard";
-import { Home, Bodies, Patterns, You } from "@/screens/home";
+import { Home, Bodies, Patterns, You, PatternView } from "@/screens/home";
 import { PatSelectBody, Prompt, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
 import { Seam, Arrange, PrintMethod, Needs, PrintReady, MiniMap, Printed } from "@/screens/print";
@@ -23,7 +23,7 @@ const SCREENS: Record<string, ScreenC> = {
   prefs: Prefs, name: NameBody, method: Method, measure: MeasureBase, base: BaseMeasures,
   scanPrep: ScanPrep, scanCam: ScanCam, preview: Preview, edit: EditMeasures, ready: Ready,
   wizard: Wizard, wstep: WizardStep, wdone: GroupDone, alldone: AllDone,
-  home: Home, bodies: Bodies, patterns: Patterns, you: You,
+  home: Home, bodies: Bodies, patterns: Patterns, you: You, pattern: PatternView,
   patSelectBody: PatSelectBody, prompt: Prompt, ref: AIRead, ai: AIRead, generating: Generating, garment: Garment, edits: Edits,
   templates: Templates, template: TemplateDetail, tplBody: TplBody, tplFit: TplFit, tplResult: TplResult,
   seam: Seam, arrange: Arrange, printMethod: PrintMethod, needs: Needs, print: PrintReady, minimap: MiniMap, printed: Printed,

@@ -11,7 +11,7 @@ const SECTION: Record<string, string> = {
   home: "home",
   bodies: "bodies", preview: "bodies", edit: "bodies", ready: "bodies", prefs: "bodies", method: "bodies", scanPrep: "bodies", name: "bodies", base: "bodies", measure: "bodies",
   wizard: "bodies", wstep: "bodies", wdone: "bodies", alldone: "bodies",
-  patterns: "patterns", garment: "patterns", edits: "patterns", seam: "patterns", arrange: "patterns", printMethod: "patterns", needs: "patterns", print: "patterns", pages: "patterns", minimap: "patterns", printed: "patterns",
+  patterns: "patterns", pattern: "patterns", garment: "patterns", edits: "patterns", seam: "patterns", arrange: "patterns", printMethod: "patterns", needs: "patterns", print: "patterns", pages: "patterns", minimap: "patterns", printed: "patterns",
   patSelectBody: "make", prompt: "make", ref: "make", ai: "make", generating: "make",
   templates: "templates", template: "templates", tplBody: "templates", tplFit: "templates", tplResult: "templates",
   you: "you",

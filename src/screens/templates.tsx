@@ -151,7 +151,7 @@ export function TplFit() {
   const [pct, setPct] = useState(0);
   useEffect(() => {
     const t0 = performance.now(); let raf = 0;
-    const tick = (n: number) => { const k = Math.min(1, (n - t0) / 3000); setPct(Math.round(100 * (1 - Math.pow(1 - k, 2)))); if (k < 1) raf = requestAnimationFrame(tick); else setTimeout(() => replace("tplResult"), 300); };
+    const tick = (n: number) => { const k = Math.min(1, (n - t0) / 7000); setPct(Math.round(100 * (1 - Math.pow(1 - k, 2)))); if (k < 1) raf = requestAnimationFrame(tick); else setTimeout(() => replace("tplResult"), 300); };
     raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
   }, [replace]);
   const steps = ["Reading your measurements", `Grading the ${t.name.toLowerCase()}`, "Adding ease at the hip", `Laying out ${t.pieces} pieces`];
@@ -190,7 +190,7 @@ export function TplResult() {
     t.category === "Tops" ? [["Bust", M.bust, "+6 ease"], ["Across back", M.acrossBack, "Graded"], ["Arm", M.upperArm, "+3 ease"], ["Length", 58, draft.length ?? t.defaultLength]] :
     [["Bust", M.bust, "+2 ease"], ["Waist", M.waist, "+4 ease"], ["Hip", M.hips, "+6 ease"], ["Length", 112, draft.length ?? t.defaultLength]];
   return (
-    <Screen footer={<div className="flex gap-3"><Pill variant="glass" className="flex-1" onClick={() => go("edits")}>Tweak fit</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Get pattern</Pill></div>}>
+    <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Change the design</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Looks right</Pill></div>}>
       <TopBar left="back" eyebrow={`Fitted to ${b.name}`} />
       <div className="lg:flex lg:items-end lg:justify-between">
       <H1 className="mt-3">{t.name}, on you</H1>

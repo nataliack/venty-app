@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
-import { defaultMeasures, templateBy, type GarmentKey, type Sex, SEED_PATTERNS } from "./data";
+import { defaultMeasures, templateBy, metresFor, type GarmentKey, type Sex, SEED_PATTERNS } from "./data";
 
 // Storage that never throws (private mode, blocked storage, etc.)
 const safeStorage: StateStorage = {
@@ -30,13 +30,17 @@ export type Pattern = {
   body: string;
   pieces: number;
   status: "Draft" | "Fitting" | "Printed";
+  // what was decided while making it, so the pattern can be looked up later (e.g. at the fabric shop)
+  spec?: { ease: number; fabric?: string; stretch?: string; drape: number; seam: number | null; printer: "A4" | "A0"; sheets?: number; metres: number; details?: [string, string][] };
 };
 
 export type Draft = {
   garment: GarmentKey;
   source: "photo" | "link" | "sketch" | "template" | "voice";
   start?: "link" | "sketch"; // home shortcut: open this input straight away on the prompt screen
-  photo?: string; // object URL, not persisted
+  photo?: string; // your photo and sketch as one picture, not persisted
+  prompt?: string; // what you wrote in the studio
+  details?: [string, string][]; // the garment details you confirmed (sleeves, neckline, …)
   bodyId?: string;
   length?: string;
   ease: number; // cm at waist
@@ -152,9 +156,11 @@ export const useApp = create<State>()(
       savePattern: (status = "Fitting") => set((s) => {
         const name = s.draft.garment === "flutter" ? "Flutter midi dress" : templateBy(s.draft.garment).name;
         const bodyName = (s.bodies.find((b) => b.id === (s.draft.bodyId ?? s.activeBody)) ?? s.bodies[0])?.name ?? "Me";
+        const d = s.draft;
+        const spec = { ease: d.ease, fabric: d.chosen?.fabric ? d.fabric : undefined, stretch: d.chosen?.stretch ? d.stretch : undefined, drape: d.drape, seam: d.seam, printer: d.printer, sheets: d.sheets, metres: metresFor(d.garment, d.ease), details: d.details };
         const existing = s.patterns.find((p) => p.name === name && p.body === bodyName);
-        if (existing) return { patterns: s.patterns.map((p) => (p === existing ? { ...p, status } : p)) };
-        return { patterns: [{ id: "n" + Date.now().toString(36), name, garment: s.draft.garment, body: bodyName, pieces: 6, status }, ...s.patterns] };
+        if (existing) return { patterns: s.patterns.map((p) => (p === existing ? { ...p, status, spec } : p)) };
+        return { patterns: [{ id: "n" + Date.now().toString(36), name, garment: d.garment, body: bodyName, pieces: 6, status, spec }, ...s.patterns] };
       }),
     }),
     {
