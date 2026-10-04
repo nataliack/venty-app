@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, PaperScreen, cx, useDesk } from "@/components/ui";
+import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, PaperScreen, Crown, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
@@ -28,8 +28,8 @@ export function Splash() {
   );
 }
 
-// Welcome sky: a periwinkle haze with three soft lights that drift slowly.
-const Sky = () => <div className="sky"><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /></div>;
+// Welcome: the Crown gradient (from the landing page).
+const Sky = () => <Crown />;
 
 const WELCOME_T = <>See a dress you love.<br />Create it. Wear it.</>;
 const WELCOME_B = "Any photo, screenshot, magazine page or sketch. Venty drafts a sewing pattern to your exact measurements, ready to print at home.";
@@ -288,7 +288,8 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   const skip = <button onClick={() => finish(true)} className="tap h-10 shrink-0 rounded-full bg-white px-5 text-[15px] font-medium text-[#12131c] shadow-lg">{fromApp ? "Close" : "Skip"}</button>;
 
   const image = (
-    <div className="grain relative h-full overflow-hidden" style={{ background: "radial-gradient(90% 70% at 30% 20%, #8c9cf8 0%, #4f63e0 45%, #1c2252 100%)" }}>
+    <div className="relative h-full overflow-hidden text-white">
+      <Crown />
       <AnimatePresence mode="wait"><motion.div key={i} className="pointer-events-none absolute inset-0" initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}><Plate i={i} big={desk} /></motion.div></AnimatePresence>
       <div className="absolute inset-x-0 top-0 flex items-center gap-4 px-5 lg:px-8" style={{ paddingTop: "var(--top)" }}>{bars}{skip}</div>
       <div className="absolute bottom-5 left-5 right-5 flex items-baseline gap-2 text-white/85 lg:bottom-8 lg:left-8"><span className="text-[14px]">Fig.&nbsp;<span className="serif">{i + 1}</span></span><span className="text-[14px] italic">{s.fig}</span></div>

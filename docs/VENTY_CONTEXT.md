@@ -118,9 +118,11 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - decorative chips that look clickable but aren't;
 - arrow characters like "→" in buttons.
 
+**Gradient: Crown only (4 Oct 2026).** The app's one big gradient is **Crown**, ported as-is from the landing page (`nataliack/Venty-landing-page`, `/gradients`, "Light, locked"): light from the top centre, a blue halo rising from below, four slowly drifting lights. Use the `<Crown />` component (animated, `.sky.sky-light`) for screens and panels, and `.violet-panel` (Crown's static layers) for small things like the avatar. It is on Welcome, the onboarding pictures, every `PaperScreen` panel (tour question, start, body ready, pattern complete), the "Design your own" card and the finished-pattern panel. **Never use the old violet radial gradient** (`#8c9cf8 → #4f63e0 → #1c2252`) anywhere.
+
 **Colour roles (4 Oct 2026):** the app was monotonous because every screen was the same dark navy. Colour now has a job:
 - **Dark navy screens are for working**: measuring, the studio, the garment check, printing, libraries. Dark keeps attention on the task and reads as precise.
-- **Paper + violet screens are for moments**: the tour question, the start page, "Your body is ready", "Your pattern is complete" (all built with `PaperScreen`: a violet picture panel, the onboarding's `violet-panel`, over warm paper; side by side on desktop). Light and violet read as calm, encouraging and celebratory, and they tie back to the onboarding.
+- **Paper + violet screens are for moments**: the tour question, the start page, "Your body is ready", "Your pattern is complete" (all built with `PaperScreen`: a Crown picture panel over warm paper; side by side on desktop). Light and violet read as calm, encouraging and celebratory, and they tie back to the onboarding.
 - **Home** has a light top (`.light-hero`: pale periwinkle with a periwinkle graph-paper grid) with text in a soft, readable indigo (`#3d4bb3` / `#5c68b0`, not white, not a harsh navy), above the dark page.
 - The finished-pattern page shows the garment on a violet panel.
 

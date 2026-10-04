@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
 import { fabricAdvice, fitName, metresFor, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
-import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar, Split, Blob, cx, useToast, useDesk } from "@/components/ui";
+import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar, Split, Blob, Crown, cx, useToast, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 
@@ -160,7 +160,8 @@ export function Home() {
               <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#5c68b0] lg:text-[18px]">Design your own, or start from one of our pre‑made patterns.</p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
-              <button onClick={make} className="violet-panel grain tap relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
+              <button onClick={make} className="tap relative isolate flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
+                <Crown className="-z-10" />
                 <span className="relative flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full bg-white/20"><Icon name="pencil" size={20} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
                 <span className="relative"><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/85">Photo, sketch or words</span></span>
               </button>
@@ -346,7 +347,8 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
       <Split cols="lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" left={<>
         <div className="mt-2 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className={cx("h-2 w-2 rounded-full", STATUS_DOT[pat.status])} />{pat.status === "Printed" ? "Printed" : pat.status === "Fitting" ? "Ready to print" : "Draft"} · drafted to {pat.body}</div>
         <H1 className="mt-2">{pat.name}</H1>
-        <div className="violet-panel grain relative mt-4 h-[min(300px,34dvh)] overflow-hidden rounded-[28px] py-4 lg:h-[min(560px,62dvh)] lg:rounded-[36px]">
+        <div className="relative mt-4 h-[min(300px,34dvh)] overflow-hidden rounded-[28px] py-4 lg:h-[min(560px,62dvh)] lg:rounded-[36px]">
+          <Crown />
           <BodyFigure sex={body?.sex ?? "female"} width={desk ? 200 : 130} variant="solid" garment={pat.garment} glow={false} className="relative h-full w-full" />
         </div>
       </>} right={<>
