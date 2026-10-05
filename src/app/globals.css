@@ -199,7 +199,9 @@ input { font: inherit; color: inherit; }
   /* the home indicator is a 5pt bar ending ~13pt above the screen edge; the tab bar rests 3pt above it (16px), never on it.
      A fixed value, because iOS reports no bottom inset to this window on some installs. */
   /* the tab bar docks to the bottom edge (--dock 0) and keeps the home bar's space inside itself (--tab-under) */
-  html.pwa .device { --bottom: max(env(safe-area-inset-bottom), 20px); --dock: 0px; --tab-under: max(env(safe-area-inset-bottom), 24px); }
+  /* hybrid: the docked tab bar is flush (--dock 0, home-bar space inside it), while every other bottom button keeps the
+     iPhone's standard clearance: the home-bar safe area (34pt; iOS doesn't always report it here) plus 8px breathing room */
+  html.pwa .device { --bottom: calc(max(env(safe-area-inset-bottom), 34px) + 8px); --dock: 0px; --tab-under: max(env(safe-area-inset-bottom), 24px); }
   /* short window: the strip below the app is painted the bar's colour (useStatusTint), so it is the space */
   html.pwa.vp-short .device { --bottom: 8px; --dock: 0px; --tab-under: 0px; }
 }
