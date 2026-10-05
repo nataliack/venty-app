@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   // Status bar: see-through (black-translucent). On iOS 26 this alone makes a home-screen web app one status bar (47pt)
   // short at the bottom (WebKit bug 301108). The cure is in globals.css (html.pwa): a document slightly taller than the
-  // screen makes iOS grow the window to the full screen. html.vp-short (below) still catches the case if it ever fails.
+  // screen makes iOS grow the window to the full screen.
   // iOS reads this setting only when the app is ADDED to the home screen: re-add after changing it.
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Venty" },
   icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon-192.png", type: "image/png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
@@ -41,9 +41,9 @@ export const viewport: Viewport = {
   themeColor: "#0b0c15",
 };
 
-// html.pwa: opened from the home screen. html.vp-short: iOS 26 made the window shorter than the screen (the WebKit
-// 301108 bug, on installs made with the old see-through status bar). The layout adapts to whichever case it finds,
-// so it is right on old and new installs alike.
+// html.pwa: opened from the home screen. html.vp-short: innerHeight is shorter than the screen. Only shown in the
+// display readout (You tab); the layout no longer reacts to it, since on a real iPhone it read "short" while the app
+// actually reached the bottom edge.
 const PWA_BOOT = `(function(){try{
 var d=document.documentElement;
 var preview=location.hostname==="localhost"&&localStorage.getItem("venty-preview-pwa")==="1"; // dev only: preview the home-screen layout
