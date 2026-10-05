@@ -180,7 +180,7 @@ export function PhotosSheet({ open, onClose }: { open: boolean; onClose: () => v
       <div className="flex items-center justify-between"><h3 className="text-[24px] font-normal tracking-[-.03em]">Scan photos</h3><RB icon="close" size={38} onClick={onClose} /></div>
       <p className="mt-1 text-[15px] text-white/55">Kept on this device only.</p>
       <div className="mt-4 grid grid-cols-3 gap-2.5">{["Front", "Back", "Side"].map((v, i) => (
-        <div key={v}><div className="aspect-[3/4] overflow-hidden rounded-[16px] bg-[#181a2e]">{body.photos?.[i] && <img src={body.photos[i]!} alt={`${v} photo`} className="h-full w-full object-cover" />}</div><div className="mt-1.5 text-center text-[14px] text-white/70">{v}</div></div>
+        <div key={v}><div className="aspect-[3/4] overflow-hidden rounded-[16px] bg-card">{body.photos?.[i] && <img src={body.photos[i]!} alt={`${v} photo`} className="h-full w-full object-cover" />}</div><div className="mt-1.5 text-center text-[14px] text-white/70">{v}</div></div>
       ))}</div>
       <Pill className="mt-6" variant="white" onClick={onClose}>Done</Pill>
     </Sheet>

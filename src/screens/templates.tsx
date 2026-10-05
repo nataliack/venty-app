@@ -200,7 +200,7 @@ export function TplResult() {
         <Glow color={t.color} variant="fade" className="flex h-[min(470px,52dvh)] justify-center rounded-[28px] pt-4 lg:h-[min(600px,66dvh)] lg:rounded-[36px] lg:pt-8"><BodyFigure sex={b.sex} width={150} garment={t.key} className="h-[94%] w-auto" /></Glow>
         <div className="flex flex-col justify-between py-1 lg:grid lg:grid-cols-2 lg:content-center lg:gap-5">
           {notes.map(([l, v, e]) => (
-            <div key={l as string} className="lg:rounded-[24px] lg:border lg:border-white/10 lg:bg-[#181a2e] lg:p-6"><Eyebrow className=" lg:">{l}</Eyebrow><div className="flex items-baseline gap-1.5"><span className="serif text-[40px] leading-none lg:text-[64px]">{u(v as number)}</span><span className="text-[10px] text-white/50">{units}</span></div><div className="text-[11px] font-medium text-peri">{e}</div></div>
+            <div key={l as string} className="lg:rounded-[24px] lg:border lg:border-white/10 lg:bg-card lg:p-6"><Eyebrow className=" lg:">{l}</Eyebrow><div className="flex items-baseline gap-1.5"><span className="serif text-[40px] leading-none lg:text-[64px]">{u(v as number)}</span><span className="text-[10px] text-white/50">{units}</span></div><div className="text-[11px] font-medium text-peri">{e}</div></div>
           ))}
         </div>
       </div>

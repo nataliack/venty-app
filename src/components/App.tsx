@@ -159,7 +159,7 @@ export default function App() {
         <div className="absolute left-0 top-0 z-[70] h-11 w-11" onPointerDown={() => { hold.current = setTimeout(() => setResetAsk(true), 2000); }} onPointerUp={() => hold.current && clearTimeout(hold.current)} onPointerLeave={() => hold.current && clearTimeout(hold.current)} />
         <AnimatePresence>{resetAsk && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 px-8 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-[28px] border border-white/15 bg-[#161826] p-6 text-center">
+            <div className="w-full max-w-sm rounded-[28px] border border-white/15 bg-card p-6 text-center">
               <Icon name="refresh" size={28} className="mx-auto" />
               <div className="mt-3 text-[20px] font-semibold">Reset for the next visitor?</div>
               <Pill className="mt-5" onClick={() => { setResetAsk(false); useApp.getState().reset(); }}>Reset Venty</Pill>
