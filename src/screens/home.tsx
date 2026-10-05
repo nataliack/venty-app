@@ -289,6 +289,18 @@ function useEditing<T extends string>() {
 const EditButton = ({ editing, onClick }: { editing: boolean; onClick: () => void }) => (
   <button onClick={onClick} className={cx("tap h-9 rounded-full px-4 text-[14px] font-medium transition-colors", editing ? "bg-white text-[#0b0c15]" : "border border-white/15 text-white/85 hover:border-white/30")}>{editing ? "Done" : "Edit"}</button>
 );
+// Library top: just the title, with Edit on the same line. While editing, one quiet line says what to do.
+function LibraryHead({ title, editing, canEdit, onEdit }: { title: string; editing: boolean; canEdit: boolean; onEdit: () => void }) {
+  return (
+    <div className="pt-7 lg:pt-6">
+      <div className="flex items-center justify-between gap-4">
+        <H1 className="min-w-0">{title}</H1>
+        {canEdit && <EditButton editing={editing} onClick={onEdit} />}
+      </div>
+      <p className={cx("text-[15px] text-white/55 transition-all", editing ? "mt-1.5 h-6 opacity-100" : "h-0 opacity-0")} aria-hidden={!editing}>Tap the ones you want to delete.</p>
+    </div>
+  );
+}
 function DeleteBar({ n, what, onDelete, onCancel }: { n: number; what: string; onDelete: () => void; onCancel: () => void }) {
   return (
     <div className="flex items-center gap-3 pb-1">
@@ -320,8 +332,7 @@ export function Bodies() {
   const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="bodies" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="bodies" />;
   return (
     <Screen dock={!ed.editing} footer={footer}>
-      <div className="flex h-12 items-center"><Eyebrow>Library</Eyebrow><span className="flex-1" />{bodies.length > 0 && <EditButton editing={ed.editing} onClick={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />}</div>
-      <H1 className="mt-3">Body library</H1>
+      <LibraryHead title="Body library" editing={ed.editing} canEdit={bodies.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
       <label className="field mt-4 flex h-12 items-center gap-2.5 px-4 lg:max-w-[420px]">
         <Icon name="search" size={18} className="shrink-0 text-white/50" />
         <input value={q} onChange={(e) => setQ(e.target.value)} type="text" enterKeyHint="search" placeholder="Search bodies" aria-label="Search bodies" autoComplete="off" spellCheck={false} className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-white/40" />
@@ -371,8 +382,7 @@ export function Patterns() {
   const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="patterns" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="patterns" />;
   return (
     <Screen dock={!ed.editing} footer={footer}>
-      <div className="flex h-12 items-center"><Eyebrow>Library</Eyebrow><span className="flex-1" />{patterns.length > 0 && <EditButton editing={ed.editing} onClick={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />}</div>
-      <H1 className="mt-3">Pattern library</H1>
+      <LibraryHead title="Pattern library" editing={ed.editing} canEdit={patterns.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
       <div className="mt-4 flex h-11 rounded-full glass p-1 lg:max-w-[420px]">{["All", "In progress", "Printed"].map((c) => <button key={c} onClick={() => setF(c)} className={cx("flex-1 rounded-full text-[14px] font-medium", f === c ? "bg-white text-bg" : "text-white/70")}>{c}</button>)}</div>
       <div className="mt-4 flex flex-col gap-3 lg:mt-7 lg:grid lg:grid-cols-2 lg:gap-4">
         {list.map((p, i) => {
