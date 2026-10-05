@@ -74,12 +74,9 @@ function useStatusTint(id: string) {
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
-    // the strip iOS leaves under a home-screen app shows the page background, so match each screen's bottom
     const PAPER = new Set(["tourAsk", "onboarding", "start", "ready", "printed"]);
-    // iOS paints that strip with the background COLOUR only (gradients are ignored). On the Crown sky screens the sky
-    // fades into this exact blue at the very bottom (.sky-floor, home-screen app only), so sky and strip meet seamlessly.
-    const SKY_EDGE = "#262c5e";
-    const bottom = PAPER.has(id) ? "#f3f1ec" : SKY.has(id) ? SKY_EDGE : "#0b0c15";
+    // (the opaque status bar in layout.tsx means there is no strip any more; this only colours overscroll edges)
+    const bottom = PAPER.has(id) ? "#f3f1ec" : SKY.has(id) ? "#131523" : "#0b0c15";
     document.documentElement.style.background = bottom; document.body.style.background = bottom;
     const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", LIGHT_TOP.has(id) ? "light" : "dark"), 0);
     return () => clearTimeout(t);

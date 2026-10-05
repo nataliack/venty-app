@@ -26,7 +26,6 @@ function SkyFrame({ children, onTap, logoIn = true }: { children?: ReactNode; on
   return (
     <button className="absolute inset-0 overflow-hidden text-center" onClick={onTap} aria-label="Continue">
       <Crown />
-      <div className="sky-floor" aria-hidden />
       <div className="relative flex h-full flex-col items-center px-6 lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
         <motion.div initial={logoIn ? { opacity: 0, y: 14 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
           <VentyLogo width={desk ? 300 : 190} />
@@ -64,7 +63,6 @@ export function Welcome() {
   return (
     <div className="absolute inset-0 overflow-hidden">
       <Sky />
-      <div className="sky-floor" aria-hidden />
       <div className="relative flex h-full flex-col items-center px-6 text-center lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
         <motion.div initial={fromSplash ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
           <VentyLogo width={desk ? 300 : 190} />
