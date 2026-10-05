@@ -41,8 +41,15 @@ export const viewport: Viewport = {
   themeColor: "#0b0c15",
 };
 
+// html.pwa: opened from the home screen. html.vp-short: iOS 26 made the window shorter than the screen (the WebKit
+// 301108 bug, on installs made with the old see-through status bar). The layout adapts to whichever case it finds,
+// so it is right on old and new installs alike.
 const PWA_BOOT = `(function(){try{
-if(window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true)document.documentElement.classList.add("pwa");
+var d=document.documentElement;
+if(!(window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true))return;
+d.classList.add("pwa");
+var fit=function(){var portrait=window.innerHeight>window.innerWidth;var gap=(portrait?screen.height:screen.width)-window.innerHeight;d.classList.toggle("vp-short",portrait&&gap>20);};
+fit();window.addEventListener("resize",fit);window.addEventListener("orientationchange",function(){setTimeout(fit,300);});
 }catch(e){}})();`
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

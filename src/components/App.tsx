@@ -75,8 +75,9 @@ function useStatusTint(id: string) {
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
     const PAPER = new Set(["tourAsk", "onboarding", "start", "ready", "printed"]);
-    // (the opaque status bar in layout.tsx means there is no strip any more; this only colours overscroll edges)
-    const bottom = PAPER.has(id) ? "#f3f1ec" : SKY.has(id) ? "#131523" : "#0b0c15";
+    // On a short iOS 26 window (html.vp-short) the strip under the app shows this colour (flat colours only, gradients are
+    // ignored), so it matches each screen's bottom: paper, the sky's blue floor (.sky-floor), or the dark page.
+    const bottom = PAPER.has(id) ? "#f3f1ec" : SKY.has(id) ? "#262c5e" : "#0b0c15";
     document.documentElement.style.background = bottom; document.body.style.background = bottom;
     const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", LIGHT_TOP.has(id) ? "light" : "dark"), 0);
     return () => clearTimeout(t);

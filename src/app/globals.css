@@ -182,12 +182,16 @@ input { font: inherit; color: inherit; }
   .device[data-top="light"] .fakestatus { color: #26335f; }
 }
 
-/* opened from the home screen (html.pwa, set in layout.tsx): the app now reaches the true bottom edge (opaque status bar,
-   see layout.tsx). The status bar sits above the app, so only a small top margin is needed. Buttons keep the home-indicator
-   safe area; the floating tab bar rests just above the home indicator (its bottom edge ~20pt from the screen edge,
-   the indicator itself ends ~13pt up), like iOS's own floating tab bars. In Safari (no .pwa) nothing changes. */
+/* opened from the home screen (html.pwa, set in layout.tsx). The top always follows the real safe area (--top above), so
+   the header never meets the clock, whatever the status bar style.
+   · full-height window: the floating tab bar rests just above the home indicator (bar bottom ~20pt from the screen
+     edge; the indicator ends ~13pt up), like iOS's own floating tab bars; buttons keep the indicator's safe area.
+   · html.vp-short (iOS 26 short window, see layout.tsx): iOS already stops the app above the indicator, so the bar sits
+     on that floor and the strip below gets each screen's bottom colour (useStatusTint, .sky-floor).
+   In Safari (no .pwa) nothing changes. */
 @media (max-width: 639px) {
-  html.pwa .device { --top: 10px; --bottom: max(env(safe-area-inset-bottom), 18px); --dock: max(calc(env(safe-area-inset-bottom) - 14px), 8px); }
+  html.pwa .device { --bottom: max(env(safe-area-inset-bottom), 18px); --dock: max(calc(env(safe-area-inset-bottom) - 14px), 8px); }
+  html.pwa.vp-short .device { --bottom: 8px; --dock: 0px; }
 }
 
 /* desktop: full-screen app with sidebar */
@@ -274,6 +278,11 @@ input { font: inherit; color: inherit; }
   background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px; background-position: -1px -1px;
   mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .6) 45%, transparent 85%); -webkit-mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .6) 45%, transparent 85%); }
 /* solid, softly lit cards on the dark page (no see-through glass) */
+/* short window only (html.vp-short): iOS paints the strip under the app with the background COLOUR only, so the Crown
+   sky fades into one blue (#262c5e) that useStatusTint also gives the strip; they meet with no visible seam */
+.sky-floor { display: none; }
+html.vp-short .sky-floor { display: block; position: absolute; inset: auto 0 0 0; height: 140px; pointer-events: none;
+  background: linear-gradient(180deg, rgb(38 44 94 / 0) 0%, rgb(38 44 94 / .7) 55%, #262c5e 100%); }
 /* home's second start card: the solid card colour, so it pairs with "Design your own" (Crown) yet reads as its own choice */
 .pair-dark { background: var(--color-card);
   border: 1px solid rgb(255 255 255 / .1); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 18px 36px -18px rgb(28 34 82 / .9); }

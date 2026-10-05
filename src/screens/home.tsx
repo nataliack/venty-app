@@ -417,6 +417,21 @@ export function Patterns() {
   );
 }
 
+// TEMPORARY: reads the real window on the iPhone (home-screen app), to check the iOS 26 short-window bug. Remove after.
+function DisplayCheck() {
+  const [t, setT] = useState("");
+  useEffect(() => {
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)";
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const d = document.documentElement.classList;
+    setT(`screen ${screen.height} · window ${window.innerHeight} · top ${parseInt(cs.paddingTop)} · bottom ${parseInt(cs.paddingBottom)} · ${d.contains("pwa") ? "app" : "browser"}${d.contains("vp-short") ? " · short" : ""}`);
+    probe.remove();
+  }, []);
+  return <p className="mt-2 text-center text-[11px] text-white/35">{t}</p>;
+}
+
 export function You() {
   const { user, units, experience, set, reset, bodies, patterns, go } = useApp();
   const [confirm, setConfirm] = useState(false);
@@ -446,6 +461,7 @@ export function You() {
       </Glass>
       <Pill variant="glass" className="mt-5" icon={<Icon name="refresh" size={18} />} onClick={() => setConfirm(true)}>Reset for the next visitor</Pill>
       <p className="mt-3 text-center text-[11px] text-white/35">Tip: press and hold the top-left corner for 2 seconds to reset from anywhere.</p>
+      <DisplayCheck />
       </div></div>
       <Sheet open={confirm} onClose={() => setConfirm(false)}>
         <h3 className="text-[22px] font-normal">Start fresh?</h3>
