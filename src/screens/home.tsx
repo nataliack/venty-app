@@ -203,10 +203,11 @@ export function Home() {
     <Screen noPad dock footer={desk ? undefined : <TabBar tab="home" />}>
       {/* the dark page sits behind the rounded corners, so nothing grey shows through */}
       <div className="bg-bg">
-      <section className="home-hero light-hero relative px-5 pb-7 pt-1 lg:px-12 lg:py-12">
+      <section className="home-hero light-hero relative px-5 pb-7 lg:px-12 lg:py-12">
         <div className="light-mat" aria-hidden />
         <div className="relative">
-          <div className="flex h-12 items-center gap-3 pt-1">
+          {/* .home-hero already pads for the status bar (padding-top: var(--top)); never add a pt-* here, it would override that */}
+          <div className="mt-2 flex h-12 items-center gap-3 lg:mt-0">
             <span className="violet-panel grid h-11 w-11 shrink-0 place-items-center rounded-full text-[17px] font-medium">{name[0].toUpperCase()}</span>
             <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-[#3f4c80]">{greet()}</div><div className="truncate text-[17px] font-medium text-[#26335f]">{name}</div></div>
             <UpdatesButton />
