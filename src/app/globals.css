@@ -24,6 +24,12 @@
 html, body { background: #0b0c15; color: #fff; height: 100%; overscroll-behavior: none; }
 /* phones: pin the document so iOS never rubber-bands or leaves a strip under a home-screen app */
 html, body { position: fixed; inset: 0; overflow: hidden; width: 100%; }
+/* home-screen app (html.pwa): iOS 26 (WebKit bug 301108) keeps the window one status bar short at the bottom while the
+   page fits inside it. Once the document is even 1px taller than the screen, iOS grows the window to the full screen
+   (verified on an iPhone: kaplanoah/sports-apps#57, #60). So here the root is a normal document a touch taller than the
+   screen; .device stays fixed and fills the now full-height window. The see-through status bar is kept. */
+html.pwa { position: static; overflow: visible; height: auto; min-height: calc(100% + env(safe-area-inset-top) + 1px); }
+html.pwa body { position: static; overflow: visible; height: auto; }
 body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
 * { box-sizing: border-box; }
 button { cursor: pointer; font: inherit; color: inherit; background: none; border: 0; padding: 0; -webkit-user-select: none; user-select: none; }

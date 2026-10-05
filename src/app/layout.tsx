@@ -24,11 +24,11 @@ export const metadata: Metadata = {
   title: "Venty — AI pattern studio",
   description: "See a dress you love. Wear it, made for you. Sewing patterns drafted to your exact measurements.",
   manifest: "/manifest.webmanifest",
-  // Status bar: "default" (opaque), NOT black-translucent. On iOS 26, black-translucent makes every home-screen web app
-  // one status bar (47pt) short at the bottom, an unpaintable strip on every screen (WebKit bug 301108). That is the root
-  // cause of the "dark block" at the bottom. The opaque bar takes each screen's top colour from theme-color (useStatusTint
-  // in App.tsx), so it still blends in. iOS reads this only when the app is ADDED to the home screen: re-add after changes.
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Venty" },
+  // Status bar: see-through (black-translucent). On iOS 26 this alone makes a home-screen web app one status bar (47pt)
+  // short at the bottom (WebKit bug 301108). The cure is in globals.css (html.pwa): a document slightly taller than the
+  // screen makes iOS grow the window to the full screen. html.vp-short (below) still catches the case if it ever fails.
+  // iOS reads this setting only when the app is ADDED to the home screen: re-add after changing it.
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Venty" },
   icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon-192.png", type: "image/png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
 };
 
