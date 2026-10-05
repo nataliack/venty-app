@@ -152,7 +152,7 @@ function SectionHead({ title, onAll }: { title: string; onAll: () => void }) {
   );
 }
 
-// Updates behind the bell: only things that matter to you (work waiting, patterns ready, what's new). No marketing.
+// Notifications behind the bell: only things that matter to you (work waiting, patterns ready, what's new). No marketing.
 function useUpdates() {
   const { bodies, patterns, resumeBody, set, go } = useApp();
   const unfinished = bodies.find((x) => x.id === resumeBody && x.done.length < 24);
@@ -172,12 +172,12 @@ function UpdatesButton() {
   const list = useUpdates();
   return (
     <>
-      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#3f4c80] shadow-[0_4px_12px_-6px_rgb(38_51_95_/_.35)] transition-colors hover:bg-[#f6f7fd]">
+      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Notifications" : "Notifications, new"} className="tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#3f4c80] shadow-[0_4px_12px_-6px_rgb(38_51_95_/_.35)] transition-colors hover:bg-[#f6f7fd]">
         <Icon name="bell" size={19} />
         {!seen && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-white" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
-        <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Updates</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
+        <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Notifications</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
         {/* a quiet feed, not a stack of buttons: plain rows split by hairlines. Rows that lead somewhere are still tappable. */}
         <div className="-mx-2 flex flex-col">{list.map((u, i) => {
           const body = <><span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-full"><Icon name={u.icon} size={18} strokeWidth={2} /></span>
@@ -219,13 +219,12 @@ export function Home() {
               <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#3f4c80] lg:text-[18px]">Design your own, or use a pre‑made pattern.</p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
-              <button onClick={make} className="tap relative isolate flex min-h-[128px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
-                <Crown className="-z-10" />
-                <span className="relative flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full border border-white/45 bg-white/20"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
-                <span className="relative"><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/85">Photo, sketch or words</span></span>
+              <button onClick={make} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
+                <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
+                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/70">Photo, sketch or words</span></span>
               </button>
               <button onClick={() => go("templates")} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
-                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
+                <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
                 <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-white/70">Ready-to-fit patterns</span></span>
               </button>
             </div>

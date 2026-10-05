@@ -285,6 +285,9 @@ input { font: inherit; color: inherit; }
 .sky-floor { display: none; }
 html.vp-short .sky-floor { display: block; position: absolute; inset: auto 0 0 0; height: 140px; pointer-events: none;
   background: linear-gradient(180deg, rgb(38 44 94 / 0) 0%, rgb(38 44 94 / .7) 55%, #262c5e 100%); }
+/* home start cards: the icon circle wears the primary button's gradient (same as .pill-primary, without its dots) */
+.icon-primary { color: #fff; background: linear-gradient(180deg, #7387f6, #687ef5 55%, #6479f2);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 8px 18px -8px rgb(104 126 245 / .7); }
 /* home's second start card: the solid card colour, so it pairs with "Design your own" (Crown) yet reads as its own choice */
 .pair-dark { background: var(--color-card);
   border: 1px solid rgb(255 255 255 / .1); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 18px 36px -18px rgb(28 34 82 / .9); }

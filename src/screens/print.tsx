@@ -303,15 +303,15 @@ export function Printed({ p }: { p?: Record<string, unknown> }) {
   const pieces = piecesFor(draft.garment).slice(0, 4);
   const art = (
     <div className="absolute inset-0 grid place-items-center pt-[var(--top)] lg:pt-0">
-      <div className="grid grid-cols-2 gap-3 lg:gap-6">{pieces.map((k, i) => (
-        <motion.div key={k} initial={{ opacity: 0, y: 14, rotate: i % 2 ? 4 : -4 }} animate={{ opacity: 1, y: 0, rotate: i % 2 ? 3 : -3 }} transition={{ delay: 0.1 + i * 0.1, duration: 0.7 }} className="grid place-items-center rounded-[10px] bg-white/12 p-2 backdrop-blur-sm lg:p-4">
-          <Piece k={k} width={desk ? 120 : 64} />
+      <div className="grid grid-cols-2 gap-2 lg:gap-6">{pieces.map((k, i) => (
+        <motion.div key={k} initial={{ opacity: 0, y: 14, rotate: i % 2 ? 4 : -4 }} animate={{ opacity: 1, y: 0, rotate: i % 2 ? 3 : -3 }} transition={{ delay: 0.1 + i * 0.1, duration: 0.7 }} className="grid place-items-center rounded-[10px] bg-white/12 p-1.5 backdrop-blur-sm lg:p-4">
+          <Piece k={k} width={desk ? 120 : 42} />
         </motion.div>
       ))}</div>
     </div>
   );
   return (
-    <PaperScreen art={art} footer={<Pill onClick={home}>Back to home</Pill>}>
+    <PaperScreen art={art} artH="h-[30%]" footer={<Pill onClick={home}>Back to home</Pill>}>
       <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-white"><Icon name="check" size={12} strokeWidth={3} /></span>{n === 1 ? "Your sheet is printed" : `All ${n} sheets are printed`}</div>
       <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Good job! Your pattern is complete</h1>
       <p className="lead mt-3">Now you can start making your {kind}.</p>
