@@ -198,8 +198,10 @@ input { font: inherit; color: inherit; }
 @media (max-width: 639px) {
   /* the home indicator is a 5pt bar ending ~13pt above the screen edge; the tab bar rests 3pt above it (16px), never on it.
      A fixed value, because iOS reports no bottom inset to this window on some installs. */
-  html.pwa .device { --bottom: max(env(safe-area-inset-bottom), 20px); --dock: 16px; }
-  html.pwa.vp-short .device { --bottom: 8px; --dock: 0px; }
+  /* the tab bar docks to the bottom edge (--dock 0) and keeps the home bar's space inside itself (--tab-under) */
+  html.pwa .device { --bottom: max(env(safe-area-inset-bottom), 20px); --dock: 0px; --tab-under: max(env(safe-area-inset-bottom), 24px); }
+  /* short window: the strip below the app is painted the bar's colour (useStatusTint), so it is the space */
+  html.pwa.vp-short .device { --bottom: 8px; --dock: 0px; --tab-under: 0px; }
 }
 
 /* desktop: full-screen app with sidebar */

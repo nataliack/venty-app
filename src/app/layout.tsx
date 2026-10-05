@@ -46,7 +46,8 @@ export const viewport: Viewport = {
 // so it is right on old and new installs alike.
 const PWA_BOOT = `(function(){try{
 var d=document.documentElement;
-if(!(window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true))return;
+var preview=location.hostname==="localhost"&&localStorage.getItem("venty-preview-pwa")==="1"; // dev only: preview the home-screen layout
+if(!(preview||window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true))return;
 d.classList.add("pwa");
 var fit=function(){var portrait=window.innerHeight>window.innerWidth;var gap=(portrait?screen.height:screen.width)-window.innerHeight;d.classList.toggle("vp-short",portrait&&gap>20);};
 fit();window.addEventListener("resize",fit);window.addEventListener("orientationchange",function(){setTimeout(fit,300);});

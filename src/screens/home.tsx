@@ -9,42 +9,53 @@ import { useInstall } from "@/components/Install";
 import { Icon, type IconName } from "@/components/icons";
 
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
-// the corners are rounded too (fillets), so the bar wraps the button like a cradle.
+// the corners are rounded too (fillets), so the bar wraps the button like a cradle. Docked (home-screen app), the
+// bottom corners are square: the bar runs into the screen's own rounded corners.
 const BAR_H = 80, BAR_R = 30, NOTCH_R = 38, NOTCH_Y = 9, FILLET = 9;
-function notchPath(w: number) {
+function notchPath(w: number, H: number, docked: boolean) {
   const c = w / 2, R = NOTCH_R, h = NOTCH_Y, f = FILLET;
   const dx = Math.sqrt((R + f) ** 2 - (h - f) ** 2); // fillet centre sits this far from the notch centre
   const k = R / (R + f); // touch point between fillet and notch, along the line joining their centres
   const p1 = [c + (-dx) * k, h + (f - h) * k], p2 = [c + dx * k, h + (f - h) * k];
-  const r = BAR_R, H = BAR_H;
+  const r = BAR_R, rb = docked ? 0 : BAR_R;
   return [
     `M ${r} 0`, `L ${c - dx} 0`,
     `A ${f} ${f} 0 0 1 ${p1[0]} ${p1[1]}`,
     `A ${R} ${R} 0 1 0 ${p2[0]} ${p2[1]}`,
     `A ${f} ${f} 0 0 1 ${c + dx} 0`,
-    `L ${w - r} 0`, `A ${r} ${r} 0 0 1 ${w} ${r}`, `L ${w} ${H - r}`, `A ${r} ${r} 0 0 1 ${w - r} ${H}`,
-    `L ${r} ${H}`, `A ${r} ${r} 0 0 1 0 ${H - r}`, `L 0 ${r}`, `A ${r} ${r} 0 0 1 ${r} 0`, "Z",
+    `L ${w - r} 0`, `A ${r} ${r} 0 0 1 ${w} ${r}`, `L ${w} ${H - rb}`, rb ? `A ${rb} ${rb} 0 0 1 ${w - rb} ${H}` : "",
+    `L ${rb} ${H}`, rb ? `A ${rb} ${rb} 0 0 1 0 ${H - rb}` : "", `L 0 ${r}`, `A ${r} ${r} 0 0 1 ${r} 0`, "Z",
   ].join(" ");
 }
-function NotchShape() {
+function NotchShape({ docked }: { docked: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [w, setW] = useState(353);
-  useEffect(() => { const el = ref.current; if (!el) return; const ro = new ResizeObserver(() => setW(el.clientWidth)); ro.observe(el); setW(el.clientWidth); return () => ro.disconnect(); }, []);
+  const [[w, h], setSize] = useState([353, BAR_H]);
+  useEffect(() => { const el = ref.current; if (!el) return; const fit = () => setSize([el.clientWidth, el.clientHeight || BAR_H]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
   return (
     <div ref={ref} className="pointer-events-none absolute inset-0" aria-hidden>
-      <svg width={w} height={BAR_H} viewBox={`0 0 ${w} ${BAR_H}`} className="tabbar-shape absolute inset-0 overflow-visible">
-        <defs><linearGradient id="tabfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#cdd3ef" /><stop offset="1" stopColor="#bac3e8" /></linearGradient></defs>
-        <path d={notchPath(w)} fill="url(#tabfill)" stroke="rgb(255 255 255 / .4)" strokeWidth="1" />
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="tabbar-shape absolute inset-0 overflow-visible">
+        {/* solid colour from BAR_H down, so a docked bar meets the strip below (painted #bac3e8) with no seam */}
+        <defs><linearGradient id="tabfill" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={BAR_H}><stop offset="0" stopColor="#cdd3ef" /><stop offset="1" stopColor="#bac3e8" /></linearGradient></defs>
+        <path d={notchPath(w, h, docked)} fill="url(#tabfill)" stroke="rgb(255 255 255 / .4)" strokeWidth="1" />
       </svg>
     </div>
   );
 }
 
-// Phone navigation: a light floating bar with the Create button sitting in a round notch in the centre.
-// The current tab sits in a soft periwinkle capsule. No glows.
+// Phone navigation: a light bar with the Create button sitting in a round notch in the centre. The current tab sits in a
+// soft periwinkle capsule. No glows.
+// · Safari: a floating pill (Safari's own toolbar sits below it).
+// · Home-screen app (html.pwa): docked like a native iOS tab bar. It runs full width to the bottom edge; icons stay in the
+//   top 80px and the bar grows underneath by --tab-under, the space kept free for the iPhone's home bar.
+const usePwaDock = () => {
+  const [docked, setDocked] = useState(false);
+  useEffect(() => { setDocked(document.documentElement.classList.contains("pwa") && window.matchMedia("(max-width: 639px)").matches); }, []);
+  return docked;
+};
 function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
+  const docked = usePwaDock();
   const items: [typeof tab, IconName, string][] = [["home", "home", "Home"], ["bodies", "body", "Bodies"], ["patterns", "scissors", "Patterns"], ["you", "user", "You"]];
   const btn = ([k, ic, l]: (typeof items)[number]) => {
     const on = tab === k;
@@ -57,10 +68,10 @@ function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   };
   return (
     <>
-      <div className="relative mt-3">
-        {/* 80px tall: icons and labels sit in the upper part, with room underneath, like iOS tab bars */}
-        <nav className="tabbar relative flex h-[80px] items-stretch px-1.5">
-          <NotchShape />
+      <div className={cx("relative mt-3", docked && "-mx-6")}>
+        {/* 80px of icons and labels, with room underneath; docked, plus the home bar's space (--tab-under) */}
+        <nav className={cx("tabbar relative flex items-stretch px-1.5", docked && "px-4")} style={{ height: docked ? "calc(80px + var(--tab-under, 0px))" : 80 }}>
+          <NotchShape docked={docked} />
           {items.slice(0, 2).map(btn)}
           <span className="w-[84px] shrink-0" />
           {items.slice(2).map(btn)}
