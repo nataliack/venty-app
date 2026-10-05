@@ -184,13 +184,15 @@ input { font: inherit; color: inherit; }
 
 /* opened from the home screen (html.pwa, set in layout.tsx). The top always follows the real safe area (--top above), so
    the header never meets the clock, whatever the status bar style.
-   · full-height window: the floating tab bar rests just above the home indicator (bar bottom ~20pt from the screen
-     edge; the indicator ends ~13pt up), like iOS's own floating tab bars; buttons keep the indicator's safe area.
+   · full-height window: the floating tab bar rests just above the home indicator (bar bottom 16px from the screen
+     edge, 3px clear of the indicator); buttons keep at least 20px.
    · html.vp-short (iOS 26 short window, see layout.tsx): iOS already stops the app above the indicator, so the bar sits
      on that floor and the strip below gets each screen's bottom colour (useStatusTint, .sky-floor).
    In Safari (no .pwa) nothing changes. */
 @media (max-width: 639px) {
-  html.pwa .device { --bottom: max(env(safe-area-inset-bottom), 18px); --dock: max(calc(env(safe-area-inset-bottom) - 14px), 8px); }
+  /* the home indicator is a 5pt bar ending ~13pt above the screen edge; the tab bar rests 3pt above it (16px), never on it.
+     A fixed value, because iOS reports no bottom inset to this window on some installs. */
+  html.pwa .device { --bottom: max(env(safe-area-inset-bottom), 20px); --dock: 16px; }
   html.pwa.vp-short .device { --bottom: 8px; --dock: 0px; }
 }
 
