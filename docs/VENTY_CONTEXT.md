@@ -161,7 +161,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 
 **Body figure centring:** to centre a `BodyFigure` in a box, give the svg `h-full w-full` (the viewBox centres the figure itself). Never use `h-full w-auto` inside a flex box: Safari sizes the box from the svg's width attribute and the figure drifts off-centre.
 
-**Navigation (phones):** a light periwinkle tab bar (`.tabbar`, the same colour family as the home hero) with Home, Bodies, Patterns and You, plus one round **Create** button (`.createbtn`) sitting in a real **notch** cut into the bar: the bar's outline is an SVG (`NotchShape` in home.tsx) with a round cut-out around the button and rounded shoulders where the cut meets the top edge, so the bar cradles the button. Create is the single most important action, so it is the only thing raised. Desktop keeps the sidebar.
+**Navigation (phones):** a light periwinkle tab bar (`.tabbar`, the same colour family as the home hero) with Home, Bodies, Patterns and You, plus one round **Create** button (`.createbtn`) sitting in a real **notch** cut into the bar: the bar's outline is an SVG (`NotchShape` in home.tsx) with a round cut-out around the button and rounded shoulders where the cut meets the top edge, so the bar cradles the button. The bar is 80px tall, with icons and labels in the upper part and room underneath, like iOS tab bars. Create is the single most important action, so it is the only thing raised. Desktop keeps the sidebar.
 
 **Styling pitfall:** custom classes in `globals.css` written **outside** `@layer` beat Tailwind utilities.
 - Never put `display`, `position` or size on those classes (`.field`, `.opt`, `.nextbtn`, …), or utilities like `flex` stop working.

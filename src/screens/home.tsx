@@ -10,7 +10,7 @@ import { Icon, type IconName } from "@/components/icons";
 
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
 // the corners are rounded too (fillets), so the bar wraps the button like a cradle.
-const BAR_H = 68, BAR_R = 28, NOTCH_R = 38, NOTCH_Y = 9, FILLET = 9;
+const BAR_H = 80, BAR_R = 30, NOTCH_R = 38, NOTCH_Y = 9, FILLET = 9;
 function notchPath(w: number) {
   const c = w / 2, R = NOTCH_R, h = NOTCH_Y, f = FILLET;
   const dx = Math.sqrt((R + f) ** 2 - (h - f) ** 2); // fillet centre sits this far from the notch centre
@@ -49,7 +49,7 @@ function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const btn = ([k, ic, l]: (typeof items)[number]) => {
     const on = tab === k;
     return (
-      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("relative flex h-full flex-1 flex-col items-center justify-center gap-1 text-[12px] transition-colors", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")}>
+      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("relative flex h-full flex-1 flex-col items-center justify-start gap-1 pt-[11px] text-[12px] transition-colors", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")}>
         <span className={cx("grid h-8 w-14 place-items-center rounded-full transition-colors", on && "bg-[#687ef5]/25")}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
         {l}
       </button>
@@ -58,7 +58,8 @@ function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   return (
     <>
       <div className="relative mt-3">
-        <nav className="tabbar relative flex h-[68px] items-stretch px-1.5">
+        {/* 80px tall: icons and labels sit in the upper part, with room underneath, like iOS tab bars */}
+        <nav className="tabbar relative flex h-[80px] items-stretch px-1.5">
           <NotchShape />
           {items.slice(0, 2).map(btn)}
           <span className="w-[84px] shrink-0" />
