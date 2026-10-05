@@ -94,15 +94,13 @@ export function TemplateDetail({ p }: { p?: Record<string, unknown> }) {
   const picked = !!p?.picked && !!draft.bodyId;
   const forName = bodies.find((x) => x.id === draft.bodyId)?.name.split(",")[0];
   const [len, setLen] = useState(t.defaultLength);
-  const [fav, setFav] = useState(false);
   const desk = useDesk();
   return (
     <Screen footer={<Pill onClick={() => { newDraft({ garment: t.key, source: "template", length: len, ...(picked ? { bodyId: draft.bodyId } : {}) }); go(picked ? "tplFit" : "tplBody"); }}>{picked && forName ? `Fit to ${forName}` : "Fit to a body"}</Pill>}>
-      <TopBar left="back" eyebrow={t.category} right="heart" onRight={() => setFav(!fav)} />
+      <TopBar left="back" eyebrow={t.category} />
       <Split left={
       <Glow color={t.color} variant="edge" className="mt-3 grid h-[min(330px,38dvh)] place-items-center rounded-[30px] lg:mt-0 lg:h-[min(620px,70dvh)] lg:rounded-[40px]">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="animate-floaty"><Flat g={t.key} size={desk ? 320 : 200} /></motion.div>
-        {fav && <span className="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1 text-[11px]">♥ Saved</span>}
       </Glow>} right={<>
       <HS className="mt-5 text-[46px] lg:mt-0 lg:text-[72px]">{t.name}</HS>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">{[`${t.pieces} pieces`, t.tag].map((c) => <span key={c} className="text-[15px] text-white/60">{c}</span>)}</div>

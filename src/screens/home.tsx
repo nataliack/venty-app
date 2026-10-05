@@ -172,9 +172,9 @@ function UpdatesButton() {
   const list = useUpdates();
   return (
     <>
-      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/60 text-[#3f4c80] transition-colors hover:bg-white/85">
+      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#3f4c80] shadow-[0_4px_12px_-6px_rgb(38_51_95_/_.35)] transition-colors hover:bg-[#f6f7fd]">
         <Icon name="bell" size={19} />
-        {!seen && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-[#eef0fb]" />}
+        {!seen && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-white" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
         <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Updates</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
@@ -344,7 +344,7 @@ export function Bodies() {
         {list.map((b, i) => {
           const on = ed.sel.includes(b.id);
           return (
-            <Glow key={b.id} as="button" color={i % 2 ? "#4d5e85" : "#687ef5"} variant="fade" onClick={() => (ed.editing ? ed.toggle(b.id) : (set({ activeBody: b.id }), go("preview")))} className={cx("relative h-[230px] rounded-[26px] p-4 transition-[box-shadow,opacity] lg:h-[320px] lg:p-5", ed.editing && !on && "opacity-70", on && "ring-2 ring-white")}>
+            <Glow key={b.id} as="button" color="#4d5e85" variant="fade" onClick={() => (ed.editing ? ed.toggle(b.id) : (set({ activeBody: b.id }), go("preview")))} className={cx("relative h-[230px] rounded-[26px] p-4 transition-[box-shadow,opacity] lg:h-[320px] lg:p-5", ed.editing && !on && "opacity-70", on && "ring-2 ring-white")}>
               {b.done.length < 24 && !ed.editing && <span className="absolute left-3 top-3 rounded-full bg-white/20 px-2 py-1 text-[11px] font-medium">Incomplete</span>}
               {ed.editing && <span className="absolute right-3 top-3"><Tick on={on} /></span>}
               <div className="flex h-[150px] justify-center lg:h-[230px]"><BodyFigure sex={b.sex} width={desk ? 90 : 62} variant="solid" glow={false} /></div>
