@@ -41,7 +41,7 @@ const SafariBar = () => (
   <Mock>
     <div className="flex items-center gap-2.5">
       <span className="grid h-9 w-9 place-items-center rounded-full bg-white/8 text-white/60"><Icon name="back" size={16} /></span>
-      <span className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full bg-white/8 px-3 text-[13px] text-white/55"><span className="truncate">venty-app-one.vercel.app</span></span>
+      <span className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full bg-white/8 px-3 text-[13px] text-white/55"><span className="truncate">app.venty.au</span></span>
       <Hi className="h-9 w-9"><Icon name="share" size={17} /></Hi>
       <span className="grid h-9 w-9 place-items-center rounded-full bg-white/8 text-white/60"><Icon name="more" size={18} /></span>
     </div>
