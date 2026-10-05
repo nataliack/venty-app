@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useApp } from "@/lib/store";
+import { useApp, DEMO_EMAIL } from "@/lib/store";
 import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, PaperScreen, Crown, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
@@ -138,7 +138,7 @@ export function SignUp() {
       </div>
       <HS className="mt-6">Create your<br />account</HS>
       <Lead className="mt-3">Keep your bodies and patterns safe, on any device.</Lead>
-      <div className="mt-8"><Ways onSocial={() => done("Ana", "ana@venty.studio")} onEmail={() => go("email", { mode: "signup" })} /></div>
+      <div className="mt-8"><Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "signup" })} /></div>
     </AuthShell>
   );
 }
@@ -151,7 +151,7 @@ export function LogIn() {
       <div className="flex h-12 items-center"><RB icon="back" onClick={useApp.getState().back} /></div>
       <HS className="mt-6">Welcome back</HS>
       <Lead className="mt-3">Log in to pick up where you left off.</Lead>
-      <div className="mt-8"><Ways onSocial={() => done("Ana", "ana@venty.studio")} onEmail={() => go("email", { mode: "login" })} /></div>
+      <div className="mt-8"><Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "login" })} /></div>
     </AuthShell>
   );
 }

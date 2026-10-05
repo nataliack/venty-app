@@ -15,7 +15,7 @@ Rules that must never be broken (the full list is in §5 of that file):
 - Every measure uses the shared `MeasureStep` (`src/screens/measure.tsx`), and every flow uses `FlowProgress`.
 - Information is never styled like a button.
 - The only big gradient is **Crown** (from the landing page): use `<Crown />`. Never the old violet radial gradient (#8c9cf8 → #4f63e0 → #1c2252).
-- Colour has a job: dark screens are for working (measuring, the studio, flows); paper + violet screens (`PaperScreen`, the onboarding look) are for moments (tour question, start, body ready, pattern complete) and the light top of home.
+- Colour has a job: dark screens are for working (measuring, flows); paper + violet screens (`PaperScreen`, the onboarding look) are for moments (tour question, start, body ready, pattern complete) and the light top of home. The studio ("What are we making?") is light, in the landing page's Made to measure look.
 - Custom CSS outside `@layer` beats Tailwind, so never set `display`, `position` or size on those classes.
 - Run `npm run build` before committing. Check changes with screenshots at phone size (393×852) and desktop size (1440×900).
 - When a decision changes, update `docs/VENTY_CONTEXT.md` in the same commit.

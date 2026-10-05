@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons";
-import { useApp } from "@/lib/store";
+import { useApp, userPhoto } from "@/lib/store";
 
 export const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(" ");
 
@@ -317,6 +317,21 @@ export function Progress({ value, className }: { value: number; className?: stri
 export function Blob({ className, color = "#687ef5", style }: { className?: string; color?: string; style?: CSSProperties }) {
   const stops = [[0, 1], [15, .9], [30, .72], [44, .52], [56, .35], [67, .21], [77, .11], [86, .045], [93, .014], [100, 0]].map(([p, a]) => `color-mix(in srgb, ${color} ${a * 100}%, transparent) ${p}%`).join(", ");
   return <div className={cx("pointer-events-none absolute scale-[1.6] blur-[40px]", className)} style={{ background: `radial-gradient(closest-side, ${stops})`, ...style }} />;
+}
+
+// The person's picture, or their initial on a soft periwinkle disc. One component, so it looks the same everywhere
+// (home greeting, profile, sidebar).
+export function Avatar({ size = 36, className, ring }: { size?: number; className?: string; ring?: boolean }) {
+  const user = useApp((s) => s.user);
+  const photo = userPhoto(user);
+  const letter = (user.guest ? "G" : user.name.trim()[0] ?? "A").toUpperCase();
+  return (
+    <span className={cx("avatar relative grid shrink-0 place-items-center overflow-hidden rounded-full", ring && "avatar-ring", className)} style={{ width: size, height: size }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {photo ? <img src={photo} alt="" className="h-full w-full object-cover" draggable={false} />
+        : <span className="font-medium leading-none text-[#3f4c80]" style={{ fontSize: Math.round(size * 0.42) }}>{letter}</span>}
+    </span>
+  );
 }
 
 // true on desktop-width screens (≥1024px)

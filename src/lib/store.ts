@@ -34,11 +34,16 @@ export type Pattern = {
   spec?: { ease: number; fabric?: string; stretch?: string; drape: number; seam: number | null; printer: "A4" | "A0"; sheets?: number; metres: number; details?: [string, string][] };
 };
 
+// A picture added in the studio: a photo, or a sketch from the drawing pad. Pins are numbered notes on the picture.
+export type Pin = { x: number; y: number; note: string }; // x, y: 0..1 of the picture
+export type Ref = { id: number; kind: "photo" | "sketch"; src: string; marked?: boolean; pins?: Pin[] };
+
 export type Draft = {
   garment: GarmentKey;
   source: "photo" | "link" | "sketch" | "template" | "voice";
   start?: "link" | "sketch"; // home shortcut: open this input straight away on the prompt screen
-  photo?: string; // your photo and sketch as one picture, not persisted
+  photo?: string; // the main picture from the studio (the first reference), not persisted
+  refs?: Ref[]; // every picture added in the studio, kept while you go back and forth, not persisted
   prompt?: string; // what you wrote in the studio
   details?: [string, string][]; // the garment details you confirmed (sleeves, neckline, …)
   bodyId?: string;
@@ -66,10 +71,16 @@ const seedBodies = (): Body[] => [
   { id: "tom", name: "Tom", sex: "male", measures: { ...defaultMeasures(), bust: 98, waist: 84, hips: 100, height: 181 }, done: ["height", "bust", "waist", "hips"] },
 ];
 
+// photo: a small JPEG data URL or a file in /public. undefined = the account's own picture (signing in with Apple or
+// Google as the demo's Ana brings hers), null = removed.
+export type User = { name: string; email: string; guest: boolean; photo?: string | null };
+export const DEMO_EMAIL = "ana@venty.studio";
+export const userPhoto = (u: User) => (u.photo === undefined ? (!u.guest && u.email === DEMO_EMAIL ? "/ana.jpg" : null) : u.photo);
+
 type State = {
   stack: Route[];
   dir: 1 | -1;
-  user: { name: string; email: string; guest: boolean };
+  user: User;
   units: "cm" | "in";
   experience: number | null;
   prefsDone: boolean; // units + experience chosen once, app-wide
@@ -108,7 +119,7 @@ type State = {
 const initial = () => ({
   stack: [{ id: "splash" }] as Route[],
   dir: 1 as 1 | -1,
-  user: { name: "Ana", email: "", guest: true },
+  user: { name: "Ana", email: "", guest: true } as User,
   units: "cm" as const,
   experience: null as number | null,
   prefsDone: false,
@@ -135,7 +146,12 @@ export const useApp = create<State>()(
       reset: () => { set({ ...initial() }); },
       set: (patch) => set(patch as Partial<State>),
       setDraft: (patch) => set((s) => ({ draft: { ...s.draft, ...patch } })),
-      newDraft: (patch) => set((s) => { if (s.draft.photo) { try { URL.revokeObjectURL(s.draft.photo); } catch {} } return { draft: { ...freshDraft(), bodyId: s.activeBody, ...patch } }; }),
+      newDraft: (patch) => set((s) => {
+        // free the studio's local previews (blob URLs) before starting again
+        const srcs = new Set([s.draft.photo, ...(s.draft.refs ?? []).map((r) => r.src)]);
+        srcs.forEach((src) => { if (src?.startsWith("blob:")) { try { URL.revokeObjectURL(src); } catch {} } });
+        return { draft: { ...freshDraft(), bodyId: s.activeBody, ...patch } };
+      }),
       body: () => { const s = get(); return s.bodies.find((b) => b.id === s.activeBody) ?? s.bodies[0] ?? ME; },
       updateBody: (patch) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, ...patch } : b)) })),
       setMeasure: (key, v) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, measures: { ...b.measures, [key]: Math.round(v * 2) / 2 } } : b)) })),
@@ -175,7 +191,7 @@ export const useApp = create<State>()(
     {
       name: "venty-expo-v1",
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ ...s, draft: { ...s.draft, photo: undefined }, stack: s.stack.slice(-12) }),
+      partialize: (s) => ({ ...s, draft: { ...s.draft, photo: undefined, refs: undefined }, stack: s.stack.slice(-12) }),
       version: 2,
       migrate: () => ({ ...initial() }) as unknown as State,
     },

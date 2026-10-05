@@ -1,12 +1,12 @@
 "use client";
 import { haptic } from "@/lib/haptics";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { FLUTTER, FITS, fitName, fabricAdvice, templateBy, type GarmentKey, type PieceKey } from "@/lib/data";
-import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, RB, Arrows, NextButton, Check, Option, Segmented, Sheet, Crown, cx, Blob, Field, Split, useDesk } from "@/components/ui";
+import { Screen, TopBar, H1, HS, Lead, Pill, Glow, Chip, RB, Arrows, Option, Segmented, Sheet, cx, Blob, Split, useDesk } from "@/components/ui";
 import { BodyFigure, Piece, Ruler } from "@/components/art";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
 import { FlowHeader } from "./measure";
 
 export const garmentName = (g: GarmentKey) => (g === "flutter" ? FLUTTER.name : templateBy(g).name);
@@ -46,163 +46,6 @@ export function PatSelectBody() {
           ))}
           <button onClick={() => startBody()} className="tap flex h-16 items-center gap-3 rounded-[22px] border border-dashed border-white/25 px-5 text-[16px] font-medium text-white/75 hover:border-white/50"><Icon name="plus" size={20} />New body</button>
         </div>} />
-    </Screen>
-  );
-}
-
-// P02 · the studio: one instrument that holds every tool, in the spirit of a creative toolkit. Photos, a sketch pad
-// and your words live in a single panel, so mixing them feels natural. The pad lives on the page (not in a sheet),
-// so drawing never drags anything away.
-type Stroke = { pts: [number, number][]; erase?: boolean }; // points normalised 0..1 so the drawing survives a resize
-const MAX_REFS = 4;
-export function Prompt() {
-  const { go, back, setDraft, draft, bodies, stack } = useApp();
-  const file = useRef<HTMLInputElement>(null);
-  const cv = useRef<HTMLCanvasElement>(null);
-  const strokes = useRef<Stroke[]>([]);
-  const cur = useRef<Stroke | null>(null);
-  const [n, setN] = useState(0); // strokes drawn, for the UI
-  const [refs, setRefs] = useState<string[]>([]);
-  const [active, setActive] = useState(0);
-  const [tool, setTool] = useState<"pen" | "erase">("pen");
-  const [text, setText] = useState("");
-  const pic = useRef<HTMLImageElement>(null);
-  const desk = useDesk();
-  const photo = refs[active] ?? null;
-  const body = bodies.find((x) => x.id === draft.bodyId);
-  const changeBody = () => (stack[stack.length - 2]?.id === "patSelectBody" ? back() : go("patSelectBody"));
-
-  const ctx = () => { const c = cv.current; const g = c?.getContext("2d"); if (!c || !g) return null; g.lineCap = "round"; g.lineJoin = "round"; return { c, g }; };
-  const paint = (g: CanvasRenderingContext2D, st: Stroke) => {
-    const d = window.devicePixelRatio || 1;
-    g.globalCompositeOperation = st.erase ? "destination-out" : "source-over";
-    g.strokeStyle = "#fff"; g.lineWidth = (st.erase ? 22 : 2.8) * d;
-    g.shadowColor = st.erase ? "transparent" : "rgb(8 10 30 / .7)"; g.shadowBlur = st.erase ? 0 : 3 * d;
-  };
-  const redraw = useCallback(() => {
-    const k = ctx(); if (!k) return; const { c, g } = k;
-    g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, c.width, c.height);
-    strokes.current.forEach((st) => { paint(g, st); g.beginPath(); st.pts.forEach(([x, y], i) => (i ? g.lineTo(x * c.width, y * c.height) : g.moveTo(x * c.width, y * c.height))); if (st.pts.length === 1) g.lineTo(st.pts[0][0] * c.width + 0.1, st.pts[0][1] * c.height); g.stroke(); });
-    g.globalCompositeOperation = "source-over";
-  }, []);
-  useEffect(() => {
-    const c = cv.current; if (!c) return;
-    const fit = () => { const r = c.getBoundingClientRect(); const d = window.devicePixelRatio || 1; c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); redraw(); };
-    const ro = new ResizeObserver(fit); ro.observe(c); fit();
-    return () => ro.disconnect();
-  }, [redraw]);
-  const at = (e: React.PointerEvent): [number, number] => { const r = cv.current!.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
-  const down = (e: React.PointerEvent) => {
-    if (tool === "erase" && n === 0) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId); cur.current = { pts: [at(e)], erase: tool === "erase" }; strokes.current.push(cur.current); redraw();
-  };
-  const move = (e: React.PointerEvent) => {
-    const st = cur.current; const k = ctx(); if (!st || !k) return;
-    const p = at(e); const [lx, ly] = st.pts[st.pts.length - 1]; st.pts.push(p);
-    paint(k.g, st); k.g.beginPath(); k.g.moveTo(lx * k.c.width, ly * k.c.height); k.g.lineTo(p[0] * k.c.width, p[1] * k.c.height); k.g.stroke();
-    k.g.globalCompositeOperation = "source-over";
-  };
-  const up = () => { if (cur.current) { cur.current = null; setN(strokes.current.length); } };
-  const undo = () => { strokes.current.pop(); redraw(); setN(strokes.current.length); if (!strokes.current.some((x) => !x.erase)) setTool("pen"); };
-  const clear = () => { strokes.current = []; redraw(); setN(0); setTool("pen"); };
-  const onFiles = (fs?: FileList | null) => {
-    if (!fs?.length) return;
-    const urls: string[] = []; Array.from(fs).forEach((f) => { try { urls.push(URL.createObjectURL(f)); } catch { /* ignore */ } });
-    setRefs((r) => { const all = [...r, ...urls].slice(0, MAX_REFS); setActive(Math.min(all.length - 1, r.length)); return all; });
-  };
-  const removeRef = (i: number) => { setRefs((r) => r.filter((_, k) => k !== i)); setActive((a) => Math.max(0, a > i ? a - 1 : a === i ? 0 : a)); };
-  const drawn = strokes.current.some((x) => !x.erase) && n > 0;
-  const ready = refs.length > 0 || drawn || text.trim().length > 0;
-  // merge the photo (fitted the way it is shown) and the sketch into one picture for the next steps
-  const merge = () => {
-    const c = cv.current; if (!c || !c.width) return undefined;
-    const out = document.createElement("canvas"); out.width = c.width; out.height = c.height;
-    const g = out.getContext("2d"); if (!g) return undefined;
-    g.fillStyle = "#121427"; g.fillRect(0, 0, out.width, out.height);
-    const img = pic.current;
-    if (photo && img?.naturalWidth) {
-      const pad = 16 * (window.devicePixelRatio || 1), k = Math.min((out.width - pad * 2) / img.naturalWidth, (out.height - pad * 2) / img.naturalHeight);
-      const w = img.naturalWidth * k, h = img.naturalHeight * k; g.drawImage(img, (out.width - w) / 2, (out.height - h) / 2, w, h);
-    }
-    g.drawImage(c, 0, 0);
-    try { return out.toDataURL("image/jpeg", 0.82); } catch { return photo ?? undefined; }
-  };
-  const next = () => {
-    setDraft({ photo: photo || drawn ? merge() : undefined, source: photo ? "photo" : drawn ? "sketch" : "voice", prompt: text.trim() || undefined, garment: "flutter", chosen: {}, details: undefined });
-    go("ref");
-  };
-
-  // the reference strip: your photos as thumbnails, plus one tile to add more (like a mood board pinned to the pad)
-  const strip = (
-    <div className="flex items-center gap-2">
-      {refs.map((r, i) => (
-        <div key={r} className="relative">
-          <button onClick={() => setActive(i)} aria-label={`Show photo ${i + 1}`} className={cx("block h-12 w-12 overflow-hidden rounded-[14px] border-2 transition-colors", i === active ? "border-white" : "border-white/15 opacity-75")}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={r} alt="" className="h-full w-full object-cover" />
-          </button>
-          {i === active && <button onClick={() => removeRef(i)} aria-label="Remove photo" className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-white text-[#0b0c15] shadow"><Icon name="close" size={11} strokeWidth={3} /></button>}
-        </div>
-      ))}
-      {refs.length < MAX_REFS && (
-        <button onClick={() => file.current?.click()} aria-label="Add a photo" className="grid h-12 w-12 place-items-center rounded-[14px] border border-white/15 bg-white/[.06] text-white/80 backdrop-blur-md transition-colors hover:bg-white/10"><Icon name="imageplus" size={20} /></button>
-      )}
-    </div>
-  );
-  const stage = (
-    <div className={cx("studio-stage relative overflow-hidden rounded-[22px]", desk ? "h-[min(470px,50dvh)]" : "h-[min(380px,44dvh)]")}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {photo && <img ref={pic} src={photo} alt="Your garment photo" className="pointer-events-none absolute inset-0 h-full w-full object-contain p-4" />}
-      {!photo && n === 0 && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-          <div className="text-[19px]">Sketch your idea here</div>
-          <div className="mt-1 max-w-[260px] text-[15px] leading-snug text-white/55">or add a photo and draw what you’d change.</div>
-        </div>
-      )}
-      <canvas ref={cv} aria-label="Sketch pad" className={cx("absolute inset-0 h-full w-full touch-none", tool === "erase" ? "cursor-cell" : "cursor-crosshair")} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
-      <div className="absolute left-2.5 top-2.5">{strip}</div>
-      {n > 0 && (
-        <div className="absolute right-2.5 top-2.5 flex gap-1.5">
-          <button onClick={undo} aria-label="Undo" className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-[#0b0c15]/60 backdrop-blur-md hover:bg-white/10"><Icon name="undo" size={18} /></button>
-          <button onClick={clear} aria-label="Clear the sketch" className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-[#0b0c15]/60 backdrop-blur-md hover:bg-white/10"><Icon name="trash" size={18} /></button>
-        </div>
-      )}
-    </div>
-  );
-  const tools = (
-    <div className="flex items-center gap-2 overflow-x-auto noscroll">
-      <button onClick={() => file.current?.click()} disabled={refs.length >= MAX_REFS} className="tool"><Icon name="imageplus" size={17} />Photo</button>
-      <button onClick={() => setTool("pen")} aria-pressed={tool === "pen"} className={cx("tool", tool === "pen" && "on")}><Icon name="pencil" size={17} />Draw</button>
-      <button onClick={() => setTool("erase")} aria-pressed={tool === "erase"} disabled={n === 0} className={cx("tool", tool === "erase" && "on")}><Icon name="eraser" size={17} />Erase</button>
-    </div>
-  );
-  const composer = (
-    <div className="studio rounded-[28px] p-2" data-need={ready ? "0" : "1"}>
-      {stage}
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={desk ? 2 : 2} aria-label="Describe it" placeholder="Describe it, e.g. a midi wrap dress with flutter sleeves"
-        className="block w-full resize-none bg-transparent px-3 pb-2 pt-3.5 text-[17px] leading-snug outline-none placeholder:text-white/35" />
-      {/* who it's drafted to, set like a setting inside the tool rather than a separate question */}
-      {body && (
-        <button onClick={changeBody} className="flex w-full items-center justify-between gap-3 border-t border-white/[.07] px-3 py-2.5 text-left">
-          <span className="flex items-center gap-2 text-[14px] text-white/50"><Icon name="body" size={16} />Drafted to</span>
-          <span className="flex items-center gap-1 text-[15px] font-medium">{body.name}<Icon name="chevR" size={15} className="text-white/45" /></span>
-        </button>
-      )}
-      <div className={cx("flex items-center gap-3 border-t border-white/[.07] px-1 pt-2", desk && "pb-0.5")}>
-        <div className="min-w-0 flex-1">{tools}</div>
-        {desk && <NextButton ready={ready} onClick={next} label="Continue" className="!h-[52px] w-[200px] shrink-0" />}
-      </div>
-    </div>
-  );
-  return (
-    <Screen header={<TopBar left="back" />} footer={desk ? undefined : <Arrows ready={ready} onNext={next} label="Continue" />}
-      bg={<div className="pointer-events-none absolute inset-x-0 top-0 h-[320px] opacity-[.35] [mask-image:linear-gradient(#000,transparent)]"><Crown /></div>}>
-      <input ref={file} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
-      <div className="lg:mx-auto lg:max-w-[920px]">
-        <h1 className="h1 !text-[28px] [text-wrap:balance] lg:!text-[44px]">What are we making?</h1>
-        <p className="mt-1 text-[15px] text-white/60 lg:text-[17px]">Mix photos, a sketch and your words.</p>
-        <div className="mt-4 lg:mt-6">{composer}</div>
-      </div>
     </Screen>
   );
 }
@@ -264,6 +107,8 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
   const choose = (patch: Partial<typeof draft>, key: "fit" | "fabric" | "stretch") => setDraft({ ...patch, chosen: { ...chosen, [key]: true } });
   const ref = <div className="h-full overflow-hidden rounded-[24px] border border-white/15"><RefImage /></div>;
   const val = (k: string) => read.find(([x]) => x === k)?.[1] ?? "";
+  // the notes pinned on your pictures in the studio, in order
+  const notes = (draft.refs ?? []).flatMap((r) => r.pins ?? []).map((p) => p.note.trim()).filter(Boolean);
 
   if (tab === "Fitting") {
     const preset = FITS.find((f) => f.ease === draft.ease);
@@ -309,7 +154,7 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
         </>} right={<>
           <div className="mt-6 text-[16px] font-medium text-white/85 lg:mt-0">Does your fabric stretch?</div>
           <div className="mt-2.5 flex flex-col gap-2" data-need={chosen.stretch ? "0" : "1"}>{([["No", "It doesn’t move"], ["A bit", "It gives when you pull"], ["A lot", "Stretches and springs back"]] as const).map(([k, d]) => (
-            <Option key={k} on={!!chosen.stretch && draft.stretch === k} onClick={() => choose({ stretch: k }, "stretch")} className="flex h-[58px] items-center gap-4 rounded-[16px] px-4"><span className="w-[124px] text-[16px] font-medium">{stretchLabel[k]}</span><span className="flex-1 text-[15px] text-white/60">{d}</span></Option>
+            <Option key={k} on={!!chosen.stretch && draft.stretch === k} onClick={() => choose({ stretch: k }, "stretch")} className="flex min-h-[58px] items-center gap-3 rounded-[16px] py-3 pl-4 pr-12"><span className="w-[118px] shrink-0 text-[16px] font-medium leading-tight">{stretchLabel[k]}</span><span className="min-w-0 flex-1 text-[15px] leading-snug text-white/60">{d}</span></Option>
           ))}</div>
           {off && <p className="mt-2.5 flex items-start gap-2 text-[15px] leading-snug text-white/65"><Icon name="info" size={18} className="mt-px shrink-0" />That works too. Your fit was planned for {tip.title.toLowerCase()}, so try the garment on as you sew.</p>}
         </>} />
@@ -332,6 +177,11 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
             <div className="mt-1 text-[24px] tracking-[-.02em] lg:text-[30px]">Dress</div>
             <div className="mt-1 text-[15px] leading-snug text-white/65">{val("Length")} length, {val("Sleeves").toLowerCase()} sleeves, {val("Neckline").toLowerCase()}, {val("Skirt").toLowerCase()} skirt.</div>
             {draft.prompt && <div className="mt-2 text-[14px] italic leading-snug text-white/50">“{draft.prompt}”</div>}
+            {notes.length > 0 && (
+              <ol className="mt-2 space-y-1">{notes.map((n, i) => (
+                <li key={i} className="flex items-start gap-2 text-[14px] leading-snug text-white/65"><span className="serif mt-px grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-primary text-[10px] leading-none">{i + 1}</span>{n}</li>
+              ))}</ol>
+            )}
           </div>
         </div>
         <div className="card-soft mt-3 rounded-[24px] px-4 pb-1 pt-3 lg:px-6">

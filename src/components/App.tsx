@@ -6,8 +6,10 @@ import { useApp } from "@/lib/store";
 import { Splash, Welcome, SignUp, LogIn, EmailStep, SignedIn, TourAsk, Onboarding, StartChoice } from "@/screens/auth";
 import { Prefs, Method, NameBody, BaseMeasures, MeasureBase, ScanPrep, ScanCam, Preview, EditMeasures, Ready } from "@/screens/setup";
 import { Wizard, WizardStep, GroupDone, AllDone } from "@/screens/wizard";
-import { Home, Bodies, Patterns, You, PatternView } from "@/screens/home";
-import { PatSelectBody, Prompt, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
+import { Home, Bodies, Patterns, PatternView } from "@/screens/home";
+import { You, ProfileEdit, Info } from "@/screens/profile";
+import { PatSelectBody, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
+import { Prompt } from "@/screens/studio";
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
 import { Seam, Arrange, PrintMethod, Needs, PrintReady, MiniMap, Printed } from "@/screens/print";
 import { Pill, cx } from "./ui";
@@ -24,7 +26,7 @@ const SCREENS: Record<string, ScreenC> = {
   prefs: Prefs, name: NameBody, method: Method, measure: MeasureBase, base: BaseMeasures,
   scanPrep: ScanPrep, scanCam: ScanCam, preview: Preview, edit: EditMeasures, ready: Ready,
   wizard: Wizard, wstep: WizardStep, wdone: GroupDone, alldone: AllDone,
-  home: Home, bodies: Bodies, patterns: Patterns, you: You, pattern: PatternView,
+  home: Home, bodies: Bodies, patterns: Patterns, you: You, profileEdit: ProfileEdit, info: Info, pattern: PatternView,
   patSelectBody: PatSelectBody, prompt: Prompt, ref: AIRead, ai: AIRead, generating: Generating, garment: Garment, edits: Edits,
   templates: Templates, template: TemplateDetail, tplBody: TplBody, tplFit: TplFit, tplResult: TplResult,
   install: InstallGuide,
@@ -63,14 +65,15 @@ function StatusBar() {
   );
 }
 
-const LIGHT_TOP = new Set(["home"]);
+// light screens: the colour at their top (Safari's bar follows it) and at their bottom
+const LIGHT_TOP: Record<string, string> = { home: "#f6f7fd", you: "#f6f7fd", prompt: "#f0f4fe" };
 // splash, welcome and "Welcome, Ana" share one sky, so they cross-fade in place instead of sliding
 const SKY = new Set(["splash", "welcome", "signedin"]);
 const CROWN_TOP = new Set(["splash", "signedin", "welcome", "tourAsk", "onboarding", "start", "ready", "printed"]);
 function useStatusTint(id: string) {
   useEffect(() => {
     const desk = window.matchMedia("(min-width: 1024px)").matches;
-    const color = desk ? "#0b0c15" : LIGHT_TOP.has(id) ? "#f6f7fd" : CROWN_TOP.has(id) ? "#a7b1d3" : "#0b0c15";
+    const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (CROWN_TOP.has(id) ? "#a7b1d3" : "#0b0c15");
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
@@ -80,9 +83,13 @@ function useStatusTint(id: string) {
     // Tab screens in the home-screen app: the bar is docked, so the strip continues the bar's own bottom colour.
     const TABS = new Set(["home", "bodies", "patterns", "you"]);
     const pwa = document.documentElement.classList.contains("pwa");
-    const bottom = pwa && TABS.has(id) ? "#bac3e8" : PAPER.has(id) ? "#f3f1ec" : SKY.has(id) ? "#262c5e" : "#0b0c15";
-    document.documentElement.style.background = bottom; document.body.style.background = bottom;
-    const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", LIGHT_TOP.has(id) ? "light" : "dark"), 0);
+    const bottom = pwa && TABS.has(id) ? "#bac3e8" : id === "prompt" ? LIGHT_TOP.prompt : PAPER.has(id) ? "#f3f1ec" : SKY.has(id) ? "#262c5e" : "#0b0c15";
+    // Safari 26 (theme-color is ignored) paints its status bar from this colour, since .device has none of its own
+    // (see globals.css): in Safari it is each screen's top colour, so the bar runs on from the screen as if see-through.
+    // The home-screen app has a see-through status bar already, so there it keeps the bottom strip's colour.
+    const fill = pwa ? bottom : color;
+    document.documentElement.style.background = fill; document.body.style.background = fill;
+    const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", id in LIGHT_TOP ? "light" : "dark"), 0);
     return () => clearTimeout(t);
   }, [id]);
 }

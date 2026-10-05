@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useApp } from "@/lib/store";
 import { VentyLogo, BodyFigure } from "./art";
 import { Icon, type IconName } from "./icons";
-import { cx, Pill } from "./ui";
+import { cx, Pill, Avatar } from "./ui";
 import { CreateSheet } from "@/screens/home";
 
 // Which sidebar item a route belongs to
@@ -14,7 +14,7 @@ const SECTION: Record<string, string> = {
   patterns: "patterns", pattern: "patterns", garment: "patterns", edits: "patterns", seam: "patterns", arrange: "patterns", printMethod: "patterns", needs: "patterns", print: "patterns", pages: "patterns", minimap: "patterns", printed: "patterns",
   patSelectBody: "make", prompt: "make", ref: "make", ai: "make", generating: "make",
   templates: "templates", template: "templates", tplBody: "templates", tplFit: "templates", tplResult: "templates",
-  you: "you",
+  you: "you", profileEdit: "you", info: "you",
 };
 
 export function Sidebar({ route }: { route: string }) {
@@ -54,7 +54,7 @@ export function Sidebar({ route }: { route: string }) {
           </div>
         </div>
         <div className="mt-4 flex items-center gap-3 px-1">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-[15px] font-semibold">{(user.guest ? "G" : user.name[0]).toUpperCase()}</span>
+          <Avatar size={36} ring />
           <div className="flex-1 text-[14px]"><div className="font-medium">{user.guest ? "Guest" : user.name}</div><div className="text-[11px] text-white/45">{user.email || "Exploring"}</div></div>
           <button aria-label="Reset for next visitor" title="Reset for the next visitor" onClick={() => nav("you")} className="text-white/45 hover:text-white"><Icon name="refresh" size={18} /></button>
         </div>

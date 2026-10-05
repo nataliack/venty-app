@@ -39,7 +39,11 @@ input { font: inherit; color: inherit; }
 }
 
 /* device shell */
-.device { position: fixed; inset: 0; overflow: hidden; background: #0b0c15; isolation: isolate; }
+/* Safari 26 colours its status bar from position: fixed elements at the top of the page (theme-color is ignored).
+   So .device (fixed, full screen) carries no colour of its own: its dark fill is a pseudo-element, which Safari skips,
+   and the bar takes the html/body colour instead, which useStatusTint (App.tsx) sets to each screen's top colour. */
+.device { position: fixed; inset: 0; overflow: hidden; background: transparent; isolation: isolate; }
+.device::before { content: ""; position: absolute; inset: 0; z-index: -1; background: #0b0c15; pointer-events: none; }
 @media (min-width: 640px) and (max-width: 1023px) and (min-height: 720px) {
   .stage { position: fixed; inset: 0; overflow: auto; display: grid; place-items: center; padding: 24px;
     background: radial-gradient(60% 50% at 30% 20%, rgba(104,126,245,.18), transparent 70%), radial-gradient(50% 50% at 80% 90%, rgba(77,94,133,.25), transparent 70%), #05060b; }
@@ -327,15 +331,6 @@ input { font: inherit; color: inherit; }
 /* the app's own dark blue (the page background, lifted a touch) with a white icon and a fine light edge */
 .iconbadge { color: #fff; background: linear-gradient(160deg, #262b4b 0%, #14172a 100%);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .1), 0 6px 14px -8px rgb(8 10 24 / .7); }
-/* the studio: one panel that holds every tool (photos, sketch, words), like a single instrument */
-.studio { background: var(--color-card); border: 1px solid rgb(255 255 255 / .1);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), 0 30px 60px -30px rgb(0 0 0 / .9), 0 0 0 1px rgb(140 156 248 / .04); }
-.studio-stage { background-color: #0d0f1c; background-image: radial-gradient(rgb(255 255 255 / .1) 1px, transparent 1.3px); background-size: 18px 18px; }
-.tool { height: 40px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; white-space: nowrap;
-  color: rgb(255 255 255 / .82); background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .1); transition: background .2s, color .2s, border-color .2s, opacity .2s; }
-.tool.on { color: #0b0c15; background: #fff; border-color: #fff; }
-.tool:disabled { opacity: .35; }
-@media (hover: hover) { .tool:not(.on):not(:disabled):hover { background: rgb(255 255 255 / .1); border-color: rgb(255 255 255 / .2); } }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 0 0 1px rgb(255 255 255 / .2), 0 10px 20px -8px rgb(53 66 170 / .7); }
@@ -354,11 +349,21 @@ input { font: inherit; color: inherit; }
 @media (hover: hover) { .paper-card.tap:hover { border-color: rgb(79 99 224 / .35); } }
 /* home: a light, airy top on graph paper in periwinkle, text in a soft (but readable) indigo */
 .light-hero { background: linear-gradient(180deg, #f6f7fd 0%, #eceffd 55%, #e1e6fd 100%); color: #3d4bb3; }
+/* the graph paper rises from the bottom of the light block (anchored there, so whole squares sit on the bottom edge)
+   and fades out towards the top */
 .light-mat { position: absolute; inset: 0; pointer-events: none;
-  background-image: linear-gradient(rgb(104 126 245 / .12) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .12) 1px, transparent 1px),
-    linear-gradient(rgb(104 126 245 / .06) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .06) 1px, transparent 1px);
-  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px; background-position: -1px -1px;
-  mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .55) 50%, transparent 92%); -webkit-mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .55) 50%, transparent 92%); }
+  background-image: linear-gradient(0deg, rgb(104 126 245 / .12) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .12) 1px, transparent 1px),
+    linear-gradient(0deg, rgb(104 126 245 / .06) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .06) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px; background-position: -1px 100%;
+  mask-image: linear-gradient(0deg, #000 0%, rgb(0 0 0 / .55) 50%, transparent 92%); -webkit-mask-image: linear-gradient(0deg, #000 0%, rgb(0 0 0 / .55) 50%, transparent 92%); }
+/* round things on the light top (avatar, bell) share one stroke: a fine periwinkle line inside a white edge */
+.avatar { background: #d9def4; }
+.avatar-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgb(104 126 245 / .35), inset 0 0 0 2px rgb(255 255 255 / .55); }
+.bell-btn { color: #3f4c80; background: linear-gradient(180deg, #fff 0%, #f4f6fd 100%);
+  box-shadow: inset 0 0 0 1px rgb(104 126 245 / .35), inset 0 0 0 2px rgb(255 255 255 / .9), 0 4px 12px -6px rgb(38 51 95 / .35);
+  transition: box-shadow .25s, color .25s, background .25s; }
+@media (hover: hover) { .bell-btn:hover { color: #26335f; box-shadow: inset 0 0 0 1px rgb(104 126 245 / .6), inset 0 0 0 2px rgb(255 255 255 / .9), 0 4px 12px -6px rgb(38 51 95 / .35); } }
 }
 
 /* ─── onboarding paper (light, editorial) ─── */
@@ -368,3 +373,247 @@ input { font: inherit; color: inherit; }
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
 
 @media (prefers-reduced-motion: reduce) { .sky .drift, .sky::before, .nextbtn.nudge { animation: none !important; } }
+
+/* ─── the studio ("What are we making?"): a light screen, the landing page's Made to measure composer.
+   Snow page, ink type, a fading dot grid and a soft primary-blue light under one white glass field.
+   The palette is the app's own tokens (the landing page uses the same colours): ink, slate, denim, lav, mist, snow,
+   primary. Lines and soft fills are ink at low opacity. ─── */
+@layer components {
+.cmp-page, .cmp-menu, .pad-modal {
+  --line: rgb(19 21 35 / .1);
+  --soft: rgb(19 21 35 / .05);
+  --spring: cubic-bezier(.2, 1.4, .4, 1);
+  --expo: cubic-bezier(.16, 1, .3, 1);
+  color: var(--color-ink);
+}
+.cmp-page { background: var(--color-snow); color-scheme: light; }
+/* the dot grid, fading out inside an ellipse round the field */
+.cmp-dots { position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgb(11 12 21 / .2) 1px, transparent 1.3px); background-size: 18px 18px; background-position: center top;
+  -webkit-mask-image: radial-gradient(ellipse 70% 42% at 50% 46%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 70% 42% at 50% 46%, #000 30%, transparent 100%); }
+@media (min-width: 1024px) {
+  .cmp-dots { -webkit-mask-image: radial-gradient(ellipse 46% 44% at 50% 46%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 46% 44% at 50% 46%, #000 30%, transparent 100%); }
+}
+/* the light table: a white glow with the primary blue round it, under the field */
+.cmp-halo { position: absolute; inset: -14% -10% -18%; z-index: 0; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(48% 46% at 50% 46%, rgb(255 255 255 / .95) 0%, rgb(255 255 255 / 0) 70%),
+    radial-gradient(60% 55% at 50% 54%, rgb(104 126 245 / .22) 0%, rgb(160 171 202 / .12) 45%, transparent 75%); }
+.cmp-title { color: var(--color-ink); }
+.cmp-lead { color: rgb(19 21 35 / .62); }
+.cmp-small { font-size: 12px; line-height: 1.3; letter-spacing: -.02em; color: var(--color-denim); }
+@media (min-width: 1024px) { .cmp-small { font-size: 13px; } }
+
+/* back: a quiet round button in the onboarding's light style */
+.cmp-back { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: rgb(255 255 255 / .7); box-shadow: inset 0 0 0 1px var(--line), 0 2px 6px -2px rgb(60 75 99 / .14); color: var(--color-ink);
+  transition: background-color .25s, box-shadow .25s, color .25s, scale .35s var(--spring); }
+.cmp-back:active { scale: .94; }
+@media (hover: hover) { .cmp-back:hover { background: rgb(104 126 245 / .1); box-shadow: inset 0 0 0 1px rgb(104 126 245 / .4); color: var(--color-primary); } }
+
+/* buttons: quiet ink-on-glass pills (ghost), a softer outline (chip), round icons */
+.cmp-ghost, .cmp-chip { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 999px;
+  background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font-size: 14px; letter-spacing: -.02em; color: var(--color-ink); white-space: nowrap;
+  transition: background-color .25s, box-shadow .25s, color .25s, scale .35s var(--spring); }
+.cmp-chip { background: transparent; max-width: 100%; }
+.cmp-chip.is-empty { color: var(--color-slate); }
+.cmp-chip svg { flex: none; }
+.cmp-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%;
+  background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); color: var(--color-ink);
+  transition: background-color .25s, box-shadow .25s, color .25s, scale .35s var(--spring), opacity .2s; }
+.cmp-icon[aria-pressed="true"] { background: rgb(104 126 245 / .14); color: var(--color-primary); }
+@media (hover: hover) {
+  .cmp-ghost:hover, .cmp-chip:hover, .cmp-icon:hover { background: rgb(104 126 245 / .1); box-shadow: inset 0 0 0 1px rgb(104 126 245 / .4); color: var(--color-primary); }
+  .cmp-ghost.is-danger:hover { color: #b4405a; box-shadow: inset 0 0 0 1px rgb(180 64 90 / .4); background: rgb(180 64 90 / .08); }
+}
+.cmp-ghost:active, .cmp-chip:active, .cmp-icon:active { scale: .94; }
+.cmp-ghost:disabled, .cmp-icon:disabled { opacity: .35; pointer-events: none; }
+.cmp-seg { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
+.cmp-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px;
+  font-size: 14px; letter-spacing: -.02em; color: var(--color-slate); transition: background-color .25s, color .25s, box-shadow .25s; }
+.cmp-seg button[aria-pressed="true"] { background: #fff; color: var(--color-ink); box-shadow: 0 1px 3px rgb(19 21 35 / .16), inset 0 0 0 1px var(--line); }
+@media (hover: hover) { .cmp-seg button:hover:not([aria-pressed="true"]) { color: var(--color-primary); } }
+/* the heading inside the ease control, set apart from its options by a rule (sentence case: no tracked caps) */
+.cmp-seg__label { display: inline-flex; align-items: center; gap: 5px; height: 22px; margin-right: 3px; padding: 0 10px 0 9px;
+  border-right: 1px solid var(--line); font-size: 13px; letter-spacing: -.01em; color: var(--color-denim); }
+/* the words field draws no ring: the caret shows where you are, and the toolbar's rule warms to primary */
+.cmp-page button:focus-visible, .cmp-menu button:focus-visible, .pad-modal button:focus-visible, .pad-modal input[type="range"]:focus-visible {
+  outline: 2px solid var(--color-primary); outline-offset: 2px; }
+/* text inputs in the pad: the note's row lights up instead, the hex field gets a primary edge */
+.pad-hex:focus { box-shadow: inset 0 0 0 1.5px var(--color-primary); }
+/* the primary pill on a light surface: its inner glow tighter and fainter so the blue holds */
+.cmp-page .pill-primary:not(.is-off), .pad-modal .pill-primary:not(:disabled) {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .25), inset 0 1px 0 rgb(255 255 255 / .45), inset 0 0 10px 1px rgb(206 214 255 / .35), 0 10px 24px -10px rgb(104 126 245 / .7); }
+.cmp-page .pill-primary.is-off { opacity: .45; }
+
+/* the field: white glass, a long soft shadow and a hairline */
+.cmp-wrap { container-type: inline-size; }
+/* on phones the field fills the rest of the screen (a page to write on); on a computer it takes its own height */
+.cmp-card { display: flex; flex-direction: column; flex: 1 1 auto; position: relative; z-index: 1; padding: 14px; border-radius: 28px; background: rgb(255 255 255 / .62); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), 0 30px 80px -36px rgb(60 75 99 / .45), 0 2px 6px -2px rgb(60 75 99 / .12);
+  transition: box-shadow .35s ease; }
+@media (min-width: 1024px) { .cmp-card { flex: none; } }
+.cmp-card.is-drop { box-shadow: 0 0 0 2px var(--color-primary), 0 30px 80px -36px rgb(104 126 245 / .6); }
+.cmp-card.is-viewing { min-height: 420px; }
+/* a blocked Create points at the field: the app's nudge, with a primary edge */
+.cmp-card.need-flash { box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), 0 0 0 3px rgb(140 156 248 / .45), 0 30px 80px -36px rgb(60 75 99 / .45); }
+.cmp-drop { position: absolute; inset: 6px; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 6px; border-radius: 22px;
+  background: rgb(240 244 254 / .9); color: var(--color-primary); font-size: 15px; pointer-events: none; }
+
+/* references: compact chips; the whole chip is one hover target, so moving onto remove keeps the image dark */
+.cmp-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 63px; padding: 7px 7px 0 0; }
+.cmp-chipwrap { position: relative; }
+.cmp-chipref { position: relative; display: block; width: 56px; height: 56px; overflow: hidden; border-radius: 14px; cursor: pointer;
+  background: var(--color-mist); box-shadow: inset 0 0 0 1px var(--line); animation: cmp-drop-in .55s var(--spring) both; transition: scale .35s var(--spring), box-shadow .25s; }
+.cmp-chipref img { width: 100%; height: 100%; object-fit: cover; }
+.cmp-chipref::after { content: ""; position: absolute; inset: 0; background: rgb(11 12 21 / .52); opacity: 0; transition: opacity .25s ease; }
+@keyframes cmp-drop-in { from { translate: 0 -10px; scale: .8; opacity: 0; } to { translate: 0 0; scale: 1; opacity: 1; } }
+.cmp-chipref__more { position: absolute; left: 50%; top: 50%; z-index: 1; display: grid; place-items: center; width: 32px; height: 32px; translate: -50% -50%;
+  border-radius: 50%; color: var(--color-snow); opacity: 0; scale: .8; transition: opacity .25s ease, scale .35s var(--spring), background-color .2s ease, box-shadow .2s ease; }
+.cmp-chipref__more:hover { background: rgb(240 244 254 / .22); box-shadow: inset 0 0 0 1.5px rgb(240 244 254 / .85); }
+.cmp-chipref__count { position: absolute; right: 4px; bottom: 4px; z-index: 2; display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; font-size: 10px; line-height: 1; background: var(--color-primary); color: var(--color-snow); }
+.cmp-chipx { position: absolute; top: -7px; right: -7px; z-index: 3; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; color: var(--color-ink); box-shadow: 0 0 0 1px var(--line), 0 3px 8px -2px rgb(19 21 35 / .35); opacity: 0; scale: .6; cursor: pointer;
+  transition: opacity .2s ease, scale .35s var(--spring), background-color .2s ease, color .2s ease; }
+/* a bigger target than it looks, for thumbs */
+.cmp-chipx::before { content: ""; position: absolute; inset: -8px; }
+.cmp-chipx:focus-visible { opacity: 1; scale: 1; }
+@media (hover: hover) {
+  .cmp-chipx:hover { background: var(--color-ink); color: var(--color-snow); }
+  .cmp-chipwrap:hover .cmp-chipref::after, .cmp-chipref:focus-visible::after { opacity: 1; }
+  .cmp-chipwrap:hover .cmp-chipref__more, .cmp-chipref:focus-visible .cmp-chipref__more { opacity: 1; scale: 1; }
+  .cmp-chipwrap:hover .cmp-chipx { opacity: 1; scale: 1; }
+  .cmp-chipwrap:hover .cmp-chipx:hover { scale: 1.1; }
+}
+/* touch screens: remove is always there; tapping the image opens it */
+@media (hover: none) { .cmp-chipx { opacity: 1; scale: 1; } }
+
+/* the words: the gap above the field lives on the wrapper, so the mirror and the field start on the same line */
+.cmp-textwrap { position: relative; margin-top: 10px; flex: 1 1 auto; min-height: calc(6 * 23px + 6px); }
+.cmp-textwrap.is-first { margin-top: 0; }
+.cmp-text { display: block; width: 100%; padding: 4px 4px 2px; resize: none; border: 0; outline: none; background: transparent;
+  font: inherit; font-size: 17px; line-height: 1.35; letter-spacing: -.03em; color: var(--color-ink); caret-color: var(--color-primary);
+  overflow: hidden; white-space: pre-wrap; overflow-wrap: break-word; }
+/* phones: the words fill the field and scroll inside it once they run past it */
+.cmp-textwrap > .cmp-text:not(.cmp-mirror) { position: absolute; inset: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.cmp-textwrap > .cmp-text::-webkit-scrollbar { display: none; }
+@media (min-width: 1024px) {
+  .cmp-text { font-size: 20px; }
+  .cmp-textwrap { flex: none; min-height: 0; }
+  .cmp-textwrap > .cmp-text:not(.cmp-mirror) { position: static; min-height: calc(5 * 1.35em + 6px); overflow: hidden; }
+}
+.cmp-text::placeholder { color: var(--color-denim); opacity: 1; }
+/* the cursor at the end of the words: a mirror of the text, invisible but for a primary-blue caret */
+.cmp-mirror { position: absolute; top: 0; left: 0; right: 0; color: transparent; pointer-events: none; user-select: none; }
+.cmp-caret { display: inline-block; width: 2px; height: 1.15em; margin-left: 1px; vertical-align: -.2em; border-radius: 1px; background: var(--color-primary);
+  animation: cmp-blink 1.05s steps(1) infinite; }
+@keyframes cmp-blink { 50% { opacity: 0; } }
+
+/* the toolbar: its rule warms to primary while you type */
+.cmp-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); transition: border-color .3s ease; }
+.cmp-card:has(.cmp-text:focus) .cmp-tools { border-top-color: rgb(104 126 245 / .4); }
+.cmp-tools__add, .cmp-tools__set { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cmp-tools__set { margin-left: auto; }
+.cmp-go { height: 44px; font-size: 15px; }
+.cmp-go-sm { height: 40px; padding: 0 18px; font-size: 14px; }
+.cmp-go-sm:disabled { opacity: .45; pointer-events: none; }
+.cmp-ease-drop { display: none; }
+/* a medium field: ease as a dropdown */
+@container (max-width: 819px) {
+  .cmp-ease { display: none; }
+  .cmp-ease-drop { display: block; }
+}
+/* phones: two rows. Row one: add and sketch on the left, who and ease on the right, with air between; row two: Create
+   my pattern, the full width. Clear air between the rows, so a thumb on the first never lands on Create */
+@container (max-width: 560px) {
+  .cmp-tools { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px 12px; padding-top: 14px; }
+  .cmp-tools__add { gap: 6px; }
+  .cmp-tools__set { justify-self: end; max-width: 100%; gap: 6px; }
+  .cmp-tools .cmp-icon { width: 38px; height: 38px; }
+  .cmp-tools .cmp-chip { height: 38px; padding: 0 10px; gap: 5px; }
+  .cmp-go { grid-column: 1 / -1; width: 100%; height: 48px; font-size: 16px; }
+}
+
+/* menus: drawn into the device frame (see Menu in studio.tsx), over everything */
+.cmp-menu { position: fixed; z-index: 90; width: 260px; max-height: min(340px, 52vh); overflow-y: auto; padding: 8px; border-radius: 18px; background: #fff;
+  box-shadow: 0 0 0 1px var(--line), 0 20px 50px -20px rgb(60 75 99 / .5); animation: cmp-in .35s var(--expo) both; overscroll-behavior: contain; scrollbar-width: none; }
+.cmp-menu button { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 2px; padding: 9px 10px; border-radius: 12px; font-size: 15px; text-align: left; }
+@media (hover: hover) { .cmp-menu button:hover { background: var(--soft); } }
+.cmp-menu button[aria-selected="true"] { background: rgb(104 126 245 / .1); }
+@keyframes cmp-in { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+
+/* the viewer: one reference large, inside the field */
+.cmp-viewer { position: absolute; inset: 0; z-index: 6; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 12px; padding: 12px;
+  border-radius: 28px; background: rgb(250 251 255 / .97); animation: cmp-in .4s var(--expo) both; }
+.cmp-viewer__img { position: relative; overflow: hidden; border-radius: 18px; background: var(--color-mist); }
+.cmp-viewer__img img { width: 100%; height: 100%; object-fit: cover; }
+.cmp-viewer__side { display: flex; flex-direction: column; min-height: 0; }
+.cmp-viewer__title { font-size: 18px; letter-spacing: -.03em; }
+.cmp-viewer__actions { display: grid; gap: 6px; margin-top: auto; padding-top: 12px; }
+.cmp-viewer__actions .cmp-ghost { justify-content: flex-start; }
+.cmp-viewer__actions .cmp-ghost.is-done { justify-content: center; }
+@container (max-width: 560px) {
+  .cmp-viewer { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .cmp-viewer__actions { grid-template-columns: 1fr 1fr; }
+}
+
+/* ─── the drawing pad (a dialog over the studio) ─── */
+.pad-modal { position: absolute; inset: 0; z-index: 95; display: grid; place-items: center; padding: var(--top) 10px var(--bottom);
+  touch-action: manipulation; overscroll-behavior: contain; color-scheme: light; }
+@media (min-width: 1024px) { .pad-modal { padding: 24px; } }
+.pad-modal__scrim { position: absolute; inset: 0; background: rgb(19 21 35 / .35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: cmp-fade .3s ease both; }
+@keyframes cmp-fade { from { opacity: 0; } }
+.pad { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 12px; border-radius: 28px; background: #f7f9ff;
+  box-shadow: 0 0 0 1px var(--line), 0 40px 100px -30px rgb(19 21 35 / .6); animation: cmp-rise .5s var(--expo) both; }
+@media (min-width: 1024px) { .pad { padding: 14px; } }
+@keyframes cmp-rise { from { opacity: 0; translate: 0 18px; scale: .98; } to { opacity: 1; translate: 0 0; scale: 1; } }
+.pad__head { display: flex; align-items: center; gap: 10px; flex: none; }
+.pad__title { flex: 1; min-width: 0; text-align: center; font-size: 15px; color: var(--color-slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pad__tools { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; flex: none; margin-top: 12px; padding: 8px; border-radius: 20px; background: var(--soft); }
+.pad__body { display: flex; gap: 12px; flex: 1; min-height: 0; margin-top: 12px; }
+.pad__board { position: relative; overflow: hidden; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); }
+.pad__hint { position: absolute; left: 50%; bottom: 14px; translate: -50% 0; padding: 5px 10px; border-radius: 999px; background: rgb(255 255 255 / .88);
+  font-size: 12px; color: var(--color-slate); pointer-events: none; white-space: nowrap; }
+/* size: a live dot and a slider */
+.pad-size { display: inline-flex; align-items: center; gap: 10px; }
+.pad-size__dot { display: block; flex: none; border-radius: 50%; box-shadow: 0 0 0 1px var(--line); transition: width .15s, height .15s; }
+.pad-range { -webkit-appearance: none; appearance: none; width: 100px; height: 6px; border-radius: 999px; background: rgb(19 21 35 / .12); }
+.pad-range::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgb(19 21 35 / .25); }
+.pad-range::-moz-range-thumb { width: 20px; height: 20px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgb(19 21 35 / .25); }
+.pad-range--hue { background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+/* colours */
+.pad-swatch { width: 26px; height: 26px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .9), 0 0 0 1px var(--line); transition: scale .3s var(--spring), box-shadow .2s; }
+.pad-swatch.is-sm { width: 22px; height: 22px; }
+@media (hover: hover) { .pad-swatch:hover { scale: 1.1; } }
+.pad-swatch[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px var(--color-primary); }
+.pad-swatch--custom { position: relative; background: conic-gradient(from 0deg, #f66, #fd5, #6e6, #5de, #67f, #e6e, #f66); }
+.pad-swatch--custom::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1.5px #fff; }
+/* the custom colour picker hangs under the tool bar, kept inside the pad */
+.pad-picker { position: absolute; z-index: 12; top: calc(100% + 8px); right: 8px; width: min(260px, calc(100% - 16px)); padding: 12px; border-radius: 18px; background: #fff;
+  box-shadow: 0 0 0 1px var(--line), 0 24px 60px -20px rgb(19 21 35 / .45); animation: cmp-in .3s var(--expo) both; }
+.pad-picker__preview { height: 36px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--line); }
+.pad-picker__row { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--color-denim); }
+.pad-picker__row .pad-range { width: 100%; }
+.pad-hex { height: 34px; padding: 0 10px; border-radius: 10px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); font: inherit; font-size: 16px; color: var(--color-ink); text-transform: uppercase; outline: none; }
+/* pins: numbered marks on a picture */
+.pad-pin { position: absolute; display: grid; place-items: center; width: 22px; height: 22px; translate: -50% -50%; border-radius: 50%;
+  background: var(--color-primary); color: var(--color-snow); font-size: 11px; line-height: 1; box-shadow: 0 0 0 2px #fff, 0 4px 10px -2px rgb(19 21 35 / .4); animation: cmp-pop .45s var(--spring) both; }
+.pad-pin.is-on { box-shadow: 0 0 0 2px #fff, 0 0 0 5px rgb(104 126 245 / .35); }
+@keyframes cmp-pop { from { scale: .4; opacity: 0; } to { scale: 1; opacity: 1; } }
+/* notes beside (or under) the board */
+.pad-notes { padding: 4px 4px 2px; }
+.pad-eyebrow { font-size: 13px; font-weight: 500; letter-spacing: -.01em; color: var(--color-slate); }
+.pad-small { font-size: 13px; line-height: 1.35; color: var(--color-denim); }
+.pad-note { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 6px; border-radius: 12px; background: var(--soft); }
+.pad-note.is-on { background: rgb(104 126 245 / .12); }
+.pad-note input { flex: 1; min-width: 0; height: 32px; border: 0; outline: none; background: transparent; font: inherit; font-size: 16px; color: var(--color-ink); }
+.pad-note input::placeholder { color: var(--color-denim); }
+.pad-note button { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--color-denim); }
+@media (hover: hover) { .pad-note button:hover { background: #fff; color: var(--color-ink); } }
+.pad-note__n { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 50%; background: var(--color-primary); color: var(--color-snow); font-size: 10px; line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cmp-chipref, .cmp-menu, .pad-pin, .pad, .cmp-viewer, .cmp-caret { animation: none; }
+}
+}

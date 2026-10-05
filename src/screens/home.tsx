@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
 import { fabricAdvice, fitName, metresFor, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
-import { Screen, Eyebrow, H1, Pill, Glow, Glass, Chip, RB, Sheet, Toggle, TopBar, Split, Blob, Crown, cx, useToast, useDesk } from "@/components/ui";
+import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { useInstall } from "@/components/Install";
 import { Icon, type IconName } from "@/components/icons";
@@ -52,7 +52,7 @@ const usePwaDock = () => {
   useEffect(() => { setDocked(document.documentElement.classList.contains("pwa") && window.matchMedia("(max-width: 639px)").matches); }, []);
   return docked;
 };
-function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
+export function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
   const docked = usePwaDock();
@@ -184,8 +184,8 @@ function UpdatesButton() {
   const list = useUpdates();
   return (
     <>
-      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Notifications" : "Notifications, new"} className="tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-[#3f4c80] shadow-[0_4px_12px_-6px_rgb(38_51_95_/_.35)] transition-colors hover:bg-[#f6f7fd]">
-        <Icon name="bell" size={19} />
+      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Notifications" : "Notifications, new"} className="bell-btn tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full">
+        <Icon name="bell" size={19} strokeWidth={1.8} />
         {!seen && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-white" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
@@ -221,7 +221,7 @@ export function Home() {
           {/* .home-hero already pads for the status bar (padding-top: var(--top)); never add a pt-* here, it would override that */}
           {/* kept quiet on purpose: the eye should land on the two cards, not up here */}
           <div className="mt-2 flex h-11 items-center gap-2.5 lg:mt-0">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#d9def4] text-[15px] font-medium text-[#3f4c80]">{name[0].toUpperCase()}</span>
+            <button onClick={() => go("you")} aria-label="Your profile" className="tap rounded-full"><Avatar size={40} ring /></button>
             <div className="min-w-0 flex-1 leading-tight"><div className="text-[13px] text-[#5d6a99]">{greet()}</div><div className="truncate text-[15px] font-medium text-[#3f4c80]">{name}</div></div>
             <UpdatesButton />
           </div>
@@ -385,9 +385,9 @@ const statusLine = (p: Pattern) => {
   return "Draft, not finished yet";
 };
 
-export function Patterns() {
+export function Patterns({ p }: { p?: Record<string, unknown> }) {
   const { go, patterns, removePatterns } = useApp();
-  const [f, setF] = useState("All");
+  const [f, setF] = useState((p?.filter as string) ?? "All"); // the profile's Printed tile opens it filtered
   const ed = useEditing<string>();
   const list = patterns.filter((p) => f === "All" || (f === "Printed" ? p.status === "Printed" : p.status !== "Printed"));
   const desk = useDesk();
@@ -427,65 +427,6 @@ export function Patterns() {
     </Screen>
   );
 }
-
-// TEMPORARY: reads the real window on the iPhone (home-screen app), to check the iOS 26 short-window bug. Remove after.
-function DisplayCheck() {
-  const [t, setT] = useState("");
-  useEffect(() => {
-    const probe = document.createElement("div");
-    probe.style.cssText = "position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)";
-    document.body.appendChild(probe);
-    const cs = getComputedStyle(probe);
-    const d = document.documentElement.classList;
-    setT(`screen ${screen.height} · window ${window.innerHeight} · top ${parseInt(cs.paddingTop)} · bottom ${parseInt(cs.paddingBottom)} · ${d.contains("pwa") ? "app" : "browser"}${d.contains("vp-short") ? " · short" : ""}`);
-    probe.remove();
-  }, []);
-  return <p className="mt-2 text-center text-[11px] text-white/35">{t}</p>;
-}
-
-export function You() {
-  const { user, units, experience, set, reset, bodies, patterns, go } = useApp();
-  const [confirm, setConfirm] = useState(false);
-  const { standalone } = useInstall();
-  const kiosk = useApp((s) => s.kiosk);
-  const { toast, node } = useToast();
-  const desk = useDesk();
-  return (
-    <Screen dock footer={desk ? undefined : <TabBar tab="you" />}>
-      <div className="flex h-12 items-center"><Eyebrow>Profile</Eyebrow></div>
-      <div className="lg:mt-4 lg:grid lg:grid-cols-2 lg:gap-12"><div>
-      <div className="mt-3 flex items-center gap-4">
-        <span className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-[#d9def4] text-[30px] font-medium text-[#3f4c80]">{(user.guest ? "G" : user.name[0]).toUpperCase()}</span>
-        <div><div className="text-[22px] font-normal">{user.guest ? "Guest" : user.name}</div><div className="text-[14px] text-white/55">{user.email || "Exploring as a guest"}</div></div>
-      </div>
-      <div className="mt-5 grid grid-cols-3 gap-2">{[["Bodies", bodies.length], ["Patterns", patterns.length], ["Printed", patterns.filter((p) => p.status === "Printed").length]].map(([l, n]) => (
-        <Glass key={l as string} className="rounded-[18px] p-3 lg:p-5"><div className="serif text-[30px] leading-none lg:text-[48px]">{String(n).padStart(2, "0")}</div><div className="eyebrow mt-2">{l}</div></Glass>
-      ))}</div>
-      </div><div>
-      <Eyebrow className="mt-6 text-white/40 lg:mt-3">Settings</Eyebrow>
-      <Glass className="mt-2.5 divide-y divide-white/8 rounded-[22px]">
-        <div className="flex items-center justify-between px-4 py-3.5"><span className="text-[15px]">Units</span><div className="flex rounded-full bg-white/8 p-1">{(["cm", "in"] as const).map((u) => <button key={u} onClick={() => set({ units: u })} className={cx("h-8 w-12 rounded-full text-[14px] font-medium", units === u ? "bg-white text-bg" : "text-white/60")}>{u}</button>)}</div></div>
-        <div className="flex items-center justify-between gap-3 px-4 py-3.5"><span className="text-[15px]">Sewing experience</span><select value={experience ?? ""} onChange={(e) => set({ experience: e.target.value === "" ? null : Number(e.target.value), prefsDone: e.target.value !== "" })} className="rounded-full bg-white/8 px-3 py-1.5 text-[14px] outline-none"><option value="" disabled>Choose</option><option value="0">New to sewing</option><option value="1">Made a few things</option><option value="2">Professional</option></select></div>
-        {!standalone && <button onClick={() => go("install")} className="flex w-full items-center justify-between px-4 py-3.5 text-left"><span className="text-[15px]">Add Venty to your home screen</span><Icon name="chevR" size={18} className="text-white/45" /></button>}
-        <div className="flex items-center justify-between px-4 py-3.5"><span className="text-[15px]">App tour</span><button onClick={() => go("onboarding", { from: "app" })} className="text-[14px] font-medium text-peri">Play</button></div>
-        <div className="flex items-center justify-between px-4 py-3.5"><div><div className="text-[15px]">Expo mode</div><div className="text-[11px] text-white/45">Reset after 2 minutes idle</div></div><Toggle on={kiosk} onChange={(v) => { set({ kiosk: v }); toast(v ? "Expo mode on" : "Expo mode off"); }} /></div>
-      </Glass>
-      <Pill variant="glass" className="mt-5" icon={<Icon name="refresh" size={18} />} onClick={() => setConfirm(true)}>Reset for the next visitor</Pill>
-      <p className="mt-3 text-center text-[11px] text-white/35">Tip: press and hold the top-left corner for 2 seconds to reset from anywhere.</p>
-      <DisplayCheck />
-      </div></div>
-      <Sheet open={confirm} onClose={() => setConfirm(false)}>
-        <h3 className="text-[22px] font-normal">Start fresh?</h3>
-        <p className="mt-2 text-[15px] text-white/60">This clears this visitor’s bodies and patterns and goes back to the start.</p>
-        <Pill className="mt-5" onClick={() => { setConfirm(false); reset(); }}>Reset Venty</Pill>
-        <Pill variant="dark" className="mt-2.5" onClick={() => setConfirm(false)}>Cancel</Pill>
-      </Sheet>
-      {node}
-      <motion.div />
-    </Screen>
-  );
-}
-
 
 // A finished (or in-progress) pattern, as a complete page you can come back to: the garment on the body,
 // where it stands, and a shopping list you can show at the fabric shop.

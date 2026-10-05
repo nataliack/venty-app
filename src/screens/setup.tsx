@@ -16,8 +16,8 @@ const Note = ({ icon = "info", children, className }: { icon?: IconName; childre
 );
 
 // ─── App preferences: asked once, before the first body. Units default to cm (never "none"). ─────────
-const EXP = [
-  { t: "Beginner", d: "I’m new to sewing" },
+export const EXP = [
+  { t: "Beginner", d: "I’m new to sewing" }, // index = the saved `experience`
   { t: "Intermediate", d: "I’ve made a few things from patterns" },
   { t: "Advanced", d: "I sew often, or professionally" },
 ];
