@@ -50,8 +50,9 @@ input { font: inherit; color: inherit; }
 .unit { font-family: var(--font-sans); font-size: 15px; font-weight: 500; letter-spacing: 0; color: rgba(255,255,255,.55); }
 
 /* surfaces */
-.glass { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
-.glass-2 { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+/* cards are solid, never see-through: the dot grid must not show through them (same fill as .card-soft) */
+.glass { background: linear-gradient(180deg, #1b1e33 0%, #15172a 100%); border: 1px solid rgba(255,255,255,.08); }
+.glass-2 { background: linear-gradient(180deg, #22263d 0%, #1a1d31 100%); border: 1px solid rgba(255,255,255,.1); }
 .sel { border-color: #687ef5 !important; box-shadow: inset 0 0 0 .5px #687ef5; }
 
 .glow { position: relative; overflow: hidden; isolation: isolate; border: 1px solid rgba(255,255,255,.14);
@@ -93,7 +94,7 @@ input { font: inherit; color: inherit; }
   .rb:hover { border-color: rgb(255 255 255 / .28); background-color: rgb(255 255 255 / .12); }
   .chip:hover { border-color: rgb(255 255 255 / .3); }
   .glass.tap { transition: transform .3s ease, border-color .25s, background-color .25s; }
-  .glass.tap:hover { border-color: rgb(255 255 255 / .22); background-color: rgb(255 255 255 / .08); }
+  .glass.tap:hover { border-color: rgb(255 255 255 / .2); background: linear-gradient(180deg, #202440 0%, #181a2f 100%); }
   .glow.tap { transition: transform .3s ease, filter .25s; }
   .glow.tap:hover { filter: brightness(1.06); }
 }
@@ -196,11 +197,11 @@ input { font: inherit; color: inherit; }
 .scroller.is-over { mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 
 /* ─── option card: idle = quiet glass with a radio ring; hover = gradient preview; selected = violet edge + gradient ─── */
-.opt { position: relative; isolation: isolate; overflow: hidden; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); cursor: pointer; transition: border-color .3s, background-color .3s, transform .4s cubic-bezier(.2,1.2,.4,1); -webkit-user-select: none; user-select: none; }
+.opt { position: relative; isolation: isolate; overflow: hidden; background: linear-gradient(180deg, #1b1e33 0%, #15172a 100%); border: 1px solid rgba(255,255,255,.1); cursor: pointer; transition: border-color .3s, background-color .3s, transform .4s cubic-bezier(.2,1.2,.4,1); -webkit-user-select: none; user-select: none; }
 .opt::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .45s ease;
   background: radial-gradient(90% 120% at 50% 110%, rgb(104 126 245 / .55), rgb(79 99 224 / .18) 55%, transparent 80%), linear-gradient(180deg, rgb(255 255 255 / .06), transparent 50%); }
 .opt:active { transform: scale(.985); }
-@media (hover: hover) { .opt:not(.on):hover { border-color: rgba(255,255,255,.26); background-color: rgba(255,255,255,.07); } }
+@media (hover: hover) { .opt:not(.on):hover { border-color: rgba(255,255,255,.24); background: linear-gradient(180deg, #202440 0%, #181a2f 100%); } }
 .opt.on { border-color: #687ef5; box-shadow: inset 0 0 0 .5px #687ef5, 0 14px 40px -18px rgb(104 126 245 / .7); }
 .opt.on::before { opacity: 1; }
 .radio { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.35); display: grid; place-items: center; flex-shrink: 0; transition: all .25s; }
@@ -268,6 +269,9 @@ input { font: inherit; color: inherit; }
   background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px; background-position: -1px -1px;
   mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .6) 45%, transparent 85%); -webkit-mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / .6) 45%, transparent 85%); }
 /* solid, softly lit cards on the dark page (no see-through glass) */
+/* home's second start card: the deep navy of the page below, with a faint Crown light at the bottom so it pairs with "Design your own" */
+.pair-dark { background: radial-gradient(120% 70% at 50% 120%, rgb(104 126 245 / .35), transparent 70%), linear-gradient(180deg, #262b4b 0%, #171a2f 100%);
+  border: 1px solid rgb(255 255 255 / .1); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 18px 36px -18px rgb(28 34 82 / .9); }
 .card-soft { background: linear-gradient(180deg, #1b1e33 0%, #15172a 100%); border: 1px solid rgb(255 255 255 / .08); box-shadow: inset 0 1px 0 rgb(255 255 255 / .05), 0 10px 30px -18px rgb(0 0 0 / .8); }
 @media (hover: hover) { .card-soft.tap:hover { border-color: rgb(255 255 255 / .16); background: linear-gradient(180deg, #202440 0%, #181a2f 100%); } }
 /* the two ways to start, on the sky: a periwinkle primary card and a frosted one */

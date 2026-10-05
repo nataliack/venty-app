@@ -43,7 +43,7 @@ function GroupList({ open: initial = [], editable }: { open?: string[]; editable
         const next = cur >= 0 && i === cur + 1;
         const isOpen = open.includes(r.key);
         return (
-          <div key={r.key} className={cx("rounded-[22px] border bg-white/[.04] transition-colors", next ? "border-primary" : "border-white/12")}>
+          <div key={r.key} className={cx("rounded-[22px] border bg-[#181a2e] transition-colors", next ? "border-primary" : "border-white/12")}>
             <div className="flex items-center gap-3.5 px-4 py-3.5">
               {complete ? <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary"><Icon name="check" size={15} strokeWidth={2.6} /></span>
                 : <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[13px] font-medium leading-none tabular-nums", next ? "border-white bg-white text-bg" : "border-white/25 text-white/50")}>{i}</span>}

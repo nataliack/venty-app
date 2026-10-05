@@ -172,9 +172,9 @@ function UpdatesButton() {
   const list = useUpdates();
   return (
     <>
-      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="iconbadge tap relative grid h-11 w-11 shrink-0 place-items-center rounded-full">
-        <Icon name="bell" size={21} strokeWidth={2} />
-        {!seen && <span className="absolute right-[9px] top-[9px] h-2.5 w-2.5 rounded-full border-2 border-[#1d2140] bg-[#8c9cf8]" />}
+      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Updates" : "Updates, new"} className="tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/60 text-[#3f4c80] transition-colors hover:bg-white/85">
+        <Icon name="bell" size={19} />
+        {!seen && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-[#eef0fb]" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
         <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Updates</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
@@ -207,9 +207,10 @@ export function Home() {
         <div className="light-mat" aria-hidden />
         <div className="relative">
           {/* .home-hero already pads for the status bar (padding-top: var(--top)); never add a pt-* here, it would override that */}
-          <div className="mt-2 flex h-12 items-center gap-3 lg:mt-0">
-            <span className="violet-panel grid h-11 w-11 shrink-0 place-items-center rounded-full text-[17px] font-medium">{name[0].toUpperCase()}</span>
-            <div className="min-w-0 flex-1 leading-tight"><div className="text-[14px] text-[#3f4c80]">{greet()}</div><div className="truncate text-[17px] font-medium text-[#26335f]">{name}</div></div>
+          {/* kept quiet on purpose: the eye should land on the two cards, not up here */}
+          <div className="mt-2 flex h-11 items-center gap-2.5 lg:mt-0">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#d9def4] text-[15px] font-medium text-[#3f4c80]">{name[0].toUpperCase()}</span>
+            <div className="min-w-0 flex-1 leading-tight"><div className="text-[13px] text-[#5d6a99]">{greet()}</div><div className="truncate text-[15px] font-medium text-[#3f4c80]">{name}</div></div>
             <UpdatesButton />
           </div>
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-end lg:gap-12">
@@ -220,12 +221,12 @@ export function Home() {
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
               <button onClick={make} className="tap relative isolate flex min-h-[128px] flex-col justify-between overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_36px_-18px_rgba(28,34,82,.9)] lg:min-h-[170px] lg:p-6">
                 <Crown className="-z-10" />
-                <span className="relative flex items-center justify-between"><span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
+                <span className="relative flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full border border-white/45 bg-white/20"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
                 <span className="relative"><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/85">Photo, sketch or words</span></span>
               </button>
-              <button onClick={() => go("templates")} className="paper-card tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left lg:min-h-[170px] lg:p-6">
-                <span className="flex items-center justify-between"><span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-[#4f63e0]/70" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight text-[#26335f] lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-[#3f4c80]">Ready-to-fit patterns</span></span>
+              <button onClick={() => go("templates")} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
+                <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
+                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-white/70">Ready-to-fit patterns</span></span>
               </button>
             </div>
           </div>
@@ -428,7 +429,7 @@ export function You() {
       <div className="flex h-12 items-center"><Eyebrow>Profile</Eyebrow></div>
       <div className="lg:mt-4 lg:grid lg:grid-cols-2 lg:gap-12"><div>
       <div className="mt-3 flex items-center gap-4">
-        <Glow color="#687ef5" variant="orb" className="grid h-[72px] w-[72px] place-items-center rounded-[22px]"><span className="serif text-[34px]">{(user.guest ? "G" : user.name[0]).toUpperCase()}</span></Glow>
+        <span className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-[#d9def4] text-[30px] font-medium text-[#3f4c80]">{(user.guest ? "G" : user.name[0]).toUpperCase()}</span>
         <div><div className="text-[22px] font-normal">{user.guest ? "Guest" : user.name}</div><div className="text-[14px] text-white/55">{user.email || "Exploring as a guest"}</div></div>
       </div>
       <div className="mt-5 grid grid-cols-3 gap-2">{[["Bodies", bodies.length], ["Patterns", patterns.length], ["Printed", patterns.filter((p) => p.status === "Printed").length]].map(([l, n]) => (
