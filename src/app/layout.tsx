@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   // screen makes iOS grow the window to the full screen.
   // iOS reads this setting only when the app is ADDED to the home screen: re-add after changing it.
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Venty" },
-  // the browser tab: the mark in a circle of Crown (the app's light sky); the
+  // the browser tab: the mark on a rounded square of Crown (the app's light sky); the
   // home-screen icons (apple-touch-icon, icon-192/512 in the manifest) stay square
   icons: { icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/favicon.png", type: "image/png", sizes: "512x512" }], apple: "/apple-touch-icon.png" },
 };
