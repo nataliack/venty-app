@@ -165,8 +165,8 @@ function ArcCarousel() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", place); };
   }, []);
   return (
-    // full bleed: it runs past the page margins to the screen edges, so the cards slide in and out at the edges
-    <div ref={box} aria-hidden className="relative -mx-6 w-[calc(100%+3rem)] shrink-0 overflow-hidden lg:hidden" style={{ height: CARD_H + 64 }}>
+    // full bleed: it runs past the page margins to the screen edges, fading out softly at both sides
+    <div ref={box} aria-hidden className="relative -mx-6 w-[calc(100%+3rem)] shrink-0 overflow-hidden lg:hidden" style={{ height: CARD_H + 64, maskImage: "linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent)" }}>
       {LOOKS.map((l, i) => (
         <div key={i} ref={(n) => { cards.current[i] = n; }} className="absolute left-0 top-3 overflow-hidden rounded-[20px] border border-white/15 bg-card shadow-[0_18px_40px_-18px_rgb(0_0_0/.9)] will-change-transform"
           style={{ width: CARD_W, height: CARD_H, transformOrigin: "50% 100%" }}>
