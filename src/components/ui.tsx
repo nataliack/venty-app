@@ -43,8 +43,9 @@ export function Screen({ children, footer, header, className, bg, noPad, wide, d
 }
 
 // Crown: the app's light gradient (from the landing page), animated with four drifting lights.
-export const Crown = ({ className }: { className?: string }) => (
-  <div className={cx("sky sky-light", className)} aria-hidden><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /><span className="drift d4" /></div>
+// `live`: the lights wander further and the glow breathes (Welcome and the screens around it).
+export const Crown = ({ className, live }: { className?: string; live?: boolean }) => (
+  <div className={cx("sky sky-light", live && "sky-live", className)} aria-hidden><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /><span className="drift d4" /></div>
 );
 
 // A "moment" screen in the onboarding style: a violet picture panel and warm paper below (side by side on desktop).

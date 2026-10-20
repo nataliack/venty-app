@@ -26,7 +26,7 @@ function SkyFrame({ children, onTap, logoIn = true }: { children?: ReactNode; on
   const desk = useDesk();
   return (
     <button className="absolute inset-0 overflow-hidden text-center" onClick={onTap} aria-label="Continue">
-      <Crown />
+      <Crown live />
       <div className="sky-floor" aria-hidden />
       <div className="relative flex h-full flex-col items-center px-6 lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
         <motion.div initial={logoIn ? { opacity: 0, y: 14 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
@@ -48,7 +48,7 @@ export function Splash() {
 }
 
 // Welcome: the Crown gradient (from the landing page).
-const Sky = () => <Crown />;
+const Sky = () => <Crown live />;
 
 const WELCOME_T = <>If you can imagine it,<br />you can wear it.</>;
 const WELCOME_B = "Start from a photo, a sketch or a few words. Venty drafts the sewing pattern to your measurements, ready to print at home.";
@@ -58,7 +58,7 @@ export function Welcome() {
   const desk = useDesk();
   const actions = (
     <div className="flex flex-col items-center gap-2">
-      <Pill className="pill-sheen" onClick={() => go("signup")}>Get started</Pill>
+      <Pill onClick={() => go("signup")}>Get started</Pill>
       <button className="h-11 px-4 text-[16px] font-medium text-white/90 transition-colors hover:text-white" onClick={() => go("login")}>I already have an account</button>
     </div>
   );

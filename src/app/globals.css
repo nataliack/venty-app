@@ -641,10 +641,22 @@ input { font: inherit; color: inherit; }
   .sky.sky-light::before { opacity: .75; }
 }
 
-/* the main action on Welcome: a soft band of light sweeps across the button now and then, so the eye finds it.
-   Once every few seconds, never a glow or a pulse; still with reduced motion. */
-.pill-sheen::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: linear-gradient(105deg, transparent 36%, rgb(255 255 255 / .16) 44%, rgb(255 255 255 / .46) 50%, rgb(255 255 255 / .16) 56%, transparent 64%); background-size: 260% 100%; background-position: 135% 0;
-  animation: v-sheen-sweep 5s cubic-bezier(.45, 0, .25, 1) 1.8s infinite; }
-@keyframes v-sheen-sweep { 0% { background-position: 135% 0; } 32%, 100% { background-position: -35% 0; } }
-@media (prefers-reduced-motion: reduce) { .pill-sheen::after { animation: none; opacity: 0; } }
+/* Welcome, the splash and "Welcome, Ana": the sky is alive. Crown's lights wander further and a little faster, the
+   light from the top breathes, and the blue rising from below swells and settles, so the gradient itself moves.
+   Still with reduced motion. */
+.sky.sky-light.sky-live::before { animation: v-live-top 9s ease-in-out infinite alternate; }
+.sky.sky-light.sky-live .d1 { animation: v-live1 10s ease-in-out infinite alternate; }
+.sky.sky-light.sky-live .d2 { animation: v-live2 11s ease-in-out infinite alternate; }
+.sky.sky-light.sky-live .d3 { animation: v-live3 12s ease-in-out infinite alternate; }
+.sky.sky-light.sky-live .d4 { animation: v-live4 9s ease-in-out infinite alternate; }
+@keyframes v-live-top { 0% { opacity: .55; scale: 1; } 100% { opacity: 1; scale: 1.18; } }
+@keyframes v-live1 { 0% { translate: -18% -6%; } 50% { translate: 24% 16%; } 100% { translate: -6% 30%; } }
+@keyframes v-live2 { 0% { translate: 0 0; scale: 1; } 50% { translate: -46% -18%; scale: 1.2; } 100% { translate: -20% -40%; scale: .9; } }
+@keyframes v-live3 { 0% { translate: 0 0; scale: 1; } 50% { translate: 40% -26%; scale: 1.25; } 100% { translate: 18% -48%; scale: .95; } }
+@keyframes v-live4 { 0% { translate: 0 0; scale: 1; opacity: .7; } 50% { translate: -24% -34%; scale: 1.3; opacity: 1; } 100% { translate: 22% -18%; scale: 1.05; opacity: .8; } }
+@media (prefers-reduced-motion: reduce) { .sky.sky-light.sky-live::before, .sky.sky-light.sky-live .drift { animation: none !important; } }
+/* the gradient itself rises and settles: drawn a little taller than the screen and slid up and down slowly */
+.sky.sky-light.sky-live { background-size: 100% 122%; animation: v-live-base 11s ease-in-out infinite alternate; }
+@keyframes v-live-base { from { background-position: 50% 0%; } to { background-position: 50% 100%; } }
+@media (max-width: 1023px) { .sky.sky-light.sky-live .drift { opacity: .85; } }
+@media (prefers-reduced-motion: reduce) { .sky.sky-light.sky-live { animation: none; } }
