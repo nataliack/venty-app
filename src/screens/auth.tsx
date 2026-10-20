@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, DEMO_EMAIL } from "@/lib/store";
-import { Screen, Pill, Field, HS, Lead, Glow, Blob, RB, PaperScreen, Crown, cx, useDesk } from "@/components/ui";
+import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, Crown, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
@@ -49,8 +49,8 @@ export function Splash() {
 // Welcome: the Crown gradient (from the landing page).
 const Sky = () => <Crown />;
 
-const WELCOME_T = <>See a dress you love.<br />Create it. Wear it.</>;
-const WELCOME_B = "Any photo, screenshot, magazine page or sketch. Venty drafts a sewing pattern to your exact measurements, ready to print at home.";
+const WELCOME_T = <>If you can imagine it,<br />you can wear it.</>;
+const WELCOME_B = "Start from a photo, a sketch or a few words. Venty drafts the sewing pattern to your measurements, ready to print at home.";
 
 export function Welcome() {
   const go = useApp((s) => s.go);
@@ -79,10 +79,12 @@ export function Welcome() {
   );
 }
 
-// Desktop: brand panel on the left, the form on the right. Phone: one column.
-function AuthShell({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+// Desktop: brand panel on the left, the form on the right. Phone: one column, with the ways in (`actions`) at the
+// bottom, in thumb reach, above the footer line.
+function AuthShell({ children, footer, actions }: { children: ReactNode; footer?: ReactNode; actions?: ReactNode }) {
   const desk = useDesk();
-  if (!desk) return <Screen footer={footer}>{children}</Screen>;
+  if (!desk) return <Screen footer={actions || footer ? <>{actions}{footer && <div className={actions ? "mt-4" : ""}>{footer}</div>}</> : undefined}>{children}</Screen>;
+  if (actions) children = <>{children}<div className="mt-8">{actions}</div></>;
   return (
     <div className="absolute inset-0 grid grid-cols-[1fr_1fr]">
       <div className="p-6">
@@ -116,7 +118,7 @@ function Ways({ onSocial, onEmail }: { onSocial: () => void; onEmail: () => void
   return (
     <div className="flex flex-col">
       <Pill variant="white" onClick={onEmail} icon={<Icon name="mail" size={20} />}>Continue with email</Pill>
-      <div className="my-6 flex items-center gap-4 text-[14px] text-white/45"><span className="h-px flex-1 bg-white/15" />or<span className="h-px flex-1 bg-white/15" /></div>
+      <div className="my-4 flex items-center gap-4 text-[14px] text-white/45 lg:my-6"><span className="h-px flex-1 bg-white/15" />or<span className="h-px flex-1 bg-white/15" /></div>
       <div className="flex flex-col gap-2.5">
         <Pill variant="glass" onClick={onSocial} icon={<AppleLogo />}>Continue with Apple</Pill>
         <Pill variant="glass" onClick={onSocial} icon={<span className="grid h-6 w-6 place-items-center rounded-full bg-white"><GoogleLogo size={15} /></span>}>Continue with Google</Pill>
@@ -131,14 +133,13 @@ export function SignUp() {
   const go = useApp((s) => s.go);
   const done = useAuthDone();
   return (
-    <AuthShell footer={<Legal />}>
+    <AuthShell footer={<Legal />} actions={<Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "signup" })} />}>
       <div className="flex h-12 items-center justify-between">
         <RB icon="back" onClick={useApp.getState().back} />
         <button className="h-11 rounded-full px-4 text-[16px] font-medium text-white/85 hover:text-white" onClick={() => done("", "", true)}>Skip for now</button>
       </div>
       <HS className="mt-6">Create your<br />account</HS>
       <Lead className="mt-3">Keep your bodies and patterns safe, on any device.</Lead>
-      <div className="mt-8"><Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "signup" })} /></div>
     </AuthShell>
   );
 }
@@ -147,11 +148,11 @@ export function LogIn() {
   const go = useApp((s) => s.go);
   const done = useAuthDone();
   return (
-    <AuthShell footer={<button className="h-11 w-full text-center text-[15px] text-white/60" onClick={() => useApp.getState().replace("signup")}>New to Venty? <span className="font-medium text-white">Create an account</span></button>}>
+    <AuthShell footer={<button className="h-11 w-full text-center text-[15px] text-white/60" onClick={() => useApp.getState().replace("signup")}>New to Venty? <span className="font-medium text-white">Create an account</span></button>}
+      actions={<Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "login" })} />}>
       <div className="flex h-12 items-center"><RB icon="back" onClick={useApp.getState().back} /></div>
       <HS className="mt-6">Welcome back</HS>
       <Lead className="mt-3">Log in to pick up where you left off.</Lead>
-      <div className="mt-8"><Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "login" })} /></div>
     </AuthShell>
   );
 }
@@ -258,25 +259,40 @@ export function TourAsk() {
   const set = useApp((s) => s.set);
   const desk = useDesk();
   const skip = () => { set({ onboarded: true, tourSkipped: true }); replace("start"); };
-  // the same paper-and-violet look as the onboarding it leads into
-  const art = (
-    <div className="absolute inset-0 grid place-items-center">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex items-end gap-4 lg:gap-8">
-        {(["slip", "wrap", "aline"] as const).map((g, i) => (
-          <motion.div key={g} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.12, duration: 0.7 }} className={cx("grid place-items-center rounded-[18px] bg-white/12 backdrop-blur-sm", i === 1 ? "h-[150px] w-[110px] lg:h-[260px] lg:w-[190px]" : "h-[118px] w-[86px] lg:h-[200px] lg:w-[150px]")}>
-            <Flat g={g} size={desk ? (i === 1 ? 160 : 120) : i === 1 ? 92 : 70} stroke="#fff" fill="rgba(255,255,255,.14)" />
-          </motion.div>
-        ))}
-      </motion.div>
+  // A question, so it is laid out as one: the Crown sky fills the screen with three garments fanned out on it, and the
+  // question sits on a paper card floating over the sky (on a computer, beside the garments). The tour itself is a
+  // picture above paper, so the two never look alike.
+  const fan = (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex items-end justify-center">
+      {(["slip", "wrap", "aline"] as const).map((g, i) => (
+        <motion.div key={g} initial={{ opacity: 0, y: 18, rotate: 0 }} animate={{ opacity: 1, y: i === 1 ? -14 : 0, rotate: (i - 1) * 9 }} transition={{ delay: 0.15 + i * 0.12, duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
+          className={cx("grid place-items-center rounded-[22px] border border-white/25 bg-white/12 backdrop-blur-sm", i === 1 ? "z-10 -mx-3 h-[168px] w-[124px] lg:h-[280px] lg:w-[206px]" : "h-[140px] w-[104px] lg:h-[230px] lg:w-[170px]")}>
+          <Flat g={g} size={desk ? (i === 1 ? 168 : 132) : i === 1 ? 100 : 80} stroke="#fff" fill="rgba(255,255,255,.14)" />
+        </motion.div>
+      ))}
+    </motion.div>
+  );
+  const card = (
+    <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+      className="paper rounded-[32px] px-6 pb-3 pt-7 text-center shadow-[0_30px_80px_-30px_rgb(11_12_21/.7)] lg:w-[460px] lg:px-10 lg:pb-6 lg:pt-10">
+      <h1 className="h1 !text-[32px] text-[#12131c] [text-wrap:balance] lg:!text-[44px]">Want a quick tour?</h1>
+      <p className="lead mx-auto mt-3 max-w-[330px] [text-wrap:pretty]">See how Venty works, from taking your measurements to printing your first pattern.</p>
+      <Pill className="mt-6" onClick={() => replace("onboarding")}>Show me how it works</Pill>
+      <TextButton tone="paper" className="mt-1" onClick={skip}>Skip the tour</TextButton>
+    </motion.div>
+  );
+  if (desk) return (
+    <div className="absolute inset-0 overflow-hidden"><Crown />
+      <div className="relative grid h-full grid-cols-[1.1fr_0.9fr] items-center px-16">{fan}<div className="flex justify-center">{card}</div></div>
     </div>
   );
   return (
-    <PaperScreen art={art} footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => replace("onboarding")}>Show me how it works</Pill><button onClick={skip} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Skip the tour</button></div>}>
-      <div className="text-center">
-        <h1 className="h1 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Want a quick tour?</h1>
-        <p className="lead mx-auto mt-3 max-w-[360px] [text-wrap:pretty]">Three short pages on how Venty works: from your measurements to a pattern you can print at home.</p>
+    <div className="absolute inset-0 overflow-hidden"><Crown />
+      <div className="relative flex h-full flex-col px-3" style={{ paddingTop: "var(--top)", paddingBottom: "max(12px, calc(var(--bottom) - 18px))" }}>
+        <div className="grid min-h-0 flex-1 place-items-center">{fan}</div>
+        {card}
       </div>
-    </PaperScreen>
+    </div>
   );
 }
 
@@ -356,17 +372,34 @@ export function StartChoice() {
   const user = useApp((s) => s.user);
   const desk = useDesk();
   const hi = user.guest ? "Welcome." : `Welcome, ${user.name}.`;
-  const art = (
-    <div className="absolute inset-0 px-6 pb-5 pt-[calc(var(--top)+8px)] lg:p-10">
-      <BodyFigure width={desk ? 150 : 100} markers={[{ kind: "ring", y: 140, w: 100 }, { kind: "ring", y: 205, w: 72 }, { kind: "ring", y: 275, w: 110 }]} className="h-full w-full" />
+  // Its own layout (not the tour's picture-over-paper): paper all the way, the greeting at the top, left-aligned, then
+  // the body on a Crown card taking the room in between, one line on why, and the buttons in thumb reach.
+  const figure = (
+    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
+      className="relative h-full min-h-[180px] overflow-hidden rounded-[28px] text-white lg:rounded-[36px]">
+      <Crown />
+      <div className="absolute inset-0 p-5 lg:p-10"><BodyFigure width={desk ? 170 : 100} markers={[{ kind: "ring", y: 140, w: 100 }, { kind: "ring", y: 205, w: 72 }, { kind: "ring", y: 275, w: 110 }]} className="h-full w-full" /></div>
+    </motion.div>
+  );
+  const words = (
+    <>
+      <h1 className="h1 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">{hi}<br />Let’s set up your body</h1>
+    </>
+  );
+  const why = <p className="lead max-w-[400px] [text-wrap:pretty]">Every pattern is drafted to your measurements. Add them once and they’re saved, ready for everything you make.</p>;
+  const actions = <><Pill onClick={startBody}>Set up my body</Pill><TextButton tone="paper" className="mt-1" onClick={home}>Skip for now and go to home</TextButton></>;
+  if (desk) return (
+    <div className="paper absolute inset-0 grid grid-cols-[0.95fr_1.05fr]">
+      <div className="flex flex-col justify-center px-16"><div className="max-w-[480px]">{words}<div className="mt-4">{why}</div><div className="mt-10">{actions}</div></div></div>
+      <div className="p-5">{figure}</div>
     </div>
   );
   return (
-    <PaperScreen art={art} footer={<div className="flex flex-col items-center gap-1"><Pill onClick={startBody}>Set up my body</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Skip for now and go to home</button></div>}>
-      <div className="text-center">
-        <h1 className="h1 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">{hi} Let’s set up your body</h1>
-        <p className="lead mx-auto mt-3 max-w-[380px] [text-wrap:pretty]">Venty drafts every pattern to your measurements. Add them once and they’re saved as your body, ready for every pattern you make.</p>
-      </div>
-    </PaperScreen>
+    <div className="paper absolute inset-0 flex flex-col px-6" style={{ paddingTop: "calc(var(--top) + 20px)", paddingBottom: "var(--bottom)" }}>
+      {words}
+      <div className="mt-5 min-h-0 flex-1">{figure}</div>
+      <div className="mt-4">{why}</div>
+      <div className="mt-5">{actions}</div>
+    </div>
   );
 }

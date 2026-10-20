@@ -3,8 +3,8 @@ import { haptic } from "@/lib/haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { PIECE_LABEL, templateBy, fabricAdvice, metresFor, type PieceKey } from "@/lib/data";
-import { Screen, TopBar, HS, H1, Lead, Pill, Glow, Glass, Option, Arrows, Check, PaperScreen, cx, useToast, Split, useDesk } from "@/components/ui";
+import { PIECE_LABEL, templateBy, fabricAdvice, fitName, metresFor, type GarmentKey, type PieceKey } from "@/lib/data";
+import { Screen, TopBar, HS, H1, Lead, Pill, Glass, Option, Arrows, RB, TextButton, PaperScreen, cx, useToast, Split, useDesk } from "@/components/ui";
 import { Piece, pieceSize } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { garmentName, piecesFor } from "./pattern";
@@ -12,8 +12,9 @@ import { FlowHeader } from "./measure";
 
 const GRID = { backgroundImage: "linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)", backgroundSize: "18px 18px" };
 
-// Print flow, in the order it really depends on: printer → seam allowance → layout on the sheets → fabric → print.
-const PRINT_STEPS = ["Printer", "Seams", "Layout", "Fabric", "Print"];
+// Print flow, in the order it really depends on: paper → seam allowance → layout on the sheets → review and print.
+// (What fabric to buy is on the finished page and the pattern's own page, where it is needed: at the shop.)
+const PRINT_STEPS = ["Paper", "Seams", "Layout", "Review"];
 // Closing the flow returns to the garment you were looking at.
 const exitPrint = () => {
   const s = useApp.getState(); const ids = s.stack.map((r) => r.id);
@@ -116,18 +117,66 @@ function sheetsUsed(box: DOMRect, rects: DOMRect[]) {
   return on;
 }
 // the paper: A4 cells (A1 … D4), tinted where a piece lands; or one A0 sheet
-function Sheets({ a4, used }: { a4: boolean; used: Set<string> }) {
-  if (!a4) return <span className="absolute left-2 top-1.5 text-[11px] text-white/45">A0 sheet</span>;
+function Sheets({ a4, used, labels = true }: { a4: boolean; used: Set<string>; labels?: boolean }) {
+  if (!a4) return labels ? <span className="absolute left-2 top-1.5 text-[11px] text-white/45">A0 sheet</span> : null;
   return <>{Array.from({ length: ROWS * COLS }, (_, n) => {
     const row = Math.floor(n / COLS), col = n % COLS, on = used.has(`${row}-${col}`);
     return (
       <div key={n} className={cx("absolute border transition-colors duration-300", on ? "border-white/35 bg-primary/15" : "border-dashed border-white/12")} style={{ left: `${(col / COLS) * 100}%`, top: `${(row / ROWS) * 100}%`, width: `${100 / COLS}%`, height: `${100 / ROWS}%` }}>
-        <span className="absolute left-1.5 top-1 text-[11px] text-white/45">{"ABCD"[row]}{col + 1}</span>
+        {labels && <span className="absolute left-1.5 top-1 text-[11px] text-white/45">{"ABCD"[row]}{col + 1}</span>}
       </div>
     );
   })}</>;
 }
 const paperStyle = (desk: boolean, reserve: number) => ({ width: `min(100%, calc((100dvh - ${desk ? 220 : reserve}px) * ${W_MM / H_MM}))`, aspectRatio: `${W_MM} / ${H_MM}` });
+// the paper as large as its box allows (the box is a size container), never wider or taller than it
+// The paper as large as its box allows, never wider or taller than it. Measured (not container units, which some
+// browsers resolve to zero inside a flex column), and drawn once the size is known.
+function FitBox({ className, children, onSize }: { className?: string; children: (style: React.CSSProperties) => React.ReactNode; onSize?: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const read = () => { const w = Math.min(el.clientWidth, el.clientHeight * (W_MM / H_MM)); if (w > 0) setSize((o) => (o && Math.abs(o.w - w) < 0.5 ? o : { w, h: w / (W_MM / H_MM) })); };
+    read(); // straight away, then whenever the box changes
+    const ro = new ResizeObserver(read); ro.observe(el);
+    window.addEventListener("resize", read);
+    return () => { ro.disconnect(); window.removeEventListener("resize", read); };
+  }, []);
+  // tell the owner once the paper is drawn at its size (the layout reads the pieces' real positions)
+  const told = useRef(onSize);
+  useEffect(() => { told.current = onSize; });
+  useEffect(() => { if (size) told.current?.(); }, [size]);
+  return <div ref={ref} className={cx("relative", className)}>{size && <div className="absolute left-1/2 top-0 -translate-x-1/2" style={{ width: size.w, height: size.h }}>{children({ width: "100%", height: "100%" })}</div>}</div>;
+}
+
+// The pattern map: exactly the layout you arranged (or a tidy one, for patterns made before layouts were saved), with
+// the sheets it prints on. Used on the finished page, the pattern's own page and the full-screen map.
+export function MapBoard({ garment, printer, at, className, style, labels = true }: { garment: GarmentKey; printer: "A4" | "A0"; at?: At; className?: string; style?: React.CSSProperties; labels?: boolean }) {
+  const a4 = printer !== "A0";
+  const pieces = piecesFor(garment);
+  const pos = at ?? pack(pieces);
+  const area = useRef<HTMLDivElement>(null);
+  const refs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [used, setUsed] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const el = area.current; if (!el) return;
+    const read = () => { const box = el.getBoundingClientRect(); if (box.width) setUsed(sheetsUsed(box, Object.values(refs.current).filter(Boolean).map((r) => r!.getBoundingClientRect()))); };
+    const t = setTimeout(read, 200);
+    const ro = new ResizeObserver(read); ro.observe(el);
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, []);
+  return (
+    <div ref={area} className={cx("relative overflow-hidden rounded-[10px] border border-white/25 bg-white/[.04]", className)} style={{ aspectRatio: `${W_MM} / ${H_MM}`, ...style }}>
+      <Sheets a4={a4} used={used} labels={labels} />
+      {pieces.map((k) => (
+        <div key={k} ref={(el) => { refs.current[k] = el; }} className="absolute" style={{ left: `${pos[k]?.x ?? 50}%`, top: `${pos[k]?.y ?? 50}%`, width: `${pieceW(k)}%`, translate: "-50% -50%", rotate: `${pos[k]?.r ?? 0}deg` }}>
+          <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Arrange() {
   const { go, draft, setDraft } = useApp();
@@ -146,7 +195,7 @@ export function Arrange() {
 
   // read where every piece is now, save it, and count the sheets it touches
   const measure = useCallback(() => {
-    const box = area.current?.getBoundingClientRect(); if (!box) return;
+    const box = area.current?.getBoundingClientRect(); if (!box || box.width < 40) return; // not laid out yet: never save a layout from it
     const at: At = {}; const rects: DOMRect[] = [];
     Object.entries(refs.current).forEach(([k, el]) => {
       if (!el) return; const r = el.getBoundingClientRect(); rects.push(r);
@@ -161,68 +210,55 @@ export function Arrange() {
   const sheets = a4 ? used.size : 1;
   const restart = () => { const fresh = pack(pieces); setStart(fresh); setRot({}); setSel(null); setSeed(seed + 1); };
   const tools = (
-    <div className="mt-3 flex justify-center gap-2 lg:justify-start">
+    <div className="mt-3 flex shrink-0 justify-center gap-2 lg:justify-start">
       <button onClick={() => { if (!sel) return; setRot({ ...rot, [sel]: ((rot[sel] ?? 0) + 90) % 360 }); }} className={cx("tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium", !sel && "opacity-40")}><Icon name="rotate" size={18} />Rotate piece</button>
       <button onClick={restart} className="tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium"><Icon name="grid" size={18} />Start over</button>
     </div>
   );
+  const board = (style: React.CSSProperties, className?: string) => (
+    <div key={seed} ref={area} className={cx("relative overflow-hidden rounded-[10px] border border-white/20 bg-white/[.03]", className)} style={style}>
+      <Sheets a4={a4} used={used} />
+      {pieces.map((k) => (
+        <motion.div key={k} ref={(el) => { refs.current[k] = el; }} drag dragConstraints={area} dragMomentum={false} dragElastic={0}
+          onDragStart={() => setSel(k)} onDragEnd={() => requestAnimationFrame(measure)} onTap={() => setSel(k)} onAnimationComplete={measure}
+          whileDrag={{ scale: 1.04, zIndex: 10 }} animate={{ rotate: rot[k] ?? 0 }}
+          className={cx("absolute cursor-grab touch-none rounded-md active:cursor-grabbing", sel === k && "outline outline-1 outline-offset-2 outline-peri")}
+          style={{ left: `${start[k]?.x ?? 50}%`, top: `${start[k]?.y ?? 50}%`, width: `${pieceW(k)}%`, translate: "-50% -50%" }}>
+          <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
+        </motion.div>
+      ))}
+    </div>
+  );
+  const intro = <>
+    <H1 className="mt-4 lg:mt-0">Arrange your pieces</H1>
+    <Lead className="mt-2">{a4 ? "Each box is one A4 sheet. Drag pieces closer to print fewer sheets." : "This is your A0 sheet. Drag the pieces where you want them."}</Lead>
+    <div className="mt-3 flex items-baseline gap-2"><span className="serif text-[34px] leading-none lg:text-[56px]">{sheets}</span><span className="text-[16px] text-white/65">{a4 ? `of ${COLS * ROWS} A4 sheets to print` : "A0 sheet to print"}</span></div>
+  </>;
+  const footer = <Arrows onNext={() => { measure(); go("print"); }} />;
+  if (desk) return (
+    <Screen header={<PrintHeader step={2} sub={0.5} />} footer={footer}>
+      <Split cols="lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]" left={<>{intro}{tools}</>} right={board(paperStyle(desk, 400), "mx-auto")} />
+    </Screen>
+  );
+  // phones: the paper takes whatever room is left between the words and the tools, on any screen height, so Rotate
+  // and Start over are always on screen
   return (
-    <Screen header={<PrintHeader step={2} sub={0.5} />} footer={<Arrows onNext={() => { measure(); go("needs"); }} />}>
-      <Split cols="lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]" left={<>
-        <H1 className="mt-4 lg:mt-0">Arrange your pieces</H1>
-        <Lead className="mt-2">{a4 ? "Each box is one A4 sheet. Drag pieces closer together to print fewer sheets." : "This is your A0 sheet. Drag the pieces to where you want them."}</Lead>
-        <div className="mt-3 flex items-baseline gap-2"><span className="serif text-[34px] leading-none lg:text-[56px]">{sheets}</span><span className="text-[16px] text-white/65">{a4 ? `of ${COLS * ROWS} A4 sheets to print` : "A0 sheet to print"}</span></div>
-        {desk && tools}
-      </>} right={<>
-        <div key={seed} ref={area} className="relative mx-auto mt-4 overflow-hidden rounded-[10px] border border-white/20 bg-white/[.03] lg:mt-0" style={paperStyle(desk, 400)}>
-          <Sheets a4={a4} used={used} />
-          {pieces.map((k) => (
-            <motion.div key={k} ref={(el) => { refs.current[k] = el; }} drag dragConstraints={area} dragMomentum={false} dragElastic={0}
-              onDragStart={() => setSel(k)} onDragEnd={() => requestAnimationFrame(measure)} onTap={() => setSel(k)} onAnimationComplete={measure}
-              whileDrag={{ scale: 1.04, zIndex: 10 }} animate={{ rotate: rot[k] ?? 0 }}
-              className={cx("absolute cursor-grab touch-none rounded-md active:cursor-grabbing", sel === k && "outline outline-1 outline-offset-2 outline-peri")}
-              style={{ left: `${start[k]?.x ?? 50}%`, top: `${start[k]?.y ?? 50}%`, width: `${pieceW(k)}%`, translate: "-50% -50%" }}>
-              <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
-            </motion.div>
-          ))}
-        </div>
-        {!desk && tools}
-      </>} />
+    <Screen header={<PrintHeader step={2} sub={0.5} />} footer={footer} fill>
+      <div className="shrink-0">{intro}</div>
+      <FitBox className="mt-3 min-h-[240px] flex-1" onSize={() => setTimeout(measure, 60)}>{(st) => board(st)}</FitBox>
+      {tools}
     </Screen>
   );
 }
 
-// 4 · the fabric to buy for this pattern: how much, and what kind (from the fit and fabric you chose)
-export function Needs() {
-  const { go, draft } = useApp();
-  const tip = fabricAdvice(draft.ease);
-  const m = metresFor(draft.garment, draft.ease);
-  const stretch = draft.chosen?.stretch ? draft.stretch : tip.stretch;
-  const rows: [string, string][] = [
-    ["Stretch", { "A lot": "Stretchy", "A bit": "A little stretch", No: "No stretch" }[stretch]],
-    ["Width", "140 cm (the most common width)"],
-  ];
-  return (
-    <Screen header={<PrintHeader step={3} sub={0.5} />} footer={<Arrows onNext={() => go("print")} />}>
-      <Split left={<>
-      <HS className="mt-4 lg:mt-0">Fabric to buy</HS>
-      <Lead className="mt-3">For your {garmentName(draft.garment).toLowerCase()}. Show this at the fabric shop.</Lead>
-      <Glow color="#687ef5" variant="side" className="relative mt-5 rounded-[26px] p-5 lg:mt-8 lg:p-8">
-        <div className="text-[16px] text-white/85">You need</div>
-        <div className="mt-1 flex items-baseline gap-2"><span className="serif text-[64px] leading-none">{m}</span><span className="text-[18px] font-medium text-white/85" translate="no">metres</span></div>
-        <div className="mt-2 text-[15px] leading-snug text-white/80">Includes 10% extra in case it shrinks when you wash it.</div>
-      </Glow>
-      </>} right={
-      <div className="card-soft mt-4 divide-y divide-white/8 rounded-[24px] px-5 lg:mt-0">
-        {rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-4"><span className="text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}
-      </div>} />
-    </Screen>
-  );
-}
+const STRETCH_WORDS = { "A lot": "stretchy", "A bit": "a little stretch", No: "no stretch" } as const;
+// What to buy for this pattern, in one line: how much, how wide, how stretchy
+export const fabricLine = (garment: GarmentKey, ease: number, stretch?: "A lot" | "A bit" | "No") =>
+  `${metresFor(garment, ease)} metres, 140 cm wide, ${STRETCH_WORDS[stretch ?? fabricAdvice(ease).stretch]}`;
 
-// 5 · print
+// 4 · review, then print
 export function PrintReady() {
-  const { replace, draft, savePattern, body } = useApp();
+  const { replace, back, draft, savePattern, body } = useApp();
   const { toast, node } = useToast();
   const a4 = draft.printer !== "A0";
   const count = a4 ? draft.sheets ?? 9 : 1;
@@ -233,21 +269,27 @@ export function PrintReady() {
     const tick = (n: number) => { const k = Math.min(1, (n - t0) / 3200); setPrinting(k); if (k < 1) requestAnimationFrame(tick); else { haptic("success"); savePattern("Printed"); replace("printed", { n: count }); } };
     requestAnimationFrame(tick);
   };
+  // every row says what it means without sewing or printing words a beginner wouldn't know
   const rows: [string, string][] = [
-    ["Pattern", garmentName(draft.garment)],
+    ["Garment", garmentName(draft.garment)],
     ["Drafted to", body().name],
-    ["Paper", a4 ? `${count} A4 sheets, at home` : "1 A0 sheet, at a print shop"],
-    ["Seam allowance", draft.seam ? `${draft.seam} cm, on every piece` : "Not added"],
+    ["Fit", `${fitName(draft.ease)}, ${draft.ease} cm of room`],
+    ["Seam allowance", draft.seam ? `${draft.seam} cm, on every piece` : "Not added, you add your own"],
+    ["Paper size", a4 ? "A4, on your printer at home" : "A0, at a print shop"],
+    ["Sheets to print", a4 ? `${count}, plus 1 map page` : "1"],
   ];
   return (
-    <Screen header={<PrintHeader step={4} sub={0.5} />} footer={<div className="flex flex-col items-center gap-1"><Pill onClick={print}>{a4 ? `Print ${count} sheets` : "Send to print shop"}</Pill><button onClick={() => toast("PDF saved to Files")} className="h-12 px-4 text-[16px] font-medium text-white/70 hover:text-white">Save as PDF instead</button></div>}>
+    <Screen header={<PrintHeader step={3} sub={0.5} />} footer={<>
+      <div className="flex items-center gap-3"><RB icon="back" variant="dark" size={56} onClick={back} label="Back" /><Pill className="min-w-0 flex-1" onClick={print}>{a4 ? `Print ${count} sheets` : "Send to print shop"}</Pill></div>
+      <TextButton className="mt-1" onClick={() => toast("PDF saved to Files")}>Save as PDF instead</TextButton>
+    </>}>
       <Split left={<>
         <HS className="mt-4 lg:mt-0">Ready to print</HS>
-        <Lead className="mt-3">Check the details, then print. Your first page is a map showing where every sheet goes.</Lead>
+        <Lead className="mt-3">Check the details, then print. The map page shows where every sheet goes.</Lead>
       </>} right={
-        <Glass className="mt-6 divide-y divide-white/8 rounded-[24px] px-5 lg:mt-0">
-          {rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-4"><span className="text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}
-        </Glass>} />
+        <div className="card-soft mt-6 divide-y divide-white/8 rounded-[24px] px-5 lg:mt-0">
+          {rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-3.5"><span className="shrink-0 text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}
+        </div>} />
       <AnimatePresence>{printing > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-bg/85 backdrop-blur-md">
           <div className="grid h-20 w-20 place-items-center rounded-full bg-white text-bg"><Icon name="printer" size={34} /></div>
@@ -260,66 +302,56 @@ export function PrintReady() {
   );
 }
 
-// Mini map: exactly the layout you arranged, with the sheets it prints on (reached from the end screen)
-export function MiniMap() {
-  const { back, draft } = useApp();
-  const a4 = draft.printer !== "A0";
-  const pieces = piecesFor(draft.garment);
-  const at = draft.layout?.garment === draft.garment ? draft.layout.at : pack(pieces);
-  const area = useRef<HTMLDivElement>(null);
-  const refs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [used, setUsed] = useState<Set<string>>(new Set());
+// The pattern map, full screen: exactly the layout you arranged, with the sheets it prints on. Opened from the finished
+// page (the pattern being made) or from a saved pattern's page ({ id }).
+export function MiniMap({ p }: { p?: Record<string, unknown> }) {
+  const { draft, patterns } = useApp();
+  const pat = p?.id ? patterns.find((x) => x.id === p.id) : undefined;
+  const garment = pat?.garment ?? draft.garment;
+  const printer = pat ? pat.spec?.printer ?? "A4" : draft.printer;
+  const at = pat ? pat.spec?.layout : draft.layout?.garment === draft.garment ? draft.layout.at : undefined;
+  const a4 = printer !== "A0";
   const desk = useDesk();
-  useEffect(() => {
-    const t = setTimeout(() => { const box = area.current?.getBoundingClientRect(); if (box) setUsed(sheetsUsed(box, Object.values(refs.current).filter(Boolean).map((el) => el!.getBoundingClientRect()))); }, 200);
-    return () => clearTimeout(t);
-  }, []);
   return (
-    <Screen footer={<Pill variant="dark" onClick={back}>Back</Pill>}>
+    <Screen fill={!desk}>
       <TopBar left="back" />
       <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<>
-      <H1 className="mt-4">Pattern mini map</H1>
-      <Lead className="mt-2">{a4 ? "Where every piece sits on your sheets. Tape each row first, then join the rows. Match the triangles on the edges." : "Where every piece sits on your A0 sheet."}</Lead>
-      </>} right={
-      <div ref={area} className="relative mx-auto mt-4 overflow-hidden rounded-[10px] border border-white/20 bg-white/[.03] lg:mt-0" style={paperStyle(desk, 300)}>
-        <Sheets a4={a4} used={used} />
-        {pieces.map((k) => (
-          <div key={k} ref={(el) => { refs.current[k] = el; }} className="absolute" style={{ left: `${at[k]?.x ?? 50}%`, top: `${at[k]?.y ?? 50}%`, width: `${pieceW(k)}%`, translate: "-50% -50%", rotate: `${at[k]?.r ?? 0}deg` }}>
-            <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
-          </div>
-        ))}
-      </div>} />
+        <H1 className="mt-4 lg:mt-0">Your pattern map</H1>
+        <Lead className="mt-2">{a4 ? "Where every piece sits on your sheets. Tape each row first, then join the rows. Match the triangles on the edges." : "Where every piece sits on your A0 sheet."}</Lead>
+      </>} right={desk ? <MapBoard garment={garment} printer={printer} at={at} className="mx-auto" style={paperStyle(true, 300)} /> : null} />
+      {!desk && <FitBox className="mt-4 min-h-[300px] flex-1">{(st) => <MapBoard garment={garment} printer={printer} at={at} style={st} />}</FitBox>}
     </Screen>
   );
 }
 
-// The end: the pattern is done, now the sewing starts. A moment, so it uses paper and violet.
+// The end: the pattern is done, now the sewing starts. A moment, so it uses paper and violet. The picture is the
+// pattern map itself (the one thing you need while taping the sheets), not decoration; tap it to open it large.
 export function Printed({ p }: { p?: Record<string, unknown> }) {
   const { home, go, draft } = useApp();
   const n = Number(p?.n ?? 9);
   const { toast, node } = useToast();
-  const desk = useDesk();
   const kind = draft.garment === "flutter" ? "dress" : ({ Dresses: "dress", Tops: "top", Pants: "trousers", Skirts: "skirt" } as const)[templateBy(draft.garment).category];
-  const pieces = piecesFor(draft.garment).slice(0, 4);
+  const at = draft.layout?.garment === draft.garment ? draft.layout.at : undefined;
   const art = (
-    <div className="absolute inset-0 grid place-items-center pt-[var(--top)] lg:pt-0">
-      <div className="grid grid-cols-2 gap-2 lg:gap-6">{pieces.map((k, i) => (
-        <motion.div key={k} initial={{ opacity: 0, y: 14, rotate: i % 2 ? 4 : -4 }} animate={{ opacity: 1, y: 0, rotate: i % 2 ? 3 : -3 }} transition={{ delay: 0.1 + i * 0.1, duration: 0.7 }} className="grid place-items-center rounded-[10px] bg-white/12 p-1.5 backdrop-blur-sm lg:p-4">
-          <Piece k={k} width={desk ? 120 : 42} />
-        </motion.div>
-      ))}</div>
-    </div>
+    <button onClick={() => go("minimap")} aria-label="Open your pattern map" className="absolute inset-0 flex flex-col items-center px-6 pb-4 pt-[calc(var(--top)+10px)] lg:px-12 lg:pb-8 lg:pt-12">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }} className="relative min-h-0 w-full flex-1">
+        <FitBox className="h-full">{(st) => <MapBoard garment={draft.garment} printer={draft.printer} at={at} className="shadow-[0_20px_50px_-24px_rgb(11_12_21/.8)]" style={st} />}</FitBox>
+      </motion.div>
+      <span className="mt-3 flex items-center gap-1.5 text-[14px] text-white/90">Your pattern map<Icon name="chevR" size={15} /></span>
+    </button>
   );
   return (
-    <PaperScreen art={art} artH="h-[30%]" footer={<Pill onClick={home}>Back to home</Pill>}>
-      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-white"><Icon name="check" size={12} strokeWidth={3} /></span>{n === 1 ? "Your sheet is printed" : `All ${n} sheets are printed`}</div>
-      <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Good job! Your pattern is complete</h1>
-      <p className="lead mt-3">Now you can start making your {kind}.</p>
-      <div className="mt-5 flex flex-col gap-2">{([["book", `Sewing guide for this ${kind}`], ["layers", "Sewing words, explained"], ["video", "Video: taping the sheets together"]] as const).map(([ic, t]) => (
-        <button key={t} onClick={() => toast("Opening " + t.toLowerCase())} className="paper-card tap flex min-h-[54px] items-center gap-3 rounded-[16px] px-4 text-left text-[16px]"><Icon name={ic} size={19} className="text-primary-2" /><span className="flex-1">{t}</span><Icon name="chevR" size={16} className="text-[#12131c]/40" /></button>
-      ))}
-        <button onClick={() => go("minimap")} className="paper-card tap flex min-h-[54px] items-center gap-3 rounded-[16px] px-4 text-left text-[16px]"><Icon name="map" size={19} className="text-primary-2" /><span className="flex-1">Pattern mini map</span><Icon name="chevR" size={16} className="text-[#12131c]/40" /></button>
+    <PaperScreen art={art} artH="h-[46%]" footer={<Pill onClick={home}>Back to home</Pill>}>
+      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>{n === 1 ? "Your sheet is printed" : `All ${n} sheets are printed`}</div>
+      <h1 className="h1 mt-3 !text-[32px] text-[#12131c] lg:!text-[52px]">Your pattern is complete</h1>
+      <p className="lead mt-2">Now you can start making your {kind}.</p>
+      <div className="mt-4 border-t border-[#12131c]/10 pt-3">
+        <div className="text-[14px] text-[#12131c]/55">Fabric to buy</div>
+        <div className="mt-0.5 text-[16px]">{fabricLine(draft.garment, draft.ease, draft.chosen?.stretch ? draft.stretch : undefined)}</div>
       </div>
+      <div className="mt-4 flex flex-col gap-2">{([["book", `Sewing guide for this ${kind}`], ["layers", "Sewing words, explained"], ["video", "Video: taping the sheets together"]] as const).map(([ic, t]) => (
+        <button key={t} onClick={() => toast("Opening " + t.toLowerCase())} className="paper-card tap flex min-h-[54px] items-center gap-3 rounded-[16px] px-4 text-left text-[16px]"><Icon name={ic} size={19} className="text-[#3c4b63]" /><span className="flex-1">{t}</span><Icon name="chevR" size={16} className="text-[#12131c]/40" /></button>
+      ))}</div>
       <div className="h-4" />
       {node}
     </PaperScreen>

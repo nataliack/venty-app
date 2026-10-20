@@ -287,29 +287,42 @@ const PIECES: Record<PieceKey, { w: number; h: number; d: string; grain: [number
 
 export const pieceSize = (k: PieceKey) => ({ w: PIECES[k].w, h: PIECES[k].h });
 
-export function Piece({ k, label, className, showGrid = false, allowance = false, width }: { k: PieceKey; label?: string; className?: string; showGrid?: boolean; allowance?: boolean; width?: number }) {
+// tone: "dark" (white lines, for the dark screens) or "light" (ink lines on paper, like a printed pattern).
+// draw (0..1): how much of the outline is drawn, for drafting animations; the fill and markings follow once it closes.
+export function Piece({ k, label, className, showGrid = false, allowance = false, width, tone = "dark", draw }: { k: PieceKey; label?: string; className?: string; showGrid?: boolean; allowance?: boolean; width?: number; tone?: "dark" | "light"; draw?: number }) {
   const p = PIECES[k];
   const [x1, y1, x2, y2] = p.grain;
+  const light = tone === "light";
+  const ink = light ? "#131523" : "#fff";
+  const grain = light ? "#4f63e0" : "#8c9cf8";
+  const drawing = draw !== undefined;
+  const closed = !drawing || draw >= 0.999;
+  const marks = { opacity: closed ? 1 : 0, transition: "opacity .5s ease" };
   return (
     <svg viewBox={`0 0 ${p.w} ${p.h}`} width={width ?? p.w} className={className} aria-hidden style={{ overflow: "visible" }}>
       {showGrid && <rect width={p.w} height={p.h} fill="none" />}
       {allowance && <path d={p.d} fill="none" stroke="#8c9cf8" strokeWidth="7" strokeOpacity=".22" strokeLinejoin="round" />}
       {allowance && <path d={p.d} fill="none" stroke="#8c9cf8" strokeWidth="1" strokeDasharray="3 3" transform={`translate(${p.w / 2} ${p.h / 2}) scale(1.045) translate(${-p.w / 2} ${-p.h / 2})`} />}
-      <path d={p.d} fill="rgba(104,126,245,.14)" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#8c9cf8" strokeWidth="1.2" />
-      <path d={x1 === x2 ? `M${x1 - 3} ${y1 + 5} L${x1} ${y1} L${x1 + 3} ${y1 + 5} M${x2 - 3} ${y2 - 5} L${x2} ${y2} L${x2 + 3} ${y2 - 5}` : `M${x1 + 5} ${y1 - 3} L${x1} ${y1} L${x1 + 5} ${y1 + 3} M${x2 - 5} ${y2 - 3} L${x2} ${y2} L${x2 - 5} ${y2 + 3}`} fill="none" stroke="#8c9cf8" strokeWidth="1.2" />
-      {label && (
-        <text x={p.w / 2 + (x1 === x2 ? 12 : 0)} y={p.h / 2} textAnchor="middle" fontSize="6.5" fill="#fff" opacity=".8" style={{ letterSpacing: ".05em" }}>
-          <tspan x={p.w / 2 + (x1 === x2 ? 14 : 0)} dy="0">{label.toUpperCase()}</tspan>
-          <tspan x={p.w / 2 + (x1 === x2 ? 14 : 0)} dy="9">{p.fold ? "CUT 1 ON FOLD" : "CUT 2"}</tspan>
-        </text>
-      )}
+      <path d={p.d} fill={light ? "rgba(104,126,245,.13)" : "rgba(104,126,245,.14)"} stroke="none" style={marks} />
+      <path d={p.d} fill="none" stroke={ink} strokeWidth={light ? 2 : 1.4} strokeLinejoin="round" {...(drawing ? { pathLength: 1, strokeDasharray: "1 1", strokeDashoffset: 1 - Math.max(0, Math.min(1, draw)) } : {})} />
+      <g style={marks}>
+        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={grain} strokeWidth="1.2" />
+        <path d={x1 === x2 ? `M${x1 - 3} ${y1 + 5} L${x1} ${y1} L${x1 + 3} ${y1 + 5} M${x2 - 3} ${y2 - 5} L${x2} ${y2} L${x2 + 3} ${y2 - 5}` : `M${x1 + 5} ${y1 - 3} L${x1} ${y1} L${x1 + 5} ${y1 + 3} M${x2 - 5} ${y2 - 3} L${x2} ${y2} L${x2 - 5} ${y2 + 3}`} fill="none" stroke={grain} strokeWidth="1.2" />
+        {label && (
+          <text x={p.w / 2 + (x1 === x2 ? 12 : 0)} y={p.h / 2} textAnchor="middle" fontSize="6.5" fill={ink} opacity={light ? 0.75 : 0.8}>
+            <tspan x={p.w / 2 + (x1 === x2 ? 14 : 0)} dy="0">{label}</tspan>
+            <tspan x={p.w / 2 + (x1 === x2 ? 14 : 0)} dy="9" opacity=".7">{p.fold ? "Cut 1 on fold" : "Cut 2"}</tspan>
+          </text>
+        )}
+      </g>
     </svg>
   );
 }
 
 // ─── Draggable tick ruler ─────────────────────────────────────────────
-export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, className, light = false }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number; px?: number; className?: string; light?: boolean }) {
+// The ticks stand on the ruler's bottom edge, so inside a card (.dial) they sit flush with the card's edges.
+// Quiet ticks (the value above is what matters); the pointer is one white line in the middle.
+export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, h = 52, className, light = false }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number; px?: number; h?: number; className?: string; light?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; v: number } | null>(null);
   const [w, setW] = useState(320);
@@ -325,20 +338,18 @@ export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, className
   const onMove = (e: React.PointerEvent) => { if (!drag.current) return; const dv = ((drag.current.x - e.clientX) / px) * step; const nv = clamp(drag.current.v + dv); if (nv !== value) { onChange(nv); try { navigator.vibrate?.(3); } catch {} } };
   const onUp = () => { drag.current = null; };
   return (
-    <div ref={ref} className={`relative h-[64px] touch-none select-none overflow-hidden ${className ?? ""}`} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
-      style={{ maskImage: "linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)", cursor: "ew-resize" }}>
-      <svg width={w} height="64" className="absolute inset-0">
+    <div ref={ref} className={`relative touch-none select-none overflow-hidden ${className ?? ""}`} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+      style={{ height: h, maskImage: "linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)", cursor: "ew-resize" }}>
+      <svg width={w} height={h} className="absolute inset-0">
         <g transform={`translate(${offset} 0)`}>
           {Array.from({ length: n + 1 }, (_, i) => {
             const major = (i * step) % 5 === 0; const mid = (i * step) % 1 === 0;
-            const h = major ? 30 : mid ? 20 : 12;
-            return <line key={i} x1={i * px} x2={i * px} y1={40 - h} y2={40} stroke={light ? "#0b0c15" : "#fff"} strokeOpacity={major ? 0.9 : 0.4} strokeWidth={major ? 1.5 : 1} />;
+            const t = major ? h * 0.42 : mid ? h * 0.26 : h * 0.15;
+            return <line key={i} x1={i * px} x2={i * px} y1={h - t} y2={h} stroke={light ? "#0b0c15" : "#fff"} strokeOpacity={major ? 0.42 : mid ? 0.24 : 0.14} strokeWidth={major ? 1.5 : 1} />;
           })}
         </g>
       </svg>
-      <div className="pointer-events-none absolute left-1/2 top-[2px] -translate-x-1/2">
-        <svg width="16" height="46" viewBox="0 0 16 46"><path d="M2 2h12L8 10z" fill="#fff" /><line x1="8" y1="8" x2="8" y2="44" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" /></svg>
-      </div>
+      <span className="pointer-events-none absolute bottom-0 left-1/2 w-[2px] -translate-x-1/2 rounded-t-full bg-white" style={{ height: h * 0.62 }} />
     </div>
   );
 }

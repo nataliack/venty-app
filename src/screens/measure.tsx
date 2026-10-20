@@ -53,7 +53,8 @@ export function HowSheet({ open, onClose, m }: { open: boolean; onClose: () => v
   );
 }
 
-// Value control: − [ value ] + , then the ruler. Empty until the user sets it.
+// Value control: − [ value ] + , then the ruler flush along the card's bottom edge. Empty until the user sets it.
+// The value row has a fixed height, so the card never changes size between empty, set and typing.
 function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; set: (v: number) => void; onSet: () => void }) {
   const units = useApp((s) => s.units);
   const [typing, setTyping] = useState(false);
@@ -61,30 +62,46 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
   const step = 0.5;
   const bump = (d: number) => { set(Math.min(m.max, Math.max(m.min, (val === null ? m.value : base + d)))); onSet(); };
   return (
-    <div data-need={val === null ? "1" : "0"} className={cx("field relative overflow-hidden !rounded-[26px] px-3 pt-2.5", val === null && "!border-white/25")}>
-      <div className="flex items-center justify-between gap-2">
+    <div data-need={val === null ? "1" : "0"} className="dial">
+      <div className="flex items-center justify-between gap-2 px-3 pt-3">
         <RB icon="minus" size={48} onClick={() => bump(-step)} label={`Minus ${step} ${units}`} className="rb-plain" />
-        <button onClick={() => setTyping(true)} className="flex min-w-0 flex-1 flex-col items-center" aria-label="Type a value">
+        <button onClick={() => setTyping(true)} className="flex h-[60px] min-w-0 flex-1 items-center justify-center" aria-label={val === null ? "Type a value" : `${fmt(base, units)} ${units}. Type a value`}>
           {typing ? (
-            <input autoFocus inputMode="decimal" defaultValue={val === null ? "" : fmt(base, units)} placeholder={fmt(m.value, units)}
-              onBlur={(e) => { const n = parseFloat(e.target.value.replace(",", ".")); if (!isNaN(n)) { set(Math.min(m.max, Math.max(m.min, units === "in" ? n * 2.54 : n))); onSet(); } setTyping(false); }}
-              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              className="serif w-[160px] bg-transparent text-center text-[46px] leading-none outline-none placeholder:text-white/20" />
+            <span className="flex items-baseline gap-2">
+              <input autoFocus inputMode="decimal" defaultValue={val === null ? "" : fmt(base, units)} placeholder={fmt(m.value, units)}
+                onBlur={(e) => { const n = parseFloat(e.target.value.replace(",", ".")); if (!isNaN(n)) { set(Math.min(m.max, Math.max(m.min, units === "in" ? n * 2.54 : n))); onSet(); } setTyping(false); }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                className="serif h-[60px] w-[130px] bg-transparent text-center text-[44px] leading-none outline-none placeholder:text-white/20" />
+              <span className="unit" translate="no">{units}</span>
+            </span>
+          ) : val === null ? (
+            <span className="text-[16px] text-white/50">Slide or tap to type</span>
           ) : (
             <span className="flex items-baseline gap-2">
               <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span key={val === null ? "empty" : base} initial={{ y: 6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className={cx("serif text-[46px] leading-none", val === null && "text-white/25")} translate="no">{val === null ? "—" : fmt(base, units)}</motion.span>
+                <motion.span key={base} initial={{ y: 6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className="serif text-[44px] leading-none" translate="no">{fmt(base, units)}</motion.span>
               </AnimatePresence>
               <span className="unit" translate="no">{units}</span>
             </span>
           )}
-          {val === null && <span className="mt-1 text-[13px] text-white/45">Tap to type, or slide below</span>}
         </button>
         <RB icon="plus" size={48} onClick={() => bump(step)} label={`Plus ${step} ${units}`} className="rb-plain" />
       </div>
-      <div className={cx("-mx-3 mt-1 transition-opacity", val === null && "opacity-45")}>
-        <Ruler value={base} min={m.min} max={m.max} onChange={(v) => { set(v); onSet(); }} />
+      <Ruler value={base} min={m.min} max={m.max} onChange={(v) => { set(v); onSet(); }} className={cx("mt-2 transition-opacity", val === null && "opacity-50")} />
+    </div>
+  );
+}
+
+// A compact dial for a value without − / + (length, neckline depth): the label and value on top, the ruler on the
+// bottom edge. The same card as the measuring control, smaller, so two fit side by side.
+export function MiniDial({ label, value, unit = "cm", min, max, step = 1, onChange }: { label: string; value: number; unit?: string; min: number; max: number; step?: number; onChange: (v: number) => void }) {
+  return (
+    <div className="dial">
+      <div className="px-4 pt-3.5">
+        <div className="truncate text-[14px] text-white/60">{label}</div>
+        <div className="mt-1 flex items-baseline gap-1.5"><span className="serif text-[28px] leading-none" translate="no">{value}</span><span className="unit" translate="no">{unit}</span></div>
       </div>
+      <Ruler value={value} min={min} max={max} step={step} px={10} h={40} onChange={onChange} className="mt-2" />
     </div>
   );
 }

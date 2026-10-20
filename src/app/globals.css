@@ -241,6 +241,20 @@ input { font: inherit; color: inherit; }
 .field input { width: 100%; height: 100%; min-width: 0; background: transparent; outline: none; caret-color: #8c9cf8; }
 .field input::placeholder { color: rgba(255,255,255,.32); }
 
+/* ─── dial: every value set on a ruler (measurements, length, neckline). A solid card like the others, the value at
+   the top, the ruler flush with the card's left, right and bottom edges ─── */
+.dial { border-radius: 26px; overflow: hidden; background: var(--color-card); border: 1px solid rgb(255 255 255 / .1);
+  transition: border-color .25s, box-shadow .25s; }
+.dial:focus-within { border-color: rgb(104 126 245 / .7); }
+.need-flash.dial { border-color: #8c9cf8 !important; box-shadow: 0 0 0 3px rgb(140 156 248 / .22); }
+
+/* ─── the pattern sheet: pieces laid out on light paper with a periwinkle graph grid, like a printed pattern ─── */
+.pattern-mat { overflow: hidden; color: #131523; background-color: #f6f7fd;
+  background-image: linear-gradient(rgb(104 126 245 / .13) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .13) 1px, transparent 1px),
+    linear-gradient(rgb(104 126 245 / .06) 1px, transparent 1px), linear-gradient(90deg, rgb(104 126 245 / .06) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px; background-position: center;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .6), 0 24px 60px -30px rgb(0 0 0 / .8); }
+
 /* ─── tick strip that runs the full width of a card and sits on its bottom edge ─── */
 .ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; pointer-events: none;
   background-image: linear-gradient(90deg, rgb(255 255 255 / .75) 1.5px, transparent 1.5px), linear-gradient(90deg, rgb(255 255 255 / .4) 1px, transparent 1px);
@@ -390,7 +404,7 @@ input { font: inherit; color: inherit; }
 /* the dot grid, fading out inside an ellipse round the field */
 .cmp-dots { position: absolute; inset: 0; pointer-events: none;
   background-image: radial-gradient(rgb(11 12 21 / .2) 1px, transparent 1.3px); background-size: 18px 18px; background-position: center top;
-  -webkit-mask-image: radial-gradient(ellipse 70% 42% at 50% 46%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 70% 42% at 50% 46%, #000 30%, transparent 100%); }
+  -webkit-mask-image: radial-gradient(ellipse 75% 34% at 50% 36%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 75% 34% at 50% 36%, #000 30%, transparent 100%); }
 @media (min-width: 1024px) {
   .cmp-dots { -webkit-mask-image: radial-gradient(ellipse 46% 44% at 50% 46%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 46% 44% at 50% 46%, #000 30%, transparent 100%); }
 }
@@ -447,12 +461,11 @@ input { font: inherit; color: inherit; }
 
 /* the field: white glass, a long soft shadow and a hairline */
 .cmp-wrap { container-type: inline-size; }
-/* on phones the field fills the rest of the screen (a page to write on); on a computer it takes its own height */
-.cmp-card { display: flex; flex-direction: column; flex: 1 1 auto; position: relative; z-index: 1; padding: 14px; border-radius: 28px; background: rgb(255 255 255 / .62); border: 1px solid var(--line);
+/* the field takes its own height (it grows with the words) on phones and computers alike */
+.cmp-card { display: flex; flex-direction: column; position: relative; z-index: 1; padding: 14px; border-radius: 28px; background: rgb(255 255 255 / .62); border: 1px solid var(--line);
   -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), 0 30px 80px -36px rgb(60 75 99 / .45), 0 2px 6px -2px rgb(60 75 99 / .12);
   transition: box-shadow .35s ease; }
-@media (min-width: 1024px) { .cmp-card { flex: none; } }
 .cmp-card.is-drop { box-shadow: 0 0 0 2px var(--color-primary), 0 30px 80px -36px rgb(104 126 245 / .6); }
 .cmp-card.is-viewing { min-height: 420px; }
 /* a blocked Create points at the field: the app's nudge, with a primary edge */
@@ -490,18 +503,17 @@ input { font: inherit; color: inherit; }
 @media (hover: none) { .cmp-chipx { opacity: 1; scale: 1; } }
 
 /* the words: the gap above the field lives on the wrapper, so the mirror and the field start on the same line */
-.cmp-textwrap { position: relative; margin-top: 10px; flex: 1 1 auto; min-height: calc(6 * 23px + 6px); }
+.cmp-textwrap { position: relative; margin-top: 10px; }
 .cmp-textwrap.is-first { margin-top: 0; }
 .cmp-text { display: block; width: 100%; padding: 4px 4px 2px; resize: none; border: 0; outline: none; background: transparent;
   font: inherit; font-size: 17px; line-height: 1.35; letter-spacing: -.03em; color: var(--color-ink); caret-color: var(--color-primary);
   overflow: hidden; white-space: pre-wrap; overflow-wrap: break-word; }
-/* phones: the words fill the field and scroll inside it once they run past it */
-.cmp-textwrap > .cmp-text:not(.cmp-mirror) { position: absolute; inset: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+/* phones: four lines to start, growing to eight, then the words scroll inside the field */
+.cmp-textwrap > .cmp-text:not(.cmp-mirror) { min-height: calc(4 * 1.35em + 6px); max-height: calc(8 * 1.35em + 6px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .cmp-textwrap > .cmp-text::-webkit-scrollbar { display: none; }
 @media (min-width: 1024px) {
   .cmp-text { font-size: 20px; }
-  .cmp-textwrap { flex: none; min-height: 0; }
-  .cmp-textwrap > .cmp-text:not(.cmp-mirror) { position: static; min-height: calc(5 * 1.35em + 6px); overflow: hidden; }
+  .cmp-textwrap > .cmp-text:not(.cmp-mirror) { min-height: calc(5 * 1.35em + 6px); max-height: none; overflow: hidden; }
 }
 .cmp-text::placeholder { color: var(--color-denim); opacity: 1; }
 /* the cursor at the end of the words: a mirror of the text, invisible but for a primary-blue caret */

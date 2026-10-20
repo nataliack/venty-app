@@ -31,7 +31,7 @@ export type Pattern = {
   pieces: number;
   status: "Draft" | "Fitting" | "Printed";
   // what was decided while making it, so the pattern can be looked up later (e.g. at the fabric shop)
-  spec?: { ease: number; fabric?: string; stretch?: string; drape: number; seam: number | null; printer: "A4" | "A0"; sheets?: number; metres: number; details?: [string, string][] };
+  spec?: { ease: number; fabric?: string; stretch?: string; drape: number; seam: number | null; printer: "A4" | "A0"; sheets?: number; metres: number; details?: [string, string][]; layout?: Record<string, { x: number; y: number; r: number }> };
 };
 
 // A picture added in the studio: a photo, or a sketch from the drawing pad. Pins are numbered notes on the picture.
@@ -177,7 +177,7 @@ export const useApp = create<State>()(
         const name = s.draft.garment === "flutter" ? "Flutter midi dress" : templateBy(s.draft.garment).name;
         const bodyName = (s.bodies.find((b) => b.id === (s.draft.bodyId ?? s.activeBody)) ?? s.bodies[0])?.name ?? "Me";
         const d = s.draft;
-        const spec = { ease: d.ease, fabric: d.chosen?.fabric ? d.fabric : undefined, stretch: d.chosen?.stretch ? d.stretch : undefined, drape: d.drape, seam: d.seam, printer: d.printer, sheets: d.sheets, metres: metresFor(d.garment, d.ease), details: d.details };
+        const spec = { ease: d.ease, fabric: d.chosen?.fabric ? d.fabric : undefined, stretch: d.chosen?.stretch ? d.stretch : undefined, drape: d.drape, seam: d.seam, printer: d.printer, sheets: d.sheets, metres: metresFor(d.garment, d.ease), details: d.details, layout: d.layout?.garment === d.garment && d.layout.printer === d.printer ? d.layout.at : undefined };
         const existing = s.patterns.find((p) => p.name === name && p.body === bodyName);
         if (existing) return { patterns: s.patterns.map((p) => (p === existing ? { ...p, status, spec } : p)) };
         return { patterns: [{ id: "n" + Date.now().toString(36), name, garment: d.garment, body: bodyName, pieces: 6, status, spec }, ...s.patterns] };

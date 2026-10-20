@@ -6,6 +6,7 @@ import { fabricAdvice, fitName, metresFor, SEED_PATTERNS, type GarmentKey } from
 import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { useInstall } from "@/components/Install";
+import { MapBoard } from "./print";
 import { Icon, type IconName } from "@/components/icons";
 
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
@@ -451,7 +452,7 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
     ["Paper", sp.printer === "A0" ? "1 A0 sheet, print shop" : `${sp.sheets ?? 9} A4 sheets, at home`],
     ...(sp.details ?? []).slice(0, 4),
   ];
-  const open = (to: string) => { if (body) set({ activeBody: body.id }); newDraft({ garment: pat.garment, ease: sp.ease, seam: sp.seam, printer: sp.printer, drape: sp.drape, ...(sp.fabric ? { fabric: sp.fabric } : {}), ...(sp.stretch ? { stretch: sp.stretch as "No" | "A bit" | "A lot" } : {}), chosen: { fit: true, fabric: !!sp.fabric, stretch: !!sp.stretch }, details: sp.details }); go(to); };
+  const open = (to: string) => { if (body) set({ activeBody: body.id }); newDraft({ garment: pat.garment, ease: sp.ease, seam: sp.seam, printer: sp.printer, drape: sp.drape, ...(sp.fabric ? { fabric: sp.fabric } : {}), ...(sp.stretch ? { stretch: sp.stretch as "No" | "A bit" | "A lot" } : {}), chosen: { fit: true, fabric: !!sp.fabric, stretch: !!sp.stretch }, details: sp.details, ...(sp.layout ? { layout: { garment: pat.garment, printer: sp.printer, at: sp.layout } } : {}) }); go(to); };
   const list = (title: string, rows: [string, string][]) => (
     <div className="card-soft mt-3 rounded-[24px] px-5 pb-1 pt-4">
       <div className="text-[15px] font-medium text-white/85">{title}</div>
@@ -469,6 +470,15 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
           <BodyFigure sex={body?.sex ?? "female"} width={desk ? 200 : 130} variant="solid" garment={pat.garment} glow={false} className="relative h-full w-full" />
         </div>
       </>} right={<>
+        {/* the pattern map: always in sight here, since it is what you need while taping the sheets together */}
+        <button onClick={() => go("minimap", { id: pat.id })} className="card-soft tap mt-3 flex w-full items-center gap-4 rounded-[24px] p-3 pr-4 text-left lg:mt-0">
+          <MapBoard garment={pat.garment} printer={sp.printer} at={sp.layout} labels={false} className="w-[84px] shrink-0 lg:w-[110px]" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[17px]">Pattern map</span>
+            <span className="mt-1 block text-[14px] leading-snug text-white/60">{sp.printer === "A0" ? "Where every piece sits on your A0 sheet" : `Where every piece sits on your ${sp.sheets ? `${sp.sheets} ` : ""}A4 sheets, and how to tape them`}</span>
+          </span>
+          <Icon name="chevR" size={18} className="shrink-0 text-white/40" />
+        </button>
         {list("Shopping list", shop)}
         <p className="mt-2 px-1 text-[14px] leading-snug text-white/50">{tip.why}</p>
         {list("How it was made", made)}

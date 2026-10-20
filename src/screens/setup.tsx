@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, fmt } from "@/lib/store";
 import { BASE, WIZARD, ALL_MEASURES } from "@/lib/data";
-import { Screen, TopBar, HS, Lead, Pill, Glow, Glass, RB, Check, Sheet, Option, Arrows, PaperScreen, cx, useToast, Blob, Split, useDesk } from "@/components/ui";
+import { Screen, TopBar, HS, Lead, Pill, Glow, Glass, RB, Check, Sheet, SheetHead, TextButton, Option, Arrows, PaperScreen, cx, useToast, Blob, Split, useDesk } from "@/components/ui";
 import { BodyFigure, Ruler } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 import { FlowHeader, bodySteps } from "./measure";
@@ -152,7 +152,7 @@ export function BaseMeasures() {
             return (
               // AI estimates must each be checked once ("Check"); confirmed values just offer "Edit"
               <button key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className={cx("field tap flex h-[72px] items-center gap-3 px-5 text-left", !ok && "!border-primary/60")}>
-                <span className="flex flex-1 items-center gap-2.5 text-[17px]">{ok && <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary"><Icon name="check" size={12} strokeWidth={3} /></span>}{b.label}</span>
+                <span className="flex flex-1 items-center gap-2.5 text-[17px]">{ok && <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/12 text-white/85"><Icon name="check" size={12} strokeWidth={3} /></span>}{b.label}</span>
                 <span className="flex items-baseline gap-1.5"><span className="serif text-[30px] leading-none" translate="no">{fmt(body.measures[b.key], units)}</span><span className="unit" translate="no">{units}</span></span>
                 {ok ? <span className="flex w-[58px] items-center justify-end gap-1 text-[14px] font-medium text-white/60"><Icon name="pencil" size={14} />Edit</span>
                   : <span className="flex w-[58px] justify-end"><span className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-bg">Check</span></span>}
@@ -187,18 +187,17 @@ export function PhotosSheet({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
+// After the base review: one question, one line on why, then the choice. "Later" is words only (the quiet option).
 function FinishSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { go, set, activeBody } = useApp();
   const body = useApp((s) => s.body());
-  const n = body.done.length;
   return (
     <Sheet open={open} onClose={onClose}>
-      <div className="flex items-center gap-2.5 text-[16px] text-white/75"><span className="grid h-6 w-6 place-items-center rounded-full bg-primary"><Icon name="check" size={14} strokeWidth={3} /></span>{n} measurements saved</div>
-      <h3 className="mt-5 text-[26px] font-normal leading-tight tracking-[-.03em]">Great job getting this far</h3>
-      <p className="mt-2 text-[17px] leading-snug text-white/85">Would you like to add 20 more measurements to make your body even more precise?</p>
-      <p className="mt-2 text-[16px] leading-snug text-white/60">{body.photoScan ? "AI estimated them from your photos too. You just check each one." : "They give the closest fit. You can stop any time and finish later."}</p>
+      <SheetHead title="Add 20 more measurements?">
+        {body.photoScan ? "Your base measurements are saved. AI estimated the other 20 from your photos, so you just check each one." : "Your base measurements are saved. The other 20 give the closest fit, and you can stop at any time."}
+      </SheetHead>
       <Pill className="mt-6" onClick={() => { onClose(); go("wizard"); }}>Yes, add 20 more</Pill>
-      <Pill className="mt-2.5" variant="glass" onClick={() => { onClose(); set({ resumeBody: activeBody }); go("ready"); }}>Later</Pill>
+      <TextButton className="mt-1" onClick={() => { onClose(); set({ resumeBody: activeBody }); go("ready"); }}>Later</TextButton>
     </Sheet>
   );
 }
@@ -430,14 +429,14 @@ export function EditMeasures({ p }: { p?: Record<string, unknown> }) {
             </Glass>
           ))}</div>
         </div>
-        <div className="field mt-4 !rounded-[26px] px-3 pt-3 lg:mt-0 lg:self-center">
-          <div className="px-2 text-[16px] font-medium">{m.label}</div>
-          <div className="mt-2 flex items-center justify-between">
+        <div className="dial mt-4 lg:mt-0 lg:self-center">
+          <div className="px-5 pt-3.5 text-[16px] font-medium">{m.label}</div>
+          <div className="mt-2 flex items-center justify-between px-3">
             <RB icon="minus" size={48} onClick={() => setMeasure(sel, Math.max(m.min, v - 0.5))} label="Minus 0.5" className="rb-plain" />
             <span className="flex items-baseline gap-2"><span className="serif text-[46px] leading-none lg:text-[64px]" translate="no">{fmt(v, units)}</span><span className="unit" translate="no">{units}</span></span>
             <RB icon="plus" size={48} onClick={() => setMeasure(sel, Math.min(m.max, v + 0.5))} label="Plus 0.5" className="rb-plain" />
           </div>
-          <div className="-mx-3"><Ruler value={v} min={m.min} max={m.max} onChange={(nv) => setMeasure(sel, nv)} className="mt-1" /></div>
+          <Ruler value={v} min={m.min} max={m.max} onChange={(nv) => setMeasure(sel, nv)} className="mt-2" />
         </div>
       </div>
       {node}
@@ -460,7 +459,7 @@ export function Ready() {
   );
   return (
     <PaperScreen art={art} artH="h-[40%]" footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
-      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
+      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
       <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Well done! Your body is ready</h1>
       <p className="lead mt-3">Good job finishing {body.name ? `${body.name}’s` : "your"} measurements. Every pattern you make will be drafted to them.</p>
       <div className="mt-5 border-t border-[#12131c]/10 pt-4">

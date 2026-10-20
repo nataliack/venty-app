@@ -57,12 +57,12 @@ export function Prompt() {
   // keep the studio in the draft, so the next step (and coming back to this one) sees it
   useEffect(() => { setDraft({ refs: atts, prompt: text }); }, [atts, text, setDraft]);
 
-  // On a computer the field grows with the words, from five lines up. On a phone it fills the card (the card fills the
-  // screen) and scrolls inside once the words run past it.
+  // The field grows with the words: from five lines on a computer, from four on a phone, where it stops at eight and
+  // scrolls inside (so the field, the toolbar and Create always fit above the keyboard).
   useLayoutEffect(() => {
     const t = field.current;
     if (!t) return;
-    if (desk) { t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; } else t.style.height = "";
+    t.style.height = "auto"; t.style.height = `${t.scrollHeight + 2}px`;
     const check = () => setOver(t.scrollHeight > t.clientHeight + 2);
     check();
     const ro = new ResizeObserver(check);
@@ -166,7 +166,7 @@ export function Prompt() {
 
       <label className="sr-only" htmlFor="cmp-prompt">Describe it</label>
       <div className={cx("cmp-textwrap", atts.length === 0 && "is-first")}>
-        <textarea ref={field} id="cmp-prompt" className="cmp-text" rows={desk ? 5 : 6} value={text} onChange={(e) => setText(e.target.value)}
+        <textarea ref={field} id="cmp-prompt" className="cmp-text" rows={desk ? 5 : 4} value={text} onChange={(e) => setText(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder="Describe it in a few words" autoComplete="off" />
         {/* the cursor at the end of the words, blinking at rest; gone once the field is focused (the real caret takes over),
             and while the words scroll inside the field (the mirror would no longer line up) */}
@@ -288,15 +288,15 @@ export function Prompt() {
       <div className="scroller relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden noscroll px-4 lg:px-14">
         {/* top-aligned: the title, then the field taking the rest of the screen (on a computer, its own height) */}
         <div className="mx-auto flex min-h-full w-full max-w-[880px] flex-col" style={{ paddingBottom: kb.open ? 10 : "calc(var(--bottom) + 8px)" }}>
-          {!kb.open && (
-            <div className="shrink-0 pt-1 text-center lg:pt-4">
-              <h1 className="h1 cmp-title [text-wrap:balance]">What are we making?</h1>
-              <p className="lead cmp-lead mx-auto mt-2 max-w-[400px] [text-wrap:pretty]">Add photos, a sketch or a few words. Mix them however you like.</p>
-            </div>
-          )}
+          {/* the title stays while typing: the field is short enough that everything fits above the keyboard, so
+              nothing on the screen jumps when it opens */}
+          <div className="shrink-0 pt-1 text-center lg:pt-4">
+            <h1 className="h1 cmp-title [text-wrap:balance]">What are we making?</h1>
+            <p className="lead cmp-lead mx-auto mt-2 max-w-[400px] [text-wrap:pretty]">Add photos, a sketch or a few words. Mix them however you like.</p>
+          </div>
           {/* the halo bleeds to the screen's edges and is clipped there, so it never makes the page scroll sideways */}
-          <div className={cx("-mx-4 flex flex-1 flex-col px-4 [overflow-x:clip] lg:-mx-14 lg:mt-10 lg:flex-none lg:px-14", kb.open ? "mt-1" : "mt-6")}>
-            <div className="cmp-wrap relative flex flex-1 flex-col lg:flex-none">
+          <div className="-mx-4 mt-6 px-4 [overflow-x:clip] lg:-mx-14 lg:mt-10 lg:px-14">
+            <div className="cmp-wrap relative">
               <div className="cmp-halo" aria-hidden="true" />
               {card}
             </div>

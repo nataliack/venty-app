@@ -9,7 +9,8 @@ export const cx = (...a: (string | false | null | undefined)[]) => a.filter(Bool
 
 // ─── Screen shell ─────────────────────────────────────────────────────
 // header (optional, pinned) · scroll area (only scrolls, and only fades, when content overflows) · footer (pinned, no backdrop).
-export function Screen({ children, footer, header, className, bg, noPad, wide, dock }: { children: ReactNode; footer?: ReactNode; header?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean; wide?: boolean; dock?: boolean }) {
+// `fill`: the content is a column as tall as the scroll area, so one part of it (flex-1) can take the space left over.
+export function Screen({ children, footer, header, className, bg, noPad, wide, dock, fill }: { children: ReactNode; footer?: ReactNode; header?: ReactNode; className?: string; bg?: ReactNode; noPad?: boolean; fixed?: boolean; wide?: boolean; dock?: boolean; fill?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [over, setOver] = useState(false);
   useEffect(() => {
@@ -26,7 +27,7 @@ export function Screen({ children, footer, header, className, bg, noPad, wide, d
       {bg}
       {header && <div className="relative z-10 shrink-0 px-6 lg:px-14" style={{ paddingTop: "var(--top)" }}><div className={cx("lg:mx-auto lg:w-full", max)}>{header}</div></div>}
       <div ref={ref} className={cx("scroller relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden noscroll", over && "is-over", !noPad && "px-6", "lg:px-14", className)} style={{ paddingTop: header ? 0 : "var(--top)" }}>
-        <div className={cx("lg:mx-auto lg:w-full", max, "pb-5", !footer && "pb-[calc(var(--bottom)+12px)]")}>
+        <div className={cx("lg:mx-auto lg:w-full", max, "pb-5", !footer && "pb-[calc(var(--bottom)+12px)]", fill && "flex min-h-full flex-col")}>
           {children}
         </div>
       </div>
@@ -145,11 +146,30 @@ export function showNeeded(from: Element) {
 }
 
 // Selectable option card (no option is ever pre-selected): radio ring idle, violet edge + gradient when chosen.
-export function Option({ on, onClick, children, className, radio = true }: { on: boolean; onClick: () => void; children: ReactNode; className?: string; radio?: boolean }) {
+// The ring sits top right; on a single-row card (`radioAt="center"`) it is centred on the card's height.
+export function Option({ on, onClick, children, className, radio = true, radioAt = "top" }: { on: boolean; onClick: () => void; children: ReactNode; className?: string; radio?: boolean; radioAt?: "top" | "center" }) {
   return (
-    <div role="radio" aria-checked={on} tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }} className={cx("opt text-left", on && "on", className)}>
+    <div role="radio" aria-checked={on} tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }} className={cx("opt text-left", on && "on", className)}>
       {children}
-      {radio && <span className="radio absolute right-4 top-4">{on && <Icon name="check" size={13} strokeWidth={3} />}</span>}
+      {radio && <span className={cx("radio absolute right-4", radioAt === "center" ? "top-1/2 -translate-y-1/2" : "top-4")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>}
+    </div>
+  );
+}
+
+// The quiet second choice under a primary button ("Later", "Skip for now", "Take a break"): words only, never a filled
+// button, so the primary stays the one clear action. `paper` for the light screens.
+export function TextButton({ children, onClick, tone = "dark", className }: { children: ReactNode; onClick?: () => void; tone?: "dark" | "paper"; className?: string }) {
+  return (
+    <button onClick={onClick} className={cx("h-12 w-full px-4 text-[16px] font-medium transition-colors", tone === "paper" ? "text-[#12131c]/65 hover:text-[#12131c]" : "text-white/70 hover:text-white", className)}>{children}</button>
+  );
+}
+
+// The words at the top of every sheet: one title and, if needed, one line of body text in one colour.
+export function SheetHead({ title, children, className }: { title: ReactNode; children?: ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      <h3 className="text-[24px] font-normal leading-tight tracking-[-.03em] [text-wrap:balance]">{title}</h3>
+      {children && <p className="mt-2 text-[16px] leading-snug text-white/65 [text-wrap:pretty]">{children}</p>}
     </div>
   );
 }

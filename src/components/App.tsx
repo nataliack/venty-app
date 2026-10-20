@@ -11,7 +11,7 @@ import { You, ProfileEdit, Info } from "@/screens/profile";
 import { PatSelectBody, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
 import { Prompt } from "@/screens/studio";
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
-import { Seam, Arrange, PrintMethod, Needs, PrintReady, MiniMap, Printed } from "@/screens/print";
+import { Seam, Arrange, PrintMethod, PrintReady, MiniMap, Printed } from "@/screens/print";
 import { Pill, cx } from "./ui";
 import { InstallGuide } from "./Install";
 import { Sidebar } from "./Sidebar";
@@ -30,7 +30,7 @@ const SCREENS: Record<string, ScreenC> = {
   patSelectBody: PatSelectBody, prompt: Prompt, ref: AIRead, ai: AIRead, generating: Generating, garment: Garment, edits: Edits,
   templates: Templates, template: TemplateDetail, tplBody: TplBody, tplFit: TplFit, tplResult: TplResult,
   install: InstallGuide,
-  seam: Seam, arrange: Arrange, printMethod: PrintMethod, needs: Needs, print: PrintReady, minimap: MiniMap, printed: Printed,
+  seam: Seam, arrange: Arrange, printMethod: PrintMethod, print: PrintReady, minimap: MiniMap, printed: Printed,
 };
 
 // If any screen throws, never show a broken page: offer a way home.
@@ -66,10 +66,10 @@ function StatusBar() {
 }
 
 // light screens: the colour at their top (Safari's bar follows it) and at their bottom
-const LIGHT_TOP: Record<string, string> = { home: "#f6f7fd", you: "#f6f7fd", prompt: "#f0f4fe" };
+const LIGHT_TOP: Record<string, string> = { home: "#f6f7fd", you: "#f6f7fd", prompt: "#f0f4fe", start: "#f3f1ec" };
 // splash, welcome and "Welcome, Ana" share one sky, so they cross-fade in place instead of sliding
 const SKY = new Set(["splash", "welcome", "signedin"]);
-const CROWN_TOP = new Set(["splash", "signedin", "welcome", "tourAsk", "onboarding", "start", "ready", "printed"]);
+const CROWN_TOP = new Set(["splash", "signedin", "welcome", "tourAsk", "onboarding", "ready", "printed"]);
 function useStatusTint(id: string) {
   useEffect(() => {
     const desk = window.matchMedia("(min-width: 1024px)").matches;
@@ -77,13 +77,13 @@ function useStatusTint(id: string) {
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
-    const PAPER = new Set(["tourAsk", "onboarding", "start", "ready", "printed"]);
+    const PAPER = new Set(["onboarding", "start", "ready", "printed"]);
     // On a short iOS 26 window (html.vp-short) the strip under the app shows this colour (flat colours only, gradients are
     // ignored), so it matches each screen's bottom: paper, the sky's blue floor (.sky-floor), or the dark page.
     // Tab screens in the home-screen app: the bar is docked, so the strip continues the bar's own bottom colour.
     const TABS = new Set(["home", "bodies", "patterns", "you"]);
     const pwa = document.documentElement.classList.contains("pwa");
-    const bottom = pwa && TABS.has(id) ? "#bac3e8" : id === "prompt" ? LIGHT_TOP.prompt : PAPER.has(id) ? "#f3f1ec" : SKY.has(id) ? "#262c5e" : "#0b0c15";
+    const bottom = pwa && TABS.has(id) ? "#bac3e8" : id === "prompt" ? LIGHT_TOP.prompt : PAPER.has(id) ? "#f3f1ec" : SKY.has(id) || id === "tourAsk" ? "#262c5e" : "#0b0c15";
     // Safari 26 (theme-color is ignored) paints its status bar from this colour, since .device has none of its own
     // (see globals.css): in Safari it is each screen's top colour, so the bar runs on from the screen as if see-through.
     // The home-screen app has a see-through status bar already, so there it keeps the bottom strip's colour.
