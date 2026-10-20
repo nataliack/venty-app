@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { FLUTTER, FITS, PIECE_LABEL, fitName, fabricAdvice, templateBy, type GarmentKey, type PieceKey } from "@/lib/data";
-import { Screen, TopBar, H1, HS, Lead, Pill, RB, Arrows, Option, Segmented, Sheet, SheetHead, TextButton, cx, Split, useDesk, useToast } from "@/components/ui";
+import { Screen, TopBar, TopAction, H1, HS, Lead, Pill, RB, Arrows, Option, Segmented, Sheet, SheetHead, cx, Split, useDesk, useToast } from "@/components/ui";
 import { BodyFigure, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { FlowHeader, MiniDial } from "./measure";
+import { Ico, SI } from "@/components/studio-icons";
 
 export const garmentName = (g: GarmentKey) => (g === "flutter" ? FLUTTER.name : templateBy(g).name);
 export const piecesFor = (g: GarmentKey): PieceKey[] => (g === "flutter" ? ["bodiceFront", "bodiceBack", "sleeve", "skirtFront", "skirtBack", "facing"] : templateBy(g).pieceSet);
@@ -31,7 +32,7 @@ export function PatSelectBody() {
   const [pick, setPick] = useState<string | null>(null); // nothing chosen until tapped
   const next = () => { if (!pick) return; set({ activeBody: pick }); setDraft({ bodyId: pick }); go("prompt", { picked: true }); };
   return (
-    <Screen footer={<Arrows ready={pick !== null} onNext={next} />}>
+    <Screen footer={<Arrows hidePrev ready={pick !== null} onNext={next} />}>
       <TopBar left="back" />
       <Split left={<>
         <HS className="mt-3 lg:mt-0">Who is this<br />pattern for?</HS>
@@ -272,36 +273,45 @@ export function Generating({ p }: { p?: Record<string, unknown> }) {
   const dur = p?.quick ? 5000 : 9000; // slow enough to read every step
   useEffect(() => {
     const t0 = performance.now(); let raf = 0;
-    const tick = (t: number) => { const k = Math.min(1, (t - t0) / dur); setPct(Math.round(100 * (1 - Math.pow(1 - k, 1.6)))); if (k < 1) raf = requestAnimationFrame(tick); else setTimeout(() => { haptic("success"); replace("garment"); }, 500); };
+    const tick = (t: number) => { const k = Math.min(1, (t - t0) / dur); setPct(100 * (1 - Math.pow(1 - k, 1.6))); if (k < 1) raf = requestAnimationFrame(tick); else setTimeout(() => { haptic("success"); replace("garment"); }, 500); };
     raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
   }, [dur, replace]);
   const active = Math.min(3, Math.floor(pct / 25.5));
-  // The pieces draft themselves on the pattern paper, one after another, as the work goes on. No big percentage:
-  // the number font has no % sign, and the drawing says more about what is happening.
+  // A light page, so drafting reads as its own moment (not one more dark working screen): the pieces draft themselves
+  // on pattern paper one after another, a pen point at the end of each line, with the four stages listed underneath.
+  // No big percentage: the number font has no % sign, and the drawing says more about what is happening.
   const pieces = piecesFor(draft.garment);
   const k = pct / 100;
   const per = 0.86 / pieces.length; // each piece's share of the time; the last bit is the pieces settling
   const desk = useDesk();
   return (
-    <Screen fixed fill>
-      <TopBar left="close" onLeft={() => useApp.getState().back()} />
-      <div className="flex flex-1 flex-col items-center justify-center pb-4 text-center">
-        <div className="pattern-mat relative w-full max-w-[360px] rounded-[28px] p-5 lg:max-w-[560px] lg:rounded-[36px] lg:p-8">
-          <div className="grid grid-cols-3 place-items-center gap-x-3 gap-y-4">
-            {pieces.map((pk, i) => (
-              <Piece key={pk} k={pk} tone="light" width={desk ? 130 : 78} draw={Math.max(0, Math.min(1, (k - i * per) / per))} />
-            ))}
+    <div className="cmp-page absolute inset-0 flex flex-col overflow-hidden">
+      <div className="cmp-dots" aria-hidden="true" />
+      <div className="relative z-10 shrink-0 px-6 lg:px-14" style={{ paddingTop: "var(--top)" }}>
+        <div className="flex h-12 items-center"><button type="button" className="cmp-back" onClick={() => useApp.getState().back()} aria-label="Stop drafting"><Ico d={SI.x} size={18} weight={1.8} /></button></div>
+      </div>
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center" style={{ paddingBottom: "calc(var(--bottom) + 12px)" }}>
+        <div className="relative w-full max-w-[340px] lg:max-w-[520px]">
+          <div className="cmp-halo" aria-hidden="true" />
+          <div className="pattern-mat is-raised relative rounded-[28px] p-5 lg:rounded-[36px] lg:p-8">
+            <div className="grid grid-cols-3 place-items-center gap-x-3 gap-y-4">
+              {pieces.map((pk, i) => (
+                <Piece key={pk} k={pk} tone="light" width={desk ? 124 : 76} draw={Math.max(0, Math.min(1, (k - i * per) / per))} />
+              ))}
+            </div>
           </div>
         </div>
-        <h1 className="h1 mt-8 !text-[28px] lg:!text-[40px]">{p?.quick ? "Updating your pattern" : "Drafting your pattern"}</h1>
-        <div className="relative mt-2 h-6 w-full">
-          <AnimatePresence mode="wait"><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35 }} className="absolute inset-0 text-[16px] text-white/65 lg:text-[18px]">{steps[active]}</motion.div></AnimatePresence>
-        </div>
-        <div className="mt-5 flex w-full max-w-[240px] gap-1.5" aria-hidden>{steps.map((_, i) => (
-          <span key={i} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/12"><span className="block h-full rounded-full bg-white/80" style={{ width: `${Math.max(0, Math.min(1, (pct - i * 25) / 25)) * 100}%` }} /></span>
-        ))}</div>
+        <h1 className="h1 cmp-title relative mt-9 !text-[28px] lg:!text-[40px]">{p?.quick ? "Updating your pattern" : "Drafting your pattern"}</h1>
+        <ol className="relative mt-5 flex w-full max-w-[280px] flex-col gap-2.5 text-left">{steps.map((t, i) => (
+          <li key={i} className={cx("flex items-center gap-3 text-[15px] transition-colors duration-500", i < active ? "text-[#131523]/55" : i === active ? "text-[#131523]" : "text-[#131523]/30")}>
+            <span className={cx("grid h-5 w-5 shrink-0 place-items-center rounded-full transition-all duration-500", i < active ? "bg-[#131523] text-white" : i === active ? "border-[1.5px] border-primary" : "border-[1.5px] border-[#131523]/20")}>
+              {i < active ? <Icon name="check" size={11} strokeWidth={3} /> : i === active ? <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> : null}
+            </span>
+            {t}
+          </li>
+        ))}</ol>
       </div>
-    </Screen>
+    </div>
   );
 }
 
@@ -317,10 +327,8 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   const { toast, node } = useToast();
   // the pattern is already saved ("Ready to print"), so leaving here keeps it in the library to print later
   const later = () => { toast("Saved to your patterns"); setTimeout(() => useApp.getState().home(), 700); };
-  const footer = <>
-    <div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Change the design</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Looks right</Pill></div>
-    <TextButton className="mt-1" onClick={later}>Save and finish later</TextButton>
-  </>;
+  // two choices at the bottom (change it, or carry on to printing); leaving for now is a page action, top right
+  const footer = <div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Change the design</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Looks right</Pill></div>;
   // Both views share one fixed height, so switching never moves the page. The light behind the figure is drawn inside
   // its own box and fades to nothing before the edges, so no scroll area can cut it into a line.
   const h = desk ? "h-[min(580px,62dvh)]" : "h-[min(440px,48dvh)]";
@@ -349,7 +357,7 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   );
   return (
     <Screen footer={footer}>
-      <TopBar left="back" />
+      <TopBar left="back"><TopAction onClick={later}>Save for later</TopAction></TopBar>
       <div className={cx(desk && "mt-2 grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] items-center gap-14")}>
         <div className={cx(!desk && "text-center")}>
           {!desk && <><h1 className="text-[26px] font-normal tracking-[-.02em]">{name}</h1><p className="mt-1 text-[15px] text-white/60">Drafted to {b.name} · {fitName(draft.ease).toLowerCase()} fit</p></>}
@@ -386,7 +394,7 @@ export function Edits() {
     </div>
   );
   return (
-    <Screen footer={<Arrows onNext={update} label="Update my pattern" />}>
+    <Screen footer={<Arrows hidePrev onNext={update} label="Update my pattern" />}>
       <TopBar left="back" />
       <Split center={false} className="lg:mt-4" cols="lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" left={<>
         {/* phones: the title beside a small preview, so the controls start high */}

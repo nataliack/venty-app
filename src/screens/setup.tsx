@@ -36,10 +36,10 @@ export function Prefs() {
         <Label className="mt-7 lg:mt-0">Do you measure in centimetres or inches?</Label>
         <div className="mt-2.5 grid grid-cols-2 gap-3">
           {(["cm", "in"] as const).map((u) => (
-            <Option key={u} on={units === u} onClick={() => set({ units: u })} className="h-[104px] rounded-[22px] p-4 lg:h-[150px]">
+            // the name, and the short form boxed like the unit on a tape, in the body font
+            <Option key={u} on={units === u} onClick={() => set({ units: u })} className="flex h-[96px] flex-col justify-between rounded-[22px] p-4 lg:h-[130px]">
               <div className="text-[17px] font-medium">{u === "cm" ? "Centimetres" : "Inches"}</div>
-              <div className="serif mt-1 text-[30px] leading-none text-white/90" translate="no">{u}</div>
-              <span className="ticks" />
+              <span className="grid h-8 min-w-10 place-items-center self-start rounded-[8px] border border-white/25 px-2 text-[15px] font-medium leading-none text-white/85" translate="no">{u}</span>
             </Option>
           ))}
         </div>
@@ -211,16 +211,20 @@ const TIPS: [IconName, string, string][] = [
 export function ScanPrep() {
   const { go } = useApp();
   return (
-    <Screen header={<FlowHeader steps={bodySteps(2, 0)} />} footer={<Arrows ready onNext={() => go("scanCam")} label="Open camera" />}>
-      <Split left={<>
-        <HS className="mt-4 lg:mt-0">Before you scan</HS>
-        <Lead className="mt-3">You’ll take 3 photos of yourself: one from the front, one from the back and one from the side.</Lead>
-      </>} right={<>
-        <ul className="mt-7 flex flex-col gap-5 lg:mt-0">{TIPS.map(([ic, t, d]) => (
-          <li key={t} className="flex items-start gap-4"><span className="grid h-10 w-10 shrink-0 place-items-center text-peri"><Icon name={ic} size={26} /></span><div><div className="text-[17px] font-medium">{t}</div><div className="text-[15px] text-white/55">{d}</div></div></li>
-        ))}</ul>
-        <Note icon="lock" className="mt-8">Your photos stay on this device. You can view or delete them any time.</Note>
-      </>} />
+    // phones: centred, the heading at the top, the three tips in the middle, the privacy note just above the button
+    <Screen header={<FlowHeader steps={bodySteps(2, 0)} />} footer={<Arrows ready onNext={() => go("scanCam")} label="Open camera" />} fill>
+      <div className="flex flex-1 flex-col lg:grid lg:min-h-[calc(100dvh-var(--top)-var(--bottom)-120px)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:gap-16">
+        <div className="text-center lg:text-left">
+          <HS className="mt-4 lg:mt-0">Before you scan</HS>
+          <Lead className="mx-auto mt-3 max-w-[330px] [text-wrap:pretty] lg:mx-0">You’ll take 3 photos of yourself: one from the front, one from the back and one from the side.</Lead>
+        </div>
+        <div className="flex flex-1 flex-col lg:block">
+          <ul className="my-auto flex flex-col gap-6 py-8 lg:my-0 lg:py-0">{TIPS.map(([ic, t, d]) => (
+            <li key={t} className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-4 lg:text-left"><Icon name={ic} size={26} className="shrink-0 text-peri" /><div className="mt-2 lg:mt-0"><div className="text-[17px] font-medium">{t}</div><div className="mt-0.5 text-[15px] text-white/55">{d}</div></div></li>
+          ))}</ul>
+          <Note icon="lock" className="mx-auto max-w-[300px] justify-center pb-2 text-center lg:mx-0 lg:mt-8 lg:max-w-none lg:justify-start lg:text-left">Your photos stay on this device. You can view or delete them any time.</Note>
+        </div>
+      </div>
     </Screen>
   );
 }
@@ -310,8 +314,15 @@ export function ScanCam() {
           <div className="absolute inset-0 flex justify-center py-4 opacity-25"><BodyFigure sex={body.sex} width={120} glow={false} className="h-full w-auto" /></div>
         </div>
       )}
-      {/* review */}
-      <AnimatePresence>{shot && <motion.img key={shot.slice(-40)} src={shot} alt={`${VIEWS[view]} photo`} initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 h-full w-full object-cover" />}</AnimatePresence>
+      {/* review: the photo as a framed picture in the middle (not the whole screen), so it reads as the photo you took */}
+      {shot && <div className="absolute inset-0" style={{ background: "radial-gradient(80% 60% at 50% 45%, #1d2138, #0a0b12)" }} />}
+      <AnimatePresence>{shot && (
+        <motion.div key={shot.slice(-40)} initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+          className="absolute inset-x-0 bottom-[170px] top-[calc(var(--top)+130px)] flex items-center justify-center px-16">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={shot} alt={`${VIEWS[view]} photo`} className="max-h-full max-w-full rounded-[22px] border border-white/20 object-contain shadow-[0_30px_80px_-30px_rgb(0_0_0/.9)]" />
+        </motion.div>
+      )}</AnimatePresence>
 
       {/* top: close + views */}
       <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/55 to-transparent px-5 pb-8" style={{ paddingTop: "var(--top)" }}>
@@ -351,8 +362,8 @@ export function ScanCam() {
           <Pill onClick={read} disabled={reading} icon={<Icon name="sparkle" size={18} />}>Read my measures</Pill>
         ) : (
           <div className="flex items-center justify-between px-2">
-            <button onClick={() => file.current?.click()} aria-label="Choose from library" className="tap grid h-12 w-12 place-items-center overflow-hidden rounded-[12px] border border-white/30 bg-white/10">
-              {photos.find(Boolean) ? <img src={photos.filter(Boolean).slice(-1)[0]!} alt="" className="h-full w-full object-cover" /> : <Icon name="image" size={22} />}
+            <button onClick={() => file.current?.click()} aria-label="Choose from library" className="tap grid h-12 w-12 place-items-center rounded-full bg-white/10">
+              <Icon name="image" size={22} />
             </button>
             <button onClick={capture} aria-label={`Take ${VIEWS[view]} photo`} className="tap grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white"><span className="h-[60px] w-[60px] rounded-full bg-white" /></button>
             <button onClick={() => setFlash(!flash)} aria-pressed={flash} aria-label="Flash" className={cx("tap grid h-12 w-12 place-items-center rounded-full", flash ? "bg-white text-bg" : "bg-white/10")}><Icon name="flash" size={22} /></button>
@@ -459,9 +470,11 @@ export function Ready() {
   );
   return (
     <PaperScreen art={art} artH="h-[40%]" footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
-      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
-      <h1 className="h1 mt-3 !text-[34px] text-[#12131c] lg:!text-[52px]">Well done! Your body is ready</h1>
-      <p className="lead mt-3">Good job finishing {body.name ? `${body.name}’s` : "your"} measurements. Every pattern you make will be drafted to them.</p>
+      <div className="text-center lg:text-left">
+        <div className="flex items-center justify-center gap-2 text-[15px] text-[#12131c]/70 lg:justify-start"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
+        <h1 className="h1 mt-3 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Well done! Your body is ready</h1>
+        <p className="lead mx-auto mt-3 max-w-[360px] [text-wrap:pretty] lg:mx-0">Every pattern you make for {body.name || "this body"} will be drafted to these measurements.</p>
+      </div>
       <div className="mt-5 border-t border-[#12131c]/10 pt-4">
         <div className="flex items-baseline justify-between"><span className="text-[17px]">{body.name}</span><span className="text-[15px] text-[#12131c]/60"><span className="serif text-[20px] text-[#12131c]">{count}</span> of 24 measurements</span></div>
         <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-[#12131c]/12")} />)}</div>

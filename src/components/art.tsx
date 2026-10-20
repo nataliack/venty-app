@@ -287,6 +287,19 @@ const PIECES: Record<PieceKey, { w: number; h: number; d: string; grain: [number
 
 export const pieceSize = (k: PieceKey) => ({ w: PIECES[k].w, h: PIECES[k].h });
 
+// A point a fraction t along a piece's outline (by length), for the pen that draws it. Measured on a detached path,
+// kept per piece.
+const PATHS: Partial<Record<PieceKey, SVGPathElement>> = {};
+function pointOn(k: PieceKey, t: number): [number, number] | null {
+  if (typeof document === "undefined") return null;
+  try {
+    let el = PATHS[k];
+    if (!el) { el = document.createElementNS("http://www.w3.org/2000/svg", "path"); el.setAttribute("d", PIECES[k].d); PATHS[k] = el; }
+    const p = el.getPointAtLength(el.getTotalLength() * t);
+    return [p.x, p.y];
+  } catch { return null; }
+}
+
 // tone: "dark" (white lines, for the dark screens) or "light" (ink lines on paper, like a printed pattern).
 // draw (0..1): how much of the outline is drawn, for drafting animations; the fill and markings follow once it closes.
 export function Piece({ k, label, className, showGrid = false, allowance = false, width, tone = "dark", draw }: { k: PieceKey; label?: string; className?: string; showGrid?: boolean; allowance?: boolean; width?: number; tone?: "dark" | "light"; draw?: number }) {
@@ -298,6 +311,8 @@ export function Piece({ k, label, className, showGrid = false, allowance = false
   const drawing = draw !== undefined;
   const closed = !drawing || draw >= 0.999;
   const marks = { opacity: closed ? 1 : 0, transition: "opacity .5s ease" };
+  // while it draws, a pen point sits at the end of the line
+  const pen = drawing && draw > 0.001 && !closed ? pointOn(k, draw) : null;
   return (
     <svg viewBox={`0 0 ${p.w} ${p.h}`} width={width ?? p.w} className={className} aria-hidden style={{ overflow: "visible" }}>
       {showGrid && <rect width={p.w} height={p.h} fill="none" />}
@@ -305,6 +320,7 @@ export function Piece({ k, label, className, showGrid = false, allowance = false
       {allowance && <path d={p.d} fill="none" stroke="#8c9cf8" strokeWidth="1" strokeDasharray="3 3" transform={`translate(${p.w / 2} ${p.h / 2}) scale(1.045) translate(${-p.w / 2} ${-p.h / 2})`} />}
       <path d={p.d} fill={light ? "rgba(104,126,245,.13)" : "rgba(104,126,245,.14)"} stroke="none" style={marks} />
       <path d={p.d} fill="none" stroke={ink} strokeWidth={light ? 2 : 1.4} strokeLinejoin="round" {...(drawing ? { pathLength: 1, strokeDasharray: "1 1", strokeDashoffset: 1 - Math.max(0, Math.min(1, draw)) } : {})} />
+      {pen && <g transform={`translate(${pen[0]} ${pen[1]})`}><circle r="16" fill="#687ef5" opacity=".16" /><circle r="7" fill="#687ef5" stroke="#fff" strokeWidth="2.6" /></g>}
       <g style={marks}>
         <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={grain} strokeWidth="1.2" />
         <path d={x1 === x2 ? `M${x1 - 3} ${y1 + 5} L${x1} ${y1} L${x1 + 3} ${y1 + 5} M${x2 - 3} ${y2 - 5} L${x2} ${y2} L${x2 + 3} ${y2 - 5}` : `M${x1 + 5} ${y1 - 3} L${x1} ${y1} L${x1 + 5} ${y1 + 3} M${x2 - 5} ${y2 - 3} L${x2} ${y2} L${x2 - 5} ${y2 + 3}`} fill="none" stroke={grain} strokeWidth="1.2" />

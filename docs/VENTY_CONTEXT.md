@@ -140,6 +140,14 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **Home** has a light top (`.light-hero`: pale periwinkle with a periwinkle graph-paper grid) with text in a soft, readable indigo (`#3d4bb3` / `#5c68b0`, not white, not a harsh navy), above the dark page.
 - The finished-pattern page shows the garment on a violet panel.
 
+**Back, close and page actions (20 Oct 2026, one rule for every flow):**
+- **Top left is the way out.** On a flow step with a progress bar (`FlowHeader`): **X**, which closes the whole flow. On a standalone page (detail, library, result, Change the design, sign up): the **back arrow**.
+- **Bottom left is the round Back**, only inside a flow, for the previous step, beside the primary button (`Arrows`). A screen with a top-left back arrow never also has a bottom Back (`hidePrev`); the first step of a flow has none either.
+- **Top right never closes anything.** It is only for a page action in words (`TopAction`): "Skip for now", "Save for later", Edit, or the "?" help.
+- **The quiet second choice** under a primary button is words only (`TextButton`): "Later", "Skip the tour", "Take a break, finish later", "Save as PDF instead".
+
+**Fields are solid (20 Oct 2026):** `.field` uses the card colour (`--color-card`) with a light edge, like every card. Nothing in the app is see-through.
+
 **Choices and buttons:**
 - **Nothing is ever pre-selected.** The user picks, then continues.
   - **The only exception: units default to cm**, and units can never be empty.
@@ -178,7 +186,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - Logo, then the headline **"If you can imagine it, you can wear it."** (20 Oct 2026: broader than dresses) and "Start from a photo, a sketch or a few words. Venty drafts the sewing pattern to your measurements, ready to print at home.", centred between the logo and the buttons.
   - A slowly drifting gradient background (`.sky` with `.drift` lights).
   - "Get started" and "I already have an account".
-- **Sign up (`signup`):** **Continue with email** first (white), then a hairline with "or", then Continue with Apple and Continue with Google below it. On phones the ways in sit **at the bottom**, in thumb reach, above the legal line (the heading stays at the top). Log in does the same.
+- **Sign up (`signup`):** **Continue with email** first (white), then a hairline with "or", then Continue with Apple and Continue with Google below it. On phones the ways in sit **at the bottom**, in thumb reach, above the legal line, and the heading and its line are **centred** in the room above them, like a title card. Log in does the same.
   - The guest option is the top-right **"Skip for now"**. It was decided to keep guest here, not on Welcome, and as text with no arrow.
 - **Log in (`login`):** the same buttons in the same order, plus "New to Venty? Create an account".
 - **Email step (`email`, mode `signup` or `login`):**
@@ -196,11 +204,11 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - The pictures contain nothing that looks like a button (the link is drawn as a URL snippet, the sketch as a paper drawing), because testers tried to tap them.
 - Replayable from Profile → App tour, opened with `{ from: "app" }`, which returns to where the user was.
 
-**Start (`start`, layout changed 20 Oct 2026):** its own layout, not the tour's picture-over-paper: paper all the way, the greeting **left-aligned at the top** ("Welcome, {name}." / "Let’s set up your body"), the body figure on a **Crown card** taking the room in between, one line on why, then the buttons (on a computer: words left, the Crown card right). One primary button, **"Set up my body"**, and a quiet **"Skip for now and go to home"**. "Explore templates" was removed: testers did not understand "Where do you want to start?", and a pattern cannot exist without a body.
+**Start (`start`, layout changed 20 Oct 2026):** its own layout, not the tour's picture-over-paper: paper all the way, the greeting **left-aligned at the top** ("Welcome, {name}." / "Let’s set up your body") with its one line on why right under it, the body figure on a **Crown card** taking the room in between, then the buttons on their own with room above them (on a computer: words left, the Crown card right). One primary button, **"Set up my body"**, and a quiet **"Skip for now and go to home"**. "Explore templates" was removed: testers did not understand "Where do you want to start?", and a pattern cannot exist without a body.
 
 **Preferences (`prefs`):**
 - Shown **once, app-wide**, before the first body. Heading **"Before we begin"**, no body text.
-- "Do you measure in centimetres or inches?": compact cards with full-width tick strips (`.ticks`). cm is the default.
+- "Do you measure in centimetres or inches?": compact cards with the name and the short form **boxed** in the body font ("cm", "in"), like the unit on a tape (the tick strips crowded the words and were dropped, 20 Oct 2026). cm is the default.
 - "What's your sewing level?": **Beginner / Intermediate / Advanced**, plain radio cards with one line each. No numbers, no extra tags. Nothing pre-selected.
 - Both can be edited in Profile.
 
@@ -221,11 +229,11 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
    - On AI-estimated values, the note "AI estimate from your photos…" sits **under** the measuring card.
    - Reset, the misleading neighbouring numbers, and the old "Save · next" bar are gone.
 4. **Scan:**
-   - **`scanPrep`:** "You'll take 3 photos of yourself: front, back and side." Three plain tips (fitted clothes, a plain wall, phone at hip height) and a privacy note. No "step back", no underwear mention.
+   - **`scanPrep`:** "You'll take 3 photos of yourself: front, back and side." Three plain tips (fitted clothes, a plain wall, phone at hip height) and a privacy note. No "step back", no underwear mention. On phones it is centred: the heading at the top, the tips stacked in the middle (icon above the words), the privacy note just above the button.
    - **`scanCam`:**
      - Front / Back / Side tabs that can be tapped.
      - Shutter, flash (torch where the device supports it) and library picker sit low.
-     - Each photo is reviewed with **Retake / Use photo**, a check confirms it ("Front saved"), and the tab gets a check mark.
+     - Each photo is reviewed with **Retake / Use photo**, a check confirms it ("Front saved"), and the tab gets a check mark. Under review the photo shows as a **framed picture in the middle**, not the whole screen, so it reads as the photo you took. The library button is always the gallery icon (never your last photo).
      - Photos are saved as small JPEGs in `body.photos` and can be viewed later ("Your scan photos" sheet).
      - "Read my measures" simulates the AI read. It fills all 24 values and marks them `est` (estimated).
 5. **`base`, the review:**
@@ -234,7 +242,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
    - Continue stays disabled until all 4 are confirmed.
    - Continue opens a sheet with one title and one line (20 Oct 2026, it had four texts): **"Add 20 more measurements?"** / "Your base measurements are saved. The other 20 give the closest fit, and you can stop at any time." → **Yes, add 20 more** (to `wizard`) or **Later** (to `ready`), which is words only (`TextButton`).
 6. **`ready`:**
-   - "Saved to your bodies", **"Well done! Your body is ready"**, "Good job finishing {name}'s measurements…", and a summary line with a progress bar.
+   - "Saved to your bodies", **"Well done! Your body is ready"**, "Every pattern you make for {name} will be drafted to these measurements." (centred), and a summary line with a progress bar.
    - Buttons: **Choose what to make** (straight to the prompt screen with this body) and Go to home. Testers asked "a pattern of what?" when the button said "Start a pattern": the garment comes before the pattern.
 7. **Rise** (the seated measurement) shows a **seated side-view figure on a chair** (`SeatedFigure`) with the tape from waist to seat.
 
@@ -296,18 +304,18 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
     - The link option and "Choose a pre-made pattern" are not in this flow (pre-made patterns start from home or the Create menu).
   - After the studio, the garment check is **three steps with a progress header (Garment · Fit · Stretch)**, not hidden tabs: `ref`/`ai` Overview **"Let's check your garment"** (your picture, a summary, your words, and details you tap to change; each detail offers the full range a sewist expects, e.g. Length: extra mini, mini, above the knee, knee, midi, maxi; Skirt includes bodycon and pencil) → `ai` Fitting **"How should it fit?"**: the body inside a **dress silhouette** (sleeves, bodice, waist seam, flared skirt) that widens as the ease grows, from hugging the body to a big, loose dress. No number read-out under the figure. **Tight +1 · Easy +4 · Loose +8 · Oversized +16 cm**, or **your own** amount up to +30 cm (nothing pre-selected) → `ai` Fabric **"Choose your fabric"**: a suggestion based on the fit, described by behaviour not by name (e.g. "A stretchy fabric" for a tight fit, "No stretch" for loose), then "Does your fabric stretch?" (required; choosing against the suggestion shows a calm note, not a block) → "Create my pattern". "Stiff or soft" and the fabric-type chips were removed: testers did not understand them. The old "Got it. How do you want to continue?" screen is gone.
   - **Garment check details (20 Oct 2026):** what you gave the studio is **one short row** under the garment summary ("What you asked for · 3 pictures, 2 notes", the first line of your words, **View**), however much you added; View opens a sheet with every picture, your words in full and your notes. **Fit:** the cards are `Option`s with a radio ring (they looked unselectable), the amount on its own line, a smaller preview, and "Your own" is a selectable card with a stepper inside. **Stretch:** "How stretchy is your fabric?" ("Choose your fabric" read like choosing leather or denim); the suggestion is plain text with an icon, never a primary-blue card (that colour means a button).
-  - `generating` (20 Oct 2026): the garment's pattern pieces **draw themselves** one after another on light pattern paper (`.pattern-mat`, `Piece tone="light" draw`), then "Drafting your pattern", the current step, and four thin progress segments. No big percentage: Bigilla has no % sign. About 9 seconds (5 when updating).
-  - `garment`: "On your body / Pattern", with **Change the design** and **Looks right**, and **"Save and finish later"** (words only) under them: the pattern is already saved as Ready to print, so this goes home with a toast. Back returns to the stretch step. Both views share one fixed height; the light behind the figure is drawn inside its own box (a blur crossing the scroll area's edge made a hard line on the right). The **Pattern** view is the pieces on light pattern paper with a periwinkle graph grid, ink outlines and labels, dropping in one by one, with "6 pieces · Drafted to {name}".
+  - `generating` (20 Oct 2026): a **light page** (the studio's snow, dot grid and halo), so it reads as its own moment. The garment's pattern pieces **draw themselves** one after another on white pattern paper (`.pattern-mat.is-raised`, `Piece tone="light" draw`), a primary **pen point** at the end of each line, then "Drafting your pattern" and the four stages listed (done, now, next). No big percentage: Bigilla has no % sign. About 9 seconds (5 when updating).
+  - `garment`: "On your body / Pattern", with two choices at the bottom, **Change the design** and **Looks right**. Leaving for now is a page action, **"Save for later"** top right: the pattern is already saved as Ready to print, so it goes home with a toast. (Three buttons at the bottom was one too many.) The template result does the same. Back returns to the stretch step. Both views share one fixed height; the light behind the figure is drawn inside its own box (a blur crossing the scroll area's edge made a hard line on the right). The **Pattern** view is the pieces on light pattern paper with a periwinkle graph grid, ink outlines and labels, dropping in one by one, with "6 pieces · Drafted to {name}".
   - `edits` is "Change the design" with one action, **Update my pattern**. On phones the title sits beside a small preview on a plain card (no primary-blue panel); **Total length** and **Neckline depth** are two `MiniDial`s side by side; the garment details are a two-column grid you tap to change (the same sheet as the garment check; the sleeve chips are gone); then "Anything else?".
   - `garment`: just the garment on the body, with Make edits / Looks right. No floating labels and no "Make edits before printing" line.
 - **Pre-made patterns (`templates`):** one row of **text tabs with a sliding underline** (Dresses, Tops, Trousers, Skirts), then "N patterns" and a single **"Any level ▾"** button that opens a small sheet (Any / Easy / Intermediate / Hard). No stacked pills. Cards are solid, with the drawing above the name and a quiet line: three small level bars, level and pieces. The detail page shows pieces and a tag only.
   - Opened from the prompt screen (`{ picked: true }`), the body is already known, so the detail button says "Fit to {name}" and skips `tplBody`.
-- **Print, in dependency order, with a progress header** (**Paper · Seams · Layout · Review**, 20 Oct 2026: "Printer" and "Print" read alike, and the Fabric step had nothing to choose; X returns to the garment):
+- **Print, in dependency order, with a progress header** (**Method · Seams · Layout · Review**, 20 Oct 2026: "Printer" and "Print" read alike, "Paper" said nothing, and Method matches the body flow's step for the same kind of choice; the Fabric step had nothing to choose; X returns to the garment):
   - `printMethod` "How are you printing it?" (A4 at home or A0 at a print shop) → `seam` → `arrange` → `print` → `printed`.
   - `arrange`: the real paper. The arrangement (piece centres and rotation) is saved in `draft.layout`, and the **mini map draws exactly that layout**. A 4 × 4 grid where each cell is one A4 sheet; pieces are drawn to scale and draggable, and sheets that a piece touches are tinted. The count "N of 16 A4 sheets to print" updates as you drag (stored as `draft.sheets`). Rotate piece and Start over.
-  - `arrange` on phones: the paper takes whatever room is left between the words and the tools (measured, `FitBox`), so Rotate piece and Start over are on screen on every phone (they were below the fold on an iPhone 17 Pro Max).
+  - `arrange`: the heading and line centred on phones, the count as one plain line ("Prints on 13 of 16 sheets", no big number). On phones the paper takes whatever room is left between the words and the tools (measured, `FitBox`), so Rotate piece and Start over are on screen on every phone (they were below the fold on an iPhone 17 Pro Max).
   - The **Fabric step is gone**: what to buy ("2.6 metres, 140 cm wide, a little stretch", `fabricLine`) is on the finished page and in the pattern's Shopping list.
-  - `print` "Ready to print": rows a beginner can read: Garment, Drafted to, Fit ("Easy, 4 cm of room"), Seam allowance, **Paper size** ("A4, on your printer at home"), **Sheets to print** ("13, plus 1 map page"). Back sits beside "Print N sheets", and "Save as PDF instead" is words only.
+  - `print` "Ready to print": rows a beginner can read: Garment, Drafted to, Fit ("Easy, 4 cm of room"), Seam allowance, **Paper size** ("A4, on your printer at home"), **Sheets to print** ("13, plus 1 map page"). Back sits beside "Print N sheets", and "Save as PDF instead" is words only. While printing, an overlay covers the whole screen: the printer in the app's icon style (`.icon-primary`, breathing), "Printing your sheets", one small sheet per page filling in, and "7 of 13 sheets".
   - `printed`: the picture is **the pattern map itself** (tap to open it large), then "Your pattern is complete", "Now you can start making your {dress}.", Fabric to buy, and the guides. The map is not a guide, so it is never in the guide list.
   - **The pattern map is always visible** (`MapBoard` in print.tsx): on the finished page, on the pattern's own page (a card above the Shopping list, opening `minimap` with `{ id }`), and full screen. Patterns save their layout (`spec.layout`); older ones get a tidy one.
 - Body, seam and printer choices are no longer pre-selected.

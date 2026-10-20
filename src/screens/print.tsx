@@ -14,7 +14,7 @@ const GRID = { backgroundImage: "linear-gradient(rgba(255,255,255,.06) 1px, tran
 
 // Print flow, in the order it really depends on: paper → seam allowance → layout on the sheets → review and print.
 // (What fabric to buy is on the finished page and the pattern's own page, where it is needed: at the shop.)
-const PRINT_STEPS = ["Paper", "Seams", "Layout", "Review"];
+const PRINT_STEPS = ["Method", "Seams", "Layout", "Review"];
 // Closing the flow returns to the garment you were looking at.
 const exitPrint = () => {
   const s = useApp.getState(); const ids = s.stack.map((r) => r.id);
@@ -229,11 +229,12 @@ export function Arrange() {
       ))}
     </div>
   );
-  const intro = <>
-    <H1 className="mt-4 lg:mt-0">Arrange your pieces</H1>
-    <Lead className="mt-2">{a4 ? "Each box is one A4 sheet. Drag pieces closer to print fewer sheets." : "This is your A0 sheet. Drag the pieces where you want them."}</Lead>
-    <div className="mt-3 flex items-baseline gap-2"><span className="serif text-[34px] leading-none lg:text-[56px]">{sheets}</span><span className="text-[16px] text-white/65">{a4 ? `of ${COLS * ROWS} A4 sheets to print` : "A0 sheet to print"}</span></div>
-  </>;
+  // centred on phones, and the sheet count is one plain line of text (no big number competing with the heading)
+  const intro = <div className="text-center lg:text-left">
+    <H1 className="mt-3 lg:mt-0">Arrange your pieces</H1>
+    <Lead className="mx-auto mt-2 max-w-[330px] [text-wrap:pretty] lg:mx-0">{a4 ? "Each box is one A4 sheet. Drag pieces closer to print fewer sheets." : "This is your A0 sheet. Drag the pieces where you want them."}</Lead>
+    <p className="mt-2 text-[15px] text-white/85">{a4 ? <>Prints on <span className="tabular-nums">{sheets}</span> of {COLS * ROWS} sheets</> : "Prints on 1 A0 sheet"}</p>
+  </div>;
   const footer = <Arrows onNext={() => { measure(); go("print"); }} />;
   if (desk) return (
     <Screen header={<PrintHeader step={2} sub={0.5} />} footer={footer}>
@@ -279,7 +280,7 @@ export function PrintReady() {
     ["Sheets to print", a4 ? `${count}, plus 1 map page` : "1"],
   ];
   return (
-    <Screen header={<PrintHeader step={3} sub={0.5} />} footer={<>
+    <><Screen header={<PrintHeader step={3} sub={0.5} />} footer={<>
       <div className="flex items-center gap-3"><RB icon="back" variant="dark" size={56} onClick={back} label="Back" /><Pill className="min-w-0 flex-1" onClick={print}>{a4 ? `Print ${count} sheets` : "Send to print shop"}</Pill></div>
       <TextButton className="mt-1" onClick={() => toast("PDF saved to Files")}>Save as PDF instead</TextButton>
     </>}>
@@ -290,15 +291,29 @@ export function PrintReady() {
         <div className="card-soft mt-6 divide-y divide-white/8 rounded-[24px] px-5 lg:mt-0">
           {rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-3.5"><span className="shrink-0 text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}
         </div>} />
+    </Screen>
       <AnimatePresence>{printing > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-bg/85 backdrop-blur-md">
-          <div className="grid h-20 w-20 place-items-center rounded-full bg-white text-bg"><Icon name="printer" size={34} /></div>
-          <div className="serif mt-6 text-[56px] leading-none">{Math.max(1, Math.round(printing * count))}/{count}</div>
-          <div className="mt-2 text-[16px] text-white/75">{a4 ? "Sending sheets to your printer…" : "Sending your pattern to the print shop…"}</div>
-          <div className="mt-5 h-1 w-48 overflow-hidden rounded-full bg-white/15"><div className="h-full bg-primary" style={{ width: `${printing * 100}%` }} /></div>
+          {/* the printer in the app's icon style (the primary gradient, a light edge, a soft glow), breathing while it works */}
+          <span className="relative grid h-24 w-24 place-items-center">
+            <span className="absolute inset-0 animate-ping rounded-full bg-primary/20 [animation-duration:2s]" />
+            <span className="icon-primary relative grid h-24 w-24 place-items-center rounded-full"><Icon name="printer" size={38} strokeWidth={1.8} /></span>
+          </span>
+          <div className="mt-7 text-[22px] tracking-[-.02em]">{a4 ? "Printing your sheets" : "Sending to the print shop"}</div>
+          {/* one small sheet per page, filling in as each one prints */}
+          {a4 ? (
+            <div className="mt-5 flex max-w-[260px] flex-wrap justify-center gap-1.5" aria-label={`${Math.max(1, Math.round(printing * count))} of ${count} sheets`}>
+              {Array.from({ length: count }, (_, i) => (
+                <span key={i} className={cx("h-[26px] w-[19px] rounded-[3px] border transition-all duration-300", i < Math.round(printing * count) ? "border-white bg-white" : "border-white/25 bg-white/[.04]")} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 h-1 w-48 overflow-hidden rounded-full bg-white/15"><div className="h-full bg-white" style={{ width: `${printing * 100}%` }} /></div>
+          )}
+          <div className="mt-3 text-[15px] tabular-nums text-white/60">{a4 ? `${Math.max(1, Math.round(printing * count))} of ${count} sheets` : "Your pattern is on its way"}</div>
         </motion.div>)}</AnimatePresence>
       {node}
-    </Screen>
+    </>
   );
 }
 

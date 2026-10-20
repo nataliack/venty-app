@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, DEMO_EMAIL } from "@/lib/store";
-import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, Crown, cx, useDesk } from "@/components/ui";
+import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
@@ -83,7 +83,7 @@ export function Welcome() {
 // bottom, in thumb reach, above the footer line.
 function AuthShell({ children, footer, actions }: { children: ReactNode; footer?: ReactNode; actions?: ReactNode }) {
   const desk = useDesk();
-  if (!desk) return <Screen footer={actions || footer ? <>{actions}{footer && <div className={actions ? "mt-4" : ""}>{footer}</div>}</> : undefined}>{children}</Screen>;
+  if (!desk) return <Screen fill footer={actions || footer ? <>{actions}{footer && <div className={actions ? "mt-4" : ""}>{footer}</div>}</> : undefined}>{children}</Screen>;
   if (actions) children = <>{children}<div className="mt-8">{actions}</div></>;
   return (
     <div className="absolute inset-0 grid grid-cols-[1fr_1fr]">
@@ -113,6 +113,15 @@ function useAuthDone() {
   };
 }
 
+// The heading and its line: on phones centred in the room above the ways in, like a title card; on a computer, on
+// top of the form column.
+const Hero = ({ title, lead }: { title: ReactNode; lead: string }) => (
+  <div className="flex flex-1 flex-col items-center justify-center pb-6 text-center lg:block lg:pb-0 lg:text-left">
+    <HS className="[text-wrap:balance] lg:mt-6">{title}</HS>
+    <Lead className="mt-3 max-w-[320px] [text-wrap:pretty] lg:max-w-none">{lead}</Lead>
+  </div>
+);
+
 // Three clear ways in. Email opens its own step.
 function Ways({ onSocial, onEmail }: { onSocial: () => void; onEmail: () => void }) {
   return (
@@ -136,10 +145,9 @@ export function SignUp() {
     <AuthShell footer={<Legal />} actions={<Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "signup" })} />}>
       <div className="flex h-12 items-center justify-between">
         <RB icon="back" onClick={useApp.getState().back} />
-        <button className="h-11 rounded-full px-4 text-[16px] font-medium text-white/85 hover:text-white" onClick={() => done("", "", true)}>Skip for now</button>
+        <TopAction onClick={() => done("", "", true)}>Skip for now</TopAction>
       </div>
-      <HS className="mt-6">Create your<br />account</HS>
-      <Lead className="mt-3">Keep your bodies and patterns safe, on any device.</Lead>
+      <Hero title={<>Create your<br />account</>} lead="Keep your bodies and patterns safe, on any device." />
     </AuthShell>
   );
 }
@@ -151,8 +159,7 @@ export function LogIn() {
     <AuthShell footer={<button className="h-11 w-full text-center text-[15px] text-white/60" onClick={() => useApp.getState().replace("signup")}>New to Venty? <span className="font-medium text-white">Create an account</span></button>}
       actions={<Ways onSocial={() => done("Ana", DEMO_EMAIL)} onEmail={() => go("email", { mode: "login" })} />}>
       <div className="flex h-12 items-center"><RB icon="back" onClick={useApp.getState().back} /></div>
-      <HS className="mt-6">Welcome back</HS>
-      <Lead className="mt-3">Log in to pick up where you left off.</Lead>
+      <Hero title="Welcome back" lead="Log in to pick up where you left off." />
     </AuthShell>
   );
 }
@@ -395,11 +402,12 @@ export function StartChoice() {
     </div>
   );
   return (
+    // the words together at the top, the body in between, the buttons alone at the bottom with room around them
     <div className="paper absolute inset-0 flex flex-col px-6" style={{ paddingTop: "calc(var(--top) + 20px)", paddingBottom: "var(--bottom)" }}>
       {words}
-      <div className="mt-5 min-h-0 flex-1">{figure}</div>
-      <div className="mt-4">{why}</div>
-      <div className="mt-5">{actions}</div>
+      <div className="mt-3">{why}</div>
+      <div className="mt-6 min-h-0 flex-1">{figure}</div>
+      <div className="mt-8">{actions}</div>
     </div>
   );
 }

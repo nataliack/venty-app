@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
 import { TEMPLATES, CATEGORIES, LEVELS, templateBy, type Category, type GarmentKey } from "@/lib/data";
-import { Screen, TopBar, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, Option, Sheet, cx, useToast } from "@/components/ui";
+import { Screen, TopBar, TopAction, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, Option, Sheet, cx, useToast } from "@/components/ui";
 import { Split, useDesk } from "@/components/ui";
 import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
@@ -189,7 +189,7 @@ export function TplResult() {
     [["Bust", M.bust, "+2 ease"], ["Waist", M.waist, "+4 ease"], ["Hip", M.hips, "+6 ease"], ["Length", 112, draft.length ?? t.defaultLength]];
   return (
     <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Change the design</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Looks right</Pill></div>}>
-      <TopBar left="back" eyebrow={`Fitted to ${b.name}`} />
+      <TopBar left="back" eyebrow={`Fitted to ${b.name}`}><TopAction onClick={() => useApp.getState().home()}>Save for later</TopAction></TopBar>
       <div className="lg:flex lg:items-end lg:justify-between">
       <H1 className="mt-3">{t.name}, on you</H1>
       <Segmented className="mt-4 lg:w-[300px]" items={["On body", "Pattern"]} value={view} onChange={(v) => (v === "Pattern" ? go("garment", { view: "Pattern" }) : setView(v))} />

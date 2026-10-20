@@ -86,7 +86,7 @@ export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
   const install = async () => { if (!deferred) return; await deferred.prompt(); try { await deferred.userChoice; } catch {} deferred = null; done(); };
   const steps = os === "ios" ? IOS : ANDROID;
   return (
-    <Screen header={<TopBar left="back" />} footer={<Arrows ready onNext={done} label={then ? "Continue" : "Done"} />}>
+    <Screen header={<TopBar left="back" />} footer={<Arrows hidePrev ready onNext={done} label={then ? "Continue" : "Done"} />}>
       <Split left={<>
         <HS className="mt-2 !text-[30px] lg:mt-0 lg:!text-[48px]">Add Venty to your home screen</HS>
         <Lead className="mt-2">Three taps, then open it like an app.</Lead>

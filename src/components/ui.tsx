@@ -164,6 +164,12 @@ export function TextButton({ children, onClick, tone = "dark", className }: { ch
   );
 }
 
+// A page action in the top right ("Skip for now", "Save for later"): words only. The top left is always the way out
+// (X closes a flow, the arrow leaves a page); the top right never closes anything.
+export function TopAction({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+  return <button onClick={onClick} className="h-11 shrink-0 rounded-full px-4 text-[16px] font-medium text-white/85 transition-colors hover:text-white">{children}</button>;
+}
+
 // The words at the top of every sheet: one title and, if needed, one line of body text in one colour.
 export function SheetHead({ title, children, className }: { title: ReactNode; children?: ReactNode; className?: string }) {
   return (
