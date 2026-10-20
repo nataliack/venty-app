@@ -58,7 +58,7 @@ export function Welcome() {
   const desk = useDesk();
   const actions = (
     <div className="flex flex-col items-center gap-2">
-      <Pill onClick={() => go("signup")}>Get started</Pill>
+      <Pill className="pill-sheen" onClick={() => go("signup")}>Get started</Pill>
       <button className="h-11 px-4 text-[16px] font-medium text-white/90 transition-colors hover:text-white" onClick={() => go("login")}>I already have an account</button>
     </div>
   );
@@ -74,7 +74,7 @@ export function Welcome() {
           <h2 className="h1 !text-[32px] lg:!text-[56px]">{WELCOME_T}</h2>
           <Lead className="mt-4 max-w-[340px] lg:max-w-[520px]">{WELCOME_B}</Lead>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.8 }} className="w-full max-w-[380px] lg:mb-[6dvh]">{actions}</motion.div>
+        <motion.div initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: 0.55, type: "spring", bounce: 0.25, duration: 0.9 }} className="w-full max-w-[380px] lg:mb-[6dvh]">{actions}</motion.div>
       </div>
     </div>
   );

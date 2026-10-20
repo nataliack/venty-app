@@ -631,3 +631,20 @@ input { font: inherit; color: inherit; }
 }
 /* the pattern paper raised on a light page (the drafting screen): white, a hairline and a long soft shadow */
 .pattern-mat.is-raised { background-color: #fff; box-shadow: 0 0 0 1px rgb(19 21 35 / .08), 0 30px 80px -36px rgb(60 75 99 / .5), 0 2px 6px -2px rgb(60 75 99 / .12); }
+
+/* phones: Crown's drifting lights are small circles on a narrow screen, so their edges read as hard blobs. Here they
+   are wider, blurrier and fainter, so the light stays soft. */
+@media (max-width: 1023px) {
+  .sky.sky-light .drift { filter: blur(100px); opacity: .68; }
+  .sky.sky-light .d1, .sky.sky-light .d2, .sky.sky-light .d3 { width: 100%; }
+  .sky.sky-light .d4 { width: 85%; }
+  .sky.sky-light::before { opacity: .75; }
+}
+
+/* the main action on Welcome: a soft band of light sweeps across the button now and then, so the eye finds it.
+   Once every few seconds, never a glow or a pulse; still with reduced motion. */
+.pill-sheen::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 36%, rgb(255 255 255 / .16) 44%, rgb(255 255 255 / .46) 50%, rgb(255 255 255 / .16) 56%, transparent 64%); background-size: 260% 100%; background-position: 135% 0;
+  animation: v-sheen-sweep 5s cubic-bezier(.45, 0, .25, 1) 1.8s infinite; }
+@keyframes v-sheen-sweep { 0% { background-position: 135% 0; } 32%, 100% { background-position: -35% 0; } }
+@media (prefers-reduced-motion: reduce) { .pill-sheen::after { animation: none; opacity: 0; } }
