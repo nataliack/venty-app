@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, DEMO_EMAIL } from "@/lib/store";
+import type { PieceKey } from "@/lib/data";
 import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
@@ -115,12 +116,68 @@ function useAuthDone() {
 
 // The heading and its line: on phones centred in the room above the ways in, like a title card; on a computer, on
 // top of the form column.
+// On phones the arc of looks sits above it, and the group is centred in the room above the ways in, with clear air
+// before the first button.
 const Hero = ({ title, lead }: { title: ReactNode; lead: string }) => (
-  <div className="flex flex-1 flex-col items-center justify-center pb-6 text-center lg:block lg:pb-0 lg:text-left">
-    <HS className="[text-wrap:balance] lg:mt-6">{title}</HS>
-    <Lead className="mt-3 max-w-[320px] [text-wrap:pretty] lg:max-w-none">{lead}</Lead>
+  <div className="flex flex-1 flex-col items-center justify-center pb-10 pt-2 text-center lg:block lg:pb-0 lg:pt-0 lg:text-left">
+    <ArcCarousel />
+    <HS className="mt-9 [text-wrap:balance] lg:mt-6">{title}</HS>
+    <Lead className="mt-4 max-w-[330px] [text-wrap:balance] lg:max-w-none">{lead}</Lead>
   </div>
 );
+
+// ─── The arc of looks: garments and their patterns on cards along a gentle arch, drifting right to left forever ───
+// Placeholders for now (the landing page's renders); patterns are the app's own pieces on pattern paper.
+type Look = { img: string } | { pieces: PieceKey[] };
+const LOOKS: Look[] = [
+  { img: "/auth/look-1.webp" },
+  { pieces: ["bodiceFront", "skirtFront"] },
+  { img: "/auth/look-4.webp" },
+  { img: "/auth/look-5.webp" },
+  { pieces: ["sleeve", "bodiceBack", "facing"] },
+  { img: "/auth/look-3.webp" },
+  { img: "/auth/look-6.webp" },
+  { pieces: ["trouserFront", "waistband"] },
+];
+const CARD_W = 100, CARD_H = 134, GAP = 12;
+function ArcCarousel() {
+  const box = useRef<HTMLDivElement>(null);
+  const cards = useRef<(HTMLDivElement | null)[]>([]);
+  useEffect(() => {
+    const el = box.current; if (!el) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const step = CARD_W + GAP, loop = LOOKS.length * step;
+    let off = 0, last = 0, raf = 0;
+    // each card's place on the arch: lower and turned outwards towards the ends, a touch smaller, as if on a curve
+    const place = () => {
+      const W = el.clientWidth, cx = W / 2, reach = W / 2 + step;
+      cards.current.forEach((c, i) => {
+        if (!c) return;
+        const x = (((i * step - off) % loop) + loop) % loop - step; // wraps off screen on the left
+        const d = Math.max(-1.4, Math.min(1.4, (x + CARD_W / 2 - cx) / reach));
+        c.style.transform = `translate3d(${x}px, ${40 * d * d}px, 0) rotate(${d * 12}deg) scale(${1 - 0.07 * d * d})`;
+      });
+    };
+    const tick = (t: number) => { if (last) off += Math.min(64, t - last) * 0.03; last = t; place(); raf = requestAnimationFrame(tick); };
+    place();
+    if (!still) raf = requestAnimationFrame(tick);
+    window.addEventListener("resize", place);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", place); };
+  }, []);
+  return (
+    <div ref={box} aria-hidden className="relative w-full shrink-0 lg:hidden" style={{ height: CARD_H + 64, maskImage: "linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent)" }}>
+      {LOOKS.map((l, i) => (
+        <div key={i} ref={(n) => { cards.current[i] = n; }} className="absolute left-0 top-3 overflow-hidden rounded-[20px] border border-white/15 bg-card shadow-[0_18px_40px_-18px_rgb(0_0_0/.9)] will-change-transform"
+          style={{ width: CARD_W, height: CARD_H, transformOrigin: "50% 100%" }}>
+          {"img" in l
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={l.img} alt="" draggable={false} className="h-full w-full object-cover" />
+            : <div className="pattern-mat flex h-full w-full flex-wrap content-center items-center justify-center gap-1.5 p-3">{l.pieces.map((k) => <Piece key={k} k={k} tone="light" width={l.pieces.length > 2 ? 34 : 44} />)}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Three clear ways in. Email opens its own step.
 function Ways({ onSocial, onEmail }: { onSocial: () => void; onEmail: () => void }) {

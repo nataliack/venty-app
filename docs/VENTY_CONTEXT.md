@@ -24,7 +24,7 @@ Venty is an AI sewing-pattern app.
 - **Jose** and **Natalia** review the app screen by screen together with Santiago. Expect feedback in that form ("screen X: change A, B, C").
 
 **Brand assets:**
-- Venty motif: a tulip-and-leaf logo. The official vertical logo is in `src/components/art.tsx` (`VentyLogo`).
+- Venty motif: a tulip-and-leaf logo. The official vertical logo is in `src/components/art.tsx` (`VentyLogo`). **Final stacked lockup (20 Oct 2026, from Jose):** the mark above "Venty", viewBox 2132 × 1786, five paths copied exactly; only the colour changes per screen.
 - Brand guidelines: `venty-brand-guidelines.html`, kept outside the repo.
 
 ---
@@ -186,7 +186,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
   - Logo, then the headline **"If you can imagine it, you can wear it."** (20 Oct 2026: broader than dresses) and "Start from a photo, a sketch or a few words. Venty drafts the sewing pattern to your measurements, ready to print at home.", centred between the logo and the buttons.
   - A slowly drifting gradient background (`.sky` with `.drift` lights).
   - "Get started" and "I already have an account".
-- **Sign up (`signup`):** **Continue with email** first (white), then a hairline with "or", then Continue with Apple and Continue with Google below it. On phones the ways in sit **at the bottom**, in thumb reach, above the legal line, and the heading and its line are **centred** in the room above them, like a title card. Log in does the same.
+- **Sign up (`signup`):** **Continue with email** first (white), then a hairline with "or", then Continue with Apple and Continue with Google below it. On phones the ways in sit **at the bottom**, in thumb reach, above the legal line, and the heading and its line are **centred** in the room above them, like a title card. Above the heading, an **arc of looks**: cards of garments and patterns (photos, and the app's own pieces on pattern paper) along a gentle arch, lower and turned outwards towards the ends, drifting right to left forever, fading into the side margins (`ArcCarousel` in auth.tsx; still with reduced motion). The photos in `public/auth/` are **placeholders** from the landing page renders, to be replaced. Log in does the same.
   - The guest option is the top-right **"Skip for now"**. It was decided to keep guest here, not on Welcome, and as text with no arrow.
 - **Log in (`login`):** the same buttons in the same order, plus "New to Venty? Create an account".
 - **Email step (`email`, mode `signup` or `login`):**
