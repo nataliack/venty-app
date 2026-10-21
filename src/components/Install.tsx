@@ -42,8 +42,16 @@ const SafariBar = () => (
     <div className="flex items-center gap-2.5">
       <span className="grid h-9 w-9 place-items-center rounded-full bg-white/8 text-white/60"><Icon name="back" size={16} /></span>
       <span className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full bg-white/8 px-3 text-[13px] text-white/55"><span className="truncate">app.venty.au</span></span>
-      <Hi className="h-9 w-9"><Icon name="share" size={17} /></Hi>
-      <span className="grid h-9 w-9 place-items-center rounded-full bg-white/8 text-white/60"><Icon name="more" size={18} /></span>
+      <Hi className="h-9 w-9"><Icon name="more" size={18} /></Hi>
+    </div>
+  </Mock>
+);
+const MoreMenu = () => (
+  <Mock>
+    <div className="flex flex-col text-[14px]">
+      <div className="flex items-center justify-between rounded-[10px] bg-white px-2.5 py-2 font-medium text-[#0b0c15] shadow-[0_0_0_5px_rgb(140_156_248_/_.35)]">Share<Icon name="share" size={17} /></div>
+      <div className="mt-1.5 px-2.5 py-1 text-white/45">Add to Bookmarks</div>
+      <div className="px-2.5 py-1 text-white/45">Find on Page</div>
     </div>
   </Mock>
 );
@@ -64,8 +72,9 @@ const AddBar = () => (
 );
 
 const IOS: { t: string; d: string; art?: ReactNode }[] = [
-  { t: "Tap Share", d: "The square with an arrow. If it’s hidden, tap ••• first.", art: <SafariBar /> },
-  { t: "Tap Add to Home Screen", d: "Scroll down a little if you don’t see it.", art: <ShareMenu /> },
+  { t: "Tap the three dots", d: "Next to the web address, at the bottom of Safari.", art: <SafariBar /> },
+  { t: "Tap Share", d: "It is at the top of the menu that opens.", art: <MoreMenu /> },
+  { t: "Scroll down, tap Add to Home Screen", d: "It sits below the apps and contacts.", art: <ShareMenu /> },
   { t: "Tap Add", d: "Venty is now on your home screen.", art: <AddBar /> },
 ];
 const ANDROID: { t: string; d: string; art?: ReactNode }[] = [
@@ -89,7 +98,7 @@ export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
     <Screen header={<TopBar left="back" />} footer={<Arrows hidePrev ready onNext={done} label={then ? "Continue" : "Done"} />}>
       <Split left={<>
         <HS className="mt-2 !text-[30px] lg:mt-0 lg:!text-[48px]">Add Venty to your home screen</HS>
-        <Lead className="mt-2">Three taps, then open it like an app.</Lead>
+        <Lead className="mt-2">{os === "ios" ? "Four taps" : "Three taps"}, then open it like an app.</Lead>
         {!ios && !android && (
           <div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/[.05] p-1" role="tablist">
             {([["ios", "iPhone"], ["android", "Android"]] as const).map(([k, l]) => (

@@ -2,13 +2,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useApp, type Body, type Pin, type Ref } from "@/lib/store";
-import { FITS, readDesign } from "@/lib/data";
+import { KINDS, detectKind, readDesign, type Kind } from "@/lib/data";
 import { NextButton, cx, useDesk } from "@/components/ui";
 import { SketchPad } from "@/components/SketchPad";
 import { Ico, SI } from "@/components/studio-icons";
 
 /* P02 · the studio: "What are we making?" One field, the landing page's Made to measure composer brought into the app.
-   References sit as compact chips above the words; the body and the ease are on the toolbar; Create my pattern is the
+   References sit as compact chips above the words; what you are making is chosen above the card; Create my pattern is the
    field's own button, so the screen has no second footer button and only the back button at the top.
 
    Adding: + opens the picker straight away, the brush starts a sketch, and on a computer images can be dropped or pasted
@@ -34,6 +34,8 @@ export function Prompt() {
   const desk = useDesk();
   const [atts, setAtts] = useState<Ref[]>(() => draft.refs ?? []);
   const [text, setText] = useState(() => draft.prompt ?? "");
+  const [kind, setKind] = useState<Kind | null>(() => draft.kind ?? null);
+  const kindTapped = useRef(!!draft.kind); // once you tap a kind, your words no longer change it
   const nextId = useRef(Math.max(0, ...(draft.refs ?? []).map((a) => a.id)) + 1);
   const [menu, setMenu] = useState<null | "body" | "ease">(null); // one menu open at a time
   const bodyBtn = useRef<HTMLButtonElement>(null);
@@ -49,10 +51,10 @@ export function Prompt() {
   const replaceId = useRef<number | null>(null);
 
   const body = bodies.find((b) => b.id === (draft.bodyId ?? activeBody)) ?? bodies[0];
-  const fitChosen = !!draft.chosen?.fit;
-  const preset = FITS.find((f) => f.ease === draft.ease);
-  const easeLabel = !fitChosen ? "Ease" : preset ? preset.label : `+${draft.ease} cm`;
-  const ready = atts.length > 0 || text.trim().length > 0;
+  const ready = (atts.length > 0 || text.trim().length > 0) && kind !== null;
+  // the words fill in what you are making ("mid-rise straight leg pants" is trousers), until you tap one yourself
+  useEffect(() => { if (kindTapped.current) return; const k = detectKind(text); if (k) setKind(k); }, [text]);
+  const tapKind = (k: Kind) => { kindTapped.current = true; setKind(k); };
 
   // keep the studio in the draft, so the next step (and coming back to this one) sees it
   useEffect(() => { setDraft({ refs: atts, prompt: text }); }, [atts, text, setDraft]);
@@ -120,8 +122,6 @@ export function Prompt() {
     return () => window.removeEventListener("keydown", on);
   }, [view]);
 
-  const pickBody = (id: string) => { set({ activeBody: id }); setDraft({ bodyId: id }); setMenu(null); bodyBtn.current?.focus(); };
-  const pickEase = (ease: number) => { setDraft({ ease, chosen: { ...draft.chosen, fit: true } }); setMenu(null); };
 
   const create = () => {
     setDraft({
@@ -129,7 +129,10 @@ export function Prompt() {
       photo: (atts.find((a) => a.kind === "photo") ?? atts[0])?.src, // a photo shows the garment best; else the first sketch
       source: atts.some((a) => a.kind === "photo") ? "photo" : atts.length ? "sketch" : "voice",
       prompt: text.trim() || undefined,
-      ...readDesign(text), // the words decide the garment and its details, e.g. a wrap has a tie, not a zip
+      kind: kind!,
+      // the kind and the words decide the pattern and its details (pants are trousers, a wrap has a tie, not a zip)
+      ...readDesign(text, kind!),
+      chosen: { ...draft.chosen, fit: false }, // how it fits is asked once, on the garment check
     });
     go("ref");
   };
@@ -176,64 +179,17 @@ export function Prompt() {
 
       {/* the toolbar: adding on the left (photos, a sketch), who and how it fits on the right, then Create */}
       <div className="cmp-tools">
+        {/* adding: each button says what it adds. The body was chosen on the screen before, and how it fits is asked
+            on the garment check, so neither is asked again here */}
         <div className="cmp-tools__add">
-          <button type="button" className="cmp-icon" onClick={() => { replaceId.current = null; file.current?.click(); }} disabled={atts.length >= MAX_REFS} aria-label="Add images" title="Add images">
-            <Ico d={SI.plus} size={18} />
+          <button type="button" className="cmp-chip" onClick={() => { replaceId.current = null; file.current?.click(); }} disabled={atts.length >= MAX_REFS} aria-label="Add a photo">
+            <Ico d={SI.image} size={17} />Photo
           </button>
-          <button type="button" className="cmp-icon" onClick={() => setPad({})} disabled={atts.length >= MAX_REFS} aria-label="New sketch" title="Sketch">
-            <Ico d={SI.brush} size={17} />
+          <button type="button" className="cmp-chip" onClick={() => setPad({})} disabled={atts.length >= MAX_REFS} aria-label="Draw a sketch">
+            <Ico d={SI.brush} size={16} />Sketch
           </button>
         </div>
-        <div className="cmp-tools__set">
-        {body && (
-          <div className="cmp-who relative min-w-0">
-            <button ref={bodyBtn} type="button" className="cmp-chip cmp-menu-btn" onClick={() => toggle("body")} aria-expanded={menu === "body"} aria-haspopup="listbox" aria-label={`Drafted to ${body.name}. Change`} title={body.name}>
-              <Ico d={SI.tape} size={16} />
-              <span className="truncate">{body.name}</span>
-              <Ico d={SI.chev} size={14} />
-            </button>
-            {menu === "body" && (
-              <Menu anchor={bodyBtn} label="Draft to">
-                {bodies.map((b) => (
-                  <li key={b.id}>
-                    <button type="button" role="option" aria-selected={b.id === body.id} onClick={() => pickBody(b.id)}>
-                      <span className="truncate">{b.name}</span>
-                      <span className="cmp-small">{summary(b, units)}</span>
-                    </button>
-                  </li>
-                ))}
-              </Menu>
-            )}
-          </div>
-        )}
-        {/* ease: a segmented control where there is room, a dropdown where there is not */}
-        <div className="cmp-seg cmp-ease" role="group" aria-label="Ease: how much room it has">
-          <span className="cmp-seg__label" aria-hidden="true"><Ico d={SI.ease} size={13} />Ease</span>
-          {FITS.map((f) => (
-            <button key={f.key} type="button" aria-pressed={fitChosen && preset?.key === f.key} onClick={() => pickEase(f.ease)} title={`${f.note}, +${f.ease} cm`}>{f.label}</button>
-          ))}
-        </div>
-        <div className="cmp-ease-drop relative">
-          <button ref={easeBtn} type="button" className={cx("cmp-chip cmp-menu-btn", !fitChosen && "is-empty")} onClick={() => toggle("ease")} aria-expanded={menu === "ease"} aria-haspopup="listbox" aria-label={fitChosen ? `Ease: ${easeLabel}. Change` : "Ease: how much room it has. Choose"}>
-            <Ico d={SI.ease} size={15} />
-            {easeLabel}
-            <Ico d={SI.chev} size={14} />
-          </button>
-          {menu === "ease" && (
-            <Menu anchor={easeBtn} label="Ease" end>
-              {FITS.map((f) => (
-                <li key={f.key}>
-                  <button type="button" role="option" aria-selected={fitChosen && preset?.key === f.key} onClick={() => { pickEase(f.ease); easeBtn.current?.focus(); }}>
-                    <span className="flex w-full items-baseline justify-between gap-3"><span>{f.label}</span><span className="cmp-small" translate="no">+{f.ease} cm</span></span>
-                    <span className="cmp-small">{f.note}</span>
-                  </button>
-                </li>
-              ))}
-            </Menu>
-          )}
-        </div>
-        </div>
-        <NextButton ready={ready} onClick={create} label="Create my pattern" className="cmp-go" />
+        <NextButton ready={ready} onClick={create} label="Create my pattern" className="cmp-go ml-auto" />
       </div>
 
       {drag && (
@@ -291,7 +247,13 @@ export function Prompt() {
               nothing on the screen jumps when it opens */}
           <div className="shrink-0 pt-1 text-center lg:pt-4">
             <h1 className="h1 cmp-title [text-wrap:balance]">What are we making?</h1>
-            <p className="lead cmp-lead mx-auto mt-2 max-w-[400px] [text-wrap:pretty]">Add photos, a sketch or a few words. Mix them however you like.</p>
+            <p className="lead cmp-lead mx-auto mt-2 max-w-[400px] [text-wrap:pretty]">Choose what it is, then add a photo, a sketch or a few words.{body && <> Drafted to {body.name}&rsquo;s measurements.</>}</p>
+            {/* what you are making: tap one, or your words fill it in */}
+            <div className="mt-4 flex justify-center">
+              <div className="cmp-seg" role="group" aria-label="What are you making?" data-need={kind ? "0" : "1"}>
+                {KINDS.map((k) => <button key={k.key} type="button" aria-pressed={kind === k.key} onClick={() => tapKind(k.key)}>{k.label}</button>)}
+              </div>
+            </div>
           </div>
           {/* the halo bleeds to the screen's edges and is clipped there, so it never makes the page scroll sideways */}
           <div className="-mx-4 mt-6 px-4 [overflow-x:clip] lg:-mx-14 lg:mt-10 lg:px-14">

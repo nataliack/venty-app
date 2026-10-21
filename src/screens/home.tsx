@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
-import { fabricAdvice, fitName, metresFor, metresAt, notionsFor, FLUTTER, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
-import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
+import { fabricAdvice, fitName, metresFor, metresAt, notionsFor, FLUTTER, SEED_PATTERNS, TEMPLATES, CATEGORIES, type GarmentKey } from "@/lib/data";
+import { TplCard } from "./templates";
+import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, Segmented, cx, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { useInstall } from "@/components/Install";
 import { MapBoard } from "./print";
@@ -104,10 +105,10 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
       <button onClick={act(() => { newDraft(); go("patSelectBody"); })} className="tap relative isolate mt-5 flex min-h-[150px] w-full flex-col justify-between overflow-hidden rounded-[26px] p-5 text-left text-white">
         <Crown className="-z-10" />
         <span className="flex items-center justify-between"><span className="iconbadge grid h-12 w-12 place-items-center rounded-full"><Icon name="pencil" size={22} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
-        <span><span className="block text-[21px] leading-tight tracking-[-.01em]">Design your own</span><span className="mt-1 block text-[15px] text-white/80">From a photo, a sketch or your own words</span></span>
+        <span><span className="block text-[21px] leading-tight tracking-[-.01em]">Design from scratch</span><span className="mt-1 block text-[15px] text-white/80">Turn a photo, a sketch or your words into a pattern</span></span>
       </button>
       <div className="mt-3 grid grid-cols-2 gap-3">
-        {tile("dress", "Use a pre-made", "Ready-to-fit patterns", () => go("templates"))}
+        {tile("dress", "Ready-made pattern", "Pick one, fit it to you", () => go("templates"))}
         {tile("body", "Make a body", "Add measurements", () => startBody())}
       </div>
     </Sheet>
@@ -174,7 +175,7 @@ function useUpdates() {
   const list: { icon: IconName; t: string; d: string; when: string; go?: () => void }[] = [];
   if (unfinished) list.push({ icon: "ruler", t: `Finish ${unfinished.name}’s measurements`, d: `${unfinished.done.length} of 24 saved. Pick up where you left off.`, when: "Today", go: () => { set({ activeBody: unfinished.id }); go("wizard"); } });
   if (ready) list.push({ icon: "printer", t: `${ready.name} is ready to print`, d: `Drafted to ${ready.body}. Lay it out on your sheets when you’re ready.`, when: "Today", go: () => go("pattern", { id: ready.id }) });
-  list.push({ icon: "dress", t: "New pre-made patterns", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", go: () => go("templates") });
+  list.push({ icon: "dress", t: "New ready-made patterns", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", go: () => go("templates") });
   list.push({ icon: "pencil", t: "New: sketch on your photos", d: "Add a photo and draw your changes on top of it.", when: "This week" });
   return list;
 }
@@ -230,16 +231,16 @@ export function Home() {
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-end lg:gap-12">
             <div>
               <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }} className="h1 mt-8 !text-[34px] text-[#26335f] [text-wrap:balance] lg:mt-14 lg:!text-[60px]">What are we making today?</motion.h1>
-              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#3f4c80] lg:text-[18px]">Design your own, or use a pre‑made pattern.</p>
+              <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#3f4c80] lg:text-[18px]">Design a pattern from scratch, or start from a ready-made one.</p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
               <button onClick={make} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design your own</span><span className="mt-1 block text-[14px] leading-snug text-white/70">Photo, sketch or words</span></span>
+                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design from scratch</span><span className="mt-1 block text-[14px] leading-snug text-white/70">From a photo, sketch or words</span></span>
               </button>
               <button onClick={() => go("templates")} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Use a pre‑made</span><span className="mt-1 block text-[14px] leading-snug text-white/70">Ready-to-fit patterns</span></span>
+                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Ready-made pattern</span><span className="mt-1 block text-[14px] leading-snug text-white/70">Pick one, fit it to you</span></span>
               </button>
             </div>
           </div>
@@ -279,7 +280,7 @@ export function Home() {
         </div>
         <button onClick={() => go("templates")} className="card-soft tap mt-5 flex w-full items-center gap-3 rounded-[22px] p-3 text-left lg:mt-8 lg:p-4">
           <div className="flex shrink-0 -space-x-3"><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-[#2b3266]"><Flat g="slip" size={30} /></span><span className="grid h-12 w-11 place-items-center rounded-[14px] bg-[#343c63]"><Flat g="tee" size={30} /></span></div>
-          <div className="flex-1"><div className="text-[16px] font-medium">Pre-made patterns</div><div className="text-[14px] text-white/55">10 patterns, ready to fit to a body</div></div>
+          <div className="flex-1"><div className="text-[16px] font-medium">Ready-made patterns</div><div className="text-[14px] text-white/55">10 patterns, ready to fit to a body</div></div>
           <Icon name="chevR" size={18} className="text-white/50" />
         </button>
         <div className="h-4" />
@@ -336,12 +337,9 @@ function ConfirmDelete({ open, n, one, many, onYes, onNo }: { open: boolean; n: 
 
 export function Bodies() {
   const { go, bodies, set, startBody, removeBodies } = useApp();
-  const [f, setF] = useState("All");
   const [q, setQ] = useState("");
   const ed = useEditing<string>();
-  const list = bodies
-    .filter((b) => f === "All" || (f === "Me" ? b.name.toLowerCase().startsWith("me") : f === "Family" ? ["mum", "sister", "tom", "dad"].some((x) => b.name.toLowerCase().includes(x)) : b.name.toLowerCase().includes("client")))
-    .filter((b) => !q.trim() || b.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const list = bodies.filter((b) => !q.trim() || b.name.toLowerCase().includes(q.trim().toLowerCase()));
   const desk = useDesk();
   const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="bodies" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="bodies" />;
   return (
@@ -352,7 +350,6 @@ export function Bodies() {
         <input value={q} onChange={(e) => setQ(e.target.value)} type="text" enterKeyHint="search" placeholder="Search bodies" aria-label="Search bodies" autoComplete="off" spellCheck={false} className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-white/40" />
         {q && <button onClick={() => setQ("")} aria-label="Clear search" className="grid h-7 w-7 place-items-center rounded-full bg-white/10"><Icon name="close" size={13} /></button>}
       </label>
-      <div className="mt-3 flex gap-2">{["All", "Me", "Family", "Clients"].map((c) => <Chip key={c} on={f === c} onClick={() => setF(c)}>{c}</Chip>)}</div>
       <div className="mt-4 grid grid-cols-2 gap-3 lg:mt-7 lg:grid-cols-4 lg:gap-5">
         {list.map((b, i) => {
           const on = ed.sel.includes(b.id);
@@ -390,14 +387,26 @@ const statusLine = (p: Pattern) => {
 export function Patterns({ p }: { p?: Record<string, unknown> }) {
   const { go, patterns, removePatterns } = useApp();
   const [f, setF] = useState((p?.filter as string) ?? "All"); // the profile's Printed tile opens it filtered
+  // your own patterns, or every ready-made pattern the app offers (the same ones as on home)
+  const [view, setView] = useState(p?.view === "ready" ? "Ready-made" : "Your patterns");
+  const ready = view === "Ready-made";
   const ed = useEditing<string>();
   const list = patterns.filter((p) => f === "All" || (f === "Printed" ? p.status === "Printed" : p.status !== "Printed"));
   const desk = useDesk();
   const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="patterns" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="patterns" />;
   return (
     <Screen dock={!ed.editing} footer={footer}>
-      <LibraryHead title="Pattern library" editing={ed.editing} canEdit={patterns.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
-      <div className="mt-4 flex h-11 rounded-full glass p-1 lg:max-w-[420px]">{["All", "In progress", "Printed"].map((c) => <button key={c} onClick={() => setF(c)} className={cx("flex-1 rounded-full text-[14px] font-medium", f === c ? "bg-white text-bg" : "text-white/70")}>{c}</button>)}</div>
+      <LibraryHead title="Pattern library" editing={ed.editing} canEdit={!ready && patterns.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
+      {!ed.editing && <div className="mt-4 lg:max-w-[420px]"><Segmented items={["Your patterns", "Ready-made"]} value={view} onChange={setView} /></div>}
+      {ready ? (
+        <div className="mt-2">{CATEGORIES.map((c) => (
+          <div key={c} className="mt-5">
+            <div className="text-[16px] font-medium text-white/85">{c === "Pants" ? "Trousers" : c}</div>
+            <div className={cx("mt-3 grid gap-3", desk ? "grid-cols-4 gap-5" : "grid-cols-2")}>{TEMPLATES.filter((t) => t.category === c).map((t) => <TplCard key={t.key} t={t} desk={desk} onClick={() => go("template", { key: t.key })} />)}</div>
+          </div>
+        ))}</div>
+      ) : <>
+      {patterns.length > 0 && <div className="mt-3 flex gap-5 border-b border-white/10 lg:max-w-[420px]">{["All", "In progress", "Printed"].map((c) => <button key={c} onClick={() => setF(c)} className={cx("relative pb-2.5 text-[15px] transition-colors", f === c ? "text-white" : "text-white/50 hover:text-white/80")}>{c}{f === c && <span className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-white" />}</button>)}</div>}
       <div className="mt-4 flex flex-col gap-3 lg:mt-7 lg:grid lg:grid-cols-2 lg:gap-4">
         {list.map((p, i) => {
           const sp = specOf(p);
@@ -424,7 +433,13 @@ export function Patterns({ p }: { p?: Record<string, unknown> }) {
           );
         })}
       </div>
-      {list.length === 0 && <p className="mt-8 text-center text-[15px] text-white/55">Nothing here yet.</p>}
+      {list.length === 0 && (patterns.length === 0 ? (
+        <div className="mt-10 text-center">
+          <p className="text-[16px] text-white/70">You have not made a pattern yet.</p>
+          <button onClick={() => setView("Ready-made")} className="tap mt-3 h-11 rounded-full border border-white/20 px-5 text-[15px] font-medium hover:border-white/45">See the ready-made patterns</button>
+        </div>
+      ) : <p className="mt-8 text-center text-[15px] text-white/55">Nothing here yet.</p>)}
+      </>}
       <ConfirmDelete open={ed.ask} n={ed.sel.length} one="pattern" many="patterns" onNo={() => ed.setAsk(false)} onYes={() => { removePatterns(ed.sel); ed.stop(); }} />
     </Screen>
   );

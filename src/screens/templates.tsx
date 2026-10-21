@@ -9,7 +9,7 @@ import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
 
 // Card: the flat drawing, the name, and one quiet line (level · pieces). Hover only lifts the edge.
-function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: boolean; onClick: () => void }) {
+export function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} className={cx("card-soft tap flex w-full flex-col overflow-hidden text-left transition-transform duration-300 ease-out lg:hover:-translate-y-1", desk ? "h-[min(420px,52dvh)] rounded-[30px] p-6" : "h-[236px] rounded-[24px] p-4")}>
       <div className="grid min-h-0 flex-1 place-items-center"><Flat g={t.key} size={desk ? 170 : 96} className="max-h-full" /></div>
@@ -69,7 +69,7 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
     <Screen wide={desk}>
       <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
       {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none lg:max-w-[420px]" />}
-      <H1 className="mt-4">Pre-made patterns</H1>
+      <H1 className="mt-4">Ready-made patterns</H1>
       <Lead className="mt-2">Choose one, fit it to a body and get the pattern.</Lead>
       <div className="mt-6">{tabs}</div>
       {bar}
@@ -152,7 +152,7 @@ export function TplFit() {
     const tick = (n: number) => { const k = Math.min(1, (n - t0) / 7000); setPct(Math.round(100 * (1 - Math.pow(1 - k, 2)))); if (k < 1) raf = requestAnimationFrame(tick); else setTimeout(() => replace("tplResult"), 300); };
     raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
   }, [replace]);
-  const steps = ["Reading your measurements", `Grading the ${t.name.toLowerCase()}`, "Adding ease at the hip", `Laying out ${t.pieces} pieces`];
+  const steps = ["Reading your measurements", `Grading the ${t.name.toLowerCase()}`, "Adding room at the hip", `Laying out ${t.pieces} pieces`];
   const active = Math.min(3, Math.floor(pct / 26));
   return (
     <Screen fixed>
@@ -183,10 +183,10 @@ export function TplResult() {
   useEffect(() => { savePattern("Fitting"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const M = b.measures;
   const u = (v: number) => (units === "in" ? (v / 2.54).toFixed(1) : Math.round(v).toString());
-  const notes = t.category === "Pants" ? [["Waist", M.waist, "+2 ease"], ["Hip", M.hips, "+5 ease"], ["Rise", M.rise, "Mid"], ["Inside leg", M.insideLeg, t.defaultLength]] :
-    t.category === "Skirts" ? [["Waist", M.waist, "+1 ease"], ["Hip", M.hips, "+6 ease"], ["Waist to hip", M.waistHip, "Graded"], ["Length", 70, draft.length ?? t.defaultLength]] :
-    t.category === "Tops" ? [["Bust", M.bust, "+6 ease"], ["Across back", M.acrossBack, "Graded"], ["Arm", M.upperArm, "+3 ease"], ["Length", 58, draft.length ?? t.defaultLength]] :
-    [["Bust", M.bust, "+2 ease"], ["Waist", M.waist, "+4 ease"], ["Hip", M.hips, "+6 ease"], ["Length", 112, draft.length ?? t.defaultLength]];
+  const notes = t.category === "Pants" ? [["Waist", M.waist, "+2 cm room"], ["Hip", M.hips, "+5 cm room"], ["Rise", M.rise, "Mid"], ["Inside leg", M.insideLeg, t.defaultLength]] :
+    t.category === "Skirts" ? [["Waist", M.waist, "+1 cm room"], ["Hip", M.hips, "+6 cm room"], ["Waist to hip", M.waistHip, "Graded"], ["Length", 70, draft.length ?? t.defaultLength]] :
+    t.category === "Tops" ? [["Bust", M.bust, "+6 cm room"], ["Across back", M.acrossBack, "Graded"], ["Arm", M.upperArm, "+3 cm room"], ["Length", 58, draft.length ?? t.defaultLength]] :
+    [["Bust", M.bust, "+2 cm room"], ["Waist", M.waist, "+4 cm room"], ["Hip", M.hips, "+6 cm room"], ["Length", 112, draft.length ?? t.defaultLength]];
   return (
     <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => go("edits")}>Change the design</Pill><Pill className="flex-1" onClick={() => go("printMethod")}>Looks right</Pill></div>}>
       <TopBar left="back" eyebrow={`Fitted to ${b.name}`}><TopAction onClick={() => useApp.getState().home()}>Save for later</TopAction></TopBar>

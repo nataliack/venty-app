@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
-import { defaultMeasures, templateBy, metresFor, type GarmentKey, type Sex, SEED_PATTERNS } from "./data";
+import { defaultMeasures, templateBy, metresFor, nameFor, type GarmentKey, type Kind, type Sex, SEED_PATTERNS } from "./data";
 
 // Storage that never throws (private mode, blocked storage, etc.)
 const safeStorage: StateStorage = {
@@ -40,6 +40,7 @@ export type Ref = { id: number; kind: "photo" | "sketch"; src: string; marked?: 
 
 export type Draft = {
   garment: GarmentKey;
+  kind?: Kind; // what you said you are making in the studio (dress, top, skirt or trousers)
   source: "photo" | "link" | "sketch" | "template" | "voice";
   start?: "link" | "sketch"; // home shortcut: open this input straight away on the prompt screen
   photo?: string; // the main picture from the studio (the first reference), not persisted
@@ -128,9 +129,10 @@ const initial = () => ({
   updatesSeen: false,
   installDismissed: false,
   resumeBody: null as string | null,
-  bodies: [ME, ...seedBodies()],
+  // a new visitor (and Reset, for the next one at the exhibition) starts with nothing: no bodies or patterns they did not make
+  bodies: [] as Body[],
   activeBody: "me",
-  patterns: SEED_PATTERNS as Pattern[],
+  patterns: [] as Pattern[],
   draft: freshDraft(),
   onboarded: false,
 });
@@ -185,7 +187,7 @@ export const useApp = create<State>()(
         return { bodies, activeBody, dir: -1 as const, stack: at >= 0 ? s.stack.slice(0, at + 1) : [{ id: "home" }] };
       }),
       savePattern: (status = "Fitting") => set((s) => {
-        const name = s.draft.garment === "flutter" ? "Flutter midi dress" : templateBy(s.draft.garment).name;
+        const name = nameFor(s.draft.garment, s.draft.kind, s.draft.details);
         const bodyName = (s.bodies.find((b) => b.id === (s.draft.bodyId ?? s.activeBody)) ?? s.bodies[0])?.name ?? "Me";
         const d = s.draft;
         const spec = { ease: d.ease, fabric: d.chosen?.fabric ? d.fabric : undefined, stretch: d.chosen?.stretch ? d.stretch : undefined, drape: d.drape, seam: d.seam, printer: d.printer, sheets: d.sheets, metres: metresFor(d.garment, d.ease), details: d.details, layout: d.layout?.garment === d.garment && d.layout.printer === d.printer ? d.layout.at : undefined };

@@ -3,7 +3,7 @@ import { haptic } from "@/lib/haptics";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { FLUTTER, FITS, PIECE_LABEL, fitName, fabricAdvice, templateBy, type GarmentKey, type PieceKey } from "@/lib/data";
+import { FLUTTER, FITS, PIECE_LABEL, KIND_DETAILS, LENGTH_DIAL, nameFor, fitName, fabricAdvice, templateBy, kindOf, kindLabel, detailOpts, describe, type GarmentKey, type Kind, type PieceKey } from "@/lib/data";
 import { Screen, TopBar, TopAction, H1, HS, Lead, Pill, RB, Arrows, Option, Segmented, Sheet, SheetHead, cx, Split, useDesk, useToast } from "@/components/ui";
 import { BodyFigure, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
@@ -91,21 +91,14 @@ function FitPreview({ ease, sex, on }: { ease: number; sex: "female" | "male"; o
   );
 }
 
-// Every garment detail and the full range a sewist expects for it.
-const DETAIL_OPTS: Record<string, string[]> = {
-  Sleeves: ["Sleeveless", "Cap", "Short", "Flutter", "Puff", "Elbow", "Three-quarter", "Long", "Bell"],
-  Neckline: ["V-neck", "Round", "Scoop", "Square", "Sweetheart", "Boat", "High neck", "Halter", "Off-shoulder", "Cowl"],
-  Length: ["Extra mini", "Mini", "Above the knee", "Knee", "Midi", "Maxi"],
-  Waist: ["Fitted", "Relaxed", "Tie", "Elastic", "Empire", "Drop waist", "Belted"],
-  Skirt: ["A-line", "Straight", "Bodycon", "Bias cut", "Pencil", "Pleated", "Full circle", "Wrap", "Tiered", "Mermaid"],
-  Fastening: ["Back zip", "Side zip", "Buttons", "Wrap tie", "Pull-on", "Hook and eye"],
-};
+// the kind of garment a draft is: what you chose in the studio, or what its pattern is
+export const draftKind = (d: { kind?: Kind; garment: GarmentKey }): Kind => d.kind ?? kindOf(d.garment);
 // Pick one option for a detail (the garment check and Change the design share it).
-function DetailSheet({ pick, value, onPick, onClose }: { pick: string | null; value?: string; onPick: (o: string) => void; onClose: () => void }) {
+function DetailSheet({ kind, pick, value, onPick, onClose }: { kind: Kind; pick: string | null; value?: string; onPick: (o: string) => void; onClose: () => void }) {
   return (
     <Sheet open={!!pick} onClose={onClose}>
       <SheetHead title={pick} />
-      <div className="mt-4 grid max-h-[56dvh] grid-cols-2 gap-2 overflow-y-auto noscroll">{pick && DETAIL_OPTS[pick].map((o) => (
+      <div className="mt-4 grid max-h-[56dvh] grid-cols-2 gap-2 overflow-y-auto noscroll">{pick && detailOpts(kind, pick).map((o) => (
         <Option key={o} on={value === o} radio={false} onClick={() => onPick(o)} className="flex h-[54px] items-center rounded-[16px] px-4"><span className="text-[16px]">{o}</span></Option>
       ))}</div>
     </Sheet>
@@ -151,7 +144,8 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
   const [pick, setPick] = useState<string | null>(null);
   const [brief, setBrief] = useState(false);
   const [custom, setCustom] = useState(() => !!chosen.fit && !FITS.some((f) => f.ease === draft.ease));
-  const [read, setRead] = useState<[string, string][]>(draft.details ?? FLUTTER.read);
+  const kind = draftKind(draft);
+  const [read, setRead] = useState<[string, string][]>(draft.details ?? KIND_DETAILS[kind].read);
   const choose = (patch: Partial<typeof draft>, key: "fit" | "fabric" | "stretch") => setDraft({ ...patch, chosen: { ...chosen, [key]: true } });
   const val = (k: string) => read.find(([x]) => x === k)?.[1] ?? "";
   // the notes pinned on your pictures in the studio, in order
@@ -166,8 +160,9 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
       <Screen header={<MakeHeader step={1} sub={chosen.fit ? 0.5 : 0} />} footer={<Arrows ready={!!chosen.fit} onNext={() => go("ai", { tab: "Fabric" })} />}>
         <Split left={<>
           <HS className="mt-4 lg:mt-0">How should it fit?</HS>
-          <Lead className="mt-2">Ease is the room between your body and the garment.</Lead>
-          <div className="mt-3"><FitPreview ease={draft.ease} sex={useApp.getState().body().sex} on={!!chosen.fit} /></div>
+          <Lead className="mt-2">How much room there is between your body and the {kindLabel(kind).toLowerCase()}. More room means a looser fit.</Lead>
+          <div className="mt-3">{kind === "dress" ? <FitPreview ease={draft.ease} sex={useApp.getState().body().sex} on={!!chosen.fit} />
+            : <div className="relative mx-auto h-[min(300px,33dvh)] w-full max-w-[320px] lg:h-[min(440px,48dvh)]"><BodyFigure sex={useApp.getState().body().sex} width={110} variant="solid" garment={draft.garment} glow={false} className="h-full w-full" /></div>}</div>
         </>} right={<>
           <div className="mt-4 grid grid-cols-2 gap-2.5 lg:mt-0" data-need={chosen.fit ? "0" : "1"}>{FITS.map((f) => (
             <Option key={f.key} on={!!chosen.fit && !own && preset?.key === f.key} onClick={() => { setCustom(false); setEase(f.ease); }} className="flex flex-col justify-between rounded-[20px] p-3.5 pr-11">
@@ -237,8 +232,8 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
           <div className="flex gap-3.5 p-3">
             <div className="h-[104px] w-[80px] shrink-0 lg:hidden">{thumb}</div>
             <div className="min-w-0 flex-1 py-1 lg:px-3 lg:py-2">
-              <div className="text-[22px] tracking-[-.02em] lg:text-[30px]">Dress</div>
-              <div className="mt-1 text-[15px] leading-snug text-white/65">{val("Length")} length, {val("Sleeves").toLowerCase()} sleeves, {val("Neckline").toLowerCase()}, {val("Skirt").toLowerCase()} skirt.</div>
+              <div className="text-[22px] tracking-[-.02em] lg:text-[30px]">{kindLabel(kind)}</div>
+              <div className="mt-1 text-[15px] leading-snug text-white/65">{describe(kind, read)}</div>
             </div>
           </div>
           {hasBrief && (
@@ -261,7 +256,7 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
           </div>
         </div>
       </>} />
-      <DetailSheet pick={pick} value={pick ? val(pick) : undefined} onClose={() => setPick(null)} onPick={(o) => { setRead(read.map(([k, v]) => [k, k === pick ? o : v])); setPick(null); }} />
+      <DetailSheet kind={kind} pick={pick} value={pick ? val(pick) : undefined} onClose={() => setPick(null)} onPick={(o) => { setRead(read.map(([k, v]) => [k, k === pick ? o : v])); setPick(null); }} />
       <BriefSheet open={brief} onClose={() => setBrief(false)} />
     </Screen>
   );
@@ -323,7 +318,7 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   const { go, draft, body, savePattern } = useApp();
   const b = body();
   const [view, setView] = useState((p?.view as string) ?? "On your body");
-  const name = garmentName(draft.garment);
+  const name = nameFor(draft.garment, draft.kind, draft.details);
   const pieces = piecesFor(draft.garment);
   useEffect(() => { savePattern("Fitting"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const desk = useDesk();
@@ -386,7 +381,9 @@ export function Edits() {
   const b = body();
   const [prompt, setPrompt] = useState("");
   const [pick, setPick] = useState<string | null>(null);
-  const details = draft.details ?? FLUTTER.read;
+  const kind = draftKind(draft);
+  const details = draft.details ?? KIND_DETAILS[kind].read;
+  const dial = LENGTH_DIAL[kind];
   const val = (k: string) => details.find(([x]) => x === k)?.[1] ?? "";
   const update = () => { setDraft({ version: draft.version + 1 }); replace("generating", { quick: true }); };
   // the garment on the body, on the same quiet stage as the result screen (no primary-blue panel: that colour is for buttons)
@@ -410,8 +407,8 @@ export function Edits() {
         <H1 className="hidden lg:block">Change the design</H1>
         <Lead className="mt-2 hidden lg:block">Adjust anything, then update your pattern.</Lead>
         <div className="mt-5 grid grid-cols-2 gap-2.5 lg:mt-6">
-          <MiniDial label="Shoulder to hem" value={draft.lengthCm} min={80} max={130} onChange={(v) => setDraft({ lengthCm: v })} />
-          <MiniDial label="Neckline depth" value={draft.neckline} min={4} max={22} onChange={(v) => setDraft({ neckline: v })} />
+          <MiniDial label={dial.label} value={Math.min(dial.max, Math.max(dial.min, draft.lengthCm))} min={dial.min} max={dial.max} onChange={(v) => setDraft({ lengthCm: v })} />
+          {(kind === "dress" || kind === "top") && <MiniDial label="Neckline depth" value={draft.neckline} min={4} max={22} onChange={(v) => setDraft({ neckline: v })} />}
         </div>
         {/* the details, as on the garment check: tap one to change it */}
         <div className="card-soft mt-2.5 grid grid-cols-2 rounded-[24px]">{details.map(([k, v], i) => (
@@ -425,7 +422,7 @@ export function Edits() {
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} placeholder="For example, make the skirt fuller" className="field block w-full resize-none px-4 py-3 text-[16px] leading-snug outline-none placeholder:text-white/35" />
         </label>
       </>} />
-      <DetailSheet pick={pick} value={pick ? val(pick) : undefined} onClose={() => setPick(null)} onPick={(o) => {
+      <DetailSheet kind={kind} pick={pick} value={pick ? val(pick) : undefined} onClose={() => setPick(null)} onPick={(o) => {
         // on the photo dress, a wrap tie makes it the wrap dress (and another fastening makes it the photo dress again)
         const dressy = draft.garment === "flutter" || draft.garment === "wrap";
         const garment = dressy && pick === "Fastening" ? (o === "Wrap tie" ? "wrap" : "flutter") : draft.garment;

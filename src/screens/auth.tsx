@@ -271,7 +271,7 @@ export function SignedIn() {
 const SLIDES = [
   { t: "Start with any look you love", b: "A photo, a screenshot, a magazine page or your own sketch. If you can picture it, Venty can draft it.", fig: "Any picture, any source" },
   { t: "Drafted to your exact body", b: "Venty turns the look into a sewing pattern built from your own measurements, not a standard size.", fig: "Your measurements, not a size chart" },
-  { t: "Tweak the fit, then print at home", b: "Adjust ease and length, see it on your body, then print on A4 sheets that tape together.", fig: "Printed on A4, taped together" },
+  { t: "Tweak the fit, then print at home", b: "Adjust the fit and length, see it on your body, then print on A4 sheets that tape together.", fig: "Printed on A4, taped together" },
 ];
 
 function Plate({ i, big }: { i: number; big: boolean }) {

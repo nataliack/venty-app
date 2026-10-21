@@ -220,10 +220,15 @@ export function ScanPrep() {
           <Lead className="mx-auto mt-3 max-w-[330px] [text-wrap:pretty] lg:mx-0">You’ll take 3 photos of yourself: one from the front, one from the back and one from the side.</Lead>
         </div>
         <div className="flex flex-1 flex-col lg:block">
-          <ul className="my-auto flex flex-col gap-6 py-8 lg:my-0 lg:py-0">{TIPS.map(([ic, t, d]) => (
-            <li key={t} className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-4 lg:text-left"><Icon name={ic} size={26} className="shrink-0 text-peri" /><div className="mt-2 lg:mt-0"><div className="text-[17px] font-medium">{t}</div><div className="mt-0.5 text-[15px] text-white/55">{d}</div></div></li>
-          ))}</ul>
-          <Note icon="lock" className="mx-auto max-w-[300px] justify-center pb-2 text-center lg:mx-0 lg:mt-8 lg:max-w-none lg:justify-start lg:text-left">Your photos stay on this device. You can view or delete them any time.</Note>
+          {/* a checklist to follow in order: step number, the thing to do in a few words, then the detail */}
+          <ol className="card-soft my-auto divide-y divide-white/8 rounded-[24px] px-4 lg:my-0">{TIPS.map(([ic, t, d], i) => (
+            <li key={t} className="flex items-center gap-3.5 py-4">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-[16px] font-medium tabular-nums">{i + 1}</span>
+              <div className="min-w-0 flex-1"><div className="text-[17px] font-medium leading-tight">{t}</div><div className="mt-0.5 text-[15px] leading-snug text-white/60">{d}</div></div>
+              <Icon name={ic} size={24} className="shrink-0 text-peri" />
+            </li>
+          ))}</ol>
+          <Note icon="lock" className="mx-auto mt-5 max-w-[300px] justify-center pb-2 text-center lg:mx-0 lg:mt-8 lg:max-w-none lg:justify-start lg:text-left">Your photos stay on this device. You can view or delete them any time.</Note>
         </div>
       </div>
     </Screen>
@@ -249,6 +254,7 @@ export function ScanCam() {
   const [shot, setShot] = useState<string | null>(null); // photo under review
   const [saved, setSaved] = useState<number | null>(null); // view just approved (for the confirmation)
   const [flash, setFlash] = useState(false);
+  const [facing, setFacing] = useState<"environment" | "user">("environment"); // back camera, or the front one to see yourself
   const [reading, setReading] = useState(false);
   const all = photos.every(Boolean);
 
@@ -257,14 +263,15 @@ export function ScanCam() {
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) return;
-        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false });
+        stream.current?.getTracks().forEach((t) => t.stop());
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 } }, audio: false });
         if (cancelled) { s.getTracks().forEach((t) => t.stop()); return; }
         stream.current = s;
         if (video.current) { video.current.srcObject = s; await video.current.play().catch(() => {}); setLive(true); }
       } catch { /* no camera: illustrated view, photos are simulated */ }
     })();
     return () => { cancelled = true; stream.current?.getTracks().forEach((t) => t.stop()); };
-  }, []);
+  }, [facing]);
   useEffect(() => {
     const track = stream.current?.getVideoTracks()[0];
     try { track?.applyConstraints({ advanced: [{ torch: flash } as MediaTrackConstraintSet] }).catch(() => {}); } catch {}
@@ -307,7 +314,8 @@ export function ScanCam() {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#0a0b12]">
       {/* viewfinder */}
-      <video ref={video} playsInline muted className={cx("absolute inset-0 h-full w-full object-cover transition-opacity", live && !shot ? "opacity-100" : "opacity-0")} />
+      {/* the front camera shows a mirror image, as phones do; the photo itself is saved the right way round */}
+      <video ref={video} playsInline muted className={cx("absolute inset-0 h-full w-full object-cover transition-opacity", live && !shot ? "opacity-100" : "opacity-0", facing === "user" && "-scale-x-100")} />
       {!live && !shot && <div className="absolute inset-0" style={{ background: "radial-gradient(80% 60% at 50% 40%, #232842, #0a0b12)" }} />}
       {!shot && (
         <div className="pointer-events-none absolute inset-x-[14%] bottom-[24%] top-[20%]">
@@ -334,7 +342,7 @@ export function ScanCam() {
               {photos[i] ? <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.6 }} className={cx("grid h-4 w-4 place-items-center rounded-full", i === view ? "bg-bg text-white" : "bg-primary")}><Icon name="check" size={10} strokeWidth={3.2} /></motion.span> : null}{v}
             </button>
           ))}</div>
-          <span className="w-10" />
+          {!shot ? <RB icon="rotate" size={40} onClick={() => { setFlash(false); setFacing(facing === "environment" ? "user" : "environment"); }} label={facing === "environment" ? "Use the front camera" : "Use the back camera"} /> : <span className="w-10" />}
         </div>
         {!shot && !all && <p className="mt-3 text-center text-[15px] text-white/85">{VIEW_HINT[view]}</p>}
       </div>
@@ -367,7 +375,7 @@ export function ScanCam() {
               <Icon name="image" size={22} />
             </button>
             <button onClick={capture} aria-label={`Take ${VIEWS[view]} photo`} className="tap grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white"><span className="h-[60px] w-[60px] rounded-full bg-white" /></button>
-            <button onClick={() => setFlash(!flash)} aria-pressed={flash} aria-label="Flash" className={cx("tap grid h-12 w-12 place-items-center rounded-full", flash ? "bg-white text-bg" : "bg-white/10")}><Icon name="flash" size={22} /></button>
+            {facing === "environment" ? <button onClick={() => setFlash(!flash)} aria-pressed={flash} aria-label="Flash" className={cx("tap grid h-12 w-12 place-items-center rounded-full", flash ? "bg-white text-bg" : "bg-white/10")}><Icon name="flash" size={22} /></button> : <span className="h-12 w-12" />}
           </div>
         )}
       </div>
