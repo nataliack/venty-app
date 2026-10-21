@@ -7,7 +7,6 @@ import { Screen, TopBar, TopAction, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Ch
 import { Split, useDesk } from "@/components/ui";
 import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
-import { ArcCarousel } from "./auth";
 import { draftSpec } from "./pattern";
 
 // Card: the flat drawing, the name, and one quiet line (level · pieces). Hover only lifts the edge.
@@ -71,9 +70,8 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
     <Screen wide={desk}>
       <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
       {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none lg:max-w-[420px]" />}
-      {q === null && !desk && <div className="mt-1"><ArcCarousel /></div>}
-      <H1 className={cx(desk ? "mt-4" : "mt-6 text-center")}>Patterns to make</H1>
-      <Lead className={cx("mt-2", !desk && "mx-auto max-w-[320px] text-center")}>Choose a style, fit it to your body and get the pattern.</Lead>
+      <H1 className="mt-4">Patterns to make</H1>
+      <Lead className="mt-2">Choose a style, fit it to your body and get the pattern.</Lead>
       <div className="mt-6">{tabs}</div>
       {bar}
       {grid}

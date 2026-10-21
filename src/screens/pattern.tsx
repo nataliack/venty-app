@@ -412,9 +412,9 @@ export function Edits() {
       </>} right={<>
         <H1 className="hidden lg:block">Change the design</H1>
         <Lead className="mt-2 hidden lg:block">Adjust anything, then update your pattern.</Lead>
-        <div className="mt-5 grid grid-cols-2 gap-2.5 lg:mt-6">
-          <MiniDial label={dial.label} value={Math.min(dial.max, Math.max(dial.min, draft.lengthCm))} min={dial.min} max={dial.max} onChange={(v) => setDraft({ lengthCm: v, details: details.map(([k, x]) => [k, k === "Length" ? lengthLabelFor(kind, v) : x] as [string, string]) })} />
-          {(kind === "dress" || kind === "top") && <MiniDial label="Neckline depth" value={draft.neckSet ? draft.neckline : Math.max(4, NECK_CM[val("Neckline")] ?? 8)} min={4} max={22} onChange={(v) => setDraft({ neckline: v, neckSet: true })} />}
+        <div className="mt-5 grid gap-2.5 lg:mt-6">
+          <MiniDial label={dial.label} less="Shorter" more="Longer" value={Math.min(dial.max, Math.max(dial.min, draft.lengthCm))} min={dial.min} max={dial.max} onChange={(v) => setDraft({ lengthCm: v, details: details.map(([k, x]) => [k, k === "Length" ? lengthLabelFor(kind, v) : x] as [string, string]) })} />
+          {(kind === "dress" || kind === "top") && <MiniDial label="Neckline depth" less="Higher" more="Deeper" value={draft.neckSet ? draft.neckline : Math.max(4, NECK_CM[val("Neckline")] ?? 8)} min={4} max={22} onChange={(v) => setDraft({ neckline: v, neckSet: true })} />}
         </div>
         {/* the details, as on the garment check: tap one to change it */}
         <div className="card-soft mt-2.5 grid grid-cols-2 rounded-[24px]">{details.map(([k, v], i) => (

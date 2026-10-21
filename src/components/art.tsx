@@ -346,7 +346,8 @@ export function Piece({ k, label, className, showGrid = false, allowance = false
 // ─── Draggable tick ruler ─────────────────────────────────────────────
 // The ticks stand on the ruler's bottom edge, so inside a card (.dial) they sit flush with the card's edges.
 // Quiet ticks (the value above is what matters); the pointer is one white line in the middle.
-export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, h = 52, className, light = false }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number; px?: number; h?: number; className?: string; light?: boolean }) {
+// numbers: write the centimetres over every fifth tick, like a tape measure (ticks then follow the real values)
+export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, h = 52, className, light = false, numbers = false }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number; px?: number; h?: number; className?: string; light?: boolean; numbers?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; v: number } | null>(null);
   const [w, setW] = useState(320);
@@ -367,9 +368,13 @@ export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, h = 52, c
       <svg width={w} height={h} className="absolute inset-0">
         <g transform={`translate(${offset} 0)`}>
           {Array.from({ length: n + 1 }, (_, i) => {
-            const major = (i * step) % 5 === 0; const mid = (i * step) % 1 === 0;
-            const t = major ? h * 0.42 : mid ? h * 0.26 : h * 0.15;
-            return <line key={i} x1={i * px} x2={i * px} y1={h - t} y2={h} stroke={light ? "#0b0c15" : "#fff"} strokeOpacity={major ? 0.42 : mid ? 0.24 : 0.14} strokeWidth={major ? 1.5 : 1} />;
+            const v = min + i * step;
+            const major = ((numbers ? v : i * step) % 5) === 0; const mid = (i * step) % 1 === 0;
+            const t = major ? h * (numbers ? 0.34 : 0.42) : mid ? h * (numbers ? 0.2 : 0.26) : h * 0.15;
+            return <g key={i}>
+              <line x1={i * px} x2={i * px} y1={h - t} y2={h} stroke={light ? "#0b0c15" : "#fff"} strokeOpacity={major ? 0.42 : mid ? 0.24 : 0.14} strokeWidth={major ? 1.5 : 1} />
+              {numbers && major && <text x={i * px} y={h - t - 6} textAnchor="middle" fontSize="11" fill={light ? "#0b0c15" : "#fff"} fillOpacity=".5" style={{ fontVariantNumeric: "tabular-nums" }}>{v}</text>}
+            </g>;
           })}
         </g>
       </svg>

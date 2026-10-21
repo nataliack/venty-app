@@ -96,16 +96,29 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
   );
 }
 
-// A compact dial for a value without − / + (length, neckline depth): the label and value on top, the ruler on the
-// bottom edge. The same card as the measuring control, smaller, so two fit side by side.
-export function MiniDial({ label, value, unit = "cm", min, max, step = 1, onChange }: { label: string; value: number; unit?: string; min: number; max: number; step?: number; onChange: (v: number) => void }) {
+// A design dial (length, neckline depth). It works like the measuring control: − and + either side of the value, a
+// tape-measure ruler with centimetre numbers to slide, and words under it saying which way is which ("Shorter" on the
+// left, "Longer" on the right), so it reads as a control, not decoration.
+export function MiniDial({ label, value, unit = "cm", min, max, step = 1, less, more, onChange }: { label: string; value: number; unit?: string; min: number; max: number; step?: number; less: string; more: string; onChange: (v: number) => void }) {
+  const bump = (d: number) => onChange(Math.min(max, Math.max(min, value + d)));
   return (
     <div className="dial">
-      <div className="px-4 pt-3.5">
-        <div className="truncate text-[14px] text-white/60">{label}</div>
-        <div className="mt-1 flex items-baseline gap-1.5"><span className="serif text-[28px] leading-none" translate="no">{value}</span><span className="unit" translate="no">{unit}</span></div>
+      <div className="px-4 pt-3 text-[14px] text-white/60">{label}</div>
+      <div className="flex items-center justify-between gap-2 px-3 pt-1">
+        <RB icon="minus" size={44} onClick={() => bump(-step)} label={`${less}, minus ${step} ${unit}`} className={cx("rb-plain", value <= min && "opacity-40")} />
+        <span className="flex items-baseline gap-1.5">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span key={value} initial={{ y: 6, opacity: 0.4 }} animate={{ y: 0, opacity: 1 }} className="serif text-[36px] leading-none" translate="no">{value}</motion.span>
+          </AnimatePresence>
+          <span className="unit" translate="no">{unit}</span>
+        </span>
+        <RB icon="plus" size={44} onClick={() => bump(step)} label={`${more}, plus ${step} ${unit}`} className={cx("rb-plain", value >= max && "opacity-40")} />
       </div>
-      <Ruler value={value} min={min} max={max} step={step} px={10} h={40} onChange={onChange} className="mt-2" />
+      <Ruler value={value} min={min} max={max} step={step} px={10} h={50} numbers onChange={onChange} className="mt-1" />
+      <div className="flex justify-between px-4 pb-2.5 pt-1 text-[13px] text-white/50">
+        <span className="flex items-center gap-1"><Icon name="chevR" size={14} className="rotate-180" />{less}</span>
+        <span className="flex items-center gap-1">{more}<Icon name="chevR" size={14} /></span>
+      </div>
     </div>
   );
 }
