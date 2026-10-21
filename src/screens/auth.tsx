@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, DEMO_EMAIL } from "@/lib/store";
-import type { PieceKey } from "@/lib/data";
 import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
@@ -127,18 +126,17 @@ const Hero = ({ title, lead }: { title: ReactNode; lead: string }) => (
 );
 
 // ─── The arc of looks: garments and their patterns on cards along a gentle arch, drifting right to left forever ───
-// Four editorial looks (generated with Higgsfield from the designer's prompts), each followed by a card of pattern
-// pieces on pattern paper: a garment, then what it is made from.
-type Look = { img: string } | { pieces: PieceKey[] };
-const LOOKS: Look[] = [
-  { img: "/auth/look-street-green.webp" },
-  { pieces: ["bodiceFront", "skirtFront"] },
-  { img: "/auth/look-limo-mauve.webp" },
-  { pieces: ["sleeve", "bodiceBack"] },
-  { img: "/auth/look-cliff-rust.webp" },
-  { pieces: ["trouserFront", "waistband"] },
-  { img: "/auth/look-street-burgundy.webp" },
-  { pieces: ["skirtBack", "collar"] },
+// Four editorial looks and four close-ups of their sewing details (all generated with Higgsfield from the designer's
+// prompts, one campaign), alternating: a garment, then the craft in it.
+const LOOKS = [
+  "/auth/look-street-green.webp",
+  "/auth/detail-zip.webp",
+  "/auth/look-limo-mauve.webp",
+  "/auth/detail-corset.webp",
+  "/auth/look-cliff-rust.webp",
+  "/auth/detail-hems.webp",
+  "/auth/look-street-burgundy.webp",
+  "/auth/detail-bows.webp",
 ];
 const CARD_W = 100, CARD_H = 134, GAP = 12;
 export function ArcCarousel() {
@@ -171,10 +169,8 @@ export function ArcCarousel() {
       {LOOKS.map((l, i) => (
         <div key={i} ref={(n) => { cards.current[i] = n; }} className="absolute left-0 top-3 overflow-hidden rounded-[20px] border border-white/15 bg-card shadow-[0_18px_40px_-18px_rgb(0_0_0/.9)] will-change-transform"
           style={{ width: CARD_W, height: CARD_H, transformOrigin: "50% 100%" }}>
-          {"img" in l
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={l.img} alt="" draggable={false} className="h-full w-full object-cover" />
-            : <div className="pattern-mat flex h-full w-full flex-wrap content-center items-center justify-center gap-1.5 p-3">{l.pieces.map((k) => <Piece key={k} k={k} tone="light" width={l.pieces.length > 2 ? 34 : 44} />)}</div>}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={l} alt="" draggable={false} className="h-full w-full object-cover" />
         </div>
       ))}
     </div>
