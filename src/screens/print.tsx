@@ -3,7 +3,7 @@ import { haptic } from "@/lib/haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { PIECE_LABEL, templateBy, fabricAdvice, fitName, metresFor, type GarmentKey, type PieceKey } from "@/lib/data";
+import { PIECE_LABEL, FLUTTER, templateBy, fabricAdvice, fitName, metresFor, metresAt, notionsFor, type GarmentKey, type PieceKey } from "@/lib/data";
 import { Screen, TopBar, HS, H1, Lead, Pill, Glass, Option, Arrows, RB, TextButton, PaperScreen, cx, useToast, Split, useDesk } from "@/components/ui";
 import { Piece, pieceSize } from "@/components/art";
 import { Icon } from "@/components/icons";
@@ -63,7 +63,7 @@ export function Seam() {
     <Screen header={<PrintHeader step={1} sub={ready ? 0.5 : 0} />} footer={<Arrows ready={ready} onNext={() => go("arrange")} />}>
       <Split left={<>
       <HS className="mt-4 lg:mt-0">Add seam<br />allowance?</HS>
-      <Lead className="mt-3">The dashed line around each piece, where you sew. Skip it if you add your own.</Lead>
+      <Lead className="mt-3">Extra fabric outside the stitching line, so there is room to sew the pieces together. Skip it if you add your own.</Lead>
       </>} right={<>
       <Glass className="relative mt-5 grid h-[min(210px,25dvh)] place-items-center rounded-[26px] lg:mt-0 lg:h-[min(340px,38dvh)]" >
         <div className="absolute inset-0 rounded-[26px]" style={GRID} />
@@ -257,6 +257,9 @@ const STRETCH_WORDS = { "A lot": "stretchy", "A bit": "a little stretch", No: "n
 export const fabricLine = (garment: GarmentKey, ease: number, stretch?: "A lot" | "A bit" | "No") =>
   `${metresFor(garment, ease)} metres, 140 cm wide, ${STRETCH_WORDS[stretch ?? fabricAdvice(ease).stretch]}`;
 
+// the same pattern on narrower or wider fabric
+export const otherWidths = (garment: GarmentKey, ease: number) => `On 115 cm wide fabric: ${metresAt(garment, ease, 115)} metres. On 150 cm: ${metresAt(garment, ease, 150)} metres.`;
+
 // 4 · review, then print
 export function PrintReady() {
   const { replace, back, draft, savePattern, body } = useApp();
@@ -288,8 +291,15 @@ export function PrintReady() {
         <HS className="mt-4 lg:mt-0">Ready to print</HS>
         <Lead className="mt-3">Check the details, then print. The map page shows where every sheet goes.</Lead>
       </>} right={
-        <div className="card-soft mt-6 divide-y divide-white/8 rounded-[24px] px-5 lg:mt-0">
-          {rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-3.5"><span className="shrink-0 text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}
+        <div className="mt-6 lg:mt-0">
+          <div className="card-soft divide-y divide-white/8 rounded-[24px] px-5">
+            {rows.map(([k, v]) => <div key={k} className="flex items-baseline justify-between gap-4 py-3.5"><span className="shrink-0 text-[15px] text-white/60">{k}</span><span className="text-right text-[16px]">{v}</span></div>)}
+          </div>
+          {/* scale check: if the printer shrinks the page, the whole pattern comes out the wrong size */}
+          <div className="mt-4 flex items-start gap-3.5">
+            <span className="grid h-[52px] w-[52px] shrink-0 place-items-center border-[1.5px] border-white/80 text-[11px] text-white/70" translate="no">10 cm</span>
+            <p className="text-[15px] leading-snug text-white/75">Print at 100% (actual size), not &ldquo;fit to page&rdquo;. Then measure the 10 cm test square on your first page before you cut.</p>
+          </div>
         </div>} />
     </Screen>
       <AnimatePresence>{printing > 0 && (
@@ -363,6 +373,10 @@ export function Printed({ p }: { p?: Record<string, unknown> }) {
       <div className="mt-4 border-t border-[#12131c]/10 pt-3">
         <div className="text-[14px] text-[#12131c]/55">Fabric to buy</div>
         <div className="mt-0.5 text-[16px]">{fabricLine(draft.garment, draft.ease, draft.chosen?.stretch ? draft.stretch : undefined)}</div>
+        {/* fabric comes in other widths too, and the pattern needs more than fabric */}
+        <div className="mt-1 text-[14px] leading-snug text-[#12131c]/60">{otherWidths(draft.garment, draft.ease)}</div>
+        <div className="mt-2.5 text-[14px] text-[#12131c]/55">You will also need</div>
+        <div className="mt-0.5 text-[15px] leading-snug">{notionsFor(draft.details ?? FLUTTER.read, piecesFor(draft.garment)).join(" · ")}</div>
       </div>
       <div className="mt-4 flex flex-col gap-2">{([["book", `Sewing guide for this ${kind}`], ["layers", "Sewing words, explained"], ["video", "Video: taping the sheets together"]] as const).map(([ic, t]) => (
         <button key={t} onClick={() => toast("Opening " + t.toLowerCase())} className="paper-card tap flex min-h-[54px] items-center gap-3 rounded-[16px] px-4 text-left text-[16px]"><Icon name={ic} size={19} className="text-[#3c4b63]" /><span className="flex-1">{t}</span><Icon name="chevR" size={16} className="text-[#12131c]/40" /></button>

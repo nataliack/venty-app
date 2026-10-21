@@ -27,7 +27,8 @@ export function Prefs() {
   const { offer } = useInstall();
   const [addHome, setAddHome] = useState<boolean | null>(null);
   const ready = experience !== null && (!offer || addHome !== null);
-  const next = () => { set({ prefsDone: true }); if (offer && addHome) go("install", { then: "name" }); else go("name"); };
+  // answered here, so home does not ask again with its own card
+  const next = () => { set({ prefsDone: true, ...(offer && addHome !== null ? { installDismissed: true } : {}) }); if (offer && addHome) go("install", { then: "name" }); else go("name"); };
   return (
     <Screen header={<TopBar left="close" onLeft={useApp.getState().exitFlow} />} footer={<Arrows ready={ready} onNext={next} />}>
       <Split left={<>

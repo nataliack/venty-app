@@ -66,6 +66,7 @@ export type Draft = {
 const freshDraft = (): Draft => ({ garment: "flutter", source: "photo", ease: 4, fabric: "Viscose crepe", stretch: "A bit", drape: 0.72, seam: 1.5, printer: "A4", lengthCm: 104, neckline: 12, sleeve: "Flutter", version: 1 });
 
 const ME: Body = { id: "me", name: "Me, Spring 26", sex: "female", measures: defaultMeasures(), done: ["height", "bust", "waist", "hips"] };
+const SEED_BODY_IDS = ["me", "mum", "tom"];
 const seedBodies = (): Body[] => [
   { id: "mum", name: "Mum", sex: "female", measures: { ...defaultMeasures(), bust: 96, waist: 82, hips: 104, height: 162 }, done: ["height", "bust", "waist", "hips"] },
   { id: "tom", name: "Tom", sex: "male", measures: { ...defaultMeasures(), bust: 98, waist: 84, hips: 100, height: 181 }, done: ["height", "bust", "waist", "hips"] },
@@ -153,7 +154,17 @@ export const useApp = create<State>()(
         return { draft: { ...freshDraft(), bodyId: s.activeBody, ...patch } };
       }),
       body: () => { const s = get(); return s.bodies.find((b) => b.id === s.activeBody) ?? s.bodies[0] ?? ME; },
-      updateBody: (patch) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, ...patch } : b)) })),
+      updateBody: (patch) => set((s) => {
+        const bodies = s.bodies.map((b) => (b.id === s.activeBody ? { ...b, ...patch } : b));
+        // the demo bodies (Mum, Tom) and their sample patterns only fill an empty app: once the visitor names their
+        // own first body they go, so a new user never sees bodies or patterns they did not make
+        const own = bodies.filter((x) => !SEED_BODY_IDS.includes(x.id) && x.name.trim());
+        if (patch.name?.trim() && own.length === 1 && own[0].id === s.activeBody) {
+          const samples = new Set(SEED_PATTERNS.map((p) => p.id));
+          return { bodies: bodies.filter((x) => !SEED_BODY_IDS.includes(x.id)), patterns: s.patterns.filter((p) => !samples.has(p.id)) };
+        }
+        return { bodies };
+      }),
       setMeasure: (key, v) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, measures: { ...b.measures, [key]: Math.round(v * 2) / 2 } } : b)) })),
       confirmMeasure: (key) => set((s) => ({ bodies: s.bodies.map((b) => (b.id === s.activeBody ? { ...b, done: b.done.includes(key) ? b.done : [...b.done, key], est: (b.est ?? []).filter((k) => k !== key) } : b)) })),
       newBody: () => set((s) => {

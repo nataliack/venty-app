@@ -227,7 +227,7 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
   const asked = [refs.length ? `${refs.length} ${refs.length === 1 ? "picture" : "pictures"}` : "", notes.length ? `${notes.length} ${notes.length === 1 ? "note" : "notes"}` : ""].filter(Boolean).join(", ");
   const hasBrief = !!draft.prompt || refs.length > 0 || notes.length > 0;
   return (
-    <Screen header={<MakeHeader step={0} sub={0.5} />} footer={<Arrows onNext={() => { setDraft({ details: read }); go("ai", { tab: "Fitting" }); }} label="Looks right" />}>
+    <Screen header={<MakeHeader step={0} sub={0.5} />} footer={<Arrows onNext={() => { setDraft({ details: read }); go("ai", { tab: chosen.fit ? "Fabric" : "Fitting" }); }} label="Looks right" />}>
       <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<>
         <HS className="mt-4 lg:mt-0">Let’s check your garment</HS>
         <Lead className="mt-3">Make sure every detail is how you want it. Tap one to change it.</Lead>
@@ -255,7 +255,10 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
           <div className="text-[14px] text-white/60">Details</div>
           <div className="mt-1 divide-y divide-white/8">{read.map(([k, v]) => (
             <button key={k} onClick={() => setPick(k)} className="flex min-h-[52px] w-full items-center justify-between text-[16px]"><span className="text-white/80">{k}</span><span className="flex items-center gap-2"><span className="text-[16px]">{v}</span><Icon name="chevR" size={16} className="text-white/40" /></span></button>
-          ))}</div>
+          ))}
+            {/* the fit chosen in the studio shows here (and opens the fit step), so it is never asked twice */}
+            {chosen.fit && <button onClick={() => go("ai", { tab: "Fitting" })} className="flex min-h-[52px] w-full items-center justify-between text-[16px]"><span className="text-white/80">Fit</span><span className="flex items-center gap-2"><span className="text-[16px]">{fitName(draft.ease)}, +{draft.ease} cm</span><Icon name="chevR" size={16} className="text-white/40" /></span></button>}
+          </div>
         </div>
       </>} />
       <DetailSheet pick={pick} value={pick ? val(pick) : undefined} onClose={() => setPick(null)} onPick={(o) => { setRead(read.map(([k, v]) => [k, k === pick ? o : v])); setPick(null); }} />
@@ -407,7 +410,7 @@ export function Edits() {
         <H1 className="hidden lg:block">Change the design</H1>
         <Lead className="mt-2 hidden lg:block">Adjust anything, then update your pattern.</Lead>
         <div className="mt-5 grid grid-cols-2 gap-2.5 lg:mt-6">
-          <MiniDial label="Total length" value={draft.lengthCm} min={80} max={130} onChange={(v) => setDraft({ lengthCm: v })} />
+          <MiniDial label="Shoulder to hem" value={draft.lengthCm} min={80} max={130} onChange={(v) => setDraft({ lengthCm: v })} />
           <MiniDial label="Neckline depth" value={draft.neckline} min={4} max={22} onChange={(v) => setDraft({ neckline: v })} />
         </div>
         {/* the details, as on the garment check: tap one to change it */}
@@ -422,7 +425,12 @@ export function Edits() {
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} placeholder="For example, make the skirt fuller" className="field block w-full resize-none px-4 py-3 text-[16px] leading-snug outline-none placeholder:text-white/35" />
         </label>
       </>} />
-      <DetailSheet pick={pick} value={pick ? val(pick) : undefined} onClose={() => setPick(null)} onPick={(o) => { setDraft({ details: details.map(([k, v]) => [k, k === pick ? o : v] as [string, string]) }); setPick(null); }} />
+      <DetailSheet pick={pick} value={pick ? val(pick) : undefined} onClose={() => setPick(null)} onPick={(o) => {
+        // on the photo dress, a wrap tie makes it the wrap dress (and another fastening makes it the photo dress again)
+        const dressy = draft.garment === "flutter" || draft.garment === "wrap";
+        const garment = dressy && pick === "Fastening" ? (o === "Wrap tie" ? "wrap" : "flutter") : draft.garment;
+        setDraft({ garment, details: details.map(([k, v]) => [k, k === pick ? o : v] as [string, string]) }); setPick(null);
+      }} />
     </Screen>
   );
 }

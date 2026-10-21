@@ -198,9 +198,11 @@ function sleeve(l: L, long: boolean, side: 1 | -1, ease = 3) {
   const y = l.shY + 34;
   return `M${P(s(l.shH - 4), l.shY - 3)} L${P(s(l.shH + ease), l.shY + 4)} L${P(s(l.shH + ease + 5), y)} L${P(s(l.armH - 1), y + 4)} L${P(s(l.armH), l.armY + 2)} Z`;
 }
+// a flutter sleeve: a loose, flared cap that falls past the shoulder in soft waves (wider and longer than a cap sleeve)
 function flutterSleeve(l: L, side: 1 | -1) {
   const s = (x: number) => side * x;
-  return `M${P(s(l.shH - 6), l.shY - 3)} Q${P(s(l.shH + 18), l.shY)} ${P(s(l.shH + 16), l.shY + 26)} Q${P(s(l.shH + 2), l.shY + 30)} ${P(s(l.armH - 1), l.armY - 4)} Z`;
+  const y = l.shY + 46;
+  return `M${P(s(l.shH - 7), l.shY - 4)} Q${P(s(l.shH + 22), l.shY - 2)} ${P(s(l.shH + 30), y)} Q${P(s(l.shH + 22), y + 7)} ${P(s(l.shH + 15), y - 2)} Q${P(s(l.shH + 8), y + 5)} ${P(s(l.armH + 1), y - 6)} L${P(s(l.armH), l.armY + 2)} Z`;
 }
 
 type G = { body: string; extra?: string[]; details: string };
@@ -227,10 +229,10 @@ function build(g: GarmentKey, l: L): G {
         details: `M${P(-(l.bustH - 12), top - 4)} L${P(-(l.neckH + 14), l.shY - 6)} M${P(l.bustH - 12, top - 4)} L${P(l.neckH + 14, l.shY - 6)}` };
     }
     case "aline": case "wrap": case "flutter": {
-      const hemY = g === "flutter" ? midi : knee, H = l.hipH + (g === "flutter" ? 26 : 20);
+      const hemY = g === "aline" ? knee : midi, H = l.hipH + (g === "aline" ? 20 : 26); // the flutter and wrap dresses are midi length
       const right: [number, number][] = [...shoulderTop(), ...bodice(), ...skirt(hemY, H).slice(1)];
       const body = `M${right.map(([x, y]) => P(x, y)).join(" L")}${hemCurve(hemY, H)} L${[...right].reverse().slice(1).map(([x, y]) => P(-x, y)).join(" L")}${g === "aline" ? round : vneck(g === "wrap" ? 70 : 40)} Z`;
-      const extra = g === "flutter" ? [flutterSleeve(l, 1), flutterSleeve(l, -1)] : g === "wrap" ? [sleeve(l, false, 1), sleeve(l, false, -1)] : undefined;
+      const extra = g === "flutter" ? [flutterSleeve(l, 1), flutterSleeve(l, -1)] : g === "wrap" ? [flutterSleeve(l, 1), flutterSleeve(l, -1)] : undefined;
       const wrapLines = g === "wrap" ? ` M${P(-l.neckH - 3, l.neckY - 1)} L${P(l.waistH * 0.5, l.waistY)} M${P(l.waistH * 0.5, l.waistY + 1)} L${P(l.waistH * 0.62, l.waistY + 36)} M${P(l.waistH * 0.5, l.waistY + 1)} L${P(l.waistH * 0.34, l.waistY + 32)}` : "";
       return { body, extra, details: `${waistSeam()} ${panels(l.waistY + 2, hemY + 2, H)}${wrapLines}` };
     }

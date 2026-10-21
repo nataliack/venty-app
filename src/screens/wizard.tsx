@@ -104,7 +104,7 @@ export function Wizard() {
   const startAt = () => { const g = GROUPS[cur]; const idx = WIZARD.findIndex((w) => w.group === g.key && !body.done.includes(w.key)); go("wstep", { i: idx }); };
   return (
     <Screen header={<FlowHeader steps={steps} onClose={takeBreak} />}
-      footer={<Arrows ready onNext={cur === -1 ? () => go("alldone") : startAt} label={cur === -1 ? "Review all 24" : `Continue with ${GROUPS[cur].title.toLowerCase()}`} />}>
+      footer={<Arrows ready onNext={cur === -1 ? () => go("alldone") : startAt} label={cur === -1 ? "Review all 24" : `Continue: ${GROUPS[cur].title}`} />}>
       <Split left={<>
         <div className="text-center lg:text-left">
           <HS className="mt-4 [text-wrap:balance] lg:mt-0">Let’s finish your measurements</HS>
@@ -146,7 +146,7 @@ export function GroupDone({ p }: { p?: Record<string, unknown> }) {
   const cont = () => (N ? replace("wstep", { i: WIZARD.findIndex((w) => w.group === N.key && !body.done.includes(w.key)) }) : replace("alldone"));
   return (
     <Screen header={<FlowHeader steps={steps} onClose={takeBreak} />}
-      footer={<><Arrows ready hidePrev onNext={cont} label={N ? `Continue with ${N.title.toLowerCase()}` : "Review all 24"} />{N && <TextButton className="mt-1" onClick={takeBreak}>Take a break, finish later</TextButton>}</>}>
+      footer={<><Arrows ready hidePrev onNext={cont} label={N ? `Continue: ${N.title}` : "Review all 24"} />{N && <TextButton className="mt-1" onClick={takeBreak}>Take a break, finish later</TextButton>}</>}>
       <Split left={
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }} className="text-center lg:text-left">
           <HS className="mt-4 [text-wrap:balance] lg:mt-0">{G.title} done</HS>

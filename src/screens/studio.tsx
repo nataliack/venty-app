@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useApp, type Body, type Pin, type Ref } from "@/lib/store";
-import { FITS } from "@/lib/data";
+import { FITS, readDesign } from "@/lib/data";
 import { NextButton, cx, useDesk } from "@/components/ui";
 import { SketchPad } from "@/components/SketchPad";
 import { Ico, SI } from "@/components/studio-icons";
@@ -129,8 +129,7 @@ export function Prompt() {
       photo: (atts.find((a) => a.kind === "photo") ?? atts[0])?.src, // a photo shows the garment best; else the first sketch
       source: atts.some((a) => a.kind === "photo") ? "photo" : atts.length ? "sketch" : "voice",
       prompt: text.trim() || undefined,
-      garment: "flutter",
-      details: undefined, // a new design is read again
+      ...readDesign(text), // the words decide the garment and its details, e.g. a wrap has a tie, not a zip
     });
     go("ref");
   };

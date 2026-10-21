@@ -53,10 +53,11 @@ export const WIZARD: Measure[] = [
 ];
 
 export const GROUPS = [
-  // sewing terms, named by the direction the tape runs; the short labels sit in the progress bar
-  { key: "around", title: "Circumferences", short: "Around", desc: "Measured around your body: neck, ribs, arm, wrist, hip and thigh" },
-  { key: "down", title: "Vertical lengths", short: "Down", desc: "Measured from top to bottom: back, front, arm and leg" },
-  { key: "across", title: "Horizontal widths", short: "Across", desc: "Measured from side to side: shoulders, back and chest" },
+  // one vocabulary: the title starts with the same word as the short label in the progress bar,
+  // and the description gives the sewing term and which way the tape runs
+  { key: "around", title: "Around the body", short: "Around", desc: "Circumferences: neck, ribs, arm, wrist, hip and thigh" },
+  { key: "down", title: "Lengths", short: "Lengths", desc: "Top to bottom: back, front, arm and leg" },
+  { key: "across", title: "Widths", short: "Widths", desc: "Side to side: shoulders, back and chest" },
   { key: "sitting", title: "Seated rise", short: "Seated", desc: "One measurement, sitting on a hard chair" },
 ] as const;
 
@@ -169,4 +170,38 @@ export function metresFor(garment: GarmentKey, ease: number) {
   const cat = garment === "flutter" ? "Dresses" : templateBy(garment).category;
   const base = { Dresses: 2.2, Tops: 1.3, Pants: 2.4, Skirts: 1.5 }[cat];
   return Math.round((base + Math.max(0, ease) * 0.03) * 1.1 * 10) / 10;
+}
+
+// The same pattern on a narrower or wider fabric needs more or fewer metres (laid out for 140 cm by default).
+export const FABRIC_WIDTHS = [115, 140, 150] as const;
+export const metresAt = (garment: GarmentKey, ease: number, width: number) => Math.round(metresFor(garment, ease) * Math.pow(140 / width, 0.8) * 10) / 10;
+
+// What else to buy, from the garment's details: the fastening, interfacing for any facing, and thread.
+export function notionsFor(details: [string, string][], pieces: PieceKey[]): string[] {
+  const d = Object.fromEntries(details);
+  const out: string[] = [];
+  const f = d.Fastening ?? "";
+  if (/zip/i.test(f)) out.push(`An invisible zip, ${/side/i.test(f) ? 20 : 55} cm`);
+  if (/button/i.test(f)) out.push("6 buttons, 12 mm");
+  if (/hook/i.test(f)) out.push("1 hook and eye");
+  if (/elastic|pull-on/i.test(`${f} ${d.Waist ?? ""}`)) out.push("Elastic, 2.5 cm wide, your waist plus 5 cm");
+  if (pieces.includes("facing") || pieces.includes("waistband") || pieces.includes("collar")) out.push("Light fusible interfacing, 0.5 m");
+  out.push("1 spool of matching thread");
+  return out;
+}
+
+// The pretend AI read: start from the photo garment and change any detail the words name.
+// A wrap is its own garment: a crossover bodice, a tie at the waist and no zip.
+export function readDesign(words?: string): { garment: GarmentKey; details: [string, string][] } {
+  const t = ` ${(words ?? "").toLowerCase()} `;
+  const read = new Map(FLUTTER.read.map(([k, v]) => [k, v]));
+  const pick = (key: string, list: [RegExp, string][]) => { for (const [re, v] of list) if (re.test(t)) { read.set(key, v); return; } };
+  pick("Sleeves", [[/sleeveless|strapless/, "Sleeveless"], [/flutter/, "Flutter"], [/puff/, "Puff"], [/bell sleeve/, "Bell"], [/three.quarter|3\/4/, "Three-quarter"], [/long sleeve/, "Long"], [/short sleeve/, "Short"], [/cap sleeve/, "Cap"]]);
+  pick("Neckline", [[/v.?neck/, "V-neck"], [/sweetheart/, "Sweetheart"], [/square neck/, "Square"], [/scoop/, "Scoop"], [/boat neck|bateau/, "Boat"], [/halter/, "Halter"], [/cowl/, "Cowl"], [/off.the.shoulder|off.shoulder/, "Off-shoulder"], [/high neck|turtle/, "High neck"], [/round neck|crew/, "Round"]]);
+  pick("Length", [[/maxi|floor/, "Maxi"], [/midi/, "Midi"], [/knee/, "Knee"], [/mini/, "Mini"]]);
+  pick("Skirt", [[/pencil/, "Pencil"], [/pleat/, "Pleated"], [/circle/, "Full circle"], [/tier/, "Tiered"], [/bias/, "Bias cut"], [/mermaid/, "Mermaid"], [/straight skirt/, "Straight"], [/a.line/, "A-line"]]);
+  pick("Fastening", [[/button/, "Buttons"], [/side zip/, "Side zip"], [/pull.on|elastic/, "Pull-on"]]);
+  const wrap = /\bwrap\b/.test(t);
+  if (wrap) { read.set("Waist", "Tie"); read.set("Skirt", "Wrap"); read.set("Fastening", "Wrap tie"); }
+  return { garment: wrap ? "wrap" : "flutter", details: [...read.entries()] };
 }

@@ -2,11 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
-import { fabricAdvice, fitName, metresFor, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
+import { fabricAdvice, fitName, metresFor, metresAt, notionsFor, FLUTTER, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
 import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { useInstall } from "@/components/Install";
 import { MapBoard } from "./print";
+import { piecesFor } from "./pattern";
 import { Icon, type IconName } from "@/components/icons";
 
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
@@ -442,6 +443,8 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
   const stretch = sp.stretch ?? tip.stretch;
   const shop: [string, string][] = [
     ["Fabric to buy", `${sp.metres} metres, 140 cm wide`],
+    ["On 115 cm fabric", `${metresAt(pat.garment, sp.ease, 115)} metres`],
+    ["On 150 cm fabric", `${metresAt(pat.garment, sp.ease, 150)} metres`],
     ["Stretch", { "A lot": "Stretchy", "A bit": "A little stretch", No: "No stretch" }[stretch as "A lot" | "A bit" | "No"] ?? stretch],
     ...(sp.fabric ? [["Fabric you chose", sp.fabric] as [string, string]] : []),
   ];
@@ -481,6 +484,11 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
         </button>
         {list("Shopping list", shop)}
         <p className="mt-2 px-1 text-[14px] leading-snug text-white/50">{tip.why}</p>
+        {/* everything else the pattern needs: the fastening, interfacing for facings, thread */}
+        <div className="card-soft mt-3 rounded-[24px] px-5 pb-3 pt-4">
+          <div className="text-[15px] font-medium text-white/85">You will also need</div>
+          <ul className="mt-2 flex flex-col gap-2">{notionsFor(sp.details ?? (pat.garment === "flutter" ? FLUTTER.read : []), piecesFor(pat.garment)).map((n) => <li key={n} className="flex items-start gap-2.5 text-[15px] leading-snug text-white/75"><Icon name="check" size={16} className="mt-0.5 shrink-0 text-peri" />{n}</li>)}</ul>
+        </div>
         {list("How it was made", made)}
       </>} />
     </Screen>

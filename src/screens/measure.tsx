@@ -60,7 +60,8 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
   const [typing, setTyping] = useState(false);
   const base = val ?? m.value;
   const step = 0.5;
-  const bump = (d: number) => { set(Math.min(m.max, Math.max(m.min, (val === null ? m.value : base + d)))); onSet(); };
+  // with no value yet, − and + open the keyboard instead of jumping to an average (nothing is pre-filled)
+  const bump = (d: number) => { if (val === null) { setTyping(true); return; } set(Math.min(m.max, Math.max(m.min, base + d))); onSet(); };
   return (
     <div data-need={val === null ? "1" : "0"} className="dial">
       <div className="flex items-center justify-between gap-2 px-3 pt-3">
@@ -68,7 +69,10 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
         <button onClick={() => setTyping(true)} className="flex h-[60px] min-w-0 flex-1 items-center justify-center" aria-label={val === null ? "Type a value" : `${fmt(base, units)} ${units}. Type a value`}>
           {typing ? (
             <span className="flex items-baseline gap-2">
-              <input autoFocus inputMode="decimal" defaultValue={val === null ? "" : fmt(base, units)} placeholder={fmt(m.value, units)}
+              <input inputMode="decimal" defaultValue={val === null ? "" : fmt(base, units)} placeholder="—"
+              // focus with the old value selected, so typing replaces it instead of adding to the end of it
+              ref={(el) => { if (el && document.activeElement !== el) { el.focus(); el.select(); setTimeout(() => el.select(), 0); } }}
+              onFocus={(e) => e.currentTarget.select()}
                 onBlur={(e) => { const n = parseFloat(e.target.value.replace(",", ".")); if (!isNaN(n)) { set(Math.min(m.max, Math.max(m.min, units === "in" ? n * 2.54 : n))); onSet(); } setTyping(false); }}
                 onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                 className="serif h-[60px] w-[130px] bg-transparent text-center text-[44px] leading-none outline-none placeholder:text-white/20" />

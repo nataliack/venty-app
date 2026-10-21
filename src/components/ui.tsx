@@ -129,7 +129,7 @@ export function Arrows({ onPrev, onNext, hidePrev, ready = true, label = "Next" 
 
 export function NextButton({ ready, onClick, label = "Next", className }: { ready: boolean; onClick?: () => void; label?: string; nudge?: boolean; className?: string }) {
   return (
-    <button aria-disabled={!ready} onClick={(e) => (ready ? onClick?.() : showNeeded(e.currentTarget))}
+    <button aria-disabled={!ready} aria-label={label} onClick={(e) => (ready ? onClick?.() : showNeeded(e.currentTarget))}
       className={cx("pill pill-primary min-w-0 px-6", !ready && "is-off", className)}>
       <span className="truncate">{label}</span>
     </button>
@@ -150,7 +150,8 @@ export function showNeeded(from: Element) {
 // The ring sits top right; on a single-row card (`radioAt="center"`) it is centred on the card's height.
 export function Option({ on, onClick, children, className, radio = true, radioAt = "top" }: { on: boolean; onClick: () => void; children: ReactNode; className?: string; radio?: boolean; radioAt?: "top" | "center" }) {
   return (
-    <div role="radio" aria-checked={on} tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }} className={cx("opt text-left", on && "on", className)}>
+    // the card's own words are its name for screen readers
+    <div role="radio" aria-checked={on} tabIndex={0} ref={(el) => { if (el) el.setAttribute("aria-label", el.innerText.replace(/\s+/g, " ").trim()); }} onClick={onClick} onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }} className={cx("opt text-left", on && "on", className)}>
       {children}
       {radio && <span className={cx("radio absolute right-4", radioAt === "center" ? "top-1/2 -translate-y-1/2" : "top-4")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>}
     </div>
