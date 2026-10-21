@@ -127,17 +127,18 @@ const Hero = ({ title, lead }: { title: ReactNode; lead: string }) => (
 );
 
 // ─── The arc of looks: garments and their patterns on cards along a gentle arch, drifting right to left forever ───
-// Placeholders for now (the landing page's renders); patterns are the app's own pieces on pattern paper.
+// Four editorial looks (generated with Higgsfield from the designer's prompts), each followed by a card of pattern
+// pieces on pattern paper: a garment, then what it is made from.
 type Look = { img: string } | { pieces: PieceKey[] };
 const LOOKS: Look[] = [
-  { img: "/auth/look-1.webp" },
+  { img: "/auth/look-street-green.webp" },
   { pieces: ["bodiceFront", "skirtFront"] },
-  { img: "/auth/look-4.webp" },
-  { img: "/auth/look-5.webp" },
-  { pieces: ["sleeve", "bodiceBack", "facing"] },
-  { img: "/auth/look-3.webp" },
-  { img: "/auth/look-6.webp" },
+  { img: "/auth/look-limo-mauve.webp" },
+  { pieces: ["sleeve", "bodiceBack"] },
+  { img: "/auth/look-cliff-rust.webp" },
   { pieces: ["trouserFront", "waistband"] },
+  { img: "/auth/look-street-burgundy.webp" },
+  { pieces: ["skirtBack", "collar"] },
 ];
 const CARD_W = 100, CARD_H = 134, GAP = 12;
 export function ArcCarousel() {
