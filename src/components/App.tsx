@@ -69,11 +69,11 @@ function StatusBar() {
 const LIGHT_TOP: Record<string, string> = { home: "#f6f7fd", you: "#f6f7fd", prompt: "#f0f4fe", generating: "#f0f4fe", start: "#f3f1ec" };
 // splash, welcome and "Welcome, Ana" share one sky, so they cross-fade in place instead of sliding
 const SKY = new Set(["splash", "welcome", "signedin"]);
-const CROWN_TOP = new Set(["splash", "signedin", "welcome", "tourAsk", "onboarding", "ready", "printed"]);
+const CROWN_TOP = new Set(["splash", "signedin", "welcome", "onboarding", "ready", "printed"]);
 function useStatusTint(id: string) {
   useEffect(() => {
     const desk = window.matchMedia("(min-width: 1024px)").matches;
-    const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (CROWN_TOP.has(id) ? "#a7b1d3" : "#0b0c15");
+    const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (CROWN_TOP.has(id) ? "#a7b1d3" : id === "tourAsk" ? "#4a525d" : "#0b0c15");
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
@@ -83,7 +83,7 @@ function useStatusTint(id: string) {
     // Tab screens in the home-screen app: the bar is docked, so the strip continues the bar's own bottom colour.
     const TABS = new Set(["home", "bodies", "patterns", "you"]);
     const pwa = document.documentElement.classList.contains("pwa");
-    const bottom = pwa && TABS.has(id) ? "#bac3e8" : id === "prompt" || id === "generating" ? LIGHT_TOP.prompt : PAPER.has(id) ? "#f3f1ec" : SKY.has(id) || id === "tourAsk" ? "#262c5e" : "#0b0c15";
+    const bottom = pwa && TABS.has(id) ? "#bac3e8" : id === "prompt" || id === "generating" ? LIGHT_TOP.prompt : PAPER.has(id) ? "#f3f1ec" : id === "tourAsk" ? "#636e7b" : SKY.has(id) ? "#262c5e" : "#0b0c15";
     // Safari 26 (theme-color is ignored) paints its status bar from this colour, since .device has none of its own
     // (see globals.css): in Safari it is each screen's top colour, so the bar runs on from the screen as if see-through.
     // The home-screen app has a see-through status bar already, so there it keeps the bottom strip's colour.

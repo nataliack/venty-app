@@ -325,17 +325,15 @@ export function TourAsk() {
   const set = useApp((s) => s.set);
   const desk = useDesk();
   const skip = () => { set({ onboarded: true, tourSkipped: true }); replace("start"); };
-  // A question, so it is laid out as one: the Crown sky fills the screen with three garments fanned out on it, and the
-  // question sits on a paper card floating over the sky (on a computer, beside the garments). The tour itself is a
-  // picture above paper, so the two never look alike.
-  const fan = (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex items-end justify-center">
-      {(["slip", "wrap", "aline"] as const).map((g, i) => (
-        <motion.div key={g} initial={{ opacity: 0, y: 18, rotate: 0 }} animate={{ opacity: 1, y: i === 1 ? -14 : 0, rotate: (i - 1) * 9 }} transition={{ delay: 0.15 + i * 0.12, duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
-          className={cx("grid place-items-center rounded-[22px] border border-white/25 bg-white/12 backdrop-blur-sm", i === 1 ? "z-10 -mx-3 h-[168px] w-[124px] lg:h-[280px] lg:w-[206px]" : "h-[140px] w-[104px] lg:h-[230px] lg:w-[170px]")}>
-          <Flat g={g} size={desk ? (i === 1 ? 168 : 132) : i === 1 ? 100 : 80} stroke="#fff" fill="rgba(255,255,255,.14)" />
-        </motion.div>
-      ))}
+  // A question, so it is laid out as one: a full-bleed photograph fills the screen (no margins), and the question sits
+  // on a paper card floating over it (on a computer, at the right). The tour itself is a picture above paper, so the
+  // two never look alike.
+  const photo = (
+    <motion.div initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, ease: [0.2, 0.8, 0.2, 1] }} className="absolute inset-0">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/tour/meadow.webp" srcSet="/tour/meadow-640.webp 640w, /tour/meadow.webp 1080w" sizes="100vw" alt="" draggable={false} className="h-full w-full object-cover" style={{ objectPosition: "50% 30%" }} />
+      {/* a soft shade under the status bar, so its clock stays readable over the photo */}
+      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0b0c15]/45 to-transparent" />
     </motion.div>
   );
   const card = (
@@ -348,14 +346,13 @@ export function TourAsk() {
     </motion.div>
   );
   if (desk) return (
-    <div className="absolute inset-0 overflow-hidden"><Crown />
-      <div className="relative grid h-full grid-cols-[1.1fr_0.9fr] items-center px-16">{fan}<div className="flex justify-center">{card}</div></div>
+    <div className="absolute inset-0 overflow-hidden bg-[#636e7b]">{photo}
+      <div className="relative flex h-full items-center justify-end px-16">{card}</div>
     </div>
   );
   return (
-    <div className="absolute inset-0 overflow-hidden"><Crown />
-      <div className="relative flex h-full flex-col px-3" style={{ paddingTop: "var(--top)", paddingBottom: "max(12px, calc(var(--bottom) - 18px))" }}>
-        <div className="grid min-h-0 flex-1 place-items-center">{fan}</div>
+    <div className="absolute inset-0 overflow-hidden bg-[#636e7b]">{photo}
+      <div className="relative flex h-full flex-col justify-end px-3" style={{ paddingTop: "var(--top)", paddingBottom: "max(12px, calc(var(--bottom) - 18px))" }}>
         {card}
       </div>
     </div>
