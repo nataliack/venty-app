@@ -54,7 +54,7 @@ export function Seam() {
   const { go, draft, setDraft } = useApp();
   const [yes, setYes] = useState<boolean | null>(null); // nothing pre-selected
   const [amt, setAmt] = useState<number | null>(null);
-  const [own, setOwn] = useState(false); // your own amount rather than 1 or 1.5 cm
+  const [typed, setTyped] = useState<string | null>(null); // what is in the box while typing
   const add = yes === true;
   const ready = yes === false || (yes === true && amt !== null);
   const pickNo = () => { setYes(false); setDraft({ seam: null }); };
@@ -68,7 +68,7 @@ export function Seam() {
       </>} right={<>
       <Glass className="relative mt-5 grid h-[min(210px,25dvh)] place-items-center rounded-[26px] lg:mt-0 lg:h-[min(340px,38dvh)]" >
         <div className="absolute inset-0 rounded-[26px]" style={GRID} />
-        <Piece k={piecesFor(draft.garment)[0]} width={120} label={PIECE_LABEL[piecesFor(draft.garment)[0]]} allowance={add} />
+        <Piece k={piecesFor(draft.garment)[0]} width={120} label={PIECE_LABEL[piecesFor(draft.garment)[0]]} allowance={add ? amt ?? 1.5 : false} />
         {add && amt !== null && <span className="absolute right-6 top-6 text-[15px] font-medium text-peri">{amt} cm</span>}
       </Glass>
       <div className="mt-3 flex flex-col gap-2.5" data-need={yes === null ? "1" : "0"}>
@@ -77,21 +77,22 @@ export function Seam() {
       </div>
       <AnimatePresence>{add && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+          {/* any amount you like: type it, or step it in half centimetres. Empty until you set it */}
           <div className="mt-4 text-[15px] font-medium text-white/80">How much?</div>
-          <div data-need={amt === null ? "1" : "0"}>
-          <div className="mt-2.5 grid grid-cols-2 gap-3">{[1.0, 1.5].map((v) => (
-            <Option key={v} on={amt === v && !own} onClick={() => { setOwn(false); pickAmt(v); }} className="flex h-[64px] items-center rounded-[18px] px-4"><span className="flex items-baseline gap-2"><span className="serif text-[30px] leading-none">{v.toFixed(1)}</span><span className="unit" translate="no">cm</span></span></Option>
-          ))}</div>
-          {/* any other amount, in half centimetres: the same selectable card, with a stepper inside */}
-          <Option on={own} onClick={() => { setOwn(true); pickAmt(amt ?? 2); }} radioAt="center" className="mt-2.5 flex items-center gap-2 rounded-[18px] py-3 pl-4 pr-12">
-            <span className="min-w-0 flex-1"><span className="block text-[17px] font-medium">Your own</span><span className="block text-[14px] text-white/55">From 0.5 to 6 cm</span></span>
-            <span className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-              <RB icon="minus" size={40} className="rb-plain" onClick={() => { setOwn(true); pickAmt(Math.max(0.5, (amt ?? 2) - 0.5)); }} label="Less seam allowance" />
-              <span className="w-[62px] text-center"><span className="serif text-[24px] leading-none">{(own ? amt ?? 2 : 2).toFixed(1)}</span><span className="unit ml-1" translate="no">cm</span></span>
-              <RB icon="plus" size={40} className="rb-plain" onClick={() => { setOwn(true); pickAmt(Math.min(6, (amt ?? 2) + 0.5)); }} label="More seam allowance" />
-            </span>
-          </Option>
+          <div data-need={amt === null ? "1" : "0"} className="field mt-2.5 flex items-center gap-2 !rounded-[20px] px-3 py-2.5">
+            <RB icon="minus" size={44} className="rb-plain" onClick={() => pickAmt(Math.max(0.5, (amt ?? 1) - 0.5))} label="Less seam allowance" />
+            <label className="flex min-w-0 flex-1 items-baseline justify-center gap-1.5">
+              <span className="sr-only">Seam allowance in centimetres</span>
+              <input inputMode="decimal" placeholder="—" value={typed ?? (amt === null ? "" : String(amt))}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => { const t = e.target.value.replace(",", "."); setTyped(t); const n = parseFloat(t); if (!isNaN(n) && n > 0) pickAmt(Math.min(50, Math.round(n * 10) / 10)); }}
+                onBlur={() => setTyped(null)}
+                className="serif w-[90px] bg-transparent text-right text-[36px] leading-none outline-none placeholder:text-white/25" />
+              <span className="unit" translate="no">cm</span>
+            </label>
+            <RB icon="plus" size={44} className="rb-plain" onClick={() => pickAmt(Math.min(50, (amt ?? 0.5) + 0.5))} label="More seam allowance" />
           </div>
+          <p className="mt-2 text-[14px] leading-snug text-white/55">Most home patterns use 1 to 1.5 cm.</p>
         </motion.div>)}</AnimatePresence>
       </>} />
     </Screen>
@@ -202,7 +203,10 @@ export function Arrange() {
   const [rot, setRot] = useState<Record<string, number>>(() => Object.fromEntries(Object.entries(start).map(([k, v]) => [k, v.r])));
   const [sel, setSel] = useState<string | null>(null);
   const [used, setUsed] = useState<Set<string>>(new Set());
+  const [touched, setTouched] = useState(false); // until you touch a piece, a little demo shows you can drag it
   const desk = useDesk();
+  const choose = (k: string) => { setSel(k); setTouched(true); };
+  const rotate = (k: string) => { setRot({ ...rot, [k]: ((rot[k] ?? 0) + 90) % 360 }); setTouched(true); };
   const rotRef = useRef(rot); rotRef.current = rot;
 
   // read where every piece is now, save it, and count the sheets it touches
@@ -227,33 +231,50 @@ export function Arrange() {
   const undoRestart = () => { if (!undo) return; setStart(undo.at); setRot(undo.rot); setSel(null); setSeed(seed + 1); setUndo(null); };
   const tools = (
     <div className="shrink-0">
-    {/* what to do next, in words: which piece is chosen, or how to choose one */}
-    <p className="mt-3 text-center text-[14px] text-white/65 lg:text-left" aria-live="polite">{undo ? <>Pieces are back where they started. <button onClick={undoRestart} className="font-medium text-white underline underline-offset-2">Undo</button></> : sel ? <>{PIECE_LABEL[sel as PieceKey]} chosen. Drag it, or rotate it.</> : "Tap a piece to choose it, then drag it or rotate it."}</p>
+    {/* what you can do here, in two plain steps (or, once a piece is chosen, what to do with it) */}
+    <div className="mt-3 flex min-h-[44px] flex-col items-center justify-center gap-1 text-[14px] text-white/75 lg:items-start" aria-live="polite">
+      {undo ? <span>Pieces laid out for you. <button onClick={undoRestart} className="font-medium text-white underline underline-offset-2">Undo</button></span>
+        : sel ? <span><span className="text-white">{PIECE_LABEL[sel as PieceKey]}</span> chosen. Drag it, or tap <Icon name="rotate" size={14} className="mx-0.5 inline align-[-2px]" /> to turn it.</span>
+        : <>
+          <span className="flex items-center gap-2"><Icon name="move" size={16} className="shrink-0 text-peri" />Drag a piece to move it</span>
+          <span className="flex items-center gap-2"><Icon name="rotate" size={16} className="shrink-0 text-peri" />Tap a piece to turn it</span>
+        </>}
+    </div>
     <div className="mt-2 flex shrink-0 justify-center gap-2 lg:justify-start">
-      <button onClick={() => { if (!sel) return; setRot({ ...rot, [sel]: ((rot[sel] ?? 0) + 90) % 360 }); }} className={cx("tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium", !sel && "opacity-40")}><Icon name="rotate" size={18} />Rotate piece</button>
-      <button onClick={restart} className="tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium"><Icon name="grid" size={18} />Reset layout</button>
+      <button onClick={() => sel && rotate(sel)} disabled={!sel} className={cx("tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium", !sel && "opacity-40")}><Icon name="rotate" size={18} />Turn piece</button>
+      <button onClick={() => { restart(); setTouched(true); }} className="tap flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[15px] font-medium"><Icon name="grid" size={18} />Arrange for me</button>
     </div>
     </div>
   );
   const board = (style: React.CSSProperties, className?: string) => (
     <div key={seed} ref={area} className={cx("relative overflow-hidden rounded-[10px] border border-white/20 bg-white/[.03]", className)} style={style}>
-      <Sheets a4={a4} used={used} />
-      {pieces.map((k) => (
+      <Sheets a4={a4} used={used} labels={false} />
+      {pieces.map((k, i) => (
         <motion.div key={k} ref={(el) => { refs.current[k] = el; }} drag dragConstraints={area} dragMomentum={false} dragElastic={0}
-          onDragStart={() => setSel(k)} onDragEnd={() => requestAnimationFrame(measure)} onTap={() => setSel(k)} onAnimationComplete={measure}
+          onDragStart={() => choose(k)} onDragEnd={() => requestAnimationFrame(measure)} onTap={() => choose(k)} onAnimationComplete={measure}
           whileDrag={{ scale: 1.04, zIndex: 10 }} animate={{ rotate: rot[k] ?? 0 }}
           className={cx("absolute cursor-grab touch-none rounded-md active:cursor-grabbing", sel === k && "outline outline-1 outline-offset-2 outline-peri")}
           style={{ left: `${start[k]?.x ?? 50}%`, top: `${start[k]?.y ?? 50}%`, width: `${pieceW(k)}%`, translate: "-50% -50%" }}>
           <Piece k={k} label={PIECE_LABEL[k]} className="h-auto w-full" />
+          {/* the chosen piece carries its own turn button, right where you are looking */}
+          {sel === k && <button aria-label={`Turn ${PIECE_LABEL[k]}`} onPointerDownCapture={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); rotate(k); }}
+            className="absolute -right-3 -top-3 z-20 grid h-9 w-9 place-items-center rounded-full bg-white text-bg shadow-[0_4px_14px_rgb(0_0_0/.45)]"><Icon name="rotate" size={18} /></button>}
+          {/* a first-time demo on the first piece: a finger mark sliding across it, and "Drag me" */}
+          {!touched && i === 0 && (
+            <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+              <motion.span animate={{ x: [-14, 14, -14] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} className="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-bg shadow-[0_0_0_6px_rgb(140_156_248/.35)]"><Icon name="move" size={20} /></motion.span>
+              <span className="whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-[12px] font-medium text-bg">Drag me</span>
+            </span>
+          )}
         </motion.div>
       ))}
     </div>
   );
   // centred on phones, and the sheet count is one plain line of text (no big number competing with the heading)
   const intro = <div className="text-center lg:text-left">
-    <H1 className="mt-3 lg:mt-0">Arrange your pieces</H1>
-    <Lead className="mx-auto mt-2 max-w-[330px] [text-wrap:pretty] lg:mx-0">{a4 ? "Each box is one A4 sheet. Move pieces closer together to print fewer sheets." : "This is your A0 sheet. Move the pieces where you want them."}</Lead>
-    <p className="mt-2 text-[15px] text-white/85">{a4 ? <>Prints on <span className="tabular-nums">{sheets}</span> of {COLS * ROWS} sheets</> : "Prints on 1 A0 sheet"}</p>
+    <H1 className="mt-3 lg:mt-0">Lay out your pattern</H1>
+    <Lead className="mx-auto mt-2 max-w-[340px] [text-wrap:pretty] lg:mx-0">{a4 ? "This is your printer paper: each square is one A4 page. Moving pieces closer together prints fewer pages. You can also skip this and tap Next." : "This is your A0 sheet. Move the pieces where you want them, or skip this and tap Next."}</Lead>
+    <p className={cx("mt-2 text-[15px] text-white/85 transition-opacity", a4 && !used.size && "opacity-0")}>{a4 ? <>Uses <span className="tabular-nums">{sheets}</span> {sheets === 1 ? "page" : "pages"}</> : "Uses 1 A0 sheet"}</p>
   </div>;
   const footer = <Arrows onNext={() => { measure(); go("print"); }} />;
   if (desk) return (
@@ -296,7 +317,7 @@ export function PrintReady() {
   };
   // every row says what it means without sewing or printing words a beginner wouldn't know
   const rows: [string, string][] = [
-    ["Garment", nameFor(draft.garment, draft.kind, draft.details)],
+    ["Garment", nameFor(draft.garment, draft.source === "template" ? undefined : draft.kind, draft.details)],
     ["Drafted to", body().name],
     ["Fit", `${fitName(draft.ease)}, ${draft.ease} cm of room`],
     ["Seam allowance", draft.seam ? `${draft.seam} cm, on every piece` : "Not added, you add your own"],

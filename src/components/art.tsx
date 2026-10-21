@@ -32,6 +32,8 @@ export function VentyLogo({ width = 160, className, color = "#fff" }: { width?: 
 
 // ─── Body silhouettes (200 × 530) ─────────────────────────────────────
 import { BODY } from "./bodyShape";
+import { LM, P, buildSpec, type L, type GarmentSpec } from "./garment";
+export type { GarmentSpec } from "./garment";
 
 type BodyProps = {
   sex?: Sex;
@@ -39,6 +41,7 @@ type BodyProps = {
   variant?: "dots" | "solid"; // legacy, both render the mannequin
   markers?: Marker[];
   garment?: GarmentKey | null;
+  spec?: GarmentSpec | null; // when given, the garment is drawn from its details (neckline, sleeves, length, fit…)
   garmentStyle?: "flat" | "fabric";
   scaleX?: number; // subtle proportion changes (e.g. bust/hips)
   className?: string;
@@ -47,7 +50,7 @@ type BodyProps = {
   dim?: number;
 };
 
-export function BodyFigure({ sex = "female", width = 140, markers = [], garment = null, garmentStyle = "fabric", scaleX = 1, className, glow = true, label, dim = 1 }: BodyProps) {
+export function BodyFigure({ sex = "female", width = 140, markers = [], garment = null, spec = null, garmentStyle = "fabric", scaleX = 1, className, glow = true, label, dim = 1 }: BodyProps) {
   const id = useId().replace(/:/g, "");
   const h = (width * 530) / 200;
   const d = BODY[sex];
@@ -79,7 +82,7 @@ export function BodyFigure({ sex = "female", width = 140, markers = [], garment 
       <g transform={`translate(${100 - 100 * scaleX} 0) scale(${scaleX} 1)`} opacity={dim}>
         {glow && <path d={d} fill="#687ef5" opacity=".4" filter={`url(#f${id})`} />}
         <path d={d} fill={`url(#b${id})`} filter={`url(#gl${id})`} />
-        {garment && <GarmentOn garment={garment} style={garmentStyle} sex={sex} />}
+        {(garment || spec) && <GarmentOn garment={garment ?? "flutter"} spec={spec} style={garmentStyle} sex={sex} />}
       </g>
       {markers.map((m, i) =>
         m.kind === "ring" ? (
@@ -180,12 +183,6 @@ export function Flat({ g, size = 120, className, stroke = "#fff", fill = "rgba(2
 // ─── Garments fitted to the body (drawn in the body's 200×530 space) ─────
 // Landmarks are measured off the silhouettes above; every garment is built from them,
 // so shoulders, waist and hips always land on the figure.
-type L = { neckY: number; neckH: number; shY: number; shH: number; armY: number; armH: number; bustY: number; bustH: number; waistY: number; waistH: number; hipY: number; hipH: number; crotchY: number; kneeY: number; ankleY: number; elbowY: number; elbowO: number; elbowI: number; wristY: number; wristO: number; wristI: number };
-const LM: Record<Sex, L> = {
-  female: { neckY: 90, neckH: 10, shY: 101, shH: 49, armY: 134, armH: 43, bustY: 150, bustH: 44, waistY: 205, waistH: 29, hipY: 275, hipH: 48, crotchY: 293, kneeY: 405, ankleY: 494, elbowY: 205, elbowO: 69, elbowI: 54, wristY: 282, wristO: 77, wristI: 67 },
-  male: { neckY: 90, neckH: 12, shY: 101, shH: 57, armY: 140, armH: 50, bustY: 156, bustH: 50, waistY: 205, waistH: 39, hipY: 278, hipH: 44, crotchY: 296, kneeY: 404, ankleY: 494, elbowY: 205, elbowO: 75.5, elbowI: 57.5, wristY: 282, wristO: 83.5, wristI: 70.5 },
-};
-const P = (x: number, y: number) => `${(100 + x).toFixed(1)} ${y.toFixed(1)}`;
 // mirror a right-hand half outline (list of [x,y], x ≥ 0 offsets from centre) into a closed path
 function sym(pts: [number, number][], neck?: string) {
   const right = pts.map(([x, y]) => P(x, y));
@@ -260,9 +257,9 @@ function build(g: GarmentKey, l: L): G {
   }
 }
 
-export function GarmentOn({ garment, style = "fabric", sex = "female" }: { garment: GarmentKey; style?: "flat" | "fabric"; sex?: Sex }) {
+export function GarmentOn({ garment, spec, style = "fabric", sex = "female" }: { garment: GarmentKey; spec?: GarmentSpec | null; style?: "flat" | "fabric"; sex?: Sex }) {
   const id = useId().replace(/:/g, "");
-  const g = build(garment, LM[sex]);
+  const g = spec ? buildSpec(spec, LM[sex]) : build(garment, LM[sex]);
   const fill = style === "fabric" ? `url(#gf${id})` : "rgba(11,12,21,.35)";
   return (
     <g style={{ color: "#fff" }}>
@@ -310,8 +307,11 @@ function pointOn(k: PieceKey, t: number): [number, number] | null {
 
 // tone: "dark" (white lines, for the dark screens) or "light" (ink lines on paper, like a printed pattern).
 // draw (0..1): how much of the outline is drawn, for drafting animations; the fill and markings follow once it closes.
-export function Piece({ k, label, className, showGrid = false, allowance = false, width, tone = "dark", draw }: { k: PieceKey; label?: string; className?: string; showGrid?: boolean; allowance?: boolean; width?: number; tone?: "dark" | "light"; draw?: number }) {
+export function Piece({ k, label, className, showGrid = false, allowance = false, width, tone = "dark", draw }: { k: PieceKey; label?: string; className?: string; showGrid?: boolean; allowance?: boolean | number; width?: number; tone?: "dark" | "light"; draw?: number }) {
   const p = PIECES[k];
+  // the allowance band widens with the amount (a number in cm; true draws the usual 1.5 cm)
+  const cm = typeof allowance === "number" ? allowance : 1.5;
+  const band = Math.min(40, 4 + cm * 2), grow = 1 + Math.min(0.24, 0.012 + cm * 0.022);
   const [x1, y1, x2, y2] = p.grain;
   const light = tone === "light";
   const ink = light ? "#131523" : "#fff";
@@ -324,8 +324,8 @@ export function Piece({ k, label, className, showGrid = false, allowance = false
   return (
     <svg viewBox={`0 0 ${p.w} ${p.h}`} width={width ?? p.w} className={className} aria-hidden style={{ overflow: "visible" }}>
       {showGrid && <rect width={p.w} height={p.h} fill="none" />}
-      {allowance && <path d={p.d} fill="none" stroke="#8c9cf8" strokeWidth="7" strokeOpacity=".22" strokeLinejoin="round" />}
-      {allowance && <path d={p.d} fill="none" stroke="#8c9cf8" strokeWidth="1" strokeDasharray="3 3" transform={`translate(${p.w / 2} ${p.h / 2}) scale(1.045) translate(${-p.w / 2} ${-p.h / 2})`} />}
+      {allowance && <path d={p.d} fill="none" stroke="#8c9cf8" strokeWidth={band} strokeOpacity=".22" strokeLinejoin="round" />}
+      {allowance && <path d={p.d} fill="none" stroke="#8c9cf8" strokeWidth="1" strokeDasharray="3 3" transform={`translate(${p.w / 2} ${p.h / 2}) scale(${grow}) translate(${-p.w / 2} ${-p.h / 2})`} />}
       <path d={p.d} fill={light ? "rgba(104,126,245,.13)" : "rgba(104,126,245,.14)"} stroke="none" style={marks} />
       <path d={p.d} fill="none" stroke={ink} strokeWidth={light ? 2 : 1.4} strokeLinejoin="round" {...(drawing ? { pathLength: 1, strokeDasharray: "1 1", strokeDashoffset: 1 - Math.max(0, Math.min(1, draw)) } : {})} />
       {pen && <g transform={`translate(${pen[0]} ${pen[1]})`}><circle r="16" fill="#687ef5" opacity=".16" /><circle r="7" fill="#687ef5" stroke="#fff" strokeWidth="2.6" /></g>}

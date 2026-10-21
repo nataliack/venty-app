@@ -2,11 +2,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useApp } from "@/lib/store";
-import { TEMPLATES, CATEGORIES, LEVELS, templateBy, type Category, type GarmentKey } from "@/lib/data";
+import { TEMPLATES, CATEGORIES, LEVELS, templateBy, templateDetails, kindOf, lengthCmFor, type Category, type GarmentKey } from "@/lib/data";
 import { Screen, TopBar, TopAction, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, Option, Sheet, cx, useToast } from "@/components/ui";
 import { Split, useDesk } from "@/components/ui";
 import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
+import { ArcCarousel } from "./auth";
+import { draftSpec } from "./pattern";
 
 // Card: the flat drawing, the name, and one quiet line (level · pieces). Hover only lifts the edge.
 export function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: boolean; onClick: () => void }) {
@@ -69,8 +71,9 @@ export function Templates({ p }: { p?: Record<string, unknown> }) {
     <Screen wide={desk}>
       <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
       {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none lg:max-w-[420px]" />}
-      <H1 className="mt-4">Ready-made patterns</H1>
-      <Lead className="mt-2">Choose one, fit it to a body and get the pattern.</Lead>
+      {q === null && !desk && <div className="mt-1"><ArcCarousel /></div>}
+      <H1 className={cx(desk ? "mt-4" : "mt-6 text-center")}>Patterns to make</H1>
+      <Lead className={cx("mt-2", !desk && "mx-auto max-w-[320px] text-center")}>Choose a style, fit it to your body and get the pattern.</Lead>
       <div className="mt-6">{tabs}</div>
       {bar}
       {grid}
@@ -96,11 +99,11 @@ export function TemplateDetail({ p }: { p?: Record<string, unknown> }) {
   const [len, setLen] = useState(t.defaultLength);
   const desk = useDesk();
   return (
-    <Screen footer={<Pill onClick={() => { newDraft({ garment: t.key, source: "template", length: len, ...(picked ? { bodyId: draft.bodyId } : {}) }); go(picked ? "tplFit" : "tplBody"); }}>{picked && forName ? `Fit to ${forName}` : "Fit to a body"}</Pill>}>
+    <Screen footer={<Pill onClick={() => { newDraft({ garment: t.key, source: "template", length: len, kind: kindOf(t.key), details: templateDetails(t.key, len), lengthCm: lengthCmFor(kindOf(t.key), len), ...(picked ? { bodyId: draft.bodyId } : {}) }); go(picked ? "tplFit" : "tplBody"); }}>{picked && forName ? `Fit to ${forName}` : "Fit to a body"}</Pill>}>
       <TopBar left="back" eyebrow={t.category} />
       <Split left={
-      <Glow color={t.color} variant="edge" className="mt-3 grid h-[min(330px,38dvh)] place-items-center rounded-[30px] lg:mt-0 lg:h-[min(620px,70dvh)] lg:rounded-[40px]">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="animate-floaty"><Flat g={t.key} size={desk ? 320 : 200} /></motion.div>
+      <Glow color={t.color} variant="edge" className="mt-3 flex h-[min(330px,38dvh)] justify-center rounded-[30px] lg:mt-0 lg:h-[min(620px,70dvh)] lg:rounded-[40px]">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="h-full py-4"><BodyFigure width={desk ? 200 : 120} variant="solid" glow={false} spec={{ kind: kindOf(t.key), details: templateDetails(t.key, len), ease: 4, lengthCm: lengthCmFor(kindOf(t.key), len) }} className="h-full w-auto" /></motion.div>
       </Glow>} right={<>
       <HS className="mt-5 text-[46px] lg:mt-0 lg:text-[72px]">{t.name}</HS>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">{[`${t.pieces} pieces`, t.tag].map((c) => <span key={c} className="text-[15px] text-white/60">{c}</span>)}</div>
@@ -159,7 +162,7 @@ export function TplFit() {
       <TopBar eyebrow={`Fitting to ${b.name}`} center />
       <div className="lg:grid lg:min-h-[calc(100dvh-var(--top)-110px)] lg:grid-cols-2 lg:items-center lg:gap-16"><div>
       <div className="relative flex h-[min(330px,38dvh)] justify-center pt-2 lg:h-[min(620px,72dvh)]">
-        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} className="h-full"><BodyFigure sex={b.sex} width={120} garment={draft.garment} garmentStyle="flat" className="h-full w-auto" /></motion.div>
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} className="h-full"><BodyFigure sex={b.sex} width={120} garment={draft.garment} spec={draftSpec(draft)} garmentStyle="flat" className="h-full w-auto" /></motion.div>
       </div>
       </div><div>
       <div className="serif mt-2 text-center text-[96px] leading-none tabular-nums lg:text-left lg:text-[200px]">{pct}%</div>
@@ -195,7 +198,7 @@ export function TplResult() {
       <Segmented className="mt-4 lg:w-[300px]" items={["On body", "Pattern"]} value={view} onChange={(v) => (v === "Pattern" ? go("garment", { view: "Pattern" }) : setView(v))} />
       </div>
       <div className="mt-4 grid grid-cols-[1fr_130px] gap-4 lg:mt-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-12">
-        <Glow color={t.color} variant="fade" className="flex h-[min(470px,52dvh)] justify-center rounded-[28px] pt-4 lg:h-[min(600px,66dvh)] lg:rounded-[36px] lg:pt-8"><BodyFigure sex={b.sex} width={150} garment={t.key} className="h-[94%] w-auto" /></Glow>
+        <Glow color={t.color} variant="fade" className="flex h-[min(470px,52dvh)] justify-center rounded-[28px] pt-4 lg:h-[min(600px,66dvh)] lg:rounded-[36px] lg:pt-8"><BodyFigure sex={b.sex} width={150} garment={t.key} spec={draftSpec(draft)} className="h-[94%] w-auto" /></Glow>
         <div className="flex flex-col justify-between py-1 lg:grid lg:grid-cols-2 lg:content-center lg:gap-5">
           {notes.map(([l, v, e]) => (
             <div key={l as string} className="lg:rounded-[24px] lg:border lg:border-white/10 lg:bg-card lg:p-6"><Eyebrow className=" lg:">{l}</Eyebrow><div className="flex items-baseline gap-1.5"><span className="serif text-[40px] leading-none lg:text-[64px]">{u(v as number)}</span><span className="text-[10px] text-white/50">{units}</span></div><div className="text-[11px] font-medium text-peri">{e}</div></div>

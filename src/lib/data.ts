@@ -150,16 +150,16 @@ export const SEED_PATTERNS = [
 // ─── Fit and fabric advice ────────────────────────────────────────────
 // Ease = the extra room (cm) between the body and the garment.
 export const FITS = [
-  { key: "tight", label: "Close", ease: 1, note: "Close to the body" },
+  { key: "tight", label: "Tight", ease: 1, note: "Close to the body" },
   { key: "easy", label: "Relaxed", ease: 4, note: "A little room to move" },
   { key: "loose", label: "Loose", ease: 8, note: "Relaxed and flowing" },
   { key: "oversized", label: "Oversized", ease: 16, note: "Big and roomy" },
 ] as const;
-export const fitName = (ease: number) => (ease <= 2 ? "Close" : ease <= 6 ? "Relaxed" : ease <= 12 ? "Loose" : "Oversized");
+export const fitName = (ease: number) => (ease <= 2 ? "Tight" : ease <= 6 ? "Relaxed" : ease <= 12 ? "Loose" : "Oversized");
 
 // What fabric suits a fit. Described by how it behaves, not by name, so people can find their own.
 export function fabricAdvice(ease: number): { stretch: "A lot" | "A bit" | "No"; title: string; why: string; drape: string } {
-  if (ease <= 2) return { stretch: "A lot", title: "A stretchy fabric", why: "A close fit needs fabric that stretches and springs back, so you can move and get it on.", drape: "Soft or medium" };
+  if (ease <= 2) return { stretch: "A lot", title: "A stretchy fabric", why: "A tight fit needs fabric that stretches and springs back, so you can move and get it on.", drape: "Soft or medium" };
   if (ease <= 6) return { stretch: "A bit", title: "Little or no stretch", why: "With a little room, a fabric with a bit of give or none at all works well.", drape: "Soft to medium" };
   if (ease <= 12) return { stretch: "No", title: "A fabric with no stretch", why: "A loose fit has room built in, so the fabric does not need to stretch. Soft fabrics hang nicely.", drape: "Soft and drapey" };
   return { stretch: "No", title: "A fabric with no stretch", why: "An oversized fit holds its shape best in fabric that does not stretch. Crisp or soft both work.", drape: "Crisp or soft" };
@@ -207,7 +207,7 @@ export function detectKind(words?: string): Kind | null {
   return null;
 }
 
-const SLEEVES = ["Sleeveless", "Cap", "Short", "Flutter", "Puff", "Elbow", "Three-quarter", "Long", "Bell"];
+const SLEEVES = ["Thin straps", "Sleeveless", "Cap", "Short", "Flutter", "Puff", "Elbow", "Three-quarter", "Long", "Bell"];
 const NECKLINES = ["V-neck", "Round", "Scoop", "Square", "Sweetheart", "Boat", "High neck", "Halter", "Off-shoulder", "Cowl"];
 // Every detail of each kind of garment, the range a sewist expects, and what the pretend AI reads first.
 export const KIND_DETAILS: Record<Kind, { read: [string, string][]; opts: Record<string, string[]> }> = {
@@ -271,18 +271,53 @@ export function nameFor(garment: GarmentKey, kind?: Kind, details?: [string, str
   const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
   if (kind === "trousers") return v("Length") === "Shorts" ? cap(`${v("Leg").toLowerCase()} ${v("Rise").toLowerCase()}-rise shorts`) : cap(`${v("Leg").toLowerCase()} ${v("Rise").toLowerCase()}-rise trousers`);
   if (kind === "skirt") return `${v("Length")} ${v("Shape").toLowerCase()} skirt`.replace(/a-line/, "A-line");
-  if (kind === "top") return garment === "shirt" ? `${v("Sleeves")}-sleeve shirt`.replace("Long-sleeve", "Long-sleeved") : garment === "cami" ? "Cami top" : `${v("Sleeves")}-sleeve top`.replace("Sleeveless-sleeve", "Sleeveless");
+  if (kind === "top") {
+    const sl = v("Sleeves"), len = v("Length");
+    const arms = sl === "Thin straps" ? "strappy" : sl === "Sleeveless" ? "sleeveless" : `${sl.toLowerCase()}-sleeve`;
+    const what = garment === "shirt" ? "shirt" : len === "Tunic" ? "tunic" : "top";
+    return cap(`${len === "Cropped" ? "cropped " : ""}${arms} ${what}`);
+  }
   if (garment === "wrap") return `${v("Length")} wrap dress`;
   return `${v("Length")} ${v("Skirt").toLowerCase()} dress`.replace(/a-line/, "A-line");
 }
 
+// how deep each neckline usually sits below the base of the neck (cm): the neckline-depth dial starts here
+export const NECK_CM: Record<string, number> = { Round: 6, "V-neck": 13, Scoop: 12, Square: 9, Cowl: 11, Collar: 6, Boat: 4, "High neck": 4, Halter: 4, Sweetheart: 10, "Off-shoulder": 4 };
+
 // where each kind's length is measured from, its range, and a typical starting length
 export const LENGTH_DIAL: Record<Kind, { label: string; min: number; max: number; start: number }> = {
-  dress: { label: "Shoulder to hem", min: 80, max: 130, start: 104 },
-  top: { label: "Shoulder to hem", min: 40, max: 80, start: 62 },
-  skirt: { label: "Waist to hem", min: 35, max: 110, start: 70 },
-  trousers: { label: "Waist to hem", min: 30, max: 115, start: 102 },
+  dress: { label: "Shoulder to hem", min: 60, max: 125, start: 109 },
+  top: { label: "Shoulder to hem", min: 25, max: 75, start: 51 },
+  skirt: { label: "Waist to hem", min: 30, max: 92, start: 77 },
+  trousers: { label: "Waist to hem", min: 25, max: 94, start: 93 },
 };
+// Each length you can choose, in centimetres from where the dial measures (shoulder for dresses and tops, waist for
+// skirts and trousers), so choosing "Mini" moves the dial and moving the dial names the length.
+export const LENGTH_CM: Record<Kind, Record<string, number>> = {
+  dress: { "Extra mini": 66, Mini: 72, "Above the knee": 85, Knee: 95, Midi: 109, Maxi: 122 },
+  top: { Cropped: 28, Waist: 35, Hip: 51, Tunic: 68 },
+  skirt: { Micro: 32, Mini: 40, "Above the knee": 53, Knee: 62, Midi: 77, Maxi: 89 },
+  trousers: { Shorts: 37, Knee: 62, Cropped: 80, Ankle: 89, Full: 93 },
+};
+export const lengthCmFor = (kind: Kind, label: string) => LENGTH_CM[kind][label === "Long" ? "Tunic" : label] ?? LENGTH_DIAL[kind].start;
+
+// Each pattern to make, described in the same details as a design from scratch, so it is drawn on the body exactly
+// (thin straps and a bias skirt for the slip, a collar and buttons for the shirt) and changes with the length you pick.
+export const TEMPLATE_DETAILS: Partial<Record<GarmentKey, [string, string][]>> = {
+  slip: [["Sleeves", "Thin straps"], ["Neckline", "V-neck"], ["Length", "Midi"], ["Waist", "Relaxed"], ["Skirt", "Bias cut"], ["Fastening", "Pull-on"]],
+  wrap: [["Sleeves", "Flutter"], ["Neckline", "V-neck"], ["Length", "Midi"], ["Waist", "Tie"], ["Skirt", "Wrap"], ["Fastening", "Wrap tie"]],
+  aline: [["Sleeves", "Sleeveless"], ["Neckline", "Round"], ["Length", "Midi"], ["Waist", "Fitted"], ["Skirt", "A-line"], ["Fastening", "Back zip"]],
+  cami: [["Sleeves", "Thin straps"], ["Neckline", "Round"], ["Length", "Hip"], ["Shape", "Relaxed"], ["Fastening", "Pull-on"]],
+  tee: [["Sleeves", "Short"], ["Neckline", "Round"], ["Length", "Hip"], ["Shape", "Boxy"], ["Fastening", "Pull-on"]],
+  shirt: [["Sleeves", "Long"], ["Neckline", "Collar"], ["Length", "Hip"], ["Shape", "Relaxed"], ["Fastening", "Buttons"]],
+  wideleg: [["Rise", "High"], ["Leg", "Wide"], ["Length", "Full"], ["Waist", "Waistband"], ["Pockets", "Slant"], ["Fastening", "Fly zip"]],
+  straight: [["Rise", "Mid"], ["Leg", "Straight"], ["Length", "Full"], ["Waist", "Waistband"], ["Pockets", "Slant"], ["Fastening", "Fly zip"]],
+  biasskirt: [["Length", "Midi"], ["Shape", "Bias cut"], ["Waist", "Elastic"], ["Fastening", "Pull-on"]],
+  mini: [["Length", "Mini"], ["Shape", "A-line"], ["Waist", "Waistband"], ["Fastening", "Back zip"]],
+};
+export const templateDetails = (g: GarmentKey, length?: string): [string, string][] =>
+  (TEMPLATE_DETAILS[g] ?? []).map(([k, v]) => [k, k === "Length" && length ? (length === "Long" ? "Tunic" : length) : v]);
+export const lengthLabelFor = (kind: Kind, cm: number) => Object.entries(LENGTH_CM[kind]).reduce((a, b) => (Math.abs(b[1] - cm) < Math.abs(a[1] - cm) ? b : a))[0];
 
 // The pretend AI read: start from the kind's usual garment and change any detail the words name. The words also choose
 // the pattern drawing: a wrap dress, a shirt or a cami, a mini or a bias skirt, wide-leg or straight trousers.
@@ -295,11 +330,11 @@ export function readDesign(words: string | undefined, kind: Kind): { garment: Ga
   pick("Length", kind === "trousers" ? [[/shorts/, "Shorts"], [/crop/, "Cropped"], [/ankle/, "Ankle"], [/full.length|long/, "Full"]]
     : kind === "top" ? [[/crop/, "Cropped"], [/tunic|long/, "Tunic"], [/waist length/, "Waist"]]
     : [[/maxi|floor/, "Maxi"], [/midi/, "Midi"], [/knee/, "Knee"], [/mini/, "Mini"]]);
-  pick("Skirt", [[/bodycon/, "Bodycon"], [/pencil/, "Pencil"], [/pleat/, "Pleated"], [/circle/, "Full circle"], [/tier/, "Tiered"], [/bias|slip/, "Bias cut"], [/mermaid/, "Mermaid"], [/straight skirt/, "Straight"], [/a.line/, "A-line"]]);
+  pick("Skirt", [[/bodycon|tight|figure.hugging/, "Bodycon"], [/pencil/, "Pencil"], [/pleat/, "Pleated"], [/circle/, "Full circle"], [/tier/, "Tiered"], [/bias|slip/, "Bias cut"], [/mermaid/, "Mermaid"], [/straight skirt/, "Straight"], [/a.line/, "A-line"]]);
   pick("Shape", kind === "skirt" ? [[/pencil/, "Pencil"], [/pleat/, "Pleated"], [/circle/, "Full circle"], [/tier/, "Tiered"], [/bias|slip/, "Bias cut"], [/straight/, "Straight"], [/wrap/, "Wrap"], [/a.line/, "A-line"]]
-    : [[/fitted|bodycon/, "Fitted"], [/boxy/, "Boxy"], [/oversize/, "Oversized"], [/peplum/, "Peplum"], [/wrap/, "Wrap"]]);
+    : [[/oversize/, "Oversized"], [/boxy/, "Boxy"], [/peplum/, "Peplum"], [/wrap/, "Wrap"], [/fitted|bodycon|tight|slim|close.fit|figure.hugging/, "Fitted"], [/relaxed|loose/, "Relaxed"]]);
   pick("Rise", [[/high.?(rise|waist)/, "High"], [/mid.?rise/, "Mid"], [/low.?rise/, "Low"]]);
-  pick("Leg", [[/wide/, "Wide"], [/slim|skinny/, "Slim"], [/taper/, "Tapered"], [/flare|boot.?cut/, "Flared"], [/barrel/, "Barrel"], [/straight/, "Straight"]]);
+  pick("Leg", [[/wide/, "Wide"], [/slim|skinny|tight/, "Slim"], [/taper/, "Tapered"], [/flare|boot.?cut/, "Flared"], [/barrel/, "Barrel"], [/straight/, "Straight"]]);
   pick("Pockets", [[/no pockets?/, "None"], [/patch pocket/, "Patch"], [/welt/, "Welt"]]);
   pick("Waist", kind === "dress" ? [[/empire/, "Empire"], [/drop waist/, "Drop waist"], [/belt/, "Belted"], [/elastic/, "Elastic"]] : [[/elastic/, "Elastic"], [/drawstring/, "Drawstring"], [/paperbag/, "Paperbag"], [/yoke/, "Yoke"]]);
   pick("Fastening", [[/button/, "Buttons"], [/side zip/, "Side zip"], [/back zip/, "Back zip"], [/pull.on|elastic|drawstring/, "Pull-on"]]);
@@ -311,11 +346,13 @@ export function readDesign(words: string | undefined, kind: Kind): { garment: Ga
   } else if (kind === "top") {
     garment = /shirt|blouse|button|collar/.test(t) && !/t-shirt|\btee\b/.test(t) ? "shirt" : /cami|strap|tank/.test(t) ? "cami" : "tee";
     if (garment === "shirt") { read.set("Fastening", "Buttons"); read.set("Neckline", "Collar"); if (!/short sleeve/.test(t)) read.set("Sleeves", "Long"); }
-    if (garment === "cami") read.set("Sleeves", "Sleeveless");
+    if (garment === "cami") read.set("Sleeves", "Thin straps");
   } else if (kind === "skirt") {
     garment = read.get("Length") === "Mini" ? "mini" : "biasskirt";
   } else {
     garment = read.get("Leg") === "Wide" || read.get("Leg") === "Flared" || read.get("Leg") === "Barrel" ? "wideleg" : "straight";
   }
-  return { garment, details: [...read.entries()], lengthCm: LENGTH_DIAL[kind].start };
+  if (/thin strap|spaghetti|strappy|\bslip\b|\bcami/.test(t) && read.has("Sleeves")) read.set("Sleeves", "Thin straps");
+  if (/singlet|tank/.test(t) && read.has("Sleeves")) read.set("Sleeves", "Sleeveless");
+  return { garment, details: [...read.entries()], lengthCm: lengthCmFor(kind, read.get("Length") ?? "") };
 }

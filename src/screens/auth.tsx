@@ -140,7 +140,7 @@ const LOOKS: Look[] = [
   { pieces: ["trouserFront", "waistband"] },
 ];
 const CARD_W = 100, CARD_H = 134, GAP = 12;
-function ArcCarousel() {
+export function ArcCarousel() {
   const box = useRef<HTMLDivElement>(null);
   const cards = useRef<(HTMLDivElement | null)[]>([]);
   useEffect(() => {

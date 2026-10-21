@@ -31,7 +31,7 @@ export type Pattern = {
   pieces: number;
   status: "Draft" | "Fitting" | "Printed";
   // what was decided while making it, so the pattern can be looked up later (e.g. at the fabric shop)
-  spec?: { ease: number; fabric?: string; stretch?: string; drape: number; seam: number | null; printer: "A4" | "A0"; sheets?: number; metres: number; details?: [string, string][]; layout?: Record<string, { x: number; y: number; r: number }> };
+  spec?: { kind?: Kind; lengthCm?: number; neckCm?: number; ease: number; fabric?: string; stretch?: string; drape: number; seam: number | null; printer: "A4" | "A0"; sheets?: number; metres: number; details?: [string, string][]; layout?: Record<string, { x: number; y: number; r: number }> };
 };
 
 // A picture added in the studio: a photo, or a sketch from the drawing pad. Pins are numbered notes on the picture.
@@ -60,6 +60,8 @@ export type Draft = {
   layout?: { garment: string; printer: string; at: Record<string, { x: number; y: number; r: number }> }; // where you put each piece: centre in % of the sheet area, rotation in degrees
   lengthCm: number;
   neckline: number;
+  patternId?: string; // the saved pattern this draft is, so renaming it (by changing the design) never saves a copy
+  neckSet?: boolean; // the neckline depth was moved on the dial (otherwise the chosen neckline's usual depth)
   sleeve: string;
   version: number;
 };
@@ -187,13 +189,14 @@ export const useApp = create<State>()(
         return { bodies, activeBody, dir: -1 as const, stack: at >= 0 ? s.stack.slice(0, at + 1) : [{ id: "home" }] };
       }),
       savePattern: (status = "Fitting") => set((s) => {
-        const name = nameFor(s.draft.garment, s.draft.kind, s.draft.details);
+        const name = nameFor(s.draft.garment, s.draft.source === "template" ? undefined : s.draft.kind, s.draft.details);
         const bodyName = (s.bodies.find((b) => b.id === (s.draft.bodyId ?? s.activeBody)) ?? s.bodies[0])?.name ?? "Me";
         const d = s.draft;
-        const spec = { ease: d.ease, fabric: d.chosen?.fabric ? d.fabric : undefined, stretch: d.chosen?.stretch ? d.stretch : undefined, drape: d.drape, seam: d.seam, printer: d.printer, sheets: d.sheets, metres: metresFor(d.garment, d.ease), details: d.details, layout: d.layout?.garment === d.garment && d.layout.printer === d.printer ? d.layout.at : undefined };
-        const existing = s.patterns.find((p) => p.name === name && p.body === bodyName);
-        if (existing) return { patterns: s.patterns.map((p) => (p === existing ? { ...p, status, spec } : p)) };
-        return { patterns: [{ id: "n" + Date.now().toString(36), name, garment: d.garment, body: bodyName, pieces: 6, status, spec }, ...s.patterns] };
+        const spec = { kind: d.kind, lengthCm: d.kind ? d.lengthCm : undefined, neckCm: d.neckSet ? d.neckline : undefined, ease: d.ease, fabric: d.chosen?.fabric ? d.fabric : undefined, stretch: d.chosen?.stretch ? d.stretch : undefined, drape: d.drape, seam: d.seam, printer: d.printer, sheets: d.sheets, metres: metresFor(d.garment, d.ease), details: d.details, layout: d.layout?.garment === d.garment && d.layout.printer === d.printer ? d.layout.at : undefined };
+        const existing = (d.patternId && s.patterns.find((p) => p.id === d.patternId)) || s.patterns.find((p) => p.name === name && p.body === bodyName);
+        if (existing) return { patterns: s.patterns.map((p) => (p === existing ? { ...p, name, garment: d.garment, status, spec } : p)), draft: { ...d, patternId: existing.id } };
+        const id = "n" + Date.now().toString(36);
+        return { patterns: [{ id, name, garment: d.garment, body: bodyName, pieces: 6, status, spec }, ...s.patterns], draft: { ...d, patternId: id } };
       }),
       removePatterns: (ids) => set((s) => ({ patterns: s.patterns.filter((p) => !ids.includes(p.id)) })),
       removeBodies: (ids) => set((s) => {
