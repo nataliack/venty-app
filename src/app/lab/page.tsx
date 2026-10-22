@@ -6,11 +6,12 @@ import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { cx } from "@/components/ui";
 
-type V = "now" | "tile" | "line" | "light";
+type V = "now" | "tile" | "line" | "light" | "inset";
 const VARIANTS: { k: V; name: string; note: string }[] = [
   { k: "now", name: "Today", note: "What the app has now: dark navy circles with a fine ring, and a gradient pop-up with a round close button." },
   { k: "tile", name: "A · Tinted tiles", note: "Icons sit in soft rounded squares, faintly tinted periwinkle, the icon in periwinkle. No ring, no gradient: a quiet marker, never a button. The pop-up is the solid card colour with a fine light edge on top, a slim handle and no close button (drag it down or tap outside)." },
   { k: "line", name: "B · Line icons", note: "No container at all: the line icon in periwinkle. The cleanest. The same solid pop-up as A." },
+  { k: "inset", name: "D · Inset tiles", note: "The same rounded square, pressed into the card instead of sitting on it: a floor a touch darker than the card, a soft shadow inside along the top edge, a faint highlight on the bottom lip, and a much quieter icon. The pop-up is the solid one from A." },
   { k: "light", name: "C · Light pop-up", note: "Tinted tiles as in A, and the pop-up turns light (the snow of the studio), ink text, periwinkle tiles. It matches the light top of home." },
 ];
 
@@ -19,6 +20,7 @@ function Badge({ v, icon, sm, onLight }: { v: V; icon: IconName; sm?: boolean; o
   const box = sm ? "h-9 w-9" : "h-11 w-11";
   const size = sm ? 17 : 20;
   if (v === "now") return <span className={cx("iconbadge grid shrink-0 place-items-center rounded-full", box)}><Icon name={icon} size={size} strokeWidth={2} /></span>;
+  if (v === "inset") return <span className={cx("lab-inset grid shrink-0 place-items-center", box, sm ? "rounded-[11px]" : "rounded-[13px]")}><Icon name={icon} size={size} strokeWidth={1.8} /></span>;
   if (v === "line") return <span className={cx("grid shrink-0 place-items-center", sm ? "w-6" : "w-7", onLight ? "text-[#4f63e0]" : "text-[#a9b5fb]")}><Icon name={icon} size={sm ? 20 : 22} strokeWidth={1.8} /></span>;
   return (
     <span className={cx("grid shrink-0 place-items-center", box, sm ? "rounded-[11px]" : "rounded-[13px]", onLight ? "bg-[rgb(104_126_245_/_.1)] text-[#4f63e0]" : "bg-[rgb(140_156_248_/_.13)] text-[#b3bdfb]")}>
@@ -154,7 +156,7 @@ function Profile({ v }: { v: V }) {
 }
 
 export default function Lab() {
-  const [v, setV] = useState<V>("tile");
+  const [v, setV] = useState<V>("inset");
   const cur = VARIANTS.find((x) => x.k === v)!;
   return (
     // the app pins html and body (no page scroll), so the lab scrolls inside its own box

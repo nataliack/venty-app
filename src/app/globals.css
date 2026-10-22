@@ -666,3 +666,8 @@ input { font: inherit; color: inherit; }
 .mark-cover { -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 100%); mask-image: linear-gradient(180deg, #000 30%, transparent 100%); }
 .mark-cover svg { position: absolute; width: 150%; max-width: none; right: -48%; top: -30%; rotate: -8deg; }
 @media (min-width: 1024px) { .mark-cover svg { width: 70%; right: -6%; top: -70%; rotate: -6deg; } }
+
+/* lab only (src/app/lab): an icon tile pressed into the card, like a debossed well. The floor is a touch darker than
+   the card, a soft shadow falls inside from the top edge, the bottom lip catches a faint light, and the icon is quiet. */
+.lab-inset { color: rgb(193 200 230 / .5); background: linear-gradient(180deg, #121320 0%, #171823 100%);
+  box-shadow: inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06), 0 1px 0 rgb(255 255 255 / .07); }
