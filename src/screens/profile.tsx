@@ -3,6 +3,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { useApp, userPhoto, type User } from "@/lib/store";
 import { Screen, TopBar, HS, Lead, Pill, Sheet, Toggle, Option, Arrows, Field, Avatar, cx, useToast, useDesk } from "@/components/ui";
 import { useInstall } from "@/components/Install";
+import { MarkCover } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 import { TabBar } from "./home";
 import { EXP } from "./setup";
@@ -56,6 +57,7 @@ export function You() {
       <div className="bg-bg">
         <section className="home-hero light-hero relative px-5 pb-7 lg:px-12 lg:py-10">
           <div className="light-mat" aria-hidden />
+          <MarkCover tone="light" />
           <div className="relative">
             <div className="mt-2 flex h-11 items-center justify-between lg:mt-0">
               <span className="text-[15px] font-medium text-[#3f4c80]">Profile</span>

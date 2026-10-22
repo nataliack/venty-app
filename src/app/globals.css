@@ -660,3 +660,15 @@ input { font: inherit; color: inherit; }
 @keyframes v-live-base { from { background-position: 50% 0%; } to { background-position: 50% 100%; } }
 @media (max-width: 1023px) { .sky.sky-light.sky-live .drift { opacity: .85; } }
 @media (prefers-reduced-motion: reduce) { .sky.sky-light.sky-live { animation: none; } }
+
+/* ─── the mark as a cover (MarkCover in art.tsx): the bird, very large, cropped by the top of a section and fading
+   down into it. Phones: it sweeps in from the right, mostly off screen. Computers: wider, across the top. ─── */
+.mark-cover { position: absolute; inset: 0 0 auto 0; height: 360px; overflow: hidden; pointer-events: none; z-index: 0;
+  -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent 100%); mask-image: linear-gradient(180deg, #000 45%, transparent 100%); }
+.mark-cover svg { position: absolute; width: 140%; max-width: none; right: -44%; top: -14%; rotate: -8deg; }
+@media (min-width: 1024px) {
+  .mark-cover { height: 420px; }
+  .mark-cover svg { width: 78%; right: -10%; top: -40%; rotate: -6deg; }
+}
+/* on the light tops it sits inside the rounded block, above the graph paper */
+.mark-cover.is-light { height: 100%; -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%); mask-image: linear-gradient(180deg, #000 55%, transparent 100%); }
