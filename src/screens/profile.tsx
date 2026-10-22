@@ -15,7 +15,7 @@ import { EXP } from "./setup";
 function Row({ icon, label, sub, onClick, right, danger }: { icon: IconName; label: string; sub?: string; onClick?: () => void; right?: ReactNode; danger?: boolean }) {
   const inner = (
     <>
-      <span className="iconbadge grid h-9 w-9 shrink-0 place-items-center rounded-full"><Icon name={icon} size={17} strokeWidth={1.9} /></span>
+      <span className="iconbadge grid h-9 w-9 shrink-0 place-items-center rounded-[11px]"><Icon name={icon} size={17} strokeWidth={1.9} /></span>
       <span className="min-w-0 flex-1"><span className={cx("block text-[16px]", danger && "text-[#f0a3b4]")}>{label}</span>{sub && <span className="block text-[13px] leading-snug text-white/50">{sub}</span>}</span>
       {right ?? (onClick && <Icon name="chevR" size={18} className="shrink-0 text-white/40" />)}
     </>
@@ -91,7 +91,7 @@ export function You() {
               <div className="mt-2.5 grid grid-cols-3 gap-2.5">
                 {tiles.map((t) => (
                   <button key={t.label} onClick={t.go} className="card-soft tap flex min-h-[138px] min-w-0 flex-col rounded-[22px] p-3.5 text-left lg:min-h-[168px] lg:p-5">
-                    <span className="iconbadge grid h-9 w-9 place-items-center rounded-full"><Icon name={t.icon} size={17} strokeWidth={1.9} /></span>
+                    <span className="iconbadge grid h-9 w-9 place-items-center rounded-[11px]"><Icon name={t.icon} size={17} strokeWidth={1.9} /></span>
                     <span className="serif mt-5 text-[34px] leading-none lg:mt-8 lg:text-[44px]">{t.n}</span>
                     <span className="mt-1.5 text-[14px] font-medium">{t.label}</span>
                     <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-white/50 lg:text-[13px]">{t.line}</span>

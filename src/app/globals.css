@@ -343,8 +343,8 @@ input { font: inherit; color: inherit; }
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
 /* small icon badges in the same periwinkle as the Create (+) button, white line icon, a fine light outline */
 /* the app's own dark blue (the page background, lifted a touch) with a white icon and a fine light edge */
-.iconbadge { color: #fff; background: linear-gradient(160deg, #262b4b 0%, #14172a 100%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .1), 0 6px 14px -8px rgb(8 10 24 / .7); }
+.iconbadge { color: rgb(193 200 230 / .55); background: rgb(0 0 0 / .26);
+  box-shadow: inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06), 0 1px 0 rgb(255 255 255 / .07); }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 0 0 1px rgb(255 255 255 / .2), 0 10px 20px -8px rgb(53 66 170 / .7); }

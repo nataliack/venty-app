@@ -116,7 +116,7 @@ export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
               <li key={s.t} className="relative flex gap-4">
                 {/* a thin thread joining each step to the next */}
                 {i < steps.length - 1 && <span className="absolute -bottom-5 left-[19px] top-11 w-px bg-white/10" aria-hidden />}
-                <span className="iconbadge relative grid h-10 w-10 shrink-0 place-items-center rounded-full"><span className="serif text-[18px] leading-none">{i + 1}</span></span>
+                <span className="iconbadge relative grid h-10 w-10 shrink-0 place-items-center rounded-[11px]"><span className="serif text-[18px] leading-none">{i + 1}</span></span>
                 <div className="min-w-0 flex-1 pt-1.5">
                   <div className="text-[18px] leading-tight">{s.t}</div>
                   <p className="mt-1 text-[15px] leading-snug text-white/60">{s.d}</p>
