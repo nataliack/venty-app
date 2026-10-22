@@ -660,3 +660,11 @@ input { font: inherit; color: inherit; }
 @keyframes v-live-base { from { background-position: 50% 0%; } to { background-position: 50% 100%; } }
 @media (max-width: 1023px) { .sky.sky-light.sky-live .drift { opacity: .85; } }
 @media (prefers-reduced-motion: reduce) { .sky.sky-light.sky-live { animation: none; } }
+
+/* ─── frosted white glass over a photograph (the tour question): the landing page's Made to measure prompt box, the
+   same as the studio's field (.cmp-card): white glass with the photo blurred behind it, a hairline, a white top edge
+   and a long soft shadow. Ink text on it. ─── */
+.glass-light { color: var(--color-ink); background: rgb(255 255 255 / .5); border: 1px solid rgb(255 255 255 / .55);
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), 0 30px 80px -36px rgb(19 21 35 / .55), 0 2px 6px -2px rgb(60 75 99 / .14); }
+.glass-light .lead { color: rgb(19 21 35 / .62); }
