@@ -322,7 +322,7 @@ export function TourAsk() {
   const desk = useDesk();
   const skip = () => { set({ onboarded: true, tourSkipped: true }); replace("start"); };
   // A question, so it is laid out as one: a full-bleed photograph fills the screen (no margins), and the question sits
-  // on a frosted white glass card floating over it (the landing page's Made to measure box, .glass-light) (on a computer, at the right). The tour itself is a picture above paper, so the
+  // on a paper card floating over it (on a computer, at the right). The tour itself is a picture above paper, so the
   // two never look alike.
   const photo = (
     <motion.div initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, ease: [0.2, 0.8, 0.2, 1] }} className="absolute inset-0">
@@ -334,7 +334,7 @@ export function TourAsk() {
   );
   const card = (
     <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-      className="glass-light rounded-[32px] px-6 pb-3 pt-7 text-center lg:w-[460px] lg:px-10 lg:pb-6 lg:pt-10">
+      className="paper rounded-[32px] px-6 pb-3 pt-7 text-center shadow-[0_30px_80px_-30px_rgb(11_12_21/.7)] lg:w-[460px] lg:px-10 lg:pb-6 lg:pt-10">
       <h1 className="h1 !text-[32px] text-[#12131c] [text-wrap:balance] lg:!text-[44px]">Want a quick tour?</h1>
       <p className="lead mx-auto mt-3 max-w-[330px] [text-wrap:pretty]">See how Venty works, from taking your measurements to printing your first pattern.</p>
       <Pill className="mt-6" onClick={() => replace("onboarding")}>Show me how it works</Pill>
