@@ -113,7 +113,7 @@ export function Method() {
   };
   const opt = (k: "scan" | "hand", icon: IconName, t: string, d: string) => (
     <Option on={m === k} onClick={() => setM(k)} className="rounded-[24px] p-5 lg:p-7">
-      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/10"><Icon name={icon} size={22} /></span>
+      <span className="iconbadge grid h-11 w-11 place-items-center rounded-[13px]"><Icon name={icon} size={21} strokeWidth={1.9} /></span>
       <div className="mt-4 text-[19px] font-medium tracking-[-.01em]">{t}</div>
       <div className="mt-1 max-w-[290px] text-[16px] leading-snug text-white/65">{d}</div>
     </Option>
@@ -223,7 +223,7 @@ export function ScanPrep() {
           {/* a checklist to follow in order: step number, the thing to do in a few words, then the detail */}
           <ol className="card-soft my-auto divide-y divide-white/8 rounded-[24px] px-4 lg:my-0">{TIPS.map(([ic, t, d], i) => (
             <li key={t} className="flex items-center gap-3.5 py-4">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-[16px] font-medium tabular-nums">{i + 1}</span>
+              <span className="iconbadge grid h-9 w-9 shrink-0 place-items-center rounded-[11px] text-[16px] font-medium tabular-nums">{i + 1}</span>
               <div className="min-w-0 flex-1"><div className="text-[17px] font-medium leading-tight">{t}</div><div className="mt-0.5 text-[15px] leading-snug text-white/60">{d}</div></div>
               <Icon name={ic} size={24} className="shrink-0 text-peri" />
             </li>

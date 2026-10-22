@@ -93,7 +93,7 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
   const act = (fn: () => void) => () => { onClose(); fn(); };
   const tile = (ic: IconName, t: string, d: string, fn: () => void) => (
     <button onClick={act(fn)} className="card-soft tap flex min-h-[132px] flex-col justify-between rounded-[22px] p-4 text-left">
-      <span className="iconbadge grid h-11 w-11 place-items-center rounded-full"><Icon name={ic} size={21} strokeWidth={2} /></span>
+      <span className="iconbadge grid h-11 w-11 place-items-center rounded-[13px]"><Icon name={ic} size={21} strokeWidth={2} /></span>
       <span><span className="block text-[16px] font-medium leading-tight">{t}</span><span className="mt-1 block text-[14px] leading-snug text-white/60">{d}</span></span>
     </button>
   );
@@ -105,7 +105,7 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
       </div>
       <button onClick={act(() => { newDraft(); go("patSelectBody"); })} className="tap relative isolate mt-5 flex min-h-[150px] w-full flex-col justify-between overflow-hidden rounded-[26px] p-5 text-left text-white">
         <Crown className="-z-10" />
-        <span className="flex items-center justify-between"><span className="iconbadge grid h-12 w-12 place-items-center rounded-full"><Icon name="pencil" size={22} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
+        <span className="flex items-center justify-between"><span className="iconbadge grid h-12 w-12 place-items-center rounded-[13px]"><Icon name="pencil" size={22} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
         <span><span className="block text-[21px] leading-tight tracking-[-.01em]">Design from scratch</span><span className="mt-1 block text-[15px] text-white/80">Turn a photo, a sketch or your words into a pattern</span></span>
       </button>
       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -128,7 +128,7 @@ function Notices() {
       {showInstall && (
         <div className="card-soft relative flex items-center gap-3.5 rounded-[22px] p-4">
           <button onClick={() => go("install")} className="flex flex-1 items-center gap-3.5 text-left">
-            <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name="addhome" size={20} strokeWidth={2} /></span>
+            <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name="addhome" size={20} strokeWidth={2} /></span>
             <span><span className="block text-[16px] font-medium">Add to your home screen</span><span className="block text-[14px] text-white/55">Open Venty in one tap, like an app.</span></span>
           </button>
           <button onClick={() => set({ installDismissed: true })} aria-label="Dismiss" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10"><Icon name="close" size={16} /></button>
@@ -136,7 +136,7 @@ function Notices() {
       )}
       {b && (
         <button onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="card-soft tap flex w-full items-center gap-3.5 rounded-[22px] !border-primary/60 p-4 text-left">
-          <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name="ruler" size={20} strokeWidth={2} /></span>
+          <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name="ruler" size={20} strokeWidth={2} /></span>
           <div className="min-w-0 flex-1"><div className="text-[16px] font-medium">Continue finishing your measurements</div><div className="text-[14px] text-white/55">{b.name} · {b.done.length} of 24 saved</div>
             <div className="mt-2 flex gap-[2px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < b.done.length ? "bg-primary" : "bg-white/15")} />)}</div></div>
           <Icon name="chevR" size={18} className="text-white/50" />
@@ -145,7 +145,7 @@ function Notices() {
       {tourSkipped && (
         <div className="card-soft relative flex items-center gap-3.5 rounded-[22px] p-4">
           <button onClick={() => go("onboarding", { from: "app" })} className="flex flex-1 items-center gap-3.5 text-left">
-            <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-full"><Icon name="video" size={20} strokeWidth={2} /></span>
+            <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name="video" size={20} strokeWidth={2} /></span>
             <span><span className="block text-[16px] font-medium">New here? Take the tour</span><span className="block text-[14px] text-white/55">See how a photo becomes your pattern.</span></span>
           </button>
           <button onClick={() => set({ tourSkipped: false })} aria-label="Dismiss" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10"><Icon name="close" size={16} /></button>
@@ -193,10 +193,10 @@ function UpdatesButton() {
         {!seen && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-white" />}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
-        <div className="mb-4 flex items-center justify-between"><h3 className="text-[22px] font-normal tracking-[-.02em]">Notifications</h3><RB icon="close" size={38} onClick={() => setOpen(false)} /></div>
+        <h3 className="mb-2 text-[20px] font-normal tracking-[-.02em]">Notifications</h3>
         {/* a quiet feed, not a stack of buttons: plain rows split by hairlines. Rows that lead somewhere are still tappable. */}
         <div className="-mx-2 flex flex-col">{list.map((u, i) => {
-          const body = <><span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-full"><Icon name={u.icon} size={18} strokeWidth={2} /></span>
+          const body = <><span className="iconbadge grid h-9 w-9 shrink-0 place-items-center rounded-[11px]"><Icon name={u.icon} size={17} strokeWidth={1.9} /></span>
             <span className="min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px]">{u.t}</span><span className="shrink-0 text-[13px] text-white/40">{u.when}</span></span><span className="mt-0.5 block text-[14px] leading-snug text-white/55">{u.d}</span></span></>;
           const row = cx("flex items-start gap-3.5 rounded-[16px] px-2 py-3.5 text-left", i > 0 && "border-t border-white/[.07]");
           return u.go

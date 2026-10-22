@@ -280,10 +280,10 @@ export function Sheet({ open, onClose, children, className }: { open: boolean; o
         <>
           <motion.div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <div className="pointer-events-none absolute inset-0 z-50 flex items-end justify-center lg:items-center">
-            <motion.div className={cx("pointer-events-auto w-full rounded-t-[36px] border-t border-white/15 px-6 pt-3 lg:w-[480px] lg:rounded-[32px] lg:border lg:px-8 lg:pb-8 lg:pt-6", className)} style={{ paddingBottom: "var(--bottom)", background: "linear-gradient(180deg, #2a2f48 0%, #161826 60%)" }}
+            <motion.div className={cx("pointer-events-auto w-full rounded-t-[30px] px-6 pt-2.5 lg:w-[480px] lg:rounded-[30px] lg:border lg:border-white/10 lg:px-8 lg:pb-8 lg:pt-6", className)} style={{ paddingBottom: "var(--bottom)", background: "var(--color-card)", boxShadow: "inset 0 1px 0 rgb(255 255 255 / .1), 0 -20px 60px -20px rgb(0 0 0 / .7)" }}
               initial={{ y: "100%", opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}
               drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.5 }} onDragEnd={(_, i) => { if (i.offset.y > 90) onClose(); }}>
-              <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/30 lg:hidden" />
+              <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-white/20 lg:hidden" />
               {children}
             </motion.div>
           </div>
