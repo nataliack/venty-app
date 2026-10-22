@@ -308,7 +308,7 @@ const EditButton = ({ editing, onClick }: { editing: boolean; onClick: () => voi
 // Library top: just the title, with Edit on the same line. While editing, one quiet line says what to do.
 function LibraryHead({ title, editing, canEdit, onEdit }: { title: string; editing: boolean; canEdit: boolean; onEdit: () => void }) {
   return (
-    <div className="pt-7 lg:pt-6">
+    <div className="pt-1 lg:pt-2">
       <div className="flex items-center justify-between gap-4">
         <H1 className="min-w-0">{title}</H1>
         {canEdit && <EditButton editing={editing} onClick={onEdit} />}
@@ -344,7 +344,8 @@ export function Bodies() {
   const desk = useDesk();
   const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="bodies" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="bodies" />;
   return (
-    <Screen dock={!ed.editing} footer={footer} bg={<MarkCover />}>
+    <Screen dock={!ed.editing} footer={footer}>
+      <MarkCover className="-mx-6 h-[calc(var(--top)+104px)] lg:-mx-14 lg:h-[200px]" style={{ marginTop: "calc(-1 * var(--top))" }} />
       <LibraryHead title="Body library" editing={ed.editing} canEdit={bodies.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
       <label className="field mt-4 flex h-12 items-center gap-2.5 px-4 lg:max-w-[420px]">
         <Icon name="search" size={18} className="shrink-0 text-white/50" />
@@ -397,7 +398,8 @@ export function Patterns({ p }: { p?: Record<string, unknown> }) {
   const desk = useDesk();
   const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="patterns" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="patterns" />;
   return (
-    <Screen dock={!ed.editing} footer={footer} bg={<MarkCover />}>
+    <Screen dock={!ed.editing} footer={footer}>
+      <MarkCover className="-mx-6 h-[calc(var(--top)+104px)] lg:-mx-14 lg:h-[200px]" style={{ marginTop: "calc(-1 * var(--top))" }} />
       <LibraryHead title="Pattern library" editing={ed.editing} canEdit={!ready && patterns.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
       {!ed.editing && <div className="mt-4 lg:max-w-[420px]"><Segmented items={["Your patterns", "Patterns to make"]} value={view} onChange={setView} /></div>}
       {ready ? (
@@ -481,7 +483,7 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
     </div>
   );
   return (
-    <Screen bg={<MarkCover />} footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => open("garment")}>Change the design</Pill><Pill className="flex-1" onClick={() => open("printMethod")}>{pat.status === "Printed" ? "Print again" : "Print it"}</Pill></div>}>
+    <Screen footer={<div className="flex gap-3"><Pill variant="dark" className="flex-1" onClick={() => open("garment")}>Change the design</Pill><Pill className="flex-1" onClick={() => open("printMethod")}>{pat.status === "Printed" ? "Print again" : "Print it"}</Pill></div>}>
       <TopBar left="back" />
       <Split cols="lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" left={<>
         <div className="mt-2 flex items-center gap-2 text-[15px] text-white/70 lg:mt-0"><span className={cx("h-2 w-2 rounded-full", STATUS_DOT[pat.status])} />{pat.status === "Printed" ? "Printed" : pat.status === "Fitting" ? "Ready to print" : "Draft"} · drafted to {pat.body}</div>

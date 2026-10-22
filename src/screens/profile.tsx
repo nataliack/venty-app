@@ -57,13 +57,13 @@ export function You() {
       <div className="bg-bg">
         <section className="home-hero light-hero relative px-5 pb-7 lg:px-12 lg:py-10">
           <div className="light-mat" aria-hidden />
-          <MarkCover tone="light" />
           <div className="relative">
             <div className="mt-2 flex h-11 items-center justify-between lg:mt-0">
               <span className="text-[15px] font-medium text-[#3f4c80]">Profile</span>
               {!user.guest && <button onClick={() => go("profileEdit")} className="bell-btn tap flex h-10 items-center gap-1.5 rounded-full px-4 text-[14px] font-medium"><Icon name="pencil" size={15} strokeWidth={2} />Edit profile</button>}
             </div>
-            <div className="mt-4 flex flex-col items-center text-center lg:mt-2 lg:flex-row lg:items-center lg:gap-6 lg:text-left">
+            <MarkCover tone="light" className="-mx-5 mt-1 h-[96px] lg:-mx-12 lg:h-[120px]" />
+            <div className="relative -mt-12 flex flex-col items-center text-center lg:-mt-14 lg:flex-row lg:items-center lg:gap-6 lg:text-left">
               <button onClick={() => (user.guest ? go("signup") : go("profileEdit"))} aria-label={user.guest ? "Create an account" : "Change your photo"} className="tap relative rounded-full">
                 <Avatar size={desk ? 112 : 104} ring className="shadow-[0_18px_40px_-18px_rgb(38_51_95_/_.55)]" />
                 {!user.guest && <span className="bell-btn absolute bottom-0.5 right-0.5 grid h-8 w-8 place-items-center rounded-full"><Icon name="camera" size={15} strokeWidth={2} /></span>}
