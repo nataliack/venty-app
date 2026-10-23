@@ -9,12 +9,13 @@
 export type PoseName = "relaxed" | "open" | "stance" | "seated";
 export type Turn = { bone: string; axis: "x" | "y" | "z"; deg: number } | { bone: string; aim: [number, number, number] };
 
-// arms hanging: the upper arms in to the sides, the forearms and the hands pointing at the ground (a touch away from
-// the thighs)
+// arms hanging naturally: the upper arms in to the sides, the elbows softly bent so the forearms come a little
+// forward (about 16°, Jose's sketch, 23 Oct 2026) towards the front of the thighs, the hands following them (a touch
+// away from the thighs). Fully straight looked robotic
 const armsHang: Turn[] = [
   { bone: "upperarm_l", axis: "z", deg: -34 }, { bone: "upperarm_r", axis: "z", deg: 34 },
-  { bone: "lowerarm_l", aim: [0.1, -1, 0] }, { bone: "lowerarm_r", aim: [-0.1, -1, 0] },
-  { bone: "hand_l", aim: [0.06, -1, 0] }, { bone: "hand_r", aim: [-0.06, -1, 0] },
+  { bone: "lowerarm_l", aim: [0.1, -1, 0.29] }, { bone: "lowerarm_r", aim: [-0.1, -1, 0.29] },
+  { bone: "hand_l", aim: [0.06, -1, 0.24] }, { bone: "hand_r", aim: [-0.06, -1, 0.24] },
 ];
 // the arms in to the sides with the elbows a little bent (the start of the seated pose's hands on the thighs)
 const armsDown: Turn[] = [
