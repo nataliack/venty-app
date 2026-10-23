@@ -3,25 +3,34 @@
 //
 // A pose is a few joint turns on MakeHuman's game-engine skeleton, each about an axis of the body (x: side to side,
 // y: up, z: front to back), in degrees, from its rest pose (arms angled out, an A pose). The body faces +z; its left
-// side is +x.
+// side is +x. Or an aim: the bone turned to point that way (in the body's axes), whatever its parents did, so a
+// forearm can hang straight down from the elbow.
 
 export type PoseName = "relaxed" | "open" | "stance" | "seated";
-export type Turn = { bone: string; axis: "x" | "y" | "z"; deg: number };
+export type Turn = { bone: string; axis: "x" | "y" | "z"; deg: number } | { bone: string; aim: [number, number, number] };
 
+// arms hanging: the upper arms in to the sides, the forearms and the hands pointing at the ground (a touch away from
+// the thighs)
+const armsHang: Turn[] = [
+  { bone: "upperarm_l", axis: "z", deg: -34 }, { bone: "upperarm_r", axis: "z", deg: 34 },
+  { bone: "lowerarm_l", aim: [0.1, -1, 0] }, { bone: "lowerarm_r", aim: [-0.1, -1, 0] },
+  { bone: "hand_l", aim: [0.06, -1, 0] }, { bone: "hand_r", aim: [-0.06, -1, 0] },
+];
+// the arms in to the sides with the elbows a little bent (the start of the seated pose's hands on the thighs)
 const armsDown: Turn[] = [
   { bone: "upperarm_l", axis: "z", deg: -34 }, { bone: "upperarm_r", axis: "z", deg: 34 },
   { bone: "lowerarm_l", axis: "x", deg: -6 }, { bone: "lowerarm_r", axis: "x", deg: -6 },
 ];
 export const POSES: Record<PoseName, Turn[]> = {
   // standing naturally, arms a little away from the body
-  relaxed: armsDown,
+  relaxed: armsHang,
   // arms out (about 45°) and palms turned forward, so the arm and the underarm are in view, and a tape can go round the torso
   open: [
     { bone: "upperarm_l", axis: "z", deg: -6 }, { bone: "upperarm_r", axis: "z", deg: 6 },
     { bone: "upperarm_l", axis: "x", deg: -4 }, { bone: "upperarm_r", axis: "x", deg: -4 },
   ],
   // feet a little apart, so the inside leg and the thighs are in view
-  stance: [...armsDown, { bone: "thigh_l", axis: "z", deg: 6 }, { bone: "thigh_r", axis: "z", deg: -6 }],
+  stance: [...armsHang, { bone: "thigh_l", axis: "z", deg: 6 }, { bone: "thigh_r", axis: "z", deg: -6 }],
   // sitting on a stool: thighs forward, shins down, hands resting on the thighs
   seated: [
     { bone: "thigh_l", axis: "x", deg: -86 }, { bone: "thigh_r", axis: "x", deg: -86 },

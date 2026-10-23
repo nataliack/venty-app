@@ -47,7 +47,7 @@ const ease = (dt: number, speed: number) => (speed <= 0 ? 1 : 1 - Math.exp(-dt *
 type Rig = {
   root: THREE.Object3D; body: THREE.SkinnedMesh; meshes: THREE.Mesh[];
   bones: Record<string, THREE.Bone>;
-  rest: Record<string, { local: THREE.Quaternion; world: THREE.Quaternion }>;
+  rest: Record<string, { local: THREE.Quaternion; world: THREE.Quaternion; dir: THREE.Vector3 }>;
   hipY: number; kneeY: number;
 };
 
@@ -71,7 +71,13 @@ function useRig(sex: Sex3D): Rig {
     });
     const rootQ = root.getWorldQuaternion(new THREE.Quaternion()).invert();
     const rest: Rig["rest"] = {};
-    for (const [n, b] of Object.entries(bones)) rest[n] = { local: b.quaternion.clone(), world: rootQ.clone().multiply(b.getWorldQuaternion(new THREE.Quaternion())) };
+    const at = (b: THREE.Object3D) => b.getWorldPosition(new THREE.Vector3()).applyQuaternion(rootQ);
+    for (const [n, b] of Object.entries(bones)) {
+      // the way the bone points: from its joint to the middle of the joints it carries
+      const kids = b.children.filter((c) => (c as THREE.Bone).isBone);
+      const dir = kids.length ? kids.reduce((v, c) => v.add(at(c)), new THREE.Vector3()).divideScalar(kids.length).sub(at(b)).normalize() : new THREE.Vector3(0, 1, 0);
+      rest[n] = { local: b.quaternion.clone(), world: rootQ.clone().multiply(b.getWorldQuaternion(new THREE.Quaternion())), dir };
+    }
     const y = (n: string) => (bones[n] ? bones[n].getWorldPosition(new THREE.Vector3()).y : 0);
     return { root, body: body as unknown as THREE.SkinnedMesh, meshes, bones, rest, hipY: y("thigh_l"), kneeY: y("calf_l") };
   }, [scene]);
@@ -81,8 +87,18 @@ function useRig(sex: Sex3D): Rig {
 function poseTargets(rig: Rig, pose: PoseName): Record<string, THREE.Quaternion> {
   const byBone: Record<string, THREE.Quaternion> = {};
   for (const t of POSES[pose]) {
+    if ("aim" in t) continue;
     const q = new THREE.Quaternion().setFromAxisAngle(AXIS[t.axis], (t.deg * Math.PI) / 180);
     byBone[t.bone] = byBone[t.bone] ? q.multiply(byBone[t.bone]) : q;
+  }
+  // aims, in order (a forearm before its hand): the turn that brings the bone, carried by its parents' turns, to point
+  // the way asked
+  for (const t of POSES[pose]) {
+    if (!("aim" in t) || !rig.rest[t.bone]) continue;
+    const carried = new THREE.Quaternion();
+    for (let p = rig.bones[t.bone].parent; p && (p as THREE.Bone).isBone; p = p.parent) if (byBone[p.name]) carried.premultiply(byBone[p.name]);
+    const want = new THREE.Vector3(...t.aim).normalize().applyQuaternion(carried.clone().invert());
+    byBone[t.bone] = new THREE.Quaternion().setFromUnitVectors(rig.rest[t.bone].dir, want);
   }
   const out: Record<string, THREE.Quaternion> = {};
   for (const [n, qA] of Object.entries(byBone)) {
