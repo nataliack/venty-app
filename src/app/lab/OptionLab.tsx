@@ -38,8 +38,8 @@ const CSS = `
 .lo.on .lo-sub { color: rgb(255 255 255 / .85); }
 .lo-ring { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid rgb(255 255 255 / .35); display: grid; place-items: center; flex-shrink: 0; transition: all .25s; }
 .lo.on .lo-ring:not(.icon-primary) { border-color: #fff; background: #fff; color: #4f63e0; }
-/* a tick that wears home's start-card icon (.icon-primary): only its border goes */
-.lo-ring.icon-primary { border-color: transparent; }
+/* a tick that wears home's start-card icon (.icon-primary): no border, so its fine light edge sits on the outline */
+.lo-ring.icon-primary { border: 0; }
 /* B: only the inner light, on the dark card */
 .lo-soft::before { background: radial-gradient(120% 140% at 50% 120%, rgb(104 126 245 / .22), rgb(104 126 245 / .08) 60%, transparent);
   box-shadow: inset 0 0 22px 2px rgb(140 156 248 / .42), inset 0 1px 0 rgb(255 255 255 / .16); }
