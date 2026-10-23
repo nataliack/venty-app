@@ -329,6 +329,21 @@ def sculpt_head(h, rig, sex):
         firm = np.maximum(hold, float(os.environ.get("BODY3D_HOLD", "0.05")))
         B, _ = solve(lambda X: L(L(X)) + firm * (X - T), T, free)
 
+    # the whole head is then smoothed along each vertex's ray from the middle of its bounds only: it evens out what
+    # the envelope left (small bumps, the rim where the face met the forehead, the kink in profile) without the
+    # shrinking a plain smoothing gives along a seam (a sphere stays a sphere). It fades in above the chin, so the jaw
+    # line and the neck stay
+    hm = B[:, 2] > chin
+    c = np.array([(B[hm, 0].min() + B[hm, 0].max()) / 2, (B[hm, 1].min() + B[hm, 1].max()) / 2, (chin + top) / 2 + 0.01])
+    D = B - c
+    r = np.linalg.norm(D, axis=1)
+    U = D / np.maximum(r, 1e-9)[:, None]
+    wr = np.clip((B[:, 2] - chin - 0.015) / 0.03, 0, 1)[:, None]
+    rad = r[:, None].copy()
+    for _ in range(int(os.environ.get("BODY3D_RADSOFT", "100"))):
+        rad += 0.5 * wr * (L(rad) / deg)
+    B = c + U * rad
+
     # a soft ridge of a nose, rising from the brow to where the tip was and easing off below it
     tris = np.array([[f.loops[0].vert.index, f.loops[i].vert.index, f.loops[i + 1].vert.index]
                      for f in bm.faces for i in range(1, len(f.loops) - 1)])
@@ -345,10 +360,6 @@ def sculpt_head(h, rig, sex):
     for _ in range(6):
         lift += 0.5 * free * (L(lift[:, None])[:, 0] / np.maximum(deg[:, 0], 1))
     P = B + nB * lift[:, None]
-    # the seam where the grid meets the old head, its corners above all, is relaxed so no dimple shows
-    seam = (free & (dist <= int(os.environ.get("BODY3D_SEAM", "4")))).astype(float)[:, None]
-    for _ in range(int(os.environ.get("BODY3D_SEAMSOFT", "40"))):
-        P += 0.5 * seam * (L(P) / deg)
     log(sex, "faired in", it, "free", int(free.sum()), "new", len(new), "nose", round(height, 4),
         "moved", round(float(np.abs(P - O)[free].max()), 3))
 
@@ -391,6 +402,10 @@ def preview(h, sex):
     scn.render.engine = "BLENDER_WORKBENCH"
     scn.render.resolution_x = scn.render.resolution_y = 700
     scn.display.shading.light = "STUDIO"
+    if os.environ.get("BODY3D_MATCAP"):
+        # a shiny matcap shows a dent the way the chrome look in the app does
+        scn.display.shading.light = "MATCAP"
+        scn.display.shading.studio_light = os.environ["BODY3D_MATCAP"]
     scn.display.shading.color_type = "SINGLE"
     scn.display.shading.single_color = (0.9, 0.91, 0.94)
     top = max((h.matrix_world @ v.co).z for v in h.data.vertices)
