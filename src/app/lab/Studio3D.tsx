@@ -17,7 +17,7 @@ const STORE = "venty-lab-3d";
 // the measurements each body starts from (cm)
 const BODY_DEFAULTS = {
   female: { height: 168, bust: 95.5, underbust: 67, waist: 68, hips: 100, neck: 34.5, thigh: 54 },
-  male: { height: 168, bust: 95.5, underbust: 67, waist: 68, hips: 94.5, neck: 34.5, thigh: 51 },
+  male: { height: 177.5, bust: 127.5, underbust: 77.5, waist: 85.5, hips: 94.5, neck: 37, thigh: 56.5 },
 };
 const saved = (): Partial<Look & { preset: string }> => {
   try { return JSON.parse(localStorage.getItem(STORE) ?? "{}"); } catch { return {}; }
