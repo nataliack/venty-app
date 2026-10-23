@@ -323,26 +323,38 @@ def sculpt_head(h, rig, sex):
                 push[i] = max(float(((F[hits] - B[i]) @ n0[i]).max()), 0.0)
         # easing off towards the brow, so the face meets the forehead without a ledge (the old brow ridge stood out)
         push *= float(os.environ.get("BODY3D_FULL", "0.85")) * np.clip((brow - 0.01 - B[:, 2]) / float(os.environ.get("BODY3D_EASE", "0.04")), 0, 1)
+        # and only from the cheekbones up: below them the lower face stays the smooth fill, so the tip of the nose and
+        # the lips do not come back
+        cheek = tip.z + float(os.environ.get("BODY3D_CHEEK", "0.012"))
+        push *= np.clip((B[:, 2] - cheek) / 0.025, 0, 1)
         for _ in range(int(os.environ.get("BODY3D_PUSHSOFT", "30"))):
             push += 0.5 * free * (L(push[:, None])[:, 0] / np.maximum(deg[:, 0], 1))
         T = B + n0 * push[:, None]
         firm = np.maximum(hold, float(os.environ.get("BODY3D_HOLD", "0.05")))
         B, _ = solve(lambda X: L(L(X)) + firm * (X - T), T, free)
 
-    # the whole head is then smoothed along each vertex's ray from the middle of its bounds only: it evens out what
+    # the whole head is then smoothed along each vertex's ray from the middle of its bounds only, in the head's oval: it evens out what
     # the envelope left (small bumps, the rim where the face met the forehead, the kink in profile) without the
     # shrinking a plain smoothing gives along a seam (a sphere stays a sphere). It fades in above the chin, so the jaw
     # line and the neck stay
     hm = B[:, 2] > chin
     c = np.array([(B[hm, 0].min() + B[hm, 0].max()) / 2, (B[hm, 1].min() + B[hm, 1].max()) / 2, (chin + top) / 2 + 0.01])
-    D = B - c
+    # measured in the head's own oval (its half widths, depth and height), so the smoothing keeps an oval, not a ball
+    ax = np.array([B[hm, 0].max() - c[0], (B[hm, 1].max() - B[hm, 1].min()) / 2, top - c[2]])
+    D = (B - c) / ax
     r = np.linalg.norm(D, axis=1)
     U = D / np.maximum(r, 1e-9)[:, None]
-    wr = np.clip((B[:, 2] - chin - 0.015) / 0.03, 0, 1)[:, None]
+    wr = np.clip((B[:, 2] - chin - 0.008) / 0.025, 0, 1)[:, None]
     rad = r[:, None].copy()
     for _ in range(int(os.environ.get("BODY3D_RADSOFT", "100"))):
         rad += 0.5 * wr * (L(rad) / deg)
-    B = c + U * rad
+    # the lower face and the chin are rounded further, so the old chin does not stand out as a knob below the
+    # smooth face (fading out under the jaw, where the neck starts)
+    lower = (np.clip((c[1] - B[:, 1]) / 0.03, 0, 1) * np.clip((B[:, 2] - chin + float(os.environ.get("BODY3D_UNDER", "0.012"))) / 0.02, 0, 1)
+             * np.clip((tip.z + 0.02 - B[:, 2]) / 0.03, 0, 1))[:, None]
+    for _ in range(int(os.environ.get("BODY3D_CHIN", "200"))):
+        rad += 0.5 * lower * (L(rad) / deg)
+    B = c + U * rad * ax
 
     # a soft ridge of a nose, rising from the brow to where the tip was and easing off below it
     tris = np.array([[f.loops[0].vert.index, f.loops[i].vert.index, f.loops[i + 1].vert.index]
@@ -354,7 +366,7 @@ def sculpt_head(h, rig, sex):
     nB /= np.maximum(np.linalg.norm(nB, axis=1), 1e-12)[:, None]
     height = float(os.environ.get("BODY3D_NOSE", "0.007"))
     t = (bridge.z - B[:, 2]) / max(bridge.z - tip.z, 1e-3)
-    along = np.where(t < 1, np.clip(t, 0, 1) ** 1.6, np.exp(-((t - 1) / 0.22) ** 2))
+    along = np.clip(t, 0, 1) ** 1.6 * np.clip((float(os.environ.get("BODY3D_NOSE_END", "0.8")) - t) / 0.3, 0, 1)
     width = 0.010 + 0.006 * np.clip(t, 0, 1)
     lift = height * along * np.exp(-(B[:, 0] / width) ** 2) * free
     for _ in range(6):
