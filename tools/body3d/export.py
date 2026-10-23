@@ -513,6 +513,7 @@ def sculpt_head(h, rig, sex, neck_z):
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
     if not REF:
         hand_sculpt(me, bm, faces_of(bm), neck_z, sex)
+        profile(np.array([v.co[:] for v in bm.verts]), "sculpted")
     # every shape key moves the sculpted head as it moved the old one (nape to waist carries the whole head)
     for layer, k in zip(sk, K):
         for v in bm.verts:
@@ -563,6 +564,11 @@ def hand_sculpt(me, bm, faces, neck_z, sex):
     bm.verts.index_update()
     co = np.array([v.co[:] for v in bm.verts])
     keep = np.clip((neck_z + 0.016 - co[:, 2]) / 0.012, 0, 1)   # 1 = the script's, 0 = free to sculpt
+    # the chin, in front of the throat, is free however low it hangs: only the neck behind it is kept
+    th = (np.abs(co[:, 0]) < 0.015) & (co[:, 2] > neck_z - 0.035) & (co[:, 2] < neck_z - 0.012)
+    throat = co[th, 1].min()
+    chin_free = np.clip((throat - 0.006 - co[:, 1]) / 0.01, 0, 1) * np.clip((co[:, 2] - neck_z + 0.01) / 0.006, 0, 1)
+    keep *= 1 - chin_free
     if not os.path.exists(HEAD_BLEND):
         global PENDING_HEAD
         PENDING_HEAD = (co, faces, keep, co[:, 2] < neck_z - 0.07)
