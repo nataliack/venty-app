@@ -13,7 +13,7 @@ const VARIANTS: { k: V; name: string; note: string }[] = [
   { k: "fill", name: "A · Filled", note: "The chosen card becomes the primary button: the same periwinkle gradient, the same light pooling at its edges and the fine white rim, without the dots. No stroke. The words turn white and the ring fills white with a periwinkle tick." },
   { k: "soft", name: "B · Lit from inside", note: "The card stays dark, and only the button's inner light comes on: a soft periwinkle glow pooling at the edges and a faint tint. No stroke and no full fill, so a choice is clear but quieter than the button." },
   { k: "paper", name: "C · Paper", note: "The chosen card turns to the warm paper of the tour card, with ink words. It is lit like a raised tile: brighter at the top, a touch deeper at the bottom, a crisp white highlight along the top edge, a fine shade along the bottom edge and a soft shadow under it. The ring fills ink with a white tick." },
-  { k: "snow", name: "D · Snow", note: "The same raised tile in the cool white of the studio, faintly blue towards the bottom, with ink words and a periwinkle ring and tick, so it ties back to the button below." },
+  { k: "snow", name: "D · Snow", note: "The chosen card turns the cool snow white of the studio, flat: one even colour, no shading and no shadow. Ink words, and the tick is the same periwinkle circle as the icons on home's Design from scratch and Start from a pattern cards." },
 ];
 type L = "cards" | "wide" | "first";
 const LAYOUTS: { k: L; name: string; note: string }[] = [
@@ -37,24 +37,25 @@ const CSS = `
 .lo .lo-sub { color: rgb(255 255 255 / .58); transition: color .3s; }
 .lo.on .lo-sub { color: rgb(255 255 255 / .85); }
 .lo-ring { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid rgb(255 255 255 / .35); display: grid; place-items: center; flex-shrink: 0; transition: all .25s; }
-.lo.on .lo-ring { border-color: #fff; background: #fff; color: #4f63e0; }
-/* D: only the inner light, on the dark card */
+.lo.on .lo-ring:not(.icon-primary) { border-color: #fff; background: #fff; color: #4f63e0; }
+/* a tick that wears home's start-card icon (.icon-primary): only its border goes */
+.lo-ring.icon-primary { border-color: transparent; }
+/* B: only the inner light, on the dark card */
 .lo-soft::before { background: radial-gradient(120% 140% at 50% 120%, rgb(104 126 245 / .22), rgb(104 126 245 / .08) 60%, transparent);
   box-shadow: inset 0 0 22px 2px rgb(140 156 248 / .42), inset 0 1px 0 rgb(255 255 255 / .16); }
 .lo-soft.on { box-shadow: 0 10px 30px -14px rgb(104 126 245 / .45); }
 .lo-soft.on .lo-ring { color: #0b0c15; }
-/* C and D: a raised light tile. Lit from the top (a white highlight on the top edge, the face brightest at the top),
+/* C: a raised light tile. Lit from the top (a white highlight on the top edge, the face brightest at the top),
    a fine shade on the bottom edge and a short, soft shadow under it, so it sits up off the dark page */
 .lo { transition: border-color .3s, box-shadow .35s ease, color .3s, transform .4s cubic-bezier(.2,1.2,.4,1); }
 .lo-paper::before { background: linear-gradient(180deg, #fffefb 0%, #f4f2ed 55%, #e8e5dd 100%);
   box-shadow: inset 0 1px 0 #fff, inset 0 0 0 1px rgb(255 255 255 / .7), inset 0 -1px 0 rgb(18 19 28 / .1), inset 0 -14px 22px -16px rgb(80 70 50 / .22); }
-.lo-snow::before { background: linear-gradient(180deg, #ffffff 0%, #f5f6fd 55%, #e6e9f8 100%);
-  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 1px rgb(255 255 255 / .8), inset 0 -1px 0 rgb(40 50 110 / .12), inset 0 -14px 22px -16px rgb(79 99 224 / .25); }
-.lo-paper.on, .lo-snow.on { color: #12131c; box-shadow: 0 1px 1px rgb(0 0 0 / .35), 0 6px 14px -6px rgb(0 0 0 / .55), 0 22px 40px -22px rgb(0 0 0 / .8); }
-.lo-snow.on { box-shadow: 0 1px 1px rgb(0 0 0 / .35), 0 6px 14px -6px rgb(0 0 0 / .55), 0 22px 44px -20px rgb(104 126 245 / .45); }
+/* D is flat: one even snow white, no light or shade on the face, no shadow under it */
+.lo-snow::before { background: var(--color-snow); box-shadow: none; }
+.lo-snow.on { color: #12131c; box-shadow: none; }
+.lo-paper.on { color: #12131c; box-shadow: 0 1px 1px rgb(0 0 0 / .35), 0 6px 14px -6px rgb(0 0 0 / .55), 0 22px 40px -22px rgb(0 0 0 / .8); }
 .lo-paper.on .lo-sub, .lo-snow.on .lo-sub { color: rgb(18 19 28 / .6); }
 .lo-paper.on .lo-ring { border-color: #12131c; background: #12131c; color: #fff; }
-.lo-snow.on .lo-ring { border-color: #687ef5; background: linear-gradient(180deg, #7387f6, #6479f2); color: #fff; box-shadow: inset 0 1px 0 rgb(255 255 255 / .45); }
 /* the stepper and the number inside a light card */
 .lo-paper.on .rb, .lo-snow.on .rb { background: rgb(18 19 28 / .06); border-color: rgb(18 19 28 / .1); color: #12131c; backdrop-filter: none; }
 .lo-paper.on .unit, .lo-snow.on .unit { color: rgb(18 19 28 / .55); }
@@ -67,7 +68,7 @@ function Card({ v, on, onClick, children, className, ring = "end" }: { v: V; on:
       <span className={cx("radio absolute right-4", ring === "endTop" ? "top-4" : "top-1/2 -translate-y-1/2")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>
     </div>
   );
-  const dot = <span className="lo-ring">{on && <Icon name="check" size={13} strokeWidth={3} />}</span>;
+  const dot = <span className={cx("lo-ring", v === "snow" && on && "icon-primary")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>;
   return (
     <div role="radio" aria-checked={on} tabIndex={0} onClick={onClick} className={cx("lo text-left", v !== "fill" && `lo-${v}`, on && "on", className)}>
       {ring === "start" && <span className="mr-3.5 flex items-center">{dot}</span>}
