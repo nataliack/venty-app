@@ -98,7 +98,8 @@ def build(sex):
         return [v.index for v in me.vertices if any(x.group == g.index and x.weight > w for x in v.groups)]
     EARS, LIPS = members("ears", 0.02), members("lips")
     if sex in SMOOTH_CHEST and os.environ.get("BODY3D_NIPPLES", "1") == "1":
-        smooth_nipples(h, members("nipple", 0.02), sex)
+        mids = smooth_nipples(h, members("nipple", 0.02), sex)
+        chest_sculpt(h, mids, sex)
     for g in list(h.vertex_groups):
         if g.name not in bones:
             h.vertex_groups.remove(g)
@@ -187,6 +188,52 @@ def smooth_nipples(h, nipples, sex):
     me.update()
     log(sex, "nipples smoothed:", len(nipples), "verts,", len(free), "faired, moved up to", round(moved * 1000, 1), "mm,",
         len(blocks), "keys")
+    return mids
+
+
+def chest_sculpt(h, mids, sex):
+    """The chest sculpted by hand in Blender (chest-<sex>.blend, tools/body3d/README.md). The first export writes the
+    file (the torso, the rest hidden, all but the chest masked); every export after adds what was sculpted in it to
+    the body and to every shape key alike, before the body is measured, so the tape and the fitting follow it."""
+    path = os.path.join(ROOT, "tools", "body3d", f"chest-{sex}.blend")
+    me = h.data
+    n = len(me.vertices)
+    co = np.empty(n * 3)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    d = np.min([np.linalg.norm(co - m, axis=1) for m in mids], axis=0)
+    front = co[:, 1] < mids[0][1] + 0.06
+    u = np.clip((d - 0.11) / 0.03, 0, 1)
+    keep = np.where(front, u * u * (3 - 2 * u), 1.0)     # 1 = the script's, 0 = free to sculpt
+    if not os.path.exists(path):
+        zc = mids[0][2]
+        PENDING_HEAD[path] = (co, [list(p.vertices) for p in me.polygons], keep,
+                              (co[:, 2] < zc - 0.3) | (co[:, 2] > zc + 0.3), "Venty chest")
+        return
+    with bpy.data.libraries.load(path) as (src, dst):
+        dst.meshes = [m for m in src.meshes if m.startswith("Venty chest")]
+    if not dst.meshes:
+        log(sex, os.path.basename(path), "has no mesh called Venty chest - the chest is left as it is")
+        return
+    cm = dst.meshes[0]
+    base = cm.attributes.get("venty_base")
+    if len(cm.vertices) != n or base is None:
+        log(sex, os.path.basename(path), "does not match the body (Dyntopo or Remesh?) - the chest is left as it is")
+        bpy.data.meshes.remove(cm)
+        return
+    U = np.zeros(n * 3)
+    cm.vertices.foreach_get("co", U)
+    B0 = np.zeros(n * 3)
+    base.data.foreach_get("vector", B0)
+    bpy.data.meshes.remove(cm)
+    delta = (U - B0).reshape(-1, 3) * (1 - keep)[:, None]
+    for kb in (me.shape_keys.key_blocks if me.shape_keys else []):
+        k = np.empty(n * 3)
+        kb.data.foreach_get("co", k)
+        kb.data.foreach_set("co", (k.reshape(-1, 3) + delta).ravel())
+    me.vertices.foreach_set("co", (co + delta).ravel())
+    me.update()
+    log(sex, "chest from", os.path.basename(path) + ", moved up to", round(float(np.abs(delta).max()) * 1000, 1), "mm")
 
 
 REF = None   # the female head, once sculpted: the male body wears the same one
@@ -605,9 +652,9 @@ def write_head_blend(path):
     """A head to sculpt, as a file of its own: the head (with the shoulders to show how it sits), the body below
     hidden and the neck masked, so only the head can be sculpted. Written last, on an empty file. The head as the
     script made it is kept in the file too (an attribute), so a relative file can tell what was sculpted."""
-    co, faces, keep, hide = PENDING_HEAD[path]
+    co, faces, keep, hide, name = PENDING_HEAD[path]
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    hm = bpy.data.meshes.new(HEAD_NAME)
+    hm = bpy.data.meshes.new(name)
     hm.from_pydata(co.tolist(), [], faces)
     hm.update()
     mask = hm.attributes.new(".sculpt_mask", "FLOAT", "POINT")
@@ -617,11 +664,11 @@ def write_head_blend(path):
     for poly in hm.polygons:
         poly.use_smooth = True
         poly.hide = bool(hide[list(poly.vertices)].any())
-    ob = bpy.data.objects.new(HEAD_NAME, hm)
+    ob = bpy.data.objects.new(name, hm)
     ob.use_mesh_mirror_x = True
     bpy.context.scene.collection.objects.link(ob)
     bpy.ops.wm.save_as_mainfile(filepath=path)
-    log("head to sculpt written", path)
+    log("file to sculpt written", path)
 
 
 def faces_of(bm):
@@ -645,7 +692,7 @@ def hand_sculpt(me, bm, faces, neck_z, sex, path, relative=False):
     chin_free = np.clip((throat - 0.006 - co[:, 1]) / 0.01, 0, 1) * np.clip((co[:, 2] - neck_z + 0.01) / 0.006, 0, 1)
     keep *= 1 - chin_free
     if not os.path.exists(path):
-        PENDING_HEAD[path] = (co, faces, keep, co[:, 2] < neck_z - 0.07)
+        PENDING_HEAD[path] = (co, faces, keep, co[:, 2] < neck_z - 0.07, HEAD_NAME)
         return
     with bpy.data.libraries.load(path) as (src, dst):
         dst.meshes = [m for m in src.meshes if m.startswith(HEAD_NAME)]

@@ -4,6 +4,7 @@ The 3D bodies (`public/body3d/female.glb`, `male.glb`) are made by `export.py`, 
 
 - **Female:** `head.blend`, opened by **Sculpt the head.cmd**.
 - **Male:** `head-male.blend`, opened by **Sculpt the male head.cmd**. It starts from the female head scaled to fit him, and what you sculpt there is his alone.
+- **Female chest:** `chest-female.blend`, opened by **Sculpt the chest.cmd**. What you sculpt there is added to every bust size, and the body is measured after it, so the fitting stays exact. Only the chest can be sculpted; the rest is masked.
 
 ## Sculpt
 

@@ -1,12 +1,11 @@
-"""Opens head.blend ready to sculpt: Sculpt mode, the head from the front, mirrored left to right, in a shiny
-look that shows every dent the way the app's chrome does. Run by "Sculpt the head.cmd" and "Sculpt the male head.cmd"."""
+"""Opens a head or chest file ready to sculpt: Sculpt mode, the part to sculpt from the front, mirrored left to right, in a shiny
+look that shows every dent the way the app's chrome does. Run by the "Sculpt the ….cmd" launchers."""
 import bpy
 
-NAME = "Venty head"
 
 
 def ready():
-    ob = bpy.data.objects.get(NAME)
+    ob = next((o for o in bpy.data.objects if o.type == "MESH"), None)
     win = bpy.context.window_manager.windows[0]
     area = next((a for a in win.screen.areas if a.type == "VIEW_3D"), None)
     if not ob or not area:
@@ -23,7 +22,7 @@ def ready():
         ob.select_set(True)
         bpy.ops.object.mode_set(mode="SCULPT")
         bpy.ops.view3d.view_axis(type="FRONT")
-    # the head filling the view (the sculptable part: not hidden, not masked)
+    # the part to sculpt filling the view (not hidden, not masked)
     me = ob.data
     mask = me.attributes.get(".sculpt_mask")
     free = [v.co for i, v in enumerate(me.vertices) if not v.hide and (not mask or mask.data[i].value < 0.5)]
