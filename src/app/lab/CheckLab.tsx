@@ -6,11 +6,12 @@ import { useState, type ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import { cx, FlowProgress, NextButton, RB } from "@/components/ui";
 
-type V = "now" | "ring" | "vanish" | "walk" | "number" | "bar";
+type V = "now" | "ring" | "vanish" | "snow" | "walk" | "number" | "bar";
 const VARIANTS: { k: V; name: string; note: string }[] = [
   { k: "now", name: "Today", note: "A periwinkle stroke round every estimate still to check, a white Check pill, and the number pushed to the right beside it." },
   { k: "ring", name: "1 · Checklist circle", note: "One round control on the right: an empty periwinkle ring while it is an estimate, filled periwinkle with a white tick (home's icon style) once checked. Tap the circle to confirm the estimate on the spot; in the app, tapping the rest of the card opens it to change the number. Once checked, a quiet Edit sits beside the filled circle." },
   { k: "vanish", name: "2 · Check, then nothing", note: "A periwinkle Check pill on every estimate. Once checked, the pill gives way to a quiet Edit, so the list gets calmer as you go." },
+  { k: "snow", name: "2b · Check, then snow", note: "Version 2, and a checked card also turns the snow white of a chosen card, with ink words and number: done at a glance. The periwinkle Check is the action on every estimate; once checked, a quiet Edit (in ink) lets you change it later." },
   { k: "walk", name: "3 · One button walks you through", note: "No buttons on the cards. The main button names the next one (Check bust, Check waist…) and the card it is about is lit with a soft tint; checked cards show a quiet Edit. When all four are done it becomes Continue. One action on screen at a time." },
   { k: "number", name: "4 · The number says it", note: "Nothing on the right. An estimate is written in soft periwinkle with a small periwinkle dot before its name; once checked the number turns white, the dot goes and a quiet Edit appears on the right. Tap a card to check it." },
   { k: "bar", name: "5 · Progress above", note: "The count moves out of the cards into a slim four-part bar under the heading, which fills as you check. Each card ends in a chevron, or a quiet Edit once checked." },
@@ -23,6 +24,13 @@ const CSS = `
 .ck-ring { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px #687ef5; transition: transform .3s cubic-bezier(.2,1.4,.4,1); }
 .ck-ring:active { transform: scale(.9); }
 .ck-ring.icon-primary { box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 8px 18px -8px rgb(104 126 245 / .7); }
+/* 2b: a checked card is snow white, like a chosen option card; its words, number and Edit turn to ink */
+.ck.snow { background: var(--color-snow); border-color: transparent; color: var(--color-ink); }
+.ck.snow .unit { color: rgb(19 21 35 / .55); }
+.ck-edit { color: rgb(255 255 255 / .55); transition: color .2s; }
+.ck-edit:hover { color: #fff; }
+.ck.snow .ck-edit { color: rgb(19 21 35 / .55); }
+.ck.snow .ck-edit:hover { color: var(--color-ink); }
 .ck-go { height: 32px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 500; }
 }`;
 
@@ -42,7 +50,7 @@ const Value = ({ v, soft }: { v: string; soft?: boolean }) => (
 );
 // after a card is checked: a quiet Edit, to change the number later (in the app it opens the measure; here it does nothing)
 const Edit = ({ label }: { label: string }) => (
-  <span role="button" tabIndex={0} aria-label={`Edit ${label.toLowerCase()}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[14px] font-medium text-white/55 hover:text-white">
+  <span role="button" tabIndex={0} aria-label={`Edit ${label.toLowerCase()}`} onClick={(e) => e.stopPropagation()} className="ck-edit flex items-center gap-1 text-[14px] font-medium">
     <Icon name="pencil" size={14} />Edit
   </span>
 );
@@ -69,12 +77,12 @@ function Row({ v, b, ok, lit, onCheck }: { v: V; b: (typeof BASE)[number]; ok: b
       </span>
     );
     if (ok) return <Edit label={b.label} />;
-    if (v === "vanish") return <span className="ck-go icon-primary inline-flex items-center">Check</span>;
+    if (v === "vanish" || v === "snow") return <span className="ck-go icon-primary inline-flex items-center">Check</span>;
     if (v === "bar") return <Icon name="chevR" size={18} className="text-white/40" />;
     return null;
   })();
   return (
-    <button onClick={onCheck} className={cx("ck tap grid h-[64px] w-full grid-cols-[minmax(0,1fr)_96px_minmax(0,1fr)] items-center px-5 text-left", lit && "lit")}>
+    <button onClick={onCheck} className={cx("ck tap grid h-[64px] w-full grid-cols-[minmax(0,1fr)_96px_minmax(0,1fr)] items-center px-5 text-left", lit && "lit", v === "snow" && ok && "snow")}>
       <span className="flex min-w-0 items-center gap-2 text-[17px]">
         {v === "number" && <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full bg-primary transition-opacity duration-300", ok && "opacity-0")} />}
         {b.label}
@@ -135,7 +143,7 @@ function CheckScreen({ v }: { v: V }) {
 }
 
 export function CheckLab() {
-  const [v, setV] = useState<V>("ring");
+  const [v, setV] = useState<V>("snow");
   return (
     <section>
       <style>{CSS}</style>
