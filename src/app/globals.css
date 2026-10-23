@@ -92,9 +92,14 @@ input { font: inherit; color: inherit; }
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3), inset 0 1px 0 rgb(255 255 255 / .6), inset 0 0 18px 3px rgb(206 214 255 / .55), 0 10px 30px -8px rgb(104 126 245 / .5); }
 .pill-glass { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
 .pill-white { background: #fff; color: #0b0c15; }
-.pill-dark { background: var(--color-card); border: 1px solid rgba(255,255,255,.08); }
-.rb { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; transition: transform .35s cubic-bezier(.2,1.4,.4,1), border-color .3s, box-shadow .3s; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
-.rb-sm { width: 40px; height: 40px; background: var(--color-card); border-color: rgba(255,255,255,.08); }
+/* the secondary button (23 Oct 2026, chosen in the lab): built like the primary but quieter, in the card colour. Lit from
+   the top: a faint white wash fading down the face, a fine light rim, a bright line along the top edge, a darker line
+   along the bottom and a very soft light inside the edges. No dot grid and no drop shadow. Every round button (.rb:
+   back, close, the steppers) and the dark pill (Cancel, Change the design) wear it */
+.pill-dark, .rb { background: linear-gradient(180deg, rgb(255 255 255 / .06), rgb(255 255 255 / 0) 60%) var(--color-card); border: 0;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1), inset 0 1px 0 rgb(255 255 255 / .2), inset 0 -1px 0 rgb(0 0 0 / .35), inset 0 0 14px 1px rgb(255 255 255 / .04); }
+.rb { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; transition: transform .35s cubic-bezier(.2,1.4,.4,1), filter .15s; }
+.rb-sm { width: 40px; height: 40px; }
 .chip { height: 34px; padding: 0 15px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.85); white-space: nowrap; transition: background .2s, color .2s; }
 .chip.on { background: #fff; color: #0b0c15; border-color: #fff; }
 
@@ -103,8 +108,8 @@ input { font: inherit; color: inherit; }
 .pill, .rb, .chip, .glass.tap, .tplcard { position: relative; isolation: isolate; overflow: hidden; }
 @media (hover: hover) {
   .pill-primary:hover { filter: brightness(1.06); }
-  .pill-glass:hover, .pill-dark:hover { background-color: rgb(255 255 255 / .12); }
-  .rb:hover { border-color: rgb(255 255 255 / .28); background-color: rgb(255 255 255 / .12); }
+  .pill-glass:hover { background-color: rgb(255 255 255 / .12); }
+  .pill-dark:hover, .rb:hover { filter: brightness(1.12); }
   .chip:hover { border-color: rgb(255 255 255 / .3); }
   .glass.tap { transition: transform .3s ease, border-color .25s, background-color .25s; }
   .glass.tap:hover { border-color: rgb(255 255 255 / .2); background: var(--color-card-hover); }
@@ -232,7 +237,7 @@ input { font: inherit; color: inherit; }
 :is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) :is(.border-white\/6, .border-white\/8, .border-white\/12) { border-color: rgb(19 21 35 / .09); }
 :is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) [class*="bg-white/"] { background-color: rgb(19 21 35 / .1); }
 :is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .unit { color: rgb(19 21 35 / .55); }
-:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .rb { background: rgb(19 21 35 / .06); border-color: rgb(19 21 35 / .1); color: var(--color-ink); backdrop-filter: none; }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .rb { background: rgb(19 21 35 / .06); border-color: rgb(19 21 35 / .1); color: var(--color-ink); backdrop-filter: none; box-shadow: inset 0 0 0 1px rgb(19 21 35 / .1); }
 :is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .rb:active { background: var(--color-ink); border-color: var(--color-ink); color: #fff; }
 /* an inset tile on a chosen card: pressed into the snow (a deeper shade along its top edge, a white lip below), the icon
    a quiet steel grey-blue; a word in the tile (the cm / in of the units) is periwinkle */
@@ -348,7 +353,7 @@ input { font: inherit; color: inherit; }
 
 /* measuring − / + buttons: no swirl or glow; hover lifts the fill a little, a press flashes solid white like a key */
 .rb.rb-plain::after { display: none; }
-@media (hover: hover) { .rb.rb-plain:hover { transform: none; box-shadow: none; background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .26); } }
+@media (hover: hover) { .rb.rb-plain:hover { transform: none; } }
 .rb.rb-plain:active { transform: scale(.94); background: #fff; border-color: #fff; color: #0b0c15; transition: transform .08s, background-color .08s, color .08s; }
 
 /* phone tab bar: light, same family as the hero. Its shape (with the round notch for Create) is an SVG, see NotchShape */
