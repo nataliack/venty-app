@@ -1,6 +1,9 @@
 # Sculpting the Venty head
 
-The 3D bodies (`public/body3d/female.glb`, `male.glb`) are made by `export.py`. The head is sculpted by hand in `head.blend`, and every export takes the head from that file. Both bodies get the same head: the male's is scaled to fit him.
+The 3D bodies (`public/body3d/female.glb`, `male.glb`) are made by `export.py`, and each has its own head to sculpt:
+
+- **Female:** `head.blend`, opened by **Sculpt the head.cmd**.
+- **Male:** `head-male.blend`, opened by **Sculpt the male head.cmd**. It starts from the female head scaled to fit him, and what you sculpt there is his alone.
 
 ## Sculpt
 
@@ -30,4 +33,4 @@ The neck where it is measured, and the body below it, are protected (the dark ma
 
 ## Start over
 
-Delete `head.blend` and run the export: the script writes a fresh one from its own head. Or ask Claude to "reset the head".
+Delete `head.blend` (or `head-male.blend`) and run the export: the script writes a fresh one. Or ask Claude to "reset the head".

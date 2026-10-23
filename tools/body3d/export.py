@@ -24,6 +24,8 @@ OUT_GLB = os.path.join(ROOT, "public", "body3d")
 OUT_JSON = os.path.join(ROOT, "src", "lib", "body3d.json")
 # the head to sculpt by hand (tools/body3d/README.md): written on the first export, read on every one after
 HEAD_BLEND = os.path.join(ROOT, "tools", "body3d", "head.blend")
+# the male's refinements, on top of the female head he wears (tools/body3d/README.md)
+HEAD_MALE_BLEND = os.path.join(ROOT, "tools", "body3d", "head-male.blend")
 HEAD_NAME = "Venty head"
 
 # Venty measure key -> MakeHuman target (without -incr / -decr)
@@ -512,8 +514,10 @@ def sculpt_head(h, rig, sex, neck_z):
     # the grid faces out like the rest of the head (a fill can face either way)
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
     if not REF:
-        hand_sculpt(me, bm, faces_of(bm), neck_z, sex)
+        hand_sculpt(me, bm, faces_of(bm), neck_z, sex, HEAD_BLEND)
         profile(np.array([v.co[:] for v in bm.verts]), "sculpted")
+    else:
+        hand_sculpt(me, bm, faces_of(bm), neck_z, sex, HEAD_MALE_BLEND, relative=True)
     # every shape key moves the sculpted head as it moved the old one (nape to waist carries the whole head)
     for layer, k in zip(sk, K):
         for v in bm.verts:
@@ -529,38 +533,44 @@ def sculpt_head(h, rig, sex, neck_z):
         poly.use_smooth = True
 
 
-PENDING_HEAD = None
+PENDING_HEAD = {}
 
 
-def write_head_blend():
-    """head.blend, as a file of its own: the head (with the shoulders to show how it sits), the body below hidden
-    and the neck masked, so only the head can be sculpted. Written last, on an empty file."""
-    co, faces, keep, hide = PENDING_HEAD
+def write_head_blend(path):
+    """A head to sculpt, as a file of its own: the head (with the shoulders to show how it sits), the body below
+    hidden and the neck masked, so only the head can be sculpted. Written last, on an empty file. The head as the
+    script made it is kept in the file too (an attribute), so a relative file can tell what was sculpted."""
+    co, faces, keep, hide = PENDING_HEAD[path]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     hm = bpy.data.meshes.new(HEAD_NAME)
     hm.from_pydata(co.tolist(), [], faces)
     hm.update()
     mask = hm.attributes.new(".sculpt_mask", "FLOAT", "POINT")
     mask.data.foreach_set("value", keep.astype(np.float32))
+    base = hm.attributes.new("venty_base", "FLOAT_VECTOR", "POINT")
+    base.data.foreach_set("vector", co.astype(np.float32).ravel())
     for poly in hm.polygons:
         poly.use_smooth = True
         poly.hide = bool(hide[list(poly.vertices)].any())
     ob = bpy.data.objects.new(HEAD_NAME, hm)
     ob.use_mesh_mirror_x = True
     bpy.context.scene.collection.objects.link(ob)
-    bpy.ops.wm.save_as_mainfile(filepath=HEAD_BLEND)
-    log("head to sculpt written", HEAD_BLEND)
+    bpy.ops.wm.save_as_mainfile(filepath=path)
+    log("head to sculpt written", path)
 
 
 def faces_of(bm):
     return [[v.index for v in f.verts] for f in bm.faces]
 
 
-def hand_sculpt(me, bm, faces, neck_z, sex):
-    """The head sculpted by hand in Blender (head.blend), on top of the script's. The first export writes the file
-    (the script's head, the body below the shoulders hidden, the neck masked); every export after takes the head
-    from it. The neck measurement and the body below always stay the script's (the mask ramps from just above the
-    measurement), whatever was sculpted there, so the fitting is never touched."""
+def hand_sculpt(me, bm, faces, neck_z, sex, path, relative=False):
+    """The head sculpted by hand in Blender (path), on top of the script's. The first export writes the file (the
+    script's head, the body below the shoulders hidden, the neck masked); every export after takes the head from it:
+    the head itself (head.blend, the female's), or, relative, only what was sculpted in it, added to the head as the
+    script makes it now (head-male.blend: so a change to the female head still reaches the male). The neck
+    measurement and the body below always stay the script's (the mask ramps from just above the measurement),
+    whatever was sculpted there, so the fitting is never touched."""
+    name = os.path.basename(path)
     bm.verts.index_update()
     co = np.array([v.co[:] for v in bm.verts])
     keep = np.clip((neck_z + 0.016 - co[:, 2]) / 0.012, 0, 1)   # 1 = the script's, 0 = free to sculpt
@@ -569,30 +579,38 @@ def hand_sculpt(me, bm, faces, neck_z, sex):
     throat = co[th, 1].min()
     chin_free = np.clip((throat - 0.006 - co[:, 1]) / 0.01, 0, 1) * np.clip((co[:, 2] - neck_z + 0.01) / 0.006, 0, 1)
     keep *= 1 - chin_free
-    if not os.path.exists(HEAD_BLEND):
-        global PENDING_HEAD
-        PENDING_HEAD = (co, faces, keep, co[:, 2] < neck_z - 0.07)
+    if not os.path.exists(path):
+        PENDING_HEAD[path] = (co, faces, keep, co[:, 2] < neck_z - 0.07)
         return
-    with bpy.data.libraries.load(HEAD_BLEND) as (src, dst):
+    with bpy.data.libraries.load(path) as (src, dst):
         dst.meshes = [m for m in src.meshes if m.startswith(HEAD_NAME)]
     if not dst.meshes:
-        log(sex, "head.blend: no mesh called", HEAD_NAME, "- the script's head is used")
+        log(sex, name + ": no mesh called", HEAD_NAME, "- the script's head is used")
         return
     hm = dst.meshes[0]
     if len(hm.vertices) != len(co):
-        log(sex, "head.blend has", len(hm.vertices), "vertices, the body", len(co),
+        log(sex, name, "has", len(hm.vertices), "vertices, the body", len(co),
             "(Dyntopo or Remesh adds and removes them) - the script's head is used")
         bpy.data.meshes.remove(hm)
         return
     U = np.zeros(len(co) * 3)
     hm.vertices.foreach_get("co", U)
     U = U.reshape(-1, 3)
+    if relative:
+        base = hm.attributes.get("venty_base")
+        if base is None:
+            log(sex, name, "has no record of the head it started from - the script's head is used")
+            bpy.data.meshes.remove(hm)
+            return
+        B0 = np.zeros(len(co) * 3)
+        base.data.foreach_get("vector", B0)
+        U = co + (U - B0.reshape(-1, 3))
     bpy.data.meshes.remove(hm)
     P = co * keep[:, None] + U * (1 - keep[:, None])
     for v in bm.verts:
         v.co = P[v.index]
     bm.normal_update()
-    log(sex, "head from head.blend, moved up to", round(float(np.abs(P - co).max()) * 1000, 1), "mm")
+    log(sex, "head from", name + ", moved up to", round(float(np.abs(P - co).max()) * 1000, 1), "mm")
 
 
 def preview(h, sex):
@@ -841,8 +859,8 @@ model = {"note": "Generated by tools/body3d/export.py from MakeHuman (CC0) via M
          "drivers": DRIVERS}
 for sex in (os.environ.get("BODY3D_SEX") or "female,male").split(","):
     model[sex] = export(sex)
-if PENDING_HEAD is not None:
-    write_head_blend()
+for path in PENDING_HEAD:
+    write_head_blend(path)
 if os.environ.get("BODY3D_PREVIEW"):
     log("preview only, nothing exported")
     sys.exit(0)

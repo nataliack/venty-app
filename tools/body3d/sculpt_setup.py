@@ -1,5 +1,5 @@
 """Opens head.blend ready to sculpt: Sculpt mode, the head from the front, mirrored left to right, in a shiny
-look that shows every dent the way the app's chrome does. Run by "Sculpt the head.cmd"."""
+look that shows every dent the way the app's chrome does. Run by "Sculpt the head.cmd" and "Sculpt the male head.cmd"."""
 import bpy
 
 NAME = "Venty head"
