@@ -12,6 +12,8 @@ import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, useGLTF, Line } from "@react-three/drei";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
+import type { Line2 } from "three/examples/jsm/lines/Line2.js";
+import type { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { fitBody, landmarks, type Sex3D } from "@/lib/fitBody";
 import { POSES, SHOTS, type PoseName, type Shot } from "@/lib/bodyShots";
 import model from "@/lib/body3d.json";
@@ -44,6 +46,8 @@ const dir = (az: number, el: number, r = 4): [number, number, number] => {
   return [Math.sin(a) * Math.cos(e) * r, Math.sin(e) * r + 1, Math.cos(a) * Math.cos(e) * r];
 };
 const AXIS = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+// how fast the tape's dashes run round the body (m/s, before the body's scale)
+const TAPE_SPEED = 0.12;
 // how much of the way to go this frame (speed per second); 0 = cut straight there
 const ease = (dt: number, speed: number) => (speed <= 0 ? 1 : 1 - Math.exp(-dt * speed));
 
@@ -215,6 +219,13 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
     return [...out, out[0]];
   }, [shot.ring, sex, rig, fit.weights]);
 
+  // the tape's dashes run round the body (about three times as fast as the body turns), so the measurement reads at a
+  // glance; still with reduced motion
+  const tapeRef = useRef<Line2 | LineSegments2>(null);
+  useFrame((_, dt) => {
+    if (tapeRef.current && !still) tapeRef.current.material.dashOffset -= dt * TAPE_SPEED;
+  });
+
   // the stool for the seated rise: a plain round seat just under the thighs
   const seatTop = (rig.kneeY - 0.075) * fit.scale;
   return (
@@ -223,7 +234,7 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
         <group scale={fit.scale}>
           <primitive object={rig.root} />
           {/* the tape: flat colour (no light, no reflection, no tone mapping), thick enough to read at a glance */}
-          {ringPts && <Line points={ringPts} color={look.ringColor} lineWidth={3.5} toneMapped={false} dashed dashSize={0.014} gapSize={0.009} />}
+          {ringPts && <Line ref={tapeRef} points={ringPts} color={look.ringColor} lineWidth={3.5} toneMapped={false} dashed dashSize={0.014} gapSize={0.009} />}
         </group>
       </group>
       {shot.pose === "seated" && (
@@ -288,7 +299,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
       onPointerDown={(e) => { dragRef.current = { x: e.clientX, yaw: yawRef.current }; (e.target as Element).setPointerCapture?.(e.pointerId); }}
       onPointerMove={(e) => { if (dragRef.current) yawRef.current = dragRef.current.yaw + (e.clientX - dragRef.current.x) * 0.012; }}
       onPointerUp={() => (dragRef.current = null)} onPointerCancel={() => (dragRef.current = null)}>
-      <Canvas frameloop={spin ? "always" : "demand"} dpr={[1, 2]} camera={{ fov: 26, near: 0.05, far: 50 }} gl={{ antialias: true, alpha: true }} shadows>
+      <Canvas frameloop={spin || (shot.ring && !still) ? "always" : "demand"} dpr={[1, 2]} camera={{ fov: 26, near: 0.05, far: 50 }} gl={{ antialias: true, alpha: true }} shadows>
         <Spinner on={spin} yawRef={yawRef} dragRef={dragRef} />
         <Camera shot={shot} height={height} still={still} />
         <ambientLight intensity={look.ambient} />
