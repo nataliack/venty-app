@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { Leva, useControls, button, folder } from "leva";
 import { Icon } from "@/components/icons";
 import { Blob, Crown, Glass, Glow, Pill, RB } from "@/components/ui";
-import { MarkCover } from "@/components/art";
+import { MarkCover, Ruler } from "@/components/art";
 import { LOOKS, type Look } from "@/components/Body3D";
 import { MEASURE_NAMES, SHOTS } from "@/lib/bodyShots";
 import { ALL_MEASURES, BASE } from "@/lib/data";
@@ -36,6 +36,22 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
       </div>
       <figcaption className="text-[14px] text-white/55">{label}</figcaption>
     </figure>
+  );
+}
+
+// the measuring dial, as the app's measuring step draws it: − and + either side of the value, the ruler along the
+// bottom. It moves the body in the lab (the same value as the panel)
+function Dial({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+  const set = (v: number) => onChange(Math.min(max, Math.max(min, Math.round(v * 2) / 2)));
+  return (
+    <div className="dial">
+      <div className="flex items-center justify-between gap-2 px-3 pt-3">
+        <RB icon="minus" size={48} onClick={() => set(value - 0.5)} label="Minus 0.5 cm" className="rb-plain" />
+        <span className="flex h-[60px] items-center justify-center gap-2"><span className="serif text-[44px] leading-none">{value.toFixed(1)}</span><span className="unit">cm</span></span>
+        <RB icon="plus" size={48} onClick={() => set(value + 0.5)} label="Plus 0.5 cm" className="rb-plain" />
+      </div>
+      <Ruler value={value} min={min} max={max} onChange={set} className="mt-2" />
+    </div>
   );
 }
 
@@ -100,18 +116,35 @@ export function Studio3D() {
       <h2 className="h1 !text-[34px]">3D body</h2>
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the app&apos;s screens that show a body (today a flat figure). Pick a measurement under Measuring: the body takes the pose for it and the camera frames it (the first phone). On the whole-body screens a taller body reaches higher: change the height to see it. Tap a row in Edit measures to move the tape. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
       <div className="mt-10 flex flex-wrap justify-center gap-x-10 gap-y-12">
+        {/* 0 · the height step: slide the ruler and the body grows or shrinks, feet on the floor */}
+        <Phone label="Height: slide to change it">
+          <div className="px-5 pt-12 text-white">
+            <div className="flex h-11 items-center gap-3"><RB icon="close" size={40} label="Close" /><div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full w-[12%] rounded-full bg-white" /></div></div>
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <div><h1 className="h1 !text-[30px]">Height</h1><p className="mt-1.5 text-[15px] leading-snug text-white/60">Stand tall against a wall, heels together.</p></div>
+              <RB icon="help" size={40} label="How to measure" className="shrink-0" />
+            </div>
+            <Glass className="relative mt-4 h-[300px] overflow-hidden rounded-[24px]">
+              <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={false} className="absolute inset-0" />
+            </Glass>
+            <div className="mt-4"><Dial value={body.height} min={140} max={200} onChange={(v) => setBody({ height: v })} /></div>
+          </div>
+          <div className="absolute inset-x-5 bottom-7 flex items-center gap-3"><RB icon="back" variant="dark" size={56} label="Back" /><Pill className="flex-1">Next</Pill></div>
+        </Phone>
         {/* 1 · a measuring step (MeasureStep): the title, the body in its card with the tape, the value */}
-        <Phone label="1 · Measuring a measurement">
+        <Phone label="1 · Measuring (pick it under Measuring)">
           <div className="px-5 pt-12 text-white">
             <div className="flex h-11 items-center gap-3"><RB icon="close" size={40} label="Close" /><div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full w-[38%] rounded-full bg-white" /></div></div>
             <div className="mt-3 flex items-start justify-between gap-3">
               <div><h1 className="h1 !text-[30px]">{MEASURE_NAMES[focus]}</h1><p className="mt-1.5 line-clamp-2 text-[15px] leading-snug text-white/60">{fm?.hint}</p></div>
               <RB icon="help" size={40} label="How to measure" className="shrink-0" />
             </div>
-            <Glass className="relative mt-4 h-[350px] overflow-hidden rounded-[24px]">
+            <Glass className="relative mt-4 h-[280px] overflow-hidden rounded-[24px]">
               <Body3D sex={sex} measures={measures} look={L} focus={focus} autoRotate={body.turning} className="absolute inset-0" />
             </Glass>
-            <div className="dial mt-4 flex h-[100px] items-center justify-center"><span className="serif text-[44px] leading-none">{value?.toFixed(1)}</span><span className="unit ml-2">cm</span></div>
+            <div className="mt-4">{focus in measures && fm
+              ? <Dial value={(measures as Record<string, number>)[focus]} min={fm.min} max={fm.max} onChange={(v) => setBody({ [focus]: v })} />
+              : <div className="dial flex h-[124px] items-center justify-center"><span className="serif text-[44px] leading-none">{value?.toFixed(1)}</span><span className="unit ml-2">cm</span></div>}</div>
           </div>
           <div className="absolute inset-x-5 bottom-7 flex items-center gap-3"><RB icon="back" variant="dark" size={56} label="Back" /><Pill className="flex-1">Next</Pill></div>
         </Phone>

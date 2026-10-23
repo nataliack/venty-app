@@ -303,13 +303,13 @@ export default function Lab() {
     <div className="fixed inset-0 overflow-y-auto bg-[#05060b] text-white">
       <div className="mx-auto max-w-[1280px] px-6 py-10">
         <p className="text-[14px] text-white/50">Venty lab</p>
+        <div className="mt-6"><Studio3D /></div>
+        <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><ButtonLab /></div>
         <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><CheckLab /></div>
         <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><OptionLab /></div>
-        <div className="my-16 h-px bg-white/10" />
-        <div className="mt-6"><Studio3D /></div>
         <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><ProfileLab /></div>
         <div className="my-16 h-px bg-white/10" />
