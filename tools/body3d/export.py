@@ -97,6 +97,8 @@ def build(sex):
             return []
         return [v.index for v in me.vertices if any(x.group == g.index and x.weight > w for x in v.groups)]
     EARS, LIPS = members("ears", 0.02), members("lips")
+    if sex in SMOOTH_CHEST and os.environ.get("BODY3D_NIPPLES", "1") == "1":
+        smooth_nipples(h, members("nipple", 0.02), sex)
     for g in list(h.vertex_groups):
         if g.name not in bones:
             h.vertex_groups.remove(g)
@@ -122,6 +124,69 @@ ZMIN = 0.0
 
 
 EARS, LIPS = [], []
+SMOOTH_CHEST = {"female"}   # bodies whose nipples are smoothed away (a mannequin's chest)
+
+
+def smooth_nipples(h, nipples, sex):
+    """The nipples (MakeHuman's own group, and a small round area of the breast round each) are refilled as the
+    smoothest surface that meets the breast, in the basis and in every shape key alike, so the bust stays smooth at
+    every size the fitting gives it. Done before the body is measured, so the tape sees the smooth chest."""
+    me = h.data
+    n = len(me.vertices)
+    nbr = [[] for _ in range(n)]
+    for e in me.edges:
+        a_, b_ = e.vertices
+        nbr[a_].append(b_)
+        nbr[b_].append(a_)
+
+    def grow(vs, k):
+        out = set(vs)
+        for _ in range(k):
+            out |= {j for i in list(out) for j in nbr[i]}
+        return out
+
+    # the free area: everything within 2 cm of each nipple's middle (sized in cm, not in rings: the mesh is far finer
+    # at the nipple than round it; any wider and the fill folds over the curve under the breast), refilled as the
+    # smoothest surface meeting the breast round it (a biharmonic fill, held by two rings of the breast)
+    allc = np.empty(n * 3)
+    me.vertices.foreach_get("co", allc)
+    allc = allc.reshape(-1, 3)
+    cs = allc[nipples]
+    mids = [cs[cs[:, 0] > 0].mean(0), cs[cs[:, 0] < 0].mean(0)]
+    r = float(os.environ.get("BODY3D_NIPPLE_R", "0.02"))
+    free = {i for m in mids for i in np.nonzero(np.linalg.norm(allc - m, axis=1) < r)[0].tolist()}
+    ring = grow(free, 2) - free
+    S = sorted(free | ring)
+    at = {v: i for i, v in enumerate(S)}
+    L = np.zeros((len(S), len(S)))
+    for v in S:
+        if v in free or any(j in free for j in nbr[v]):   # rows needed for the bilaplacian of the free vertices
+            i = at[v]
+            L[i, i] = -1.0
+            for j in nbr[v]:
+                L[i, at[j]] += 1.0 / len(nbr[v])
+    M = L @ L
+    fi = [at[v] for v in sorted(free)]
+    xi = [at[v] for v in S if v not in free]
+    # the fill is linear in the breast round it, so one matrix serves the basis and every shape key
+    T = -np.linalg.solve(M[np.ix_(fi, fi)], M[np.ix_(fi, xi)])
+    idx_f, idx_x = np.array(sorted(free)), np.array([v for v in S if v not in free])
+    blocks = [me.shape_keys.key_blocks[k] for k in range(len(me.shape_keys.key_blocks))] if me.shape_keys else []
+    moved = 0.0
+    for kb in blocks:
+        co = np.empty(n * 3)
+        kb.data.foreach_get("co", co)
+        co = co.reshape(-1, 3)
+        new = T @ co[idx_x]
+        moved = max(moved, float(np.abs(new - co[idx_f]).max()))
+        co[idx_f] = new
+        kb.data.foreach_set("co", co.ravel())
+    basis = np.empty(n * 3)
+    me.shape_keys.key_blocks[0].data.foreach_get("co", basis)
+    me.vertices.foreach_set("co", basis)
+    me.update()
+    log(sex, "nipples smoothed:", len(nipples), "verts,", len(free), "faired, moved up to", round(moved * 1000, 1), "mm,",
+        len(blocks), "keys")
 
 
 REF = None   # the female head, once sculpted: the male body wears the same one
@@ -634,7 +699,7 @@ def preview(h, sex):
     scn.camera = cam
     for name, pos, aim in (("front", (0, -1.2, top - 0.12), 0.14), ("side", (1.2, 0, top - 0.12), 0.14),
                            ("three", (0.75, -0.95, top - 0.08), 0.14), ("back", (0.95, 0.7, top - 0.1), 0.15),
-                           ("neck", (0.9, -0.6, top - 0.24), 0.2)):
+                           ("neck", (0.9, -0.6, top - 0.24), 0.2), ("chest", (0.55, -1.3, top - 0.38), 0.38), ("nipple", (0.35, -0.45, top - 0.42), 0.43)):
         target = mathutils.Vector((0, 0, top - aim))
         cam.location = pos
         cam.rotation_euler = (target - mathutils.Vector(pos)).to_track_quat("-Z", "Y").to_euler()

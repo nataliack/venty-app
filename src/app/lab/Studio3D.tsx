@@ -14,6 +14,11 @@ import { ALL_MEASURES } from "@/lib/data";
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false });
 
 const STORE = "venty-lab-3d";
+// the measurements each body starts from (cm)
+const BODY_DEFAULTS = {
+  female: { height: 168, bust: 95.5, underbust: 67, waist: 68, hips: 100, neck: 34.5, thigh: 54 },
+  male: { height: 168, bust: 95.5, underbust: 67, waist: 68, hips: 94.5, neck: 34.5, thigh: 51 },
+};
 const saved = (): Partial<Look & { preset: string }> => {
   try { return JSON.parse(localStorage.getItem(STORE) ?? "{}"); } catch { return {}; }
 };
@@ -35,19 +40,21 @@ export function Studio3D() {
   const ready = useSyncExternalStore(() => () => {}, () => true, () => false);
   const init = useMemo(() => ({ ...LOOKS.chrome, ...(typeof window !== "undefined" ? saved() : {}) }), []);
 
-  const body = useControls("Body", {
+  const [body, setBody] = useControls("Body", () => ({
     sex: { value: "female", options: ["female", "male"] },
-    height: { value: 168, min: 140, max: 200, step: 0.5 },
-    bust: { value: 88, min: 70, max: 130, step: 0.5 },
-    underbust: { value: 76, min: 60, max: 110, step: 0.5 },
-    waist: { value: 70, min: 55, max: 120, step: 0.5 },
-    hips: { value: 96, min: 75, max: 140, step: 0.5 },
-    neck: { value: 34.5, min: 28, max: 48, step: 0.5 },
-    thigh: { value: 54, min: 40, max: 80, step: 0.5 },
+    height: { value: BODY_DEFAULTS.female.height, min: 140, max: 200, step: 0.5 },
+    bust: { value: BODY_DEFAULTS.female.bust, min: 70, max: 130, step: 0.5 },
+    underbust: { value: BODY_DEFAULTS.female.underbust, min: 60, max: 110, step: 0.5 },
+    waist: { value: BODY_DEFAULTS.female.waist, min: 55, max: 120, step: 0.5 },
+    hips: { value: BODY_DEFAULTS.female.hips, min: 75, max: 140, step: 0.5 },
+    neck: { value: BODY_DEFAULTS.female.neck, min: 28, max: 48, step: 0.5 },
+    thigh: { value: BODY_DEFAULTS.female.thigh, min: 40, max: 80, step: 0.5 },
     // the measurement being taken: the body poses and the camera frames it (see bodyShots)
     measuring: { value: (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("m")) || "bust", options: Object.fromEntries(Object.keys(SHOTS).map((k) => [MEASURE_NAMES[k] ?? k, k])) },
     turning: true,
-  });
+  }));
+  // each body starts from its own measurements (Jose's, 23 Oct 2026), also when the sex is switched
+  useEffect(() => { setBody(BODY_DEFAULTS[body.sex as "female" | "male"]); }, [body.sex, setBody]);
   const [look, setLook] = useControls(() => ({
     Material: folder({
       color: init.color, metalness: { value: init.metalness, min: 0, max: 1 }, roughness: { value: init.roughness, min: 0, max: 1 },
