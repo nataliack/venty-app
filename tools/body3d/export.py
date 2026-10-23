@@ -13,6 +13,8 @@
 #   5. writes public/body3d/<sex>.glb (morph targets, sparse) and src/lib/body3d.json (the measuring model).
 # The base mesh and targets are MakeHuman's (CC0). MPFB2 itself (GPL) is only the tool that runs here.
 import bpy, bmesh, json, math, os, sys
+import mathutils
+import mathutils.kdtree
 import numpy as np
 from bl_ext.user_default.mpfb.services.humanservice import HumanService
 from bl_ext.user_default.mpfb.services.targetservice import TargetService
@@ -83,6 +85,13 @@ def build(sex):
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if body not in v[dl]], context="VERTS")
     bm.to_mesh(me)
     bm.free()
+    global EARS, LIPS
+    def members(name, w=0.3):
+        g = h.vertex_groups.get(name)
+        if not g:
+            return []
+        return [v.index for v in me.vertices if any(x.group == g.index and x.weight > w for x in v.groups)]
+    EARS, LIPS = members("ears", 0.02), members("lips")
     for g in list(h.vertex_groups):
         if g.name not in bones:
             h.vertex_groups.remove(g)
@@ -107,50 +116,295 @@ def build(sex):
 ZMIN = 0.0
 
 
-def add_helmet(h, rig, sex):
-    """The face and ears go: the head above where the head bone starts is replaced by a smooth egg."""
-    # the head, above where the head bone starts: measured for the egg, then removed (face and ears with it)
-    head_z = rig.data.bones["head"].head_local.z - 0.04  # the head bone starts at ear level; the chin is lower
+EARS, LIPS = [], []
+
+
+def sculpt_head(h, rig, sex):
+    """A mannequin head from MakeHuman's own. The ears go, and so does the whole face in front of them (eyes, lips,
+    nostrils and all, with whatever sat inside); the opening is closed with a fresh, even grid, faired into the
+    smoothest surface that meets the skull, the cheeks and the jaw, and a soft ridge of a nose is raised on it. The head
+    stays one surface with the neck. Nothing below the chin moves, so the shape keys (all below the head) and the
+    measurements are untouched."""
     me = h.data
+    chin = rig.data.bones["head"].head_local.z - 0.045
     bm = bmesh.new()
     bm.from_mesh(me)
-    head = [v for v in bm.verts if v.co.z > head_z and abs(v.co.x) < 0.2]
-    hx = [v.co.x for v in head]; hy = [v.co.y for v in head]; hz = [v.co.z for v in head]
-    bmesh.ops.delete(bm, geom=head, context="VERTS")
+    bm.verts.ensure_lookup_table()
+    dl = bm.verts.layers.deform.verify()
+    head_bone = h.vertex_groups["head"].index
+    ears = [bm.verts[i] for i in EARS]
+    head = [v for v in bm.verts if v.co.z > chin]
+    top = max(v.co.z for v in head)
+    brow = chin + (top - chin) * float(os.environ.get("BODY3D_BROW", "0.62"))
+    # the tip of the nose and the top of its bridge, for the ridge raised later (MakeHuman faces -y)
+    tip = min((v for v in head if v.co.z < brow and abs(v.co.x) < 0.01), key=lambda v: v.co.y).co.copy()
+    bridge = min((v for v in head if abs(v.co.z - brow) < 0.006 and abs(v.co.x) < 0.01), key=lambda v: v.co.y).co.copy()
+
+    gone = set(ears)
+    # the face goes inside a rounded rectangle wrapped round the head (so the new grid has no sharp corner to fold
+    # at): its width as an angle round the head's middle, its height from just under the lips (MakeHuman's own lips
+    # group) to the brow
+    mid = sum((v.co for v in head), mathutils.Vector()) / len(head)
+    lip_low = min(bm.verts[i].co.z for i in LIPS) if LIPS else chin + 0.02
+    low = max(lip_low - float(os.environ.get("BODY3D_LOW", "0.008")), chin + 0.006)
+    zc, hz = (low + brow) / 2, (brow - low) / 2
+    wide = float(os.environ.get("BODY3D_WIDE", "1.2"))
+    sq = float(os.environ.get("BODY3D_SQUARE", "3"))
+    gone |= {v for v in head if abs(math.atan2(v.co.x, mid.y - v.co.y) / wide) ** sq + abs((v.co.z - zc) / hz) ** sq < 1}
+    # the outward-facing surface of the old face: its broad shape (the cheekbones, the nose, the chin) is
+    # brought back onto the new one
+    bm.normal_update()
+    front = [v.co.copy() for v in gone if v not in ears and v.normal.dot((v.co - mid).normalized()) > 0.2]
+    bmesh.ops.delete(bm, geom=list(gone), context="VERTS")
+    # whatever that cut loose (the inside of the mouth, the backs of the eyes) floats inside: only the body stays
+    bm.verts.index_update()
+    part = [-1] * len(bm.verts)
+    sizes = []
+    for v in bm.verts:
+        if part[v.index] >= 0:
+            continue
+        stack, k = [v], len(sizes)
+        part[v.index] = k
+        size = 0
+        while stack:
+            x = stack.pop()
+            size += 1
+            for e in x.link_edges:
+                y = e.other_vert(x)
+                if part[y.index] < 0:
+                    part[y.index] = k
+                    stack.append(y)
+        sizes.append(size)
+    keep = max(range(len(sizes)), key=sizes.__getitem__)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if part[v.index] != keep], context="VERTS")
+
+    # the vertices from here on are known by where they sit (bmesh hands back new wrappers after its operators)
+    before = mathutils.kdtree.KDTree(len(bm.verts))
+    for i, v in enumerate(bm.verts):
+        before.insert(v.co, i)
+    before.balance()
+
+    # the openings (the face, where the ears were), each closed with an even grid of quads
+    rim = {e for e in bm.edges if e.is_boundary and all(v.co.z > chin for v in e.verts)}
+    loops, seen = [], set()
+    for e in rim:
+        if e in seen:
+            continue
+        stack, loop = [e], []
+        while stack:
+            x = stack.pop()
+            if x in seen:
+                continue
+            seen.add(x)
+            loop.append(x)
+            for v in x.verts:
+                stack.extend(y for y in v.link_edges if y in rim and y not in seen)
+        loops.append(loop)
+    for loop in loops:
+        # the loop in order
+        nxt = {}
+        for e in loop:
+            a_, b_ = e.verts
+            nxt.setdefault(a_, []).append(b_)
+            nxt.setdefault(b_, []).append(a_)
+        order = [loop[0].verts[0]]
+        prev = None
+        while True:
+            cur = order[-1]
+            step = [w for w in nxt[cur] if w is not prev]
+            if not step or step[0] is order[0]:
+                break
+            prev = cur
+            order.append(step[0])
+        n = len(order)
+        filled = False
+        if n == len(loop) and n % 2 == 0 and n >= 8:
+            # the grid runs between the bottom and the top of the loop, laid out evenly either side of the middle of
+            # the face so it comes out symmetrical (the cut is: MakeHuman is)
+            m = min(range(n), key=lambda i: abs(order[i].co.x) * 10 + order[i].co.z)
+            nb = 2 * max(1, round(n / 8))
+            ring = [order[(m - nb // 2 + i) % n] for i in range(n)]
+            rails = ring[nb:n // 2 + 1], ring[n // 2 + nb:] + ring[:1]
+            edges = [bm.edges.get((r[i], r[i + 1])) for r in rails for i in range(len(r) - 1)]
+            try:
+                out = bmesh.ops.grid_fill(bm, edges=edges, use_interp_simple=True)
+                filled = bool(out["faces"])
+            except Exception as err:
+                log(sex, "grid fill failed", n, err)
+        if not filled:
+            f = bmesh.ops.holes_fill(bm, edges=loop, sides=0)["faces"]
+            bmesh.ops.poke(bm, faces=f)
+    new = [v for v in bm.verts if before.find(v.co)[2] > 1e-6]
+    for v in new:
+        v[dl].clear()
+        v[dl][head_bone] = 1.0
+
+    # the new grid and a few rings of the head round it are faired into the smoothest surface that meets the rest
+    # (a biharmonic fill, solved outright with conjugate gradients)
+    bm.verts.index_update()
+    n = len(bm.verts)
+    O = np.array([v.co[:] for v in bm.verts])
+    src, dst = [], []
+    for e in bm.edges:
+        i, j = e.verts[0].index, e.verts[1].index
+        src += [i, j]
+        dst += [j, i]
+    src, dst = np.array(src), np.array(dst)
+    deg = np.bincount(src, minlength=n).astype(float)[:, None]
+
+    def L(X):
+        out = -deg * X
+        np.add.at(out, src, X[dst])
+        return out
+
+    # how far each vertex is from the new grid, in rings: the grid moves freely, the head round it is held more
+    # firmly the further out it is (so the old brow ridge and the cheeks melt into the new face, and the skull stays)
+    R = int(os.environ.get("BODY3D_RINGS", "16"))
+    dist = np.full(n, R + 1)
+    for v in new:
+        dist[v.index] = 0
+    for k in range(1, R + 1):
+        hit = np.zeros(n, bool)
+        hit[src[dist[dst] == k - 1]] = True
+        dist[hit & (dist > k)] = k
+    free = (dist <= R) & (O[:, 2] > chin - 0.004)
+    hold = float(os.environ.get("BODY3D_FIRM", "1.0")) * np.clip((dist - 2) / (R - 2), 0, 1)[:, None] ** 2
+
+    def solve(op, X, mask):
+        """Conjugate gradients: the vertices in mask moved until op(X) is zero there, the rest held."""
+        X = X.copy()
+        r = np.zeros_like(X)
+        r[mask] = -op(X)[mask]
+        d = r.copy()
+        rr = (r * r).sum(0)
+        zero = op(np.zeros_like(X))
+        for it in range(6000):
+            Q = op(d) - zero
+            Q[~mask] = 0
+            alpha = rr / np.maximum((d * Q).sum(0), 1e-30)
+            X += alpha * d
+            r -= alpha * Q
+            rn = (r * r).sum(0)
+            if rn.max() < 1e-22:
+                break
+            d = r + (rn / np.maximum(rr, 1e-30)) * d
+            rr = rn
+        return X, it
+
+    grid = dist == 0
+    G, _ = solve(lambda X: -L(X), O, grid)
+    B, it = solve(lambda X: L(L(X)) + hold * (X - G), G, free)
+
+    # the new face is brought out to the old one's outer envelope (along the surface's normal, the furthest point of
+    # the old face within a small radius, so the eyes, the lips' parting and the nostrils close over), then softened
+    near3d = mathutils.kdtree.KDTree(len(front))
+    for i, c in enumerate(front):
+        near3d.insert(c, i)
+    near3d.balance()
+    reach = float(os.environ.get("BODY3D_REACH", "0.025"))
+    F = np.array([c[:] for c in front])
+    tris0 = np.array([[f.loops[0].vert.index, f.loops[i].vert.index, f.loops[i + 1].vert.index]
+                      for f in bm.faces for i in range(1, len(f.loops) - 1)])
+
+    def normals(X):
+        fn0 = np.cross(X[tris0[:, 1]] - X[tris0[:, 0]], X[tris0[:, 2]] - X[tris0[:, 0]])
+        out = np.zeros_like(X)
+        for c in range(3):
+            np.add.at(out, tris0[:, c], fn0)
+        return out / np.maximum(np.linalg.norm(out, axis=1), 1e-12)[:, None]
+
+    # a few rounds, each reaching from where the last one left the surface
+    for _ in range(int(os.environ.get("BODY3D_PASSES", "1"))):
+        n0 = normals(B)
+        push = np.zeros(n)
+        for i in np.nonzero(free)[0]:
+            hits = [j for _, j, _ in near3d.find_range(B[i], reach)]
+            if hits:
+                push[i] = max(float(((F[hits] - B[i]) @ n0[i]).max()), 0.0)
+        # easing off towards the brow, so the face meets the forehead without a ledge (the old brow ridge stood out)
+        push *= float(os.environ.get("BODY3D_FULL", "0.85")) * np.clip((brow - 0.01 - B[:, 2]) / float(os.environ.get("BODY3D_EASE", "0.04")), 0, 1)
+        for _ in range(int(os.environ.get("BODY3D_PUSHSOFT", "30"))):
+            push += 0.5 * free * (L(push[:, None])[:, 0] / np.maximum(deg[:, 0], 1))
+        T = B + n0 * push[:, None]
+        firm = np.maximum(hold, float(os.environ.get("BODY3D_HOLD", "0.05")))
+        B, _ = solve(lambda X: L(L(X)) + firm * (X - T), T, free)
+
+    # a soft ridge of a nose, rising from the brow to where the tip was and easing off below it
+    tris = np.array([[f.loops[0].vert.index, f.loops[i].vert.index, f.loops[i + 1].vert.index]
+                     for f in bm.faces for i in range(1, len(f.loops) - 1)])
+    fn = np.cross(B[tris[:, 1]] - B[tris[:, 0]], B[tris[:, 2]] - B[tris[:, 0]])
+    nB = np.zeros_like(B)
+    for c in range(3):
+        np.add.at(nB, tris[:, c], fn)
+    nB /= np.maximum(np.linalg.norm(nB, axis=1), 1e-12)[:, None]
+    height = float(os.environ.get("BODY3D_NOSE", "0.007"))
+    t = (bridge.z - B[:, 2]) / max(bridge.z - tip.z, 1e-3)
+    along = np.where(t < 1, np.clip(t, 0, 1) ** 1.6, np.exp(-((t - 1) / 0.22) ** 2))
+    width = 0.010 + 0.006 * np.clip(t, 0, 1)
+    lift = height * along * np.exp(-(B[:, 0] / width) ** 2) * free
+    for _ in range(6):
+        lift += 0.5 * free * (L(lift[:, None])[:, 0] / np.maximum(deg[:, 0], 1))
+    P = B + nB * lift[:, None]
+    # the seam where the grid meets the old head, its corners above all, is relaxed so no dimple shows
+    seam = (free & (dist <= int(os.environ.get("BODY3D_SEAM", "4")))).astype(float)[:, None]
+    for _ in range(int(os.environ.get("BODY3D_SEAMSOFT", "40"))):
+        P += 0.5 * seam * (L(P) / deg)
+    log(sex, "faired in", it, "free", int(free.sum()), "new", len(new), "nose", round(height, 4),
+        "moved", round(float(np.abs(P - O)[free].max()), 3))
+
+    for v in bm.verts:
+        v.co = P[v.index]
+    # the grid's corners can fold a cell over: those and the cells round them are relaxed flat
+    for _ in range(3):
+        bm.normal_update()
+        odd = [f for f in bm.faces if f.calc_center_median().z > chin and
+               sum((g.normal for e in f.edges for g in e.link_faces if g is not f), mathutils.Vector()).dot(f.normal) < 0]
+        if not odd:
+            break
+        relax = {v for f in odd for v in f.verts}
+        for _ in range(2):
+            relax |= {e.other_vert(v) for v in list(relax) for e in v.link_edges}
+        relax = [v for v in relax if v.co.z > chin]
+        for _ in range(15):
+            moved = {v: sum((e.other_vert(v).co for e in v.link_edges), mathutils.Vector()) / len(v.link_edges) for v in relax}
+            for v, c in moved.items():
+                v.co = v.co.lerp(c, 0.5)
+    log(sex, "folded cells left", len(odd))
+    # the grid faces out like the rest of the head (a fill can face either way)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    # every shape key follows the sculpted head (the keys do not move the head, so they match the basis there)
+    sk = list(bm.verts.layers.shape.values())
+    for v in bm.verts:
+        if v.co.z > chin - 0.01:
+            for layer in sk:
+                v[layer] = v.co.copy()
     bm.to_mesh(me)
     bm.free()
-
-    # the egg: a smooth ovoid a little bigger than the skull (ears included), narrower towards the chin, its lower
-    # edge tucked into the neck so the join never shows. Bound wholly to the head bone.
-    cx, cy = (max(hx) + min(hx)) / 2, (max(hy) + min(hy)) / 2
-    top = max(hz)
-    a_ = (max(hx) - min(hx)) / 2 * 1.0
-    b_ = (max(hy) - min(hy)) / 2 * 1.04
-    c_ = (top - head_z) / 2 * 1.12
-    cz = head_z + (top - head_z) / 2 - 0.012
-    em = bpy.data.meshes.new(f"venty_{sex}_head")
-    ebm = bmesh.new()
-    bmesh.ops.create_uvsphere(ebm, u_segments=64, v_segments=40, radius=1.0)
-    for v in ebm.verts:
-        x, y, z = v.co
-        taper = 1.0 - 0.22 * max(0.0, -z) ** 1.4  # narrower at the chin
-        v.co = (cx + x * a_ * taper, cy + y * b_ * taper, cz + z * c_)
-    ebm.to_mesh(em)
-    ebm.free()
-    for poly in em.polygons:
+    for poly in me.polygons:
         poly.use_smooth = True
-    egg = bpy.data.objects.new(f"venty_{sex}_head", em)
-    bpy.context.collection.objects.link(egg)
-    egg.parent = rig
-    vg = egg.vertex_groups.new(name="head")
-    vg.add(list(range(len(em.vertices))), 1.0, "REPLACE")
-    mod = egg.modifiers.new("Armature", "ARMATURE")
-    mod.object = rig
-
-    log(sex, "head cut", round(head_z * 100, 1), "egg", [round(x * 100, 1) for x in (a_, b_, c_)])
-    return egg
 
 
+def preview(h, sex):
+    """Renders the head from the front and the side (workbench, matte), to check the sculpt."""
+    import mathutils
+    scn = bpy.context.scene
+    scn.render.engine = "BLENDER_WORKBENCH"
+    scn.render.resolution_x = scn.render.resolution_y = 700
+    scn.display.shading.light = "STUDIO"
+    scn.display.shading.color_type = "SINGLE"
+    scn.display.shading.single_color = (0.9, 0.91, 0.94)
+    top = max((h.matrix_world @ v.co).z for v in h.data.vertices)
+    cam_data = bpy.data.cameras.new("cam")
+    cam_data.lens = 85
+    cam = bpy.data.objects.new("cam", cam_data)
+    bpy.context.collection.objects.link(cam)
+    scn.camera = cam
+    target = mathutils.Vector((0, 0, top - 0.14))
+    for name, pos in (("front", (0, -1.2, top - 0.12)), ("side", (1.2, 0, top - 0.12)), ("three", (0.75, -0.95, top - 0.08))):
+        cam.location = pos
+        cam.rotation_euler = (target - mathutils.Vector(pos)).to_track_quat("-Z", "Y").to_euler()
+        scn.render.filepath = os.path.join(ROOT, "tools", "body3d", "preview", f"{sex}-head-{name}.png")
+        bpy.ops.render.render(write_still=True)
 
 
 # ─── the tape: positions of the mesh with some shape keys applied ───
@@ -340,10 +594,13 @@ def export(sex):
     log(sex, "base", {k: round(v, 1) for k, v in base.items()})
     rings = {k: torso_outline(P0, E, lm[k]) for k in ("bust", "underbust", "waist", "highHip", "hips")}
     # the helmet head, then export
-    egg = add_helmet(h, rig, sex)
+    sculpt_head(h, rig, sex)
+    if os.environ.get("BODY3D_PREVIEW"):
+        preview(h, sex)
+        return None
     os.makedirs(OUT_GLB, exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
-    for o in (h, rig, egg):
+    for o in (h, rig):
         o.select_set(True)
     bpy.context.view_layer.objects.active = rig
     path = os.path.join(OUT_GLB, f"{sex}.glb")
@@ -359,8 +616,11 @@ def export(sex):
 
 model = {"note": "Generated by tools/body3d/export.py from MakeHuman (CC0) via MPFB2. cm. effects[key] = cm added by that shape key at weight 1.",
          "drivers": DRIVERS}
-for sex in ("female", "male"):
+for sex in (os.environ.get("BODY3D_SEX") or "female,male").split(","):
     model[sex] = export(sex)
+if os.environ.get("BODY3D_PREVIEW"):
+    log("preview only, nothing exported")
+    sys.exit(0)
 with open(OUT_JSON, "w") as f:
     json.dump(model, f, indent=1)
 log("done", OUT_JSON)
