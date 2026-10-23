@@ -161,7 +161,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **Option cards** (`Option`):
   - Unselected: the solid card with a radio ring.
   - Hover: a slightly brighter edge only.
-  - Selected (23 Oct 2026, chosen by Jose in the lab, "Snow"): the card turns **flat snow white** (`--color-snow`) with ink words: no edge, no glow, no shadow, no 3D shading. The ring becomes a tick in home's start-card icon style (`.icon-primary`, the same class, with no border so its light edge sits on the outline). Only the colours change; every card keeps its own shape and layout. What sits inside turns to ink too (secondary text, outlines, the stepper, inset icon tiles), by rules in `globals.css`. A `Glass` card with `selected` (the body picker for a template, the Edit measures list) is chosen the same way. The old violet stroke and rising gradient are gone.
+  - Selected (23 Oct 2026, chosen by Jose in the lab, "Snow"): the card turns **flat snow white** (`--color-snow`) with ink words: no edge, no glow, no shadow, no 3D shading. The ring becomes a tick in home's start-card icon style (`.icon-primary`, the same class, with no border so its light edge sits on the outline). Only the colours change; every card keeps its own shape and layout. What sits inside turns to ink too (secondary text, outlines, the stepper, inset icon tiles), by rules in `globals.css`. A `Glass` card with `selected` (the body picker for a template, the Edit measures list) is chosen the same way. An inset tile (`.iconbadge`) on a chosen card is pressed into the snow, a little deeper than on the dark card, with its icon in a quiet steel grey-blue (#6e7894); a word in a tile (`.iconbadge-word`: the cm and in of the units) turns periwinkle. The units cards show cm and in in an inset tile, chosen or not. The old violet stroke and rising gradient are gone.
   - A card never sits selected by default.
 - **Information is never styled like a button.** Tips and notes are plain text with an icon (`Note`, the tip lists).
 - **Inputs look like real, empty inputs** (`Field`, `.field`), with a placeholder and no pre-filled value.
@@ -230,7 +230,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
    - On AI-estimated values, the note "AI estimate from your photos…" sits **under** the measuring card.
    - Reset, the misleading neighbouring numbers, and the old "Save · next" bar are gone.
 4. **Scan:**
-   - **`scanPrep`:** "You'll take 3 photos of yourself: front, back and side." Three plain tips (fitted clothes, a plain wall, phone at hip height) and a privacy note. No "step back", no underwear mention. On phones it is centred: the heading at the top, the tips stacked in the middle (icon above the words), the privacy note just above the button.
+   - **`scanPrep`:** "You'll take 3 photos of yourself: front, back and side." Three plain tips (fitted clothes, a plain wall, phone at hip height) and a privacy note. No "step back", no underwear mention. On phones it is centred: the heading at the top, the tips stacked in the middle (icon above the words), the privacy note just above the button. The tips are information, so they have no card, box or tile around them (23 Oct 2026: in a card they looked tappable): a line icon in periwinkle and the words, beside each other on a computer.
    - **`scanCam`:**
      - Front / Back / Side tabs that can be tapped.
      - Shutter, flash (torch where the device supports it) and library picker sit low.

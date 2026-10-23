@@ -230,7 +230,11 @@ input { font: inherit; color: inherit; }
 :is(.opt.on, .glass.sel, .glass-2.sel) .unit { color: rgb(19 21 35 / .55); }
 :is(.opt.on, .glass.sel, .glass-2.sel) .rb { background: rgb(19 21 35 / .06); border-color: rgb(19 21 35 / .1); color: var(--color-ink); backdrop-filter: none; }
 :is(.opt.on, .glass.sel, .glass-2.sel) .rb:active { background: var(--color-ink); border-color: var(--color-ink); color: #fff; }
-:is(.opt.on, .glass.sel, .glass-2.sel) .iconbadge { color: #4f63e0; background: rgb(104 126 245 / .12); box-shadow: inset 0 2px 5px rgb(40 50 110 / .16), inset 0 -1px 0 rgb(255 255 255 / .8); }
+/* an inset tile on a chosen card: pressed into the snow (a deeper shade along its top edge, a white lip below), the icon
+   a quiet steel grey-blue; a word in the tile (the cm / in of the units) is periwinkle */
+:is(.opt.on, .glass.sel, .glass-2.sel) .iconbadge { color: #6e7894; background: rgb(52 62 110 / .09);
+  box-shadow: inset 0 3px 7px rgb(28 36 84 / .3), inset 0 1px 1.5px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
+:is(.opt.on, .glass.sel, .glass-2.sel) .iconbadge-word { color: var(--color-primary); }
 
 /* ─── the decision button: a quiet chevron until something is chosen, then it grows into "Next" ─── */
 .nextbtn { height: 52px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; overflow: hidden; position: relative; isolation: isolate;

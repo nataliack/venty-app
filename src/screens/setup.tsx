@@ -37,10 +37,10 @@ export function Prefs() {
         <Label className="mt-7 lg:mt-0">Do you measure in centimetres or inches?</Label>
         <div className="mt-2.5 grid grid-cols-2 gap-3">
           {(["cm", "in"] as const).map((u) => (
-            // the name, and the short form boxed like the unit on a tape, in the body font
+            // the name, and the short form in an inset tile (like the app's icon tiles), in the body font
             <Option key={u} on={units === u} onClick={() => set({ units: u })} className="flex h-[96px] flex-col justify-between rounded-[22px] p-4 lg:h-[130px]">
               <div className="text-[17px] font-medium">{u === "cm" ? "Centimetres" : "Inches"}</div>
-              <span className="grid h-8 min-w-10 place-items-center self-start rounded-[8px] border border-white/25 px-2 text-[15px] font-medium leading-none text-white/85" translate="no">{u}</span>
+              <span className="iconbadge iconbadge-word grid h-8 min-w-10 place-items-center self-start rounded-[8px] px-2 text-[15px] font-medium leading-none" translate="no">{u}</span>
             </Option>
           ))}
         </div>
@@ -220,14 +220,14 @@ export function ScanPrep() {
           <Lead className="mx-auto mt-3 max-w-[330px] [text-wrap:pretty] lg:mx-0">You’ll take 3 photos of yourself: one from the front, one from the back and one from the side.</Lead>
         </div>
         <div className="flex flex-1 flex-col lg:block">
-          {/* a checklist to follow in order: step number, the thing to do in a few words, then the detail */}
-          <ol className="card-soft my-auto divide-y divide-white/8 rounded-[24px] px-4 lg:my-0">{TIPS.map(([ic, t, d], i) => (
-            <li key={t} className="flex items-center gap-3.5 py-4">
-              <span className="iconbadge grid h-9 w-9 shrink-0 place-items-center rounded-[11px] text-[16px] font-medium tabular-nums">{i + 1}</span>
-              <div className="min-w-0 flex-1"><div className="text-[17px] font-medium leading-tight">{t}</div><div className="mt-0.5 text-[15px] leading-snug text-white/60">{d}</div></div>
-              <Icon name={ic} size={24} className="shrink-0 text-peri" />
+          {/* tips to read, not to tap: no card, no box and no tile, just a line icon over the words (beside them on a
+              computer), so nothing here looks like a button */}
+          <ul className="my-auto flex flex-col gap-6 lg:my-0 lg:gap-7">{TIPS.map(([ic, t, d]) => (
+            <li key={t} className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-4 lg:text-left">
+              <Icon name={ic} size={24} strokeWidth={1.7} className="shrink-0 text-peri/80 lg:mt-px" />
+              <div className="mt-2 lg:mt-0"><div className="text-[17px] font-medium leading-tight">{t}</div><div className="mt-1 text-[15px] leading-snug text-white/60">{d}</div></div>
             </li>
-          ))}</ol>
+          ))}</ul>
           <Note icon="lock" className="mx-auto mt-5 max-w-[300px] justify-center pb-2 text-center lg:mx-0 lg:mt-8 lg:max-w-none lg:justify-start lg:text-left">Your photos stay on this device. You can view or delete them any time.</Note>
         </div>
       </div>
