@@ -159,10 +159,10 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **Hover and press effects are plain** (changed 4 Oct 2026): hover brightens the edge or fill a little, a press dips the element. No swirls, glows, ripples or drifting lights; they read as "random rainbows" and stuck on touch screens.
 - **Cards on the dark page are solid** (`.card-soft`), not see-through glass.
 - **Option cards** (`Option`):
-  - Unselected: quiet glass with a radio ring.
+  - Unselected: the solid card with a radio ring.
   - Hover: a slightly brighter edge only.
-  - Selected: violet edge plus gradient.
-  - The bright gradient means *selected or hovered*. A card never sits in that state by default.
+  - Selected (23 Oct 2026, chosen by Jose in the lab, "Snow"): the card turns **flat snow white** (`--color-snow`) with ink words: no edge, no glow, no shadow, no 3D shading. The ring becomes a tick in home's start-card icon style (`.icon-primary`, the same class, with no border so its light edge sits on the outline). Only the colours change; every card keeps its own shape and layout. What sits inside turns to ink too (secondary text, outlines, the stepper, inset icon tiles), by rules in `globals.css`. A `Glass` card with `selected` (the body picker for a template, the Edit measures list) is chosen the same way. The old violet stroke and rising gradient are gone.
+  - A card never sits selected by default.
 - **Information is never styled like a button.** Tips and notes are plain text with an icon (`Note`, the tip lists).
 - **Inputs look like real, empty inputs** (`Field`, `.field`), with a placeholder and no pre-filled value.
 - **Scrolling and layout:**

@@ -146,14 +146,15 @@ export function showNeeded(from: Element) {
   try { navigator.vibrate?.(12); } catch {}
 }
 
-// Selectable option card (no option is ever pre-selected): radio ring idle, violet edge + gradient when chosen.
+// Selectable option card (no option is ever pre-selected): radio ring idle; chosen, the card turns snow white and the
+// ring becomes a tick in home's start-card icon style (.icon-primary).
 // The ring sits top right; on a single-row card (`radioAt="center"`) it is centred on the card's height.
 export function Option({ on, onClick, children, className, radio = true, radioAt = "top" }: { on: boolean; onClick: () => void; children: ReactNode; className?: string; radio?: boolean; radioAt?: "top" | "center" }) {
   return (
     // the card's own words are its name for screen readers
     <div role="radio" aria-checked={on} tabIndex={0} ref={(el) => { if (el) el.setAttribute("aria-label", el.innerText.replace(/\s+/g, " ").trim()); }} onClick={onClick} onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }} className={cx("opt text-left", on && "on", className)}>
       {children}
-      {radio && <span className={cx("radio absolute right-4", radioAt === "center" ? "top-1/2 -translate-y-1/2" : "top-4")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>}
+      {radio && <span className={cx("radio absolute right-4", on && "icon-primary", radioAt === "center" ? "top-1/2 -translate-y-1/2" : "top-4")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>}
     </div>
   );
 }
