@@ -31,6 +31,9 @@ export type Look = {
 };
 
 export const LOOKS: Record<string, Look> = {
+  // the default (Jose's, 23 Oct 2026): a pale blue-grey, glossy but not metallic, lit from the fill and the rim, no
+  // floor shadow, a cornflower tape
+  venty: { color: "#b0c3d4", metalness: 0, roughness: 0.15, clearcoat: 0.43, clearcoatRoughness: 0.15, sheen: 0, sheenColor: "#8c9cf8", envIntensity: 1.2, keyIntensity: 0, keyColor: "#e6e9ff", keyAzimuth: 35, keyElevation: 40, fillIntensity: 0.6, fillColor: "#687ef5", rimIntensity: 2.4, rimColor: "#8c9cf8", ambient: 0.15, shadowOpacity: 0, shadowBlur: 0, ringColor: "#687ef5" },
   chrome: { color: "#c9d0f5", metalness: 1, roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.15, sheen: 0, sheenColor: "#8c9cf8", envIntensity: 1.2, keyIntensity: 2.2, keyColor: "#e6e9ff", keyAzimuth: 35, keyElevation: 40, fillIntensity: 0.6, fillColor: "#687ef5", rimIntensity: 2.4, rimColor: "#8c9cf8", ambient: 0.15, shadowOpacity: 0.55, shadowBlur: 2.4, ringColor: "#ffffff" },
   porcelain: { color: "#e9ebf4", metalness: 0, roughness: 0.42, clearcoat: 0.8, clearcoatRoughness: 0.3, sheen: 0.2, sheenColor: "#c1c8d9", envIntensity: 0.8, keyIntensity: 2.6, keyColor: "#ffffff", keyAzimuth: 30, keyElevation: 45, fillIntensity: 0.8, fillColor: "#a0abca", rimIntensity: 1.6, rimColor: "#8c9cf8", ambient: 0.25, shadowOpacity: 0.45, shadowBlur: 2.6, ringColor: "#687ef5" },
   matte: { color: "#4d5e85", metalness: 0, roughness: 0.85, clearcoat: 0, clearcoatRoughness: 0.5, sheen: 0.5, sheenColor: "#8c9cf8", envIntensity: 0.6, keyIntensity: 2.4, keyColor: "#f0f4fe", keyAzimuth: 40, keyElevation: 35, fillIntensity: 0.7, fillColor: "#687ef5", rimIntensity: 2.8, rimColor: "#a9b5fb", ambient: 0.2, shadowOpacity: 0.5, shadowBlur: 2.2, ringColor: "#ffffff" },
@@ -150,8 +153,8 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
     if (moving) invalidate();
   });
 
-  // the tape ring, traced on the fitted body: the skin at that height (shape keys applied), the torso only (split from
-  // the arms by a gap), the outline a tape follows (its convex hull), a few millimetres off the skin
+  // the tape ring, traced on the fitted body: the skin at that height (shape keys applied), the torso only (no arm
+  // points, then split from anything else by a gap), the outline a tape follows (its convex hull), a few millimetres off the skin
   const ringPts = useMemo(() => {
     const ring = shot.ring;
     if (!ring) return null;
@@ -159,19 +162,38 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
     const geo = rig.body.geometry;
     const pos = geo.attributes.position as THREE.BufferAttribute | undefined;
     if (lm === undefined || !pos) return null;
-    const y0 = lm / 100, band = 0.01;
+    const band = 0.01;
     const morphs = geo.morphAttributes.position ?? [];
     const names = Object.entries(rig.body.morphTargetDictionary ?? {});
-    const pts: [number, number][] = [];
+    // the tape goes round the torso only: points carried mostly by an arm bone are left out (at the bust the arms are
+    // close enough to the sides to be taken for torso)
+    const skinI = geo.attributes.skinIndex as THREE.BufferAttribute | undefined, skinW = geo.attributes.skinWeight as THREE.BufferAttribute | undefined;
+    const armBone = new Set(rig.body.skeleton.bones.map((b, k) => (/upperarm|lowerarm|hand|thumb|index|middle|ring|pinky/.test(b.name) ? k : -1)).filter((k) => k >= 0));
+    const onArm = (i: number) => {
+      if (!skinI || !skinW) return false;
+      let w = 0;
+      for (let c = 0; c < 4; c++) if (armBone.has(skinI.getComponent(i, c))) w += skinW.getComponent(i, c);
+      return w > 0.5;
+    };
+    // the fitted torso's skin (shape keys applied)
+    const skin: [number, number, number][] = [];
     for (let i = 0; i < pos.count; i++) {
+      if (onArm(i)) continue;
       let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
       for (const [name, j] of names) {
         const w = fit.weights[name];
         if (!w || !morphs[j]) continue;
         x += morphs[j].getX(i) * w; y += morphs[j].getY(i) * w; z += morphs[j].getZ(i) * w;
       }
-      if (Math.abs(y - y0) < band) pts.push([x, z]);
+      skin.push([x, y, z]);
     }
+    // the base body's height for the tape; the bust follows the fitted bust's fullest point (a fuller bust sits lower)
+    let y0 = lm / 100;
+    if (ring === "bust") {
+      let best = -Infinity;
+      for (const [x, y, z] of skin) if (Math.abs(x) < 0.15 && y > y0 - 0.08 && y < y0 + 0.04 && z > best) { best = z; y0 = y; }
+    }
+    const pts: [number, number][] = skin.filter(([, y]) => Math.abs(y - y0) < band).map(([x, , z]) => [x, z]);
     pts.sort((p, q) => p[0] - q[0]);
     const mid = pts.findIndex((p) => p[0] >= 0);
     if (mid < 0) return null;
@@ -187,7 +209,7 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
     if (hull.length < 3) return null;
     const cx = hull.reduce((t, q) => t + q[0], 0) / hull.length, cz = hull.reduce((t, q) => t + q[1], 0) / hull.length;
     const out = hull.map(([x, z]) => {
-      const dx = x - cx, dz = z - cz, r = Math.hypot(dx, dz) || 1, off = 0.004;
+      const dx = x - cx, dz = z - cz, r = Math.hypot(dx, dz) || 1, off = 0.006;
       return new THREE.Vector3(cx + dx + (dx / r) * off, y0, cz + dz + (dz / r) * off);
     });
     return [...out, out[0]];
@@ -200,7 +222,8 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
       <group ref={group}>
         <group scale={fit.scale}>
           <primitive object={rig.root} />
-          {ringPts && <Line points={ringPts} color={look.ringColor} lineWidth={1.6} dashed dashSize={0.012} gapSize={0.008} />}
+          {/* the tape: flat colour (no light, no reflection, no tone mapping), thick enough to read at a glance */}
+          {ringPts && <Line points={ringPts} color={look.ringColor} lineWidth={3.5} toneMapped={false} dashed dashSize={0.014} gapSize={0.009} />}
         </group>
       </group>
       {shot.pose === "seated" && (
@@ -248,7 +271,7 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
   return null;
 }
 
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.chrome, focus = "height", autoRotate = true, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; className?: string;
 }) {
   const [still, setStill] = useState(false);
@@ -283,7 +306,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.chrome, foc
         <Suspense fallback={null}>
           <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} />
         </Suspense>
-        <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />
+        {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}
       </Canvas>
     </div>
   );

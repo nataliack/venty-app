@@ -38,7 +38,7 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 export function Studio3D() {
   // true once in the browser (the saved look lives in localStorage, so the panel starts after the first paint)
   const ready = useSyncExternalStore(() => () => {}, () => true, () => false);
-  const init = useMemo(() => ({ ...LOOKS.chrome, ...(typeof window !== "undefined" ? saved() : {}) }), []);
+  const init = useMemo(() => ({ ...LOOKS.venty, ...(typeof window !== "undefined" ? saved() : {}) }), []);
 
   const [body, setBody] = useControls("Body", () => ({
     sex: { value: "female", options: ["female", "male"] },
@@ -71,6 +71,7 @@ export function Studio3D() {
     Shadow: folder({ shadowOpacity: { value: init.shadowOpacity, min: 0, max: 1 }, shadowBlur: { value: init.shadowBlur, min: 0, max: 6 }, ringColor: init.ringColor }),
   }));
   useControls("Presets", {
+    Venty: button(() => setLook(LOOKS.venty)),
     Chrome: button(() => setLook(LOOKS.chrome)),
     Porcelain: button(() => setLook(LOOKS.porcelain)),
     Matte: button(() => setLook(LOOKS.matte)),
