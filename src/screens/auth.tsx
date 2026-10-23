@@ -379,7 +379,7 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
       ))}
     </div>
   );
-  const skip = <button onClick={() => finish(true)} className="tap h-10 shrink-0 rounded-full bg-white px-5 text-[15px] font-medium text-[#12131c] shadow-lg">{fromApp ? "Close" : "Skip"}</button>;
+  const skip = <button onClick={() => finish(true)} className="pill-white tap h-10 shrink-0 rounded-full px-5 text-[15px] font-medium">{fromApp ? "Close" : "Skip"}</button>;
 
   const image = (
     <div className="relative h-full overflow-hidden text-white">
@@ -401,7 +401,7 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
     <div className="flex items-center">
       <AnimatePresence initial={false}>{i > 0 && (
         <motion.button key="prev" onClick={prev} aria-label="Previous" initial={{ width: 0, marginRight: 0, opacity: 0 }} animate={{ width: 56, marginRight: 12, opacity: 1 }} exit={{ width: 0, marginRight: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
-          className="tap grid h-[56px] shrink-0 place-items-center overflow-hidden rounded-full border border-[#12131c]/15 text-[#12131c]"><Icon name="back" size={22} /></motion.button>
+          className="sec-dark tap grid h-[56px] shrink-0 place-items-center overflow-hidden rounded-full"><Icon name="back" size={22} /></motion.button>
       )}</AnimatePresence>
       <Pill className="min-w-0 flex-1" onClick={next}>{i === 2 ? (fromApp ? "Done" : "Get started") : "Next"}</Pill>
     </div>
