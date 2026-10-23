@@ -63,7 +63,9 @@ function GroupList({ open: initial = [], editable }: { open?: string[]; editable
         const next = cur >= 0 && i === cur + 1;
         const isOpen = open.includes(r.key);
         return (
-          <div key={r.key} className={cx("rounded-[22px] border bg-card transition-colors", next ? "border-primary" : "border-white/12")}>
+          // a finished group is snow white (done, like a checked measurement); the next one is the plain card with its
+          // number in a white disc and "Up next" (no outline); the rest wait, muted
+          <div key={r.key} className={cx("rounded-[22px] border border-white/12 bg-card transition-colors duration-300", complete && "snow-card")}>
             <div className="flex items-center gap-3.5 px-4 py-3.5">
               {complete ? <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/12 text-white/85"><Icon name="check" size={15} strokeWidth={2.6} /></span>
                 : <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[13px] font-medium leading-none tabular-nums", next ? "border-white bg-white text-bg" : "border-white/25 text-white/50")}>{i}</span>}
@@ -107,11 +109,11 @@ export function Wizard() {
       footer={<Arrows ready onNext={cur === -1 ? () => go("alldone") : startAt} label={cur === -1 ? "Review all 24" : `Continue: ${GROUPS[cur].title}`} />}>
       <Split left={<>
         <div className="text-center lg:text-left">
-          <HS className="mt-4 [text-wrap:balance] lg:mt-0">Let’s finish your measurements</HS>
-          <Lead className="mx-auto mt-3 max-w-[340px] [text-wrap:pretty] lg:mx-0">{scan ? "AI estimated these from your photos. Check each one, in order." : "Group by group, in order. We show you where the tape goes and save as you go."}</Lead>
+          <HS className="mt-8 [text-wrap:balance] lg:mt-0">Let’s finish your measurements</HS>
+          <Lead className="mx-auto mt-4 max-w-[340px] [text-wrap:pretty] lg:mx-0">{scan ? "AI estimated these from your photos. Check each one, in order." : "Group by group, in order. We show you where the tape goes and save as you go."}</Lead>
         </div>
-        {!scan && <Hints items={TIPS} className="mt-5" />}
-      </>} right={<div className="mt-7 lg:mt-0"><GroupList /></div>} />
+        {!scan && <Hints items={TIPS} className="mt-8" />}
+      </>} right={<div className="mt-10 lg:mt-0"><GroupList /></div>} />
     </Screen>
   );
 }
@@ -149,9 +151,9 @@ export function GroupDone({ p }: { p?: Record<string, unknown> }) {
       footer={<><Arrows ready hidePrev onNext={cont} label={N ? `Continue: ${N.title}` : "Review all 24"} />{N && <TextButton className="mt-1" onClick={takeBreak}>Take a break, finish later</TextButton>}</>}>
       <Split left={
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }} className="text-center lg:text-left">
-          <HS className="mt-4 [text-wrap:balance] lg:mt-0">{G.title} done</HS>
-          <Lead className="mx-auto mt-3 max-w-[340px] lg:mx-0">{doneIn(g)} of {inGroup(g).length} saved. {N ? `Next up: ${N.title.toLowerCase()}.` : "That was the last group."}</Lead>
-        </motion.div>} right={<div className="mt-7 lg:mt-0"><GroupList /></div>} />
+          <HS className="mt-8 [text-wrap:balance] lg:mt-0">{G.title} done</HS>
+          <Lead className="mx-auto mt-4 max-w-[340px] lg:mx-0">{doneIn(g)} of {inGroup(g).length} saved. {N ? `Next up: ${N.title.toLowerCase()}.` : "That was the last group."}</Lead>
+        </motion.div>} right={<div className="mt-10 lg:mt-0"><GroupList /></div>} />
     </Screen>
   );
 }
@@ -191,7 +193,7 @@ export function AllDone() {
           <Dial24 n={total} />
           <HS className="mt-5">{total === 24 ? "Fully measured" : "Nearly there"}</HS>
           <Lead className="mx-auto mt-2 max-w-[320px] lg:mx-0">Open a group to see or change any measurement.</Lead>
-        </motion.div>} right={<div className="mt-7 lg:mt-0"><GroupList editable /></div>} />
+        </motion.div>} right={<div className="mt-10 lg:mt-0"><GroupList editable /></div>} />
     </Screen>
   );
 }

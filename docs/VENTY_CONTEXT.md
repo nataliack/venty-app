@@ -238,8 +238,9 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
      - Photos are saved as small JPEGs in `body.photos` and can be viewed later ("Your scan photos" sheet).
      - "Read my measures" simulates the AI read. It fills all 24 values and marks them `est` (estimated).
 5. **`base`, the review:**
-   - Four field-like rows. Rows still marked AI-estimated show a white **"Check"**, and tapping one opens the measure step with "Looks right · Save".
-   - Confirmed rows show a small tick before the label and a quiet **"Edit"**. Decision: AI estimates must each be checked once (a wrong bust or hip estimate ruins the pattern, and it is only four taps); values the user measured or already confirmed just offer Edit.
+   - Four one-line rows (23 Oct 2026, chosen in the lab as "Check, then snow"): the name, the number in a centred column (right-aligned in a fixed width, so the units line up row to row), then the action. No line of text under the name and no outline.
+   - Rows still marked AI-estimated are the dark card with a periwinkle **"Check"** pill (`.icon-primary`, the action); tapping one opens the measure step with "Looks right · Save".
+   - Confirmed rows turn **snow white** (`.snow-card`, done, the same snow as a chosen card) with a quiet **"Edit"** in ink. Decision: AI estimates must each be checked once (a wrong bust or hip estimate ruins the pattern, and it is only four taps); values the user measured or already confirmed just offer Edit.
    - Continue stays disabled until all 4 are confirmed.
    - Continue opens a sheet with one title and one line (20 Oct 2026, it had four texts): **"Add 20 more measurements?"** / "Your base measurements are saved. The other 20 give the closest fit, and you can stop at any time." → **Yes, add 20 more** (to `wizard`) or **Later** (to `ready`), which is words only (`TextButton`).
 6. **`ready`:**
@@ -251,9 +252,10 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - **Groups (one vocabulary, changed 21 Oct 2026):** **Around the body** ("Circumferences: neck, ribs…"), **Lengths** ("Top to bottom…"), **Widths** ("Side to side…") and **Seated rise** (sitting on a hard chair). Each title starts with the same word as its progress label and the sewing term sits in the description (the walkthrough found two vocabularies: "Around · Down · Across" in the header, "Circumferences…" in the list). Buttons read "Continue: {group}". Before that, on 4 Oct: Testers did not understand "Wraps". Each group's description says which way the tape goes.
 - **Progress:** "Base · Around · Lengths · Widths · Seated" (short labels).
 - The last step of a group says just **"Finish"**. Copy says "measurements", not "measures" or "numbers".
-- **`wizard`:** the heading and line centred, the prep tips (tape, a friend, fitted clothes) as **one rotating hint line** (icon + words, changes every few seconds, nothing to tap, so it never looks like the cards), then the group list. Done groups show a quiet white tick, not primary (there were too many primary ticks).
+- **`wizard`:** the heading and line centred, the prep tips (tape, a friend, fitted clothes) as **one rotating hint line** (icon + words, changes every few seconds, nothing to tap, so it never looks like the cards), then the group list. Done groups are **snow white** (`.snow-card`, 23 Oct 2026) with a quiet ink tick, not primary (there were too many primary ticks).
   - Base measures show as done.
-  - The next group is outlined "Up next". The list is a guide, not a menu.
+  - The next group is the plain card with its number in a white disc and "Up next"; no outline (the periwinkle outline was dropped on 23 Oct 2026, like the one on home's "Continue finishing your measurements" card). The list is a guide, not a menu.
+  - Spacing (23 Oct 2026): more room between the progress bar and the heading, between the words and the hint line, and above the list, on `wizard` and `wdone`; the list may scroll.
   - One button: "Continue with {group}". The order is strict.
 - **`wstep`:** the same `MeasureStep` UI as the base measures.
 - **`wdone`:** centred "{Group} done" and one line ("N of N saved. Next up: …"); no big tick. The same group list, where finished groups have a **"View my measures"** dropdown.

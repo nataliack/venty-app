@@ -135,7 +135,7 @@ function Notices() {
         </div>
       )}
       {b && (
-        <button onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="card-soft tap flex w-full items-center gap-3.5 rounded-[22px] !border-primary/60 p-4 text-left">
+        <button onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="card-soft tap flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left">
           <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name="ruler" size={20} strokeWidth={2} /></span>
           <div className="min-w-0 flex-1"><div className="text-[16px] font-medium">Continue finishing your measurements</div><div className="text-[14px] text-white/55">{b.name} · {b.done.length} of 24 saved</div>
             <div className="mt-2 flex gap-[2px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < b.done.length ? "bg-primary" : "bg-white/15")} />)}</div></div>

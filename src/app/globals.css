@@ -218,23 +218,27 @@ input { font: inherit; color: inherit; }
 .opt { position: relative; isolation: isolate; overflow: hidden; background: var(--color-card); border: 1px solid rgba(255,255,255,.1); cursor: pointer; transition: border-color .3s, background-color .3s, color .3s, transform .4s cubic-bezier(.2,1.2,.4,1); -webkit-user-select: none; user-select: none; }
 .opt:active { transform: scale(.985); }
 @media (hover: hover) { .opt:not(.on):hover { border-color: rgba(255,255,255,.24); background: var(--color-card-hover); } }
-.opt.on, .glass.sel, .glass-2.sel { border-color: transparent; background: var(--color-snow); color: var(--color-ink); box-shadow: none; }
+/* .snow-card: a card that is finished rather than chosen (a checked measurement, a finished group), in the same snow;
+   the class is doubled so it beats the card's own fill (.field comes later in this file) */
+.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card { border-color: transparent; background: var(--color-snow); color: var(--color-ink); box-shadow: none; }
 .radio { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.35); display: grid; place-items: center; flex-shrink: 0; transition: all .25s; }
 /* no border on the chosen tick, so the icon's fine light edge sits on its outline */
 .opt.on .radio { border: 0; }
 /* what sits inside a chosen card turns to ink (these rules are outside the layers, so they beat the text-white utilities) */
-:is(.opt.on, .glass.sel, .glass-2.sel) [class*="text-white/"] { color: rgb(19 21 35 / .6); }
-:is(.opt.on, .glass.sel, .glass-2.sel) :is(.text-white\/75, .text-white\/85) { color: rgb(19 21 35 / .75); }
-:is(.opt.on, .glass.sel, .glass-2.sel) [class*="border-white/"] { border-color: rgb(19 21 35 / .3); }
-:is(.opt.on, .glass.sel, .glass-2.sel) [class*="bg-white/"] { background-color: rgb(19 21 35 / .1); }
-:is(.opt.on, .glass.sel, .glass-2.sel) .unit { color: rgb(19 21 35 / .55); }
-:is(.opt.on, .glass.sel, .glass-2.sel) .rb { background: rgb(19 21 35 / .06); border-color: rgb(19 21 35 / .1); color: var(--color-ink); backdrop-filter: none; }
-:is(.opt.on, .glass.sel, .glass-2.sel) .rb:active { background: var(--color-ink); border-color: var(--color-ink); color: #fff; }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) [class*="text-white/"] { color: rgb(19 21 35 / .6); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) :is(.text-white\/75, .text-white\/85) { color: rgb(19 21 35 / .75); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) [class*="border-white/"] { border-color: rgb(19 21 35 / .3); }
+/* hairlines stay hairlines */
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) :is(.border-white\/6, .border-white\/8, .border-white\/12) { border-color: rgb(19 21 35 / .09); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) [class*="bg-white/"] { background-color: rgb(19 21 35 / .1); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .unit { color: rgb(19 21 35 / .55); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .rb { background: rgb(19 21 35 / .06); border-color: rgb(19 21 35 / .1); color: var(--color-ink); backdrop-filter: none; }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .rb:active { background: var(--color-ink); border-color: var(--color-ink); color: #fff; }
 /* an inset tile on a chosen card: pressed into the snow (a deeper shade along its top edge, a white lip below), the icon
    a quiet steel grey-blue; a word in the tile (the cm / in of the units) is periwinkle */
-:is(.opt.on, .glass.sel, .glass-2.sel) .iconbadge { color: #6e7894; background: rgb(52 62 110 / .09);
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .iconbadge { color: #6e7894; background: rgb(52 62 110 / .09);
   box-shadow: inset 0 3px 7px rgb(28 36 84 / .3), inset 0 1px 1.5px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
-:is(.opt.on, .glass.sel, .glass-2.sel) .iconbadge-word { color: var(--color-primary); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .iconbadge-word { color: var(--color-primary); }
 
 /* ─── the decision button: a quiet chevron until something is chosen, then it grows into "Next" ─── */
 .nextbtn { height: 52px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; overflow: hidden; position: relative; isolation: isolate;

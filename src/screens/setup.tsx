@@ -151,12 +151,14 @@ export function BaseMeasures() {
           {BASE.map((b) => {
             const ok = body.done.includes(b.key);
             return (
-              // AI estimates must each be checked once ("Check"); confirmed values just offer "Edit"
-              <button key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className={cx("field tap flex h-[72px] items-center gap-3 px-5 text-left", !ok && "!border-primary/60")}>
-                <span className="flex flex-1 items-center gap-2.5 text-[17px]">{ok && <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/12 text-white/85"><Icon name="check" size={12} strokeWidth={3} /></span>}{b.label}</span>
-                <span className="flex items-baseline gap-1.5"><span className="serif text-[30px] leading-none" translate="no">{fmt(body.measures[b.key], units)}</span><span className="unit" translate="no">{units}</span></span>
-                {ok ? <span className="flex w-[58px] items-center justify-end gap-1 text-[14px] font-medium text-white/60"><Icon name="pencil" size={14} />Edit</span>
-                  : <span className="flex w-[58px] justify-end"><span className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-bg">Check</span></span>}
+              // AI estimates must each be checked once: a dark card with the periwinkle Check (the action). Once confirmed
+              // the card turns snow white (done) and offers a quiet Edit. One row: the name, the number in a centred
+              // column (right-aligned in a fixed width, so the units line up card to card), then Check or Edit
+              <button key={b.key} onClick={() => go("measure", { key: b.key, edit: true })} className={cx("field tap grid h-[64px] grid-cols-[minmax(0,1fr)_124px_minmax(0,1fr)] items-center px-5 text-left transition-colors duration-300", ok && "snow-card")}>
+                <span className="min-w-0 truncate text-[17px]">{b.label}</span>
+                <span className="flex items-baseline justify-center"><span className="serif w-[88px] text-right text-[30px] leading-none" translate="no">{fmt(body.measures[b.key], units)}</span><span className="unit ml-1.5 w-[22px]" translate="no">{units}</span></span>
+                <span className="flex justify-end">{ok ? <span className="flex items-center gap-1 text-[14px] font-medium text-white/55"><Icon name="pencil" size={14} />Edit</span>
+                  : <span className="icon-primary inline-flex h-8 items-center rounded-full px-3.5 text-[14px] font-medium">Check</span>}</span>
               </button>
             );
           })}
