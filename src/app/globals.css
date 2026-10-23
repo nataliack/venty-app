@@ -367,7 +367,7 @@ input { font: inherit; color: inherit; }
 
 /* phone tab bar: light, same family as the hero. Its shape (with the round notch for Create) is an SVG, see NotchShape */
 .tabbar { color: #26335f; }
-.tabbar-shape { filter: drop-shadow(0 14px 18px rgb(0 0 0 / .45)); }
+.tabbar-shape { filter: drop-shadow(0 1px 2px rgb(0 0 0 / .3)) drop-shadow(0 14px 18px rgb(0 0 0 / .45)); }
 /* home shortcuts share the Create button's periwinkle fill */
 .herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
@@ -391,8 +391,13 @@ input { font: inherit; color: inherit; }
     linear-gradient(180deg, #7988b8 0%, #5a6c99 30%, #353f62 55%, #1b2035 78%, #131523 100%); }
 .paper-card { background: #fff; border: 1px solid rgb(18 19 28 / .08); box-shadow: 0 10px 30px -22px rgb(28 34 82 / .5); color: #12131c; }
 @media (hover: hover) { .paper-card.tap:hover { border-color: rgb(79 99 224 / .35); } }
-/* home: a light, airy top on graph paper in periwinkle, text in a soft (but readable) indigo */
-.light-hero { background: linear-gradient(180deg, #f6f7fd 0%, #eceffd 55%, #e1e6fd 100%); color: #3d4bb3; }
+/* home and profile: a light top on graph paper in periwinkle, text in a soft (but readable) indigo. No gradient (23 Oct
+   2026): one even snow, built like the white secondary button: a fine ink rim, a white line along the top edge (seen on
+   a computer, where the block has four rounded corners), a slightly deeper snow along the bottom edge, a soft white
+   light inside, and a drop shadow onto the dark page */
+.light-hero { background: var(--color-snow); color: #3d4bb3;
+  box-shadow: inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .12), inset 0 0 28px 2px rgb(255 255 255 / .8),
+    0 1px 2px rgb(0 0 0 / .3), 0 14px 30px -14px rgb(0 0 0 / .75); }
 /* the graph paper rises from the bottom of the light block (anchored there, so whole squares sit on the bottom edge)
    and fades out towards the top */
 .light-mat { position: absolute; inset: 0; pointer-events: none;

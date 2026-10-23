@@ -67,7 +67,7 @@ function GroupList({ open: initial = [], editable }: { open?: string[]; editable
           // number in a white disc and "Up next" (no outline); the rest wait, muted
           <div key={r.key} className={cx("rounded-[22px] border border-white/12 bg-card transition-colors duration-300", complete && "snow-card")}>
             <div className="flex items-center gap-3.5 px-4 py-3.5">
-              {complete ? <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/12 text-white/85"><Icon name="check" size={15} strokeWidth={2.6} /></span>
+              {complete ? <span className="sec-dark grid h-7 w-7 shrink-0 place-items-center rounded-full"><Icon name="check" size={15} strokeWidth={2.6} /></span>
                 // numbered from 2: the base measurements are the first group. The next one wears home's periwinkle icon.
                 // Figures have no descender, so they sit low in the line: 1.5px under them centres them to the eye
                 : <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-full pb-[1.5px] text-[13px] font-medium tabular-nums", next ? "icon-primary" : "border border-white/25 text-white/50")}>{i + 1}</span>}
