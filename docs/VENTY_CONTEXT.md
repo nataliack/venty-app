@@ -254,7 +254,8 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 - The last step of a group says just **"Finish"**. Copy says "measurements", not "measures" or "numbers".
 - **`wizard`:** the heading and line centred, the prep tips (tape, a friend, fitted clothes) as **one rotating hint line** (icon + words, changes every few seconds, nothing to tap, so it never looks like the cards), then the group list. Done groups are **snow white** (`.snow-card`, 23 Oct 2026) with a quiet ink tick, not primary (there were too many primary ticks).
   - Base measures show as done.
-  - The next group is the plain card with its number in a white disc and "Up next"; no outline (the periwinkle outline was dropped on 23 Oct 2026, like the one on home's "Continue finishing your measurements" card). The list is a guide, not a menu.
+  - The groups are numbered from 2 (23 Oct 2026): the base measurements are the first group, so Around the body is 2 and Seated rise is 5. The numbers are nudged up 1.5px so they look centred in their disc (figures have no descender). Inside "View my measurements" a hairline runs only between two rows, never under the last one.
+  - The next group is the plain card with its number in the periwinkle disc of home's start-card icons (`.icon-primary`) and "Up next"; no outline (the periwinkle outline was dropped on 23 Oct 2026, like the one on home's "Continue finishing your measurements" card). The list is a guide, not a menu.
   - Spacing (23 Oct 2026): more room between the progress bar and the heading, between the words and the hint line, and above the list, on `wizard` and `wdone`; the list may scroll.
   - One button: "Continue with {group}". The order is strict.
 - **`wstep`:** the same `MeasureStep` UI as the base measures.

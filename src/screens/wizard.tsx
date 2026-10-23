@@ -68,7 +68,9 @@ function GroupList({ open: initial = [], editable }: { open?: string[]; editable
           <div key={r.key} className={cx("rounded-[22px] border border-white/12 bg-card transition-colors duration-300", complete && "snow-card")}>
             <div className="flex items-center gap-3.5 px-4 py-3.5">
               {complete ? <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/12 text-white/85"><Icon name="check" size={15} strokeWidth={2.6} /></span>
-                : <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[13px] font-medium leading-none tabular-nums", next ? "border-white bg-white text-bg" : "border-white/25 text-white/50")}>{i}</span>}
+                // numbered from 2: the base measurements are the first group. The next one wears home's periwinkle icon.
+                // Figures have no descender, so they sit low in the line: 1.5px under them centres them to the eye
+                : <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-full pb-[1.5px] text-[13px] font-medium tabular-nums", next ? "icon-primary" : "border border-white/25 text-white/50")}>{i + 1}</span>}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2"><span className={cx("text-[17px] font-medium", !complete && !next && "text-white/60")}>{r.title}</span>{next && <span className="text-[13px] text-peri">Up next</span>}</div>
                 <div className="truncate text-[14px] text-white/50">{r.desc}</div>
@@ -82,8 +84,9 @@ function GroupList({ open: initial = [], editable }: { open?: string[]; editable
                 </button>
                 <AnimatePresence initial={false}>{isOpen && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <div className="grid grid-cols-2 gap-x-5 px-4 pb-3">{r.list.map((m) => (
-                      <button key={m.key} disabled={!editable} onClick={() => edit(m)} className="flex items-baseline justify-between border-b border-white/6 py-2 text-left">
+                    <div className="grid grid-cols-2 gap-x-5 px-4 pb-3">{r.list.map((m, k) => (
+                      // a line only between two rows of measurements: none under the last row
+                      <button key={m.key} disabled={!editable} onClick={() => edit(m)} className={cx("flex items-baseline justify-between py-2 text-left", k < r.list.length - (r.list.length % 2 || 2) && "border-b border-white/6")}>
                         <span className="text-[14px] text-white/60">{m.label}</span><span className="flex items-baseline gap-1"><span className="serif text-[19px]" translate="no">{fmt(body.measures[m.key] ?? m.value, units)}</span><span className="text-[12px] text-white/45" translate="no">{units}</span></span>
                       </button>
                     ))}</div>
