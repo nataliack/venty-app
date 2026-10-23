@@ -14,6 +14,10 @@ import { ContactShadows, Environment, Lightformer, useGLTF, Line } from "@react-
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { fitBody, landmarks, type Sex3D } from "@/lib/fitBody";
 import { POSES, SHOTS, type PoseName, type Shot } from "@/lib/bodyShots";
+import model from "@/lib/body3d.json";
+
+// the model's address carries a stamp of its bytes (written by the export), so a new export is never served from a cache
+const glbUrl = (sex: Sex3D) => `/body3d/${sex}.glb?v=${(model as { glb?: Record<string, string> }).glb?.[sex] ?? "0"}`;
 
 export type Look = {
   color: string; metalness: number; roughness: number; clearcoat: number; clearcoatRoughness: number;
@@ -49,7 +53,7 @@ type Rig = {
 
 // a copy of the body for this view (its own skeleton, its own shape key weights), with the rest pose recorded
 function useRig(sex: Sex3D): Rig {
-  const { scene } = useGLTF(`/body3d/${sex}.glb`);
+  const { scene } = useGLTF(glbUrl(sex));
   return useMemo(() => {
     const root = cloneSkinned(scene);
     root.updateMatrixWorld(true);
@@ -269,4 +273,4 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.chrome, foc
   );
 }
 
-useGLTF.preload("/body3d/female.glb");
+useGLTF.preload(glbUrl("female"));

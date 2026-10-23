@@ -846,6 +846,10 @@ if PENDING_HEAD is not None:
 if os.environ.get("BODY3D_PREVIEW"):
     log("preview only, nothing exported")
     sys.exit(0)
+# a stamp of each model's bytes, so the app asks for the new file after every export (no stale copy in a cache)
+import hashlib
+model["glb"] = {sx: hashlib.md5(open(os.path.join(OUT_GLB, f"{sx}.glb"), "rb").read()).hexdigest()[:8]
+                for sx in ("female", "male") if os.path.exists(os.path.join(OUT_GLB, f"{sx}.glb"))}
 with open(OUT_JSON, "w") as f:
     json.dump(model, f, indent=1)
 log("done", OUT_JSON)
