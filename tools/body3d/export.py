@@ -5,7 +5,9 @@
 #   1. creates a young adult MakeHuman base (MPFB2) and bakes the gender/age macros into the basis;
 #   2. loads MakeHuman's own "measure" targets (bust, waist, hips, neck, thigh, ...) as shape keys at 0, one shape key
 #      per direction (…_incr / …_decr), so the app can push each measurement up or down;
-#   3. removes the helper geometry (keeps only the "body" vertex group), keeping every shape key;
+#   3. adds MakeHuman's game-engine skeleton (53 bones, with its skin weights), removes the helper geometry (keeps only the
+#      "body" vertex group, every shape key and the bone weights), and swaps the head for a smooth egg (no face, no
+#      ears, like a helmet), bound to the head bone;
 #   4. measures the body like a tape would (horizontal slices; the torso's own loop; the outline a tape follows, i.e.
 #      the convex hull), at weight 0 and with each shape key at 1, so the app knows how many cm each one adds;
 #   5. writes public/body3d/<sex>.glb (morph targets, sparse) and src/lib/body3d.json (the measuring model).
@@ -57,47 +59,98 @@ def build(sex):
     macros["gender"] = 0.0 if sex == "female" else 1.0
     macros["age"] = 0.5          # young adult (about 25)
     macros["race"] = {"asian": 1 / 3, "caucasian": 1 / 3, "african": 1 / 3}
-    h = HumanService.create_human(mask_helpers=False, detailed_helpers=False, extra_vertex_groups=True,
+    # the joint helpers stay until the skeleton is fitted to them
+    h = HumanService.create_human(mask_helpers=False, detailed_helpers=True, extra_vertex_groups=True,
                                   feet_on_ground=True, scale=0.1, macro_detail_dict=macros)
     bpy.context.view_layer.objects.active = h
     # bake the macros into the basis, so the body's own shape is the rest shape
     TargetService.bake_targets(h)
+    rig = HumanService.add_builtin_rig(h, "game_engine", import_weights=True)
+    bones = {bn.name for bn in rig.data.bones}
     keys = []
     for key, base in DRIVERS.items():
         for d in ("incr", "decr"):
             name = f"{key}_{d}"
             TargetService.load_target(h, target_path(f"{base}-{d}"), weight=0.0, name=name)
             keys.append(name)
-    # keep only the skin: delete the helper geometry (shape keys survive vertex deletion)
+
+    # the helper geometry goes (the skin, every shape key and the bone weights stay); the head stays for measuring
+    me = h.data
     body = h.vertex_groups["body"].index
     bm = bmesh.new()
-    bm.from_mesh(h.data)
+    bm.from_mesh(me)
     dl = bm.verts.layers.deform.verify()
-    drop = [v for v in bm.verts if body not in v[dl]]
-    bmesh.ops.delete(bm, geom=drop, context="VERTS")
-    bm.to_mesh(h.data)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if body not in v[dl]], context="VERTS")
+    bm.to_mesh(me)
     bm.free()
     for g in list(h.vertex_groups):
-        h.vertex_groups.remove(g)
+        if g.name not in bones:
+            h.vertex_groups.remove(g)
     for m in list(h.modifiers):
-        h.modifiers.remove(m)
-    # feet on the ground again, centred
-    co = np.empty(len(h.data.vertices) * 3)
-    h.data.vertices.foreach_get("co", co)
-    co = co.reshape(-1, 3)
-    shift = np.array([-(co[:, 0].max() + co[:, 0].min()) / 2, 0.0, -co[:, 2].min()])
-    for kb in h.data.shape_keys.key_blocks:
-        a = np.empty(len(kb.data) * 3)
-        kb.data.foreach_get("co", a)
-        a = a.reshape(-1, 3) + shift
-        kb.data.foreach_set("co", a.ravel())
-    h.data.vertices.foreach_set("co", (co + shift).ravel())
-    h.data.update()
-    for p in h.data.polygons:
-        p.use_smooth = True
+        if m.type != "ARMATURE":
+            h.modifiers.remove(m)
+    for poly in me.polygons:
+        poly.use_smooth = True
+
+    # feet on the ground: move the skeleton (the meshes ride on it); the tape measures from the same ground
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", co)
+    global ZMIN
+    ZMIN = float(co.reshape(-1, 3)[:, 2].min())
+    rig.location.z -= ZMIN
     h.name = f"venty_{sex}"
-    log(sex, "verts", len(h.data.vertices), "keys", len(keys))
-    return h, keys
+    rig.name = f"venty_{sex}_rig"
+    log(sex, "verts", len(me.vertices), "keys", len(keys), "bones", len(bones))
+    return h, keys, rig
+
+
+ZMIN = 0.0
+
+
+def add_helmet(h, rig, sex):
+    """The face and ears go: the head above where the head bone starts is replaced by a smooth egg."""
+    # the head, above where the head bone starts: measured for the egg, then removed (face and ears with it)
+    head_z = rig.data.bones["head"].head_local.z - 0.04  # the head bone starts at ear level; the chin is lower
+    me = h.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    head = [v for v in bm.verts if v.co.z > head_z and abs(v.co.x) < 0.2]
+    hx = [v.co.x for v in head]; hy = [v.co.y for v in head]; hz = [v.co.z for v in head]
+    bmesh.ops.delete(bm, geom=head, context="VERTS")
+    bm.to_mesh(me)
+    bm.free()
+
+    # the egg: a smooth ovoid a little bigger than the skull (ears included), narrower towards the chin, its lower
+    # edge tucked into the neck so the join never shows. Bound wholly to the head bone.
+    cx, cy = (max(hx) + min(hx)) / 2, (max(hy) + min(hy)) / 2
+    top = max(hz)
+    a_ = (max(hx) - min(hx)) / 2 * 1.0
+    b_ = (max(hy) - min(hy)) / 2 * 1.04
+    c_ = (top - head_z) / 2 * 1.12
+    cz = head_z + (top - head_z) / 2 - 0.012
+    em = bpy.data.meshes.new(f"venty_{sex}_head")
+    ebm = bmesh.new()
+    bmesh.ops.create_uvsphere(ebm, u_segments=64, v_segments=40, radius=1.0)
+    for v in ebm.verts:
+        x, y, z = v.co
+        taper = 1.0 - 0.22 * max(0.0, -z) ** 1.4  # narrower at the chin
+        v.co = (cx + x * a_ * taper, cy + y * b_ * taper, cz + z * c_)
+    ebm.to_mesh(em)
+    ebm.free()
+    for poly in em.polygons:
+        poly.use_smooth = True
+    egg = bpy.data.objects.new(f"venty_{sex}_head", em)
+    bpy.context.collection.objects.link(egg)
+    egg.parent = rig
+    vg = egg.vertex_groups.new(name="head")
+    vg.add(list(range(len(em.vertices))), 1.0, "REPLACE")
+    mod = egg.modifiers.new("Armature", "ARMATURE")
+    mod.object = rig
+
+    log(sex, "head cut", round(head_z * 100, 1), "egg", [round(x * 100, 1) for x in (a_, b_, c_)])
+    return egg
+
+
 
 
 # ─── the tape: positions of the mesh with some shape keys applied ───
@@ -108,6 +161,7 @@ def coords(h, weights):
     kbs["Basis"].data.foreach_get("co", basis)
     basis = basis.reshape(-1, 3)
     out = basis.copy()
+    out[:, 2] -= ZMIN
     for name, w in weights.items():
         if not w:
             continue
@@ -274,7 +328,7 @@ def measure(P, E, lm):
 
 
 def export(sex):
-    h, keys = build(sex)
+    h, keys, rig = build(sex)
     E = edges_of(h)
     P0 = coords(h, {})
     lm = landmarks(P0, E)
@@ -284,18 +338,20 @@ def export(sex):
         m = measure(coords(h, {k: 1.0}), E, lm)
         effects[k] = {q: round(m[q] - base[q], 3) for q in base if abs(m[q] - base[q]) > 0.05}
     log(sex, "base", {k: round(v, 1) for k, v in base.items()})
-    # export
+    rings = {k: torso_outline(P0, E, lm[k]) for k in ("bust", "underbust", "waist", "highHip", "hips")}
+    # the helmet head, then export
+    egg = add_helmet(h, rig, sex)
     os.makedirs(OUT_GLB, exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
-    h.select_set(True)
-    bpy.context.view_layer.objects.active = h
+    for o in (h, rig, egg):
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = rig
     path = os.path.join(OUT_GLB, f"{sex}.glb")
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=False,
                               export_morph=True, export_morph_normal=False, export_try_sparse_sk=True,
-                              export_texcoords=False, export_materials="NONE", export_skins=False,
+                              export_texcoords=False, export_materials="NONE", export_skins=True, export_animations=False,
                               export_yup=True)
     log(sex, "glb", path, os.path.getsize(path) // 1024, "KB")
-    rings = {k: torso_outline(P0, E, lm[k]) for k in ("bust", "underbust", "waist", "highHip", "hips")}
     return {"base": {k: round(v, 2) for k, v in base.items()}, "rings": rings,
             "landmarks": {k: round(v * 100, 2) for k, v in lm.items()},
             "effects": effects}

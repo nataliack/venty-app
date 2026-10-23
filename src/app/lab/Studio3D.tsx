@@ -7,6 +7,8 @@ import dynamic from "next/dynamic";
 import { Leva, useControls, button, folder } from "leva";
 import { Icon } from "@/components/icons";
 import { LOOKS, type Look } from "@/components/Body3D";
+import { MEASURE_NAMES, SHOTS } from "@/lib/bodyShots";
+import { ALL_MEASURES } from "@/lib/data";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false });
@@ -42,7 +44,8 @@ export function Studio3D() {
     hips: { value: 96, min: 75, max: 140, step: 0.5 },
     neck: { value: 34.5, min: 28, max: 48, step: 0.5 },
     thigh: { value: 54, min: 40, max: 80, step: 0.5 },
-    ring: { value: "bust", options: ["none", "bust", "underbust", "waist", "hips"] },
+    // the measurement being taken: the body poses and the camera frames it (see bodyShots)
+    measuring: { value: (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("m")) || "bust", options: Object.fromEntries(Object.keys(SHOTS).map((k) => [MEASURE_NAMES[k] ?? k, k])) },
     turning: true,
   });
   const [look, setLook] = useControls(() => ({
@@ -71,7 +74,9 @@ export function Studio3D() {
 
   const sex = body.sex as "female" | "male";
   const measures = useMemo(() => ({ height: body.height, bust: body.bust, underbust: body.underbust, waist: body.waist, hips: body.hips, neck: body.neck, thigh: body.thigh }), [body.height, body.bust, body.underbust, body.waist, body.hips, body.neck, body.thigh]);
-  const ring = body.ring === "none" ? undefined : body.ring;
+  const focus = body.measuring as string;
+  const fm = ALL_MEASURES.find((m) => m.key === focus);
+  const value = (measures as Record<string, number>)[focus] ?? fm?.value;
   const L = look as unknown as Look;
 
   if (!ready) return null;
@@ -80,18 +85,18 @@ export function Studio3D() {
       {/* ?shots in the address hides the panel (for clean screenshots) */}
       <Leva collapsed={false} hidden={typeof window !== "undefined" && window.location.search.includes("shots")} titleBar={{ title: "3D body" }} />
       <h2 className="h1 !text-[34px]">3D body</h2>
-      <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements on the right and lit by the look. Change anything in the panel: every phone below updates. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
+      <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look. Pick a measurement under Measuring: the body takes the pose for it and the camera frames it (the first phone). Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
       <div className="mt-10 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {/* a measuring step: the title, the body in its card with the tape ring, the value */}
         <Phone label="Measuring">
           <div className="px-5 pt-14 text-white">
-            <div className="text-[13px] text-white/55">Measures · Bust</div>
-            <h1 className="h1 mt-2 !text-[30px]">Bust</h1>
-            <p className="mt-1.5 text-[15px] text-white/60">Around the fullest part of your bust.</p>
+            <div className="text-[13px] text-white/55">Measures · {MEASURE_NAMES[focus]}</div>
+            <h1 className="h1 mt-2 !text-[30px]">{MEASURE_NAMES[focus]}</h1>
+            <p className="mt-1.5 line-clamp-2 text-[15px] text-white/60">{fm?.hint}</p>
             <div className="glass relative mt-4 h-[380px] overflow-hidden rounded-[24px]">
-              <Body3D sex={sex} measures={measures} look={L} ring={ring} autoRotate={body.turning} className="absolute inset-0" />
+              <Body3D sex={sex} measures={measures} look={L} focus={focus} autoRotate={body.turning} className="absolute inset-0" />
             </div>
-            <div className="dial mt-4 flex h-[110px] items-center justify-center"><span className="serif text-[44px] leading-none">{measures.bust.toFixed(1)}</span><span className="unit ml-2">cm</span></div>
+            <div className="dial mt-4 flex h-[110px] items-center justify-center"><span className="serif text-[44px] leading-none">{value?.toFixed(1)}</span><span className="unit ml-2">cm</span></div>
           </div>
         </Phone>
         {/* the body on its own: the preview after setup */}
@@ -101,7 +106,7 @@ export function Studio3D() {
             <h1 className="h1 !text-[30px]">Me, Spring 26</h1>
             <p className="mt-1 text-[15px] text-white/55">24 of 24 measurements</p>
           </div>
-          <Body3D sex={sex} measures={measures} look={L} autoRotate={body.turning} className="absolute inset-x-0 bottom-24 top-36" />
+          <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={body.turning} className="absolute inset-x-0 bottom-24 top-36" />
           <div className="absolute inset-x-5 bottom-8 grid grid-cols-4 gap-2 text-white">{(["height", "bust", "waist", "hips"] as const).map((k) => (
             <div key={k} className="card-soft rounded-[16px] px-2.5 py-2.5"><div className="text-[12px] capitalize text-white/55">{k}</div><div className="serif mt-1.5 text-[22px] leading-none">{Math.round(measures[k])}</div></div>
           ))}</div>
@@ -113,7 +118,7 @@ export function Studio3D() {
             <p className="mt-1 text-[15px] text-white/60">Drafted to Me · easy fit</p>
             <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 rounded-full bg-white py-2 text-bg">On your body</span><span className="flex-1 py-2 text-white/70">Pattern</span></div>
           </div>
-          <Body3D sex={sex} measures={measures} look={L} autoRotate={body.turning} className="absolute inset-x-0 bottom-28 top-44" />
+          <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={body.turning} className="absolute inset-x-0 bottom-28 top-44" />
           <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
           <span className="absolute left-1/2 top-[52%] -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-[12px] text-white/70 backdrop-blur"><Icon name="dress" size={13} className="mr-1 inline" />Garment: next step</span>
         </Phone>
