@@ -9,11 +9,11 @@ import { cx, FlowProgress, NextButton, RB } from "@/components/ui";
 type V = "now" | "ring" | "vanish" | "walk" | "number" | "bar";
 const VARIANTS: { k: V; name: string; note: string }[] = [
   { k: "now", name: "Today", note: "A periwinkle stroke round every estimate still to check, a white Check pill, and the number pushed to the right beside it." },
-  { k: "ring", name: "1 · Checklist circle", note: "One round control on the right: an empty periwinkle ring while it is an estimate, filled periwinkle with a white tick (home's icon style) once checked. Tap the circle to confirm the estimate on the spot; in the app, tapping the rest of the card opens it to change the number. No words at all." },
-  { k: "vanish", name: "2 · Check, then nothing", note: "A periwinkle Check pill on every estimate. Once checked, the pill goes and only a faint tick is left, so the list gets quieter as you go." },
-  { k: "walk", name: "3 · One button walks you through", note: "No buttons on the cards. The main button names the next one (Check bust, Check waist…) and the card it is about is lit with a soft tint; checked cards keep a faint tick. When all four are done it becomes Continue. One action on screen at a time." },
-  { k: "number", name: "4 · The number says it", note: "Nothing on the right. An estimate is written in soft periwinkle with a small periwinkle dot before its name; once checked the number turns white and the dot goes. Tap a card to check it." },
-  { k: "bar", name: "5 · Progress above", note: "The count moves out of the cards into a slim four-part bar under the heading, which fills as you check. Each card ends in a chevron, or a tick once checked." },
+  { k: "ring", name: "1 · Checklist circle", note: "One round control on the right: an empty periwinkle ring while it is an estimate, filled periwinkle with a white tick (home's icon style) once checked. Tap the circle to confirm the estimate on the spot; in the app, tapping the rest of the card opens it to change the number. Once checked, a quiet Edit sits beside the filled circle." },
+  { k: "vanish", name: "2 · Check, then nothing", note: "A periwinkle Check pill on every estimate. Once checked, the pill gives way to a quiet Edit, so the list gets calmer as you go." },
+  { k: "walk", name: "3 · One button walks you through", note: "No buttons on the cards. The main button names the next one (Check bust, Check waist…) and the card it is about is lit with a soft tint; checked cards show a quiet Edit. When all four are done it becomes Continue. One action on screen at a time." },
+  { k: "number", name: "4 · The number says it", note: "Nothing on the right. An estimate is written in soft periwinkle with a small periwinkle dot before its name; once checked the number turns white, the dot goes and a quiet Edit appears on the right. Tap a card to check it." },
+  { k: "bar", name: "5 · Progress above", note: "The count moves out of the cards into a slim four-part bar under the heading, which fills as you check. Each card ends in a chevron, or a quiet Edit once checked." },
 ];
 
 const CSS = `
@@ -40,7 +40,12 @@ const Value = ({ v, soft }: { v: string; soft?: boolean }) => (
     <span className="unit ml-1.5 w-[22px]" translate="no">cm</span>
   </span>
 );
-const FaintTick = () => <Icon name="check" size={18} strokeWidth={2.4} className="text-white/45" />;
+// after a card is checked: a quiet Edit, to change the number later (in the app it opens the measure; here it does nothing)
+const Edit = ({ label }: { label: string }) => (
+  <span role="button" tabIndex={0} aria-label={`Edit ${label.toLowerCase()}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[14px] font-medium text-white/55 hover:text-white">
+    <Icon name="pencil" size={14} />Edit
+  </span>
+);
 
 function Today({ b, ok, onCheck }: { b: (typeof BASE)[number]; ok: boolean; onCheck: () => void }) {
   return (
@@ -56,13 +61,16 @@ function Today({ b, ok, onCheck }: { b: (typeof BASE)[number]; ok: boolean; onCh
 function Row({ v, b, ok, lit, onCheck }: { v: V; b: (typeof BASE)[number]; ok: boolean; lit: boolean; onCheck: () => void }) {
   const end = (() => {
     if (v === "ring") return (
+      <span className="flex items-center gap-2.5">
+      {ok && <Edit label={b.label} />}
       <span role="checkbox" aria-checked={ok} aria-label={`Confirm ${b.label.toLowerCase()}`} onClick={(e) => { e.stopPropagation(); onCheck(); }} className={cx("ck-ring", ok && "icon-primary")}>
         {ok && <Icon name="check" size={15} strokeWidth={3} />}
       </span>
+      </span>
     );
-    if (v === "vanish") return ok ? <FaintTick /> : <span className="ck-go icon-primary inline-flex items-center">Check</span>;
-    if (v === "walk") return ok ? <FaintTick /> : null;
-    if (v === "bar") return ok ? <FaintTick /> : <Icon name="chevR" size={18} className="text-white/40" />;
+    if (ok) return <Edit label={b.label} />;
+    if (v === "vanish") return <span className="ck-go icon-primary inline-flex items-center">Check</span>;
+    if (v === "bar") return <Icon name="chevR" size={18} className="text-white/40" />;
     return null;
   })();
   return (
