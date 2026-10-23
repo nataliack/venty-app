@@ -46,6 +46,9 @@ const dir = (az: number, el: number, r = 4): [number, number, number] => {
   return [Math.sin(a) * Math.cos(e) * r, Math.sin(e) * r + 1, Math.cos(a) * Math.cos(e) * r];
 };
 const AXIS = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+// the whole body is framed as if it stood this tall (m, the tallest the app takes), feet on the same line: so a
+// taller body visibly reaches higher, rather than every height filling the frame alike
+const FULL_FRAME = 2.0;
 // how fast the tape's dashes run round the body (m/s, before the body's scale)
 const TAPE_SPEED = 0.12;
 // how much of the way to go this frame (speed per second); 0 = cut straight there
@@ -253,12 +256,16 @@ function Camera({ shot, height, still }: { shot: Shot; height: number; still: bo
     const cam = camera as THREE.PerspectiveCamera;
     const fov = (cam.fov * Math.PI) / 180;
     const [y0, y1] = shot.y;
-    const bandH = (y1 - y0) * height * 1.12;
-    const bandW = Math.max(0.5 * height * (y1 - y0 > 0.6 ? 1 : 0.7), bandH * 0.62);
+    const whole = y0 === 0 && y1 === 1;
+    // a band of the body follows the body's own height; the whole body, the tallest frame (see FULL_FRAME)
+    const H = whole ? Math.max(height, FULL_FRAME) : height;
+    const bandH = (y1 - y0) * H * 1.12;
+    // across: the whole body needs its own width (arms out at most about 0.6 of its height); a band, some room round it
+    const bandW = whole ? 0.6 * height : Math.max(0.5 * H * (y1 - y0 > 0.6 ? 1 : 0.7), bandH * 0.62);
     const aspect = size.width / size.height;
     const d = Math.max(bandH / 2 / Math.tan(fov / 2), bandW / 2 / (Math.tan(fov / 2) * aspect));
     const az = (shot.az * Math.PI) / 180;
-    const look = new THREE.Vector3((shot.x ?? 0) * height, ((y0 + y1) / 2) * height, 0);
+    const look = new THREE.Vector3((shot.x ?? 0) * height, ((y0 + y1) / 2) * H, 0);
     return { look, pos: look.clone().add(new THREE.Vector3(Math.sin(az) * d, 0, Math.cos(az) * d)) };
   }, [camera, size, shot, height]);
   const lookAt = useRef<THREE.Vector3 | null>(null);
@@ -282,12 +289,15 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
   return null;
 }
 
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, className }: {
-  sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; className?: string;
+// whole: frame the whole body (front on, no turning by itself) but keep the measurement's pose and tape, for a figure
+// beside a list (Edit measures) rather than a close-up
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, className }: {
+  sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean; className?: string;
 }) {
   const [still, setStill] = useState(false);
   useEffect(() => { const q = window.matchMedia("(prefers-reduced-motion: reduce)"); const f = () => setStill(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
-  const shot = SHOTS[focus] ?? SHOTS.height;
+  const base = SHOTS[focus] ?? SHOTS.height;
+  const shot = useMemo<Shot>(() => (whole ? { ...base, y: [0, 1], x: 0, az: 0, spin: false } : base), [base, whole]);
   const spin = autoRotate && !!shot.spin && !still;
   const height = (measures.height ?? (sex === "female" ? 159 : 173)) / 100;
   // turning: a drag turns the body; the torso shots also turn slowly by themselves; a new shot faces the camera again
