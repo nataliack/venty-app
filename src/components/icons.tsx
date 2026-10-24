@@ -54,6 +54,8 @@ const P: Record<string, React.ReactNode> = {
   trash: <><path d="M5 7h14M9.5 7V5h5v2M7 7l1 12.5h8L17 7" /></>,
   eye: <><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" /><circle cx="12" cy="12" r="2.5" /></>,
   bell: <><path d="M6.5 15.2V9.7a5.5 5.5 0 0 1 11 0v5.5l1.6 1.6H4.9z" /><path d="M10 18.9a2.1 2.1 0 0 0 4 0" /></>,
+  pause: <><path d="M9 6.5v11" /><path d="M15 6.5v11" /></>,
+  play: <path d="M8.5 6.2v11.6a.6.6 0 0 0 .9.5l9.2-5.8a.6.6 0 0 0 0-1L9.4 5.7a.6.6 0 0 0-.9.5Z" />,
   video: <><rect x="3.5" y="6.5" width="12" height="11" rx="2" /><path d="M15.5 10.5 20.5 8v8l-5-2.5" /></>,
   book: <><path d="M5 5.5A2 2 0 0 1 7 4h12v14H7a2 2 0 0 0-2 2z" /><path d="M5 20V5.5" /></>,
   triangle: <path d="M12 5 20 19H4z" />,

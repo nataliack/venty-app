@@ -10,7 +10,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, Lightformer, useGLTF, Line } from "@react-three/drei";
+import { ContactShadows, Environment, Grid, Lightformer, useGLTF, Line } from "@react-three/drei";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { Line2 } from "three/examples/jsm/lines/Line2.js";
 import type { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
@@ -250,7 +250,7 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
 }
 
 // The camera glides to the shot: the band of the body it frames, from the front, side or back.
-function Camera({ shot, height, still }: { shot: Shot; height: number; still: boolean }) {
+function Camera({ shot, height, still, stage }: { shot: Shot; height: number; still: boolean; stage: Stage }) {
   const { camera, size, invalidate } = useThree();
   const goal = useMemo(() => {
     const cam = camera as THREE.PerspectiveCamera;
@@ -259,15 +259,18 @@ function Camera({ shot, height, still }: { shot: Shot; height: number; still: bo
     const whole = y0 === 0 && y1 === 1;
     // a band of the body follows the body's own height; the whole body, the tallest frame (see FULL_FRAME)
     const H = whole ? Math.max(height, FULL_FRAME) : height;
-    const bandH = (y1 - y0) * H * 1.12;
+    // on a stage the camera looks down a little, and the frame takes in the floor round the feet
+    const under = whole && stage !== "none" ? 0.12 * H : 0;
+    const bandH = (y1 - y0) * H * 1.12 + under;
     // across: the whole body needs its own width (arms out at most about 0.6 of its height); a band, some room round it
     const bandW = whole ? 0.6 * height : Math.max(0.5 * H * (y1 - y0 > 0.6 ? 1 : 0.7), bandH * 0.62);
     const aspect = size.width / size.height;
     const d = Math.max(bandH / 2 / Math.tan(fov / 2), bandW / 2 / (Math.tan(fov / 2) * aspect));
     const az = (shot.az * Math.PI) / 180;
-    const look = new THREE.Vector3((shot.x ?? 0) * height, ((y0 + y1) / 2) * H, 0);
-    return { look, pos: look.clone().add(new THREE.Vector3(Math.sin(az) * d, 0, Math.cos(az) * d)) };
-  }, [camera, size, shot, height]);
+    const look = new THREE.Vector3((shot.x ?? 0) * height, ((y0 + y1) / 2) * H - under / 2, 0);
+    const el = stage !== "none" ? (9 * Math.PI) / 180 : 0;
+    return { look, pos: look.clone().add(new THREE.Vector3(Math.sin(az) * d * Math.cos(el), d * Math.sin(el), Math.cos(az) * d * Math.cos(el))) };
+  }, [camera, size, shot, height, stage]);
   const lookAt = useRef<THREE.Vector3 | null>(null);
   useFrame((_, dt) => {
     const k = ease(dt, still ? 0 : 5);
@@ -284,6 +287,59 @@ function Camera({ shot, height, still }: { shot: Shot; height: number; still: bo
 }
 
 // the slow turn on the torso shots (not while dragging)
+// where the body stands: nothing (floating in its card), a pool of cornflower light on the floor, a low round podium
+// (a turntable for the turning body), or a graph-paper floor fading into the dark (the pattern paper's grid)
+export type Stage = "none" | "glow" | "podium" | "grid";
+let glowTex: THREE.CanvasTexture | null = null;
+function floorGlow() {
+  if (glowTex) return glowTex;
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const g = c.getContext("2d")!;
+  const r = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  r.addColorStop(0, "rgba(140,156,248,.55)"); r.addColorStop(0.45, "rgba(104,126,245,.22)"); r.addColorStop(1, "rgba(104,126,245,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 256, 256);
+  glowTex = new THREE.CanvasTexture(c);
+  glowTex.colorSpace = THREE.SRGBColorSpace;
+  return glowTex;
+}
+function StagePieces({ stage, scale }: { stage: Stage; scale: number }) {
+  if (stage === "none") return null;
+  const r = 0.42 * scale;
+  return (
+    <group>
+      {stage === "podium" && (
+        <>
+          <mesh position={[0, -0.03 * scale, 0]} receiveShadow><cylinderGeometry args={[r, r * 1.03, 0.06 * scale, 96]} /><meshStandardMaterial color="#0b0c14" roughness={0.9} metalness={0} envMapIntensity={0.25} /></mesh>
+          <mesh position={[0, 0.0005, 0]} rotation-x={-Math.PI / 2}><ringGeometry args={[r * 0.985, r, 128]} /><meshBasicMaterial color="#8c9cf8" toneMapped={false} transparent opacity={0.85} /></mesh>
+        </>
+      )}
+      {/* the grid fades out from the feet (fadeFrom 0: from the middle, not from the camera) */}
+      {stage === "grid" && <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1 * scale} cellThickness={0.8} cellColor="#3a4680" sectionSize={0.5 * scale} sectionThickness={1.2} sectionColor="#687ef5" fadeDistance={1.5 * scale} fadeStrength={1.4} fadeFrom={0} infiniteGrid />}
+      <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[stage === "podium" ? r * 0.7 : 0.6 * scale, 96]} /><meshBasicMaterial map={floorGlow()} transparent opacity={stage === "podium" ? 0.45 : 1} depthWrite={false} toneMapped={false} /></mesh>
+      <ContactShadows position={[0, 0.003, 0]} opacity={0.6} blur={2.2} scale={1.6 * scale} far={1} resolution={512} frames={Infinity} color="#05060b" />
+    </group>
+  );
+}
+
+// a picture of the view for design work: the body alone, transparent round it, rendered sharper than the screen
+function Snapshot({ id }: { id: string }) {
+  const { gl, scene, camera, size } = useThree();
+  useEffect(() => {
+    const w = window as unknown as { __ventySnap?: Record<string, (k: number) => string> };
+    w.__ventySnap = { ...(w.__ventySnap ?? {}), [id]: (k: number) => {
+      const was = gl.getPixelRatio();
+      gl.setPixelRatio(k); gl.setSize(size.width, size.height, false);
+      gl.render(scene, camera);
+      const url = gl.domElement.toDataURL("image/png");
+      gl.setPixelRatio(was); gl.setSize(size.width, size.height, false);
+      return url;
+    } };
+    return () => { if (w.__ventySnap) delete w.__ventySnap[id]; };
+  }, [gl, scene, camera, size, id]);
+  return null;
+}
+
 function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRefObject<number>; dragRef: React.MutableRefObject<unknown> }) {
   useFrame((_, dt) => { if (on && !dragRef.current) yawRef.current += dt * 0.35; });
   return null;
@@ -291,14 +347,17 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 
 // whole: frame the whole body (front on, no turning by itself) but keep the measurement's pose and tape, for a figure
 // beside a list (Edit measures) rather than a close-up
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, className }: {
-  sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean; className?: string;
+// stage: what the body stands on (see Stage). turn: turn slowly by itself on this view too (the torso shots always
+// may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", turn = false, paused = false, snapshot, className }: {
+  sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
+  stage?: Stage; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   useEffect(() => { const q = window.matchMedia("(prefers-reduced-motion: reduce)"); const f = () => setStill(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
   const base = SHOTS[focus] ?? SHOTS.height;
   const shot = useMemo<Shot>(() => (whole ? { ...base, y: [0, 1], x: 0, az: 0, spin: false } : base), [base, whole]);
-  const spin = autoRotate && !!shot.spin && !still;
+  const spin = autoRotate && (!!shot.spin || turn) && !paused && !still;
   const height = (measures.height ?? (sex === "female" ? 159 : 173)) / 100;
   // turning: a drag turns the body; the torso shots also turn slowly by themselves; a new shot faces the camera again
   const yawRef = useRef(0);
@@ -311,7 +370,8 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
       onPointerUp={() => (dragRef.current = null)} onPointerCancel={() => (dragRef.current = null)}>
       <Canvas frameloop={spin || (shot.ring && !still) ? "always" : "demand"} dpr={[1, 2]} camera={{ fov: 26, near: 0.05, far: 50 }} gl={{ antialias: true, alpha: true }} shadows>
         <Spinner on={spin} yawRef={yawRef} dragRef={dragRef} />
-        <Camera shot={shot} height={height} still={still} />
+        <Camera shot={shot} height={height} still={still} stage={stage} />
+        {snapshot && <Snapshot id={snapshot} />}
         <ambientLight intensity={look.ambient} />
         <directionalLight position={dir(look.keyAzimuth, look.keyElevation)} intensity={look.keyIntensity} color={look.keyColor} />
         <directionalLight position={dir(look.keyAzimuth - 150, 15)} intensity={look.fillIntensity} color={look.fillColor} />
@@ -327,6 +387,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
         <Suspense fallback={null}>
           <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} />
         </Suspense>
+        <StagePieces stage={stage} scale={height / 1.65} />
         {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}
       </Canvas>
     </div>

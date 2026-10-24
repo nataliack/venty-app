@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import dynamic from "next/dynamic";
 import { Leva, useControls, button, folder } from "leva";
 import { Icon } from "@/components/icons";
-import { Blob, Crown, Glass, Glow, Pill, RB } from "@/components/ui";
+import { Blob, Crown, cx, Glass, Glow, Pill, RB } from "@/components/ui";
 import { MarkCover, Ruler } from "@/components/art";
-import { LOOKS, type Look } from "@/components/Body3D";
+import { LOOKS, type Look, type Stage } from "@/components/Body3D";
 import { MEASURE_NAMES, SHOTS } from "@/lib/bodyShots";
 import { ALL_MEASURES, BASE } from "@/lib/data";
 
@@ -39,19 +39,61 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+// where the body stands, and what the card behind it looks like
+const STAGES: { k: Stage; name: string; note: string; bg: string }[] = [
+  { k: "none", name: "Today", note: "The body floats in the plain card.", bg: "var(--color-card)" },
+  { k: "glow", name: "A · Pool of light", note: "A soft light from above falls into a pool of cornflower on the floor, with a shadow under the feet: a quiet studio.", bg: "radial-gradient(70% 55% at 50% 0%, rgb(140 156 248 / .2), transparent 72%), linear-gradient(180deg, #181a29 0%, #0e0f18 100%)" },
+  { k: "podium", name: "B · Podium", note: "The body stands on a low round podium with a fine cornflower edge, like a turntable, which suits the turning body.", bg: "radial-gradient(62% 46% at 50% 40%, rgb(104 126 245 / .18), transparent 72%), #0d0e17" },
+  { k: "grid", name: "C · Pattern floor", note: "A graph-paper floor, the grid of the pattern sheets, fading into the dark: the body stands where its pattern will be drawn.", bg: "linear-gradient(180deg, #141626 0%, #0c0d16 62%, #10121f 100%)" },
+];
+type DialStyle = "now" | "snow" | "inset" | "snowInset";
+const DIALS: { k: DialStyle; name: string; note: string }[] = [
+  { k: "now", name: "Today", note: "The card colour, the ruler along the bottom." },
+  { k: "snow", name: "1 · Snow", note: "The whole dial turns snow, ink numbers and ticks, a cornflower needle: the one light thing on the screen, so it reads as the control." },
+  { k: "inset", name: "2 · Inset track", note: "The ruler sits in a track pressed into the card (the inset tiles' look), so it reads as something to slide. The same height as today." },
+  { k: "snowInset", name: "3 · Snow, inset track", note: "Snow, with the ruler in a soft pressed track." },
+];
+
 // the measuring dial, as the app's measuring step draws it: − and + either side of the value, the ruler along the
-// bottom. It moves the body in the lab (the same value as the panel)
-function Dial({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+// bottom (or in a pressed track). It moves the body in the lab (the same value as the panel). Every style is the same
+// height, so the screen still fits without scrolling
+function Dial({ value, min, max, onChange, style = "now" }: { value: number; min: number; max: number; onChange: (v: number) => void; style?: DialStyle }) {
   const set = (v: number) => onChange(Math.min(max, Math.max(min, Math.round(v * 2) / 2)));
+  const snow = style === "snow" || style === "snowInset";
+  const inset = style === "inset" || style === "snowInset";
+  const btn = snow ? "!border-[#12131c]/10 !bg-white !text-[#12131c] shadow-[0_1px_2px_rgb(28_34_82/.12)]" : "rb-plain";
   return (
-    <div className="dial">
-      <div className="flex items-center justify-between gap-2 px-3 pt-3">
-        <RB icon="minus" size={48} onClick={() => set(value - 0.5)} label="Minus 0.5 cm" className="rb-plain" />
-        <span className="flex h-[60px] items-center justify-center gap-2"><span className="serif text-[44px] leading-none">{value.toFixed(1)}</span><span className="unit">cm</span></span>
-        <RB icon="plus" size={48} onClick={() => set(value + 0.5)} label="Plus 0.5 cm" className="rb-plain" />
+    <div className={cx("dial h-[132px]", snow && "!border-white/70 !bg-snow text-[#12131c]")}>
+      <div className={cx("flex items-center justify-between gap-2 px-3", inset ? "pt-2.5" : "pt-3")}>
+        <RB icon="minus" size={inset ? 44 : 48} onClick={() => set(value - 0.5)} label="Minus 0.5 cm" className={btn} />
+        <span className={cx("flex items-center justify-center gap-2", inset ? "h-[56px]" : "h-[60px]")}><span className="serif text-[44px] leading-none">{value.toFixed(1)}</span><span className={cx("unit", snow && "!text-[#12131c]/55")}>cm</span></span>
+        <RB icon="plus" size={inset ? 44 : 48} onClick={() => set(value + 0.5)} label="Plus 0.5 cm" className={btn} />
       </div>
-      <Ruler value={value} min={min} max={max} onChange={set} className="mt-2" />
+      {inset
+        ? <div className={cx("mx-3 mt-1.5 overflow-hidden rounded-[16px] py-[3px]", snow ? "shadow-[inset_0_2px_5px_rgb(28_34_82/.2),inset_0_-1px_0_rgb(255_255_255/.95)] bg-[#e3e8f6]" : "lab-inset")}><Ruler value={value} min={min} max={max} onChange={set} h={44} light={snow} /></div>
+        : <Ruler value={value} min={min} max={max} onChange={set} light={snow} className="mt-2" />}
     </div>
+  );
+}
+
+// the card the body stands in: its backdrop, the stage, and a pause button for the turning
+function StageCard({ stage, h, paused, onPause, children }: { stage: Stage; h: string; paused: boolean; onPause: () => void; children: ReactNode }) {
+  const bg = STAGES.find((x) => x.k === stage)!.bg;
+  return (
+    <div className={cx("relative mt-4 overflow-hidden rounded-[24px] border border-white/[.08]", h)} style={{ background: bg }}>
+      {children}
+      <button onClick={onPause} aria-label={paused ? "Turn the body" : "Stop turning"} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#0b0c15]/55 text-white/80 backdrop-blur hover:text-white">
+        <Icon name={paused ? "play" : "pause"} size={16} strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+function Pick<T extends string>({ items, value, onChange }: { items: { k: T; name: string }[]; value: T; onChange: (k: T) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">{items.map((x) => (
+      <button key={x.k} onClick={() => onChange(x.k)} aria-pressed={value === x.k} className={cx("h-11 rounded-full px-5 text-[15px] font-medium transition-colors", value === x.k ? "bg-white text-bg" : "border border-white/15 text-white/75 hover:text-white")}>{x.name}</button>
+    ))}</div>
   );
 }
 
@@ -104,6 +146,9 @@ export function Studio3D() {
   const measures = useMemo(() => ({ height: body.height, bust: body.bust, underbust: body.underbust, waist: body.waist, hips: body.hips, neck: body.neck, thigh: body.thigh }), [body.height, body.bust, body.underbust, body.waist, body.hips, body.neck, body.thigh]);
   const focus = body.measuring as string;
   const [edit, setEdit] = useState("waist");
+  const [stage, setStage] = useState<Stage>("glow");
+  const [dialStyle, setDialStyle] = useState<DialStyle>("inset");
+  const [paused, setPaused] = useState(false);
   const fm = ALL_MEASURES.find((m) => m.key === focus);
   const value = (measures as Record<string, number>)[focus] ?? fm?.value;
   const L = look as unknown as Look;
@@ -115,8 +160,14 @@ export function Studio3D() {
       <Leva collapsed={false} hidden={typeof window !== "undefined" && window.location.search.includes("shots")} titleBar={{ title: "3D body" }} />
       <h2 className="h1 !text-[34px]">3D body</h2>
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the app&apos;s screens that show a body (today a flat figure). Pick a measurement under Measuring: the body takes the pose for it and the camera frames it (the first phone). On the whole-body screens a taller body reaches higher: change the height to see it. Tap a row in Edit measures to move the tape. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
-      <div className="mt-10 flex flex-wrap justify-center gap-x-10 gap-y-12">
-        {/* 0 · the height step: slide the ruler and the body grows or shrinks, feet on the floor */}
+      <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Height and measuring: the stage and the dial</h3>
+      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+        <div><div className="mb-2 text-[14px] text-white/50">Stage</div><Pick items={STAGES} value={stage} onChange={setStage} /><p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{STAGES.find((x) => x.k === stage)!.note}</p></div>
+        <div><div className="mb-2 text-[14px] text-white/50">Dial</div><Pick items={DIALS} value={dialStyle} onChange={setDialStyle} /><p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{DIALS.find((x) => x.k === dialStyle)!.note}</p></div>
+      </div>
+      <p className="mt-4 max-w-[760px] text-[15px] leading-snug text-white/50">On both: drag the body to turn it, the button at the top right stops and starts the turning, and the ruler keeps following your finger even outside the dial until you let go.</p>
+      <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
+        {/* the height step: slide the ruler and the body grows or shrinks, feet on the floor; it turns slowly (pause) */}
         <Phone label="Height: slide to change it">
           <div className="px-5 pt-12 text-white">
             <div className="flex h-11 items-center gap-3"><RB icon="close" size={40} label="Close" /><div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full w-[12%] rounded-full bg-white" /></div></div>
@@ -124,31 +175,35 @@ export function Studio3D() {
               <div><h1 className="h1 !text-[30px]">Height</h1><p className="mt-1.5 text-[15px] leading-snug text-white/60">Stand tall against a wall, heels together.</p></div>
               <RB icon="help" size={40} label="How to measure" className="shrink-0" />
             </div>
-            <Glass className="relative mt-4 h-[300px] overflow-hidden rounded-[24px]">
-              <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={false} className="absolute inset-0" />
-            </Glass>
-            <div className="mt-4"><Dial value={body.height} min={140} max={200} onChange={(v) => setBody({ height: v })} /></div>
+            <StageCard stage={stage} h="h-[300px]" paused={paused} onPause={() => setPaused((x) => !x)}>
+              <Body3D sex={sex} measures={measures} look={L} focus="height" stage={stage} turn={body.turning} paused={paused} snapshot="stage" className="absolute inset-0" />
+            </StageCard>
+            <div className="mt-4"><Dial style={dialStyle} value={body.height} min={140} max={200} onChange={(v) => setBody({ height: v })} /></div>
           </div>
           <div className="absolute inset-x-5 bottom-7 flex items-center gap-3"><RB icon="back" variant="dark" size={56} label="Back" /><Pill className="flex-1">Next</Pill></div>
         </Phone>
-        {/* 1 · a measuring step (MeasureStep): the title, the body in its card with the tape, the value */}
-        <Phone label="1 · Measuring (pick it under Measuring)">
+
+        {/* a measuring step (MeasureStep): the title, the body with the tape, the value */}
+        <Phone label="Measuring (pick it under Measuring)">
           <div className="px-5 pt-12 text-white">
             <div className="flex h-11 items-center gap-3"><RB icon="close" size={40} label="Close" /><div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full w-[38%] rounded-full bg-white" /></div></div>
             <div className="mt-3 flex items-start justify-between gap-3">
               <div><h1 className="h1 !text-[30px]">{MEASURE_NAMES[focus]}</h1><p className="mt-1.5 line-clamp-2 text-[15px] leading-snug text-white/60">{fm?.hint}</p></div>
               <RB icon="help" size={40} label="How to measure" className="shrink-0" />
             </div>
-            <Glass className="relative mt-4 h-[280px] overflow-hidden rounded-[24px]">
-              <Body3D sex={sex} measures={measures} look={L} focus={focus} autoRotate={body.turning} className="absolute inset-0" />
-            </Glass>
+            <StageCard stage={stage} h="h-[280px]" paused={paused} onPause={() => setPaused((x) => !x)}>
+              <Body3D sex={sex} measures={measures} look={L} focus={focus} stage={stage} paused={paused} autoRotate={body.turning} className="absolute inset-0" />
+            </StageCard>
             <div className="mt-4">{focus in measures && fm
-              ? <Dial value={(measures as Record<string, number>)[focus]} min={fm.min} max={fm.max} onChange={(v) => setBody({ [focus]: v })} />
-              : <div className="dial flex h-[124px] items-center justify-center"><span className="serif text-[44px] leading-none">{value?.toFixed(1)}</span><span className="unit ml-2">cm</span></div>}</div>
+              ? <Dial style={dialStyle} value={(measures as Record<string, number>)[focus]} min={fm.min} max={fm.max} onChange={(v) => setBody({ [focus]: v })} />
+              : <div className="dial flex h-[132px] items-center justify-center"><span className="serif text-[44px] leading-none">{value?.toFixed(1)}</span><span className="unit ml-2">cm</span></div>}</div>
           </div>
           <div className="absolute inset-x-5 bottom-7 flex items-center gap-3"><RB icon="back" variant="dark" size={56} label="Back" /><Pill className="flex-1">Next</Pill></div>
         </Phone>
+      </div>
 
+      <h3 className="mt-16 text-[22px] font-normal tracking-[-.02em]">The other screens (on hold)</h3>
+      <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {/* 2 · the body after setup (Preview): turn it, the four base numbers */}
         <Phone label="2 · Your body (after setup)">
           <div className="px-5 pt-12 text-white">
@@ -158,7 +213,7 @@ export function Studio3D() {
           </div>
           <div className="absolute inset-x-5 top-[170px] h-[390px]">
             <Blob className="left-1/2 top-1/2 h-[300px] w-[220px] -translate-x-1/2 -translate-y-1/2 opacity-40" />
-            <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={body.turning} className="absolute inset-0" />
+            <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={body.turning} snapshot="body" className="absolute inset-0" />
             <RB icon="back" className="absolute left-0 top-1/2 -translate-y-1/2" label="Turn left" />
             <RB icon="chevR" className="absolute right-0 top-1/2 -translate-y-1/2" label="Turn right" />
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2"><span className="glass-2 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] text-white">Front · drag to turn</span></div>
