@@ -41,14 +41,17 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 
 // twenty ways to present the body: the card's backdrop (CSS, with a decoration behind the body) and what it stands on
 // (the floor, in the scene). Each takes a different approach
-type Deco = "crown" | "arch" | "strip" | "rings" | "frame" | "cone" | "beams" | "dots";
+type Deco = "crown" | "arch" | "strip" | "rings" | "frame" | "cone" | "beams" | "dots" | "floor";
 type Scene = { k: string; name: string; note: string; floor: Stage; chart?: boolean; bg: string; deco?: Deco };
 const DARK = "linear-gradient(180deg, #141626 0%, #0c0d16 100%)";
+// ink, with a cornflower light from above so faint it is felt more than seen
+const INK = "radial-gradient(75% 48% at 50% -8%, rgb(104 126 245 / .085), rgb(104 126 245 / .03) 45%, transparent 75%), var(--color-ink)";
 const SCENES: Scene[] = [
   { k: "today", name: "1 · Today", note: "What the app has: the plain card colour, the body floating in it.", floor: "none", bg: "var(--color-card)" },
   { k: "pool", name: "2 · Pool of light", note: "Soft light from above falls into a pool of cornflower on the floor, a shadow under the feet. A quiet studio.", floor: "glow", bg: "radial-gradient(70% 55% at 50% 0%, rgb(140 156 248 / .2), transparent 72%), linear-gradient(180deg, #181a29 0%, #0e0f18 100%)" },
   { k: "podium", name: "3 · Podium", note: "A low round podium with a fine cornflower edge, a soft spot behind: a turntable for the turning body.", floor: "podium", bg: "radial-gradient(62% 46% at 50% 40%, rgb(104 126 245 / .18), transparent 72%), #0d0e17" },
-  { k: "grid", name: "4 · Pattern floor", note: "A graph-paper floor, the grid of the pattern sheets, fading into the dark: the body stands where its pattern is drawn.", floor: "grid", bg: "linear-gradient(180deg, #141626 0%, #0c0d16 62%, #10121f 100%)" },
+  { k: "grid", name: "4 · Pattern floor", note: "A graph-paper floor, the grid of the pattern sheets, fading into the dark: the body stands where its pattern is drawn. Refined: ink, a very faint cornflower light from above, quieter lines (real 10 cm squares, bolder every 50, the same at every height), a shadow under the feet. The floor is in the 3D scene: one flat plane, very cheap next to the body.", floor: "grid", bg: INK },
+  { k: "gridFlat", name: "4b · Pattern floor, drawn", note: "The same floor drawn flat behind the body (an image, nothing in the 3D scene), the shadow still in the scene. A touch cheaper, but it cannot follow the camera: fine on the height step, where the camera never moves.", floor: "shadow", bg: INK, deco: "floor" },
   { k: "horizon", name: "5 · Studio horizon", note: "A wall and a floor meeting in a soft horizon behind the feet, like a photo studio with the lights on the wall.", floor: "shadow", bg: "linear-gradient(180deg, #23273d 0%, #1b1e30 58%, #131523 67%, #0b0c14 100%)" },
   { k: "slate", name: "6 · Slate sweep", note: "A mid blue-grey seamless backdrop (a cyclorama) with light falling off at the edges: the body reads in its own tones, like a product shot.", floor: "shadow", bg: "radial-gradient(95% 75% at 50% 38%, #3a4766 0%, #252c43 52%, #151927 100%)" },
   { k: "crown", name: "7 · Crown", note: "The landing page's Crown gradient behind the body, a pool of light at the feet: the brand's own light.", floor: "glow", bg: "#0b0c15", deco: "crown" },
@@ -71,6 +74,19 @@ function Decor({ d }: { d?: Deco }) {
   if (!d) return null;
   if (d === "crown") return <><Crown /><div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 50%, rgb(11 12 21 / .6))" }} /></>;
   if (d === "dots") return <div className="dotgrid" />;
+  if (d === "floor") {
+    // graph paper laid on the floor in perspective: fine lines every square, bolder every five, fading out round the feet
+    const line = (c: string, step: number, w: number) => `repeating-linear-gradient(0deg, ${c} 0 ${w}px, transparent ${w}px ${step}px), repeating-linear-gradient(90deg, ${c} 0 ${w}px, transparent ${w}px ${step}px)`;
+    return (
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] overflow-hidden" style={{ perspective: "260px", perspectiveOrigin: "50% 0%" }}>
+        {/* the floor round the feet a shade lighter, so the shadow under them reads */}
+        <div className="absolute left-1/2 top-[8%] h-[46%] w-[70%] -translate-x-1/2 rounded-[50%]" style={{ background: "radial-gradient(closest-side, rgb(193 200 217 / .07), transparent)" }} />
+        <div className="absolute -inset-x-[60%] bottom-[-30%] top-0" style={{ transform: "rotateX(64deg)", transformOrigin: "50% 0%",
+          background: `${line("rgb(58 69 128 / .55)", 110, 1.2)}, ${line("rgb(38 44 76 / .9)", 22, 1)}`, backgroundPosition: "center top",
+          maskImage: "radial-gradient(42% 55% at 50% 22%, #000 20%, transparent 100%)", WebkitMaskImage: "radial-gradient(42% 55% at 50% 22%, #000 20%, transparent 100%)" }} />
+      </div>
+    );
+  }
   const base = "pointer-events-none absolute";
   if (d === "arch") return <div className={cx(base, "left-1/2 top-[7%] bottom-[16%] w-[58%] -translate-x-1/2 rounded-t-full")} style={{ background: "linear-gradient(180deg, rgb(140 156 248 / .17), rgb(140 156 248 / .05) 80%, transparent)" }} />;
   if (d === "frame") return <div className={cx(base, "left-1/2 top-[7%] bottom-[14%] w-[56%] -translate-x-1/2 rounded-t-full border-[1.5px] border-b-0 border-[#8c9cf8]/60")} />;
@@ -180,7 +196,7 @@ export function Studio3D() {
   const measures = useMemo(() => ({ height: body.height, bust: body.bust, underbust: body.underbust, waist: body.waist, hips: body.hips, neck: body.neck, thigh: body.thigh }), [body.height, body.bust, body.underbust, body.waist, body.hips, body.neck, body.thigh]);
   const focus = body.measuring as string;
   const [edit, setEdit] = useState("waist");
-  const [sceneK, setSceneK] = useState("pool");
+  const [sceneK, setSceneK] = useState("grid");
   const scene = SCENES.find((x) => x.k === sceneK) ?? SCENES[0];
   const stepScene = (d: number) => setSceneK(SCENES[(SCENES.indexOf(scene) + d + SCENES.length) % SCENES.length].k);
   const [dialStyle, setDialStyle] = useState<DialStyle>("inset");
