@@ -135,7 +135,7 @@ export function TplBody() {
           <Glass key={x.id} onClick={() => setSel(x.id)} selected={x.id === sel} className="flex h-[84px] w-full items-center gap-4 rounded-[24px] px-4 lg:h-[100px] lg:px-6">
             <BodyFigure sex={x.sex} width={26} glow={false} />
             <div className="flex-1"><div className="text-[16px] font-semibold">{x.name}</div><div className="text-[14px] text-white/55">{x.done.length} of 24 measurements</div></div>
-            <Check on={x.id === sel} className={x.id === sel ? "!bg-primary !text-white" : ""} />
+            <Check on={x.id === sel} className={x.id === sel ? "icon-primary !text-white" : ""} />
           </Glass>
         ))}
         <button onClick={() => { startBody(); }} className="tap flex h-16 items-center gap-3 rounded-[22px] border border-dashed border-white/25 px-5 text-[16px] font-medium text-white/75"><Icon name="plus" size={20} />New body</button>

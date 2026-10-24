@@ -35,12 +35,21 @@ function NotchShape({ docked }: { docked: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [[w, h], setSize] = useState([353, BAR_H]);
   useEffect(() => { const el = ref.current; if (!el) return; const fit = () => setSize([el.clientWidth, el.clientHeight || BAR_H]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
+  const d = notchPath(w, h, docked);
   return (
     <div ref={ref} className="pointer-events-none absolute inset-0" aria-hidden>
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="tabbar-shape absolute inset-0 overflow-visible">
-        {/* solid colour from BAR_H down, so a docked bar meets the strip below (painted #bac3e8) with no seam */}
-        <defs><linearGradient id="tabfill" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={BAR_H}><stop offset="0" stopColor="#cdd3ef" /><stop offset="1" stopColor="#bac3e8" /></linearGradient></defs>
-        <path d={notchPath(w, h, docked)} fill="url(#tabfill)" stroke="rgb(255 255 255 / .4)" strokeWidth="1" />
+        {/* one even snow (no gradient; a docked bar meets the strip below, painted the same snow, with no seam), built like
+            the white secondary button: a soft white light inside the edge, and a rim that is white along the top and a
+            slightly deeper snow towards the bottom */}
+        <defs>
+          <linearGradient id="tabrim" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={BAR_H}><stop offset="0" stopColor="#fff" /><stop offset=".35" stopColor="rgb(19 21 35 / .06)" /><stop offset="1" stopColor="rgb(19 21 35 / .16)" /></linearGradient>
+          <clipPath id="tabclip"><path d={d} /></clipPath>
+          <filter id="tabglow" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="4" /></filter>
+        </defs>
+        <path d={d} fill="var(--color-snow)" />
+        <path d={d} fill="none" stroke="#fff" strokeOpacity=".8" strokeWidth="12" clipPath="url(#tabclip)" filter="url(#tabglow)" />
+        <path d={d} fill="none" stroke="url(#tabrim)" strokeWidth="1" />
       </svg>
     </div>
   );
@@ -135,7 +144,7 @@ function Notices() {
         </div>
       )}
       {b && (
-        <button onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="card-soft tap flex w-full items-center gap-3.5 rounded-[22px] !border-primary/60 p-4 text-left">
+        <button onClick={() => { set({ activeBody: b.id }); go("wizard"); }} className="card-soft tap flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left">
           <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name="ruler" size={20} strokeWidth={2} /></span>
           <div className="min-w-0 flex-1"><div className="text-[16px] font-medium">Continue finishing your measurements</div><div className="text-[14px] text-white/55">{b.name} · {b.done.length} of 24 saved</div>
             <div className="mt-2 flex gap-[2px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < b.done.length ? "bg-primary" : "bg-white/15")} />)}</div></div>

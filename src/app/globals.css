@@ -67,7 +67,6 @@ input { font: inherit; color: inherit; }
 /* cards are solid, never see-through: the dot grid must not show through them (same fill as .card-soft) */
 .glass { background: var(--color-card); border: 1px solid rgba(255,255,255,.08); }
 .glass-2 { background: var(--color-card); border: 1px solid rgba(255,255,255,.1); }
-.sel { border-color: #687ef5 !important; box-shadow: inset 0 0 0 .5px #687ef5; }
 
 .glow { position: relative; overflow: hidden; isolation: isolate; border: 1px solid rgba(255,255,255,.14);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -20px 40px rgba(255,255,255,.06); background: var(--gc, #687ef5); }
@@ -92,10 +91,24 @@ input { font: inherit; color: inherit; }
   background-size: 5px 5px, 100% 100%;
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3), inset 0 1px 0 rgb(255 255 255 / .6), inset 0 0 18px 3px rgb(206 214 255 / .55), 0 10px 30px -8px rgb(104 126 245 / .5); }
 .pill-glass { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
-.pill-white { background: #fff; color: #0b0c15; }
-.pill-dark { background: var(--color-card); border: 1px solid rgba(255,255,255,.08); }
-.rb { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; transition: transform .35s cubic-bezier(.2,1.4,.4,1), border-color .3s, box-shadow .3s; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); }
-.rb-sm { width: 40px; height: 40px; background: var(--color-card); border-color: rgba(255,255,255,.08); }
+/* the white secondary (23 Oct 2026, chosen in the lab): the app's snow, lit from the top like the primary (a pure white
+   line along the top edge, a slightly deeper snow along the bottom, a faint ink rim and a soft white light inside), and
+   a soft drop shadow (a short one right under it, a wide faint one below) so it stands off light surfaces too. Done,
+   Got it, Continue with email, the onboarding's Skip (.pill-white) and the white round buttons on the light tops
+   (.bell-btn: the bell, Edit profile, the photo's camera) */
+.pill-white, .bell-btn { background: var(--color-snow); color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .1), inset 0 0 12px 1px rgb(255 255 255 / .75),
+    0 1px 2px rgb(19 21 35 / .1), 0 6px 14px -6px rgb(19 21 35 / .22); }
+/* the secondary button (23 Oct 2026, chosen in the lab): built like the primary but quieter, in the card colour. Lit from
+   the top: a faint white wash fading down the face, a fine light rim, a bright line along the top edge, a darker line
+   along the bottom and a very soft light inside the edges. No dot grid and no drop shadow. Every round button (.rb:
+   back, close, the steppers), the dark pill (Cancel, Change the design) and .sec-dark (the onboarding's back, on the
+   paper: on a light surface the secondary is the dark one) wear it */
+.sec-dark { color: #fff; }
+.pill-dark, .rb, .sec-dark { background: linear-gradient(180deg, rgb(255 255 255 / .06), rgb(255 255 255 / 0) 60%) var(--color-card); border: 0;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1), inset 0 1px 0 rgb(255 255 255 / .2), inset 0 -1px 0 rgb(0 0 0 / .35), inset 0 0 14px 1px rgb(255 255 255 / .04); }
+.rb { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; transition: transform .35s cubic-bezier(.2,1.4,.4,1), filter .15s; }
+.rb-sm { width: 40px; height: 40px; }
 .chip { height: 34px; padding: 0 15px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.85); white-space: nowrap; transition: background .2s, color .2s; }
 .chip.on { background: #fff; color: #0b0c15; border-color: #fff; }
 
@@ -104,8 +117,8 @@ input { font: inherit; color: inherit; }
 .pill, .rb, .chip, .glass.tap, .tplcard { position: relative; isolation: isolate; overflow: hidden; }
 @media (hover: hover) {
   .pill-primary:hover { filter: brightness(1.06); }
-  .pill-glass:hover, .pill-dark:hover { background-color: rgb(255 255 255 / .12); }
-  .rb:hover { border-color: rgb(255 255 255 / .28); background-color: rgb(255 255 255 / .12); }
+  .pill-glass:hover { background-color: rgb(255 255 255 / .12); }
+  .pill-dark:hover, .rb:hover { filter: brightness(1.12); }
   .chip:hover { border-color: rgb(255 255 255 / .3); }
   .glass.tap { transition: transform .3s ease, border-color .25s, background-color .25s; }
   .glass.tap:hover { border-color: rgb(255 255 255 / .2); background: var(--color-card-hover); }
@@ -213,16 +226,33 @@ input { font: inherit; color: inherit; }
 .scroller { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .scroller.is-over { mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 
-/* ─── option card: idle = quiet glass with a radio ring; hover = gradient preview; selected = violet edge + gradient ─── */
-.opt { position: relative; isolation: isolate; overflow: hidden; background: var(--color-card); border: 1px solid rgba(255,255,255,.1); cursor: pointer; transition: border-color .3s, background-color .3s, transform .4s cubic-bezier(.2,1.2,.4,1); -webkit-user-select: none; user-select: none; }
-.opt::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .45s ease;
-  background: radial-gradient(90% 120% at 50% 110%, rgb(104 126 245 / .55), rgb(79 99 224 / .18) 55%, transparent 80%), linear-gradient(180deg, rgb(255 255 255 / .06), transparent 50%); }
+/* ─── option card: idle = the solid card with a radio ring; chosen = flat snow white with ink words, the tick in home's
+   start-card icon (.icon-primary, set in Option). Flat: no edge, no glow, no shadow. A Glass card with `selected` (.sel)
+   is chosen the same way. Only the colours change: every card keeps its own shape ─── */
+.opt { position: relative; isolation: isolate; overflow: hidden; background: var(--color-card); border: 1px solid rgba(255,255,255,.1); cursor: pointer; transition: border-color .3s, background-color .3s, color .3s, transform .4s cubic-bezier(.2,1.2,.4,1); -webkit-user-select: none; user-select: none; }
 .opt:active { transform: scale(.985); }
 @media (hover: hover) { .opt:not(.on):hover { border-color: rgba(255,255,255,.24); background: var(--color-card-hover); } }
-.opt.on { border-color: #687ef5; box-shadow: inset 0 0 0 .5px #687ef5, 0 14px 40px -18px rgb(104 126 245 / .7); }
-.opt.on::before { opacity: 1; }
+/* .snow-card: a card that is finished rather than chosen (a checked measurement, a finished group), in the same snow;
+   the class is doubled so it beats the card's own fill (.field comes later in this file) */
+.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card { border-color: transparent; background: var(--color-snow); color: var(--color-ink); box-shadow: none; }
 .radio { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.35); display: grid; place-items: center; flex-shrink: 0; transition: all .25s; }
-.opt.on .radio { border-color: #fff; background: #fff; color: #0b0c15; }
+/* no border on the chosen tick, so the icon's fine light edge sits on its outline */
+.opt.on .radio { border: 0; }
+/* what sits inside a chosen card turns to ink (these rules are outside the layers, so they beat the text-white utilities) */
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) [class*="text-white/"] { color: rgb(19 21 35 / .6); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) :is(.text-white\/75, .text-white\/85) { color: rgb(19 21 35 / .75); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) [class*="border-white/"] { border-color: rgb(19 21 35 / .3); }
+/* hairlines stay hairlines */
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) :is(.border-white\/6, .border-white\/8, .border-white\/12) { border-color: rgb(19 21 35 / .09); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) [class*="bg-white/"] { background-color: rgb(19 21 35 / .1); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .unit { color: rgb(19 21 35 / .55); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .rb { background: rgb(19 21 35 / .06); border-color: rgb(19 21 35 / .1); color: var(--color-ink); backdrop-filter: none; box-shadow: inset 0 0 0 1px rgb(19 21 35 / .1); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .rb:active { background: var(--color-ink); border-color: var(--color-ink); color: #fff; }
+/* an inset tile on a chosen card: pressed into the snow (a deeper shade along its top edge, a white lip below), the icon
+   a quiet steel grey-blue; a word in the tile (the cm / in of the units) is periwinkle */
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .iconbadge { color: #6e7894; background: rgb(52 62 110 / .09);
+  box-shadow: inset 0 3px 7px rgb(28 36 84 / .3), inset 0 1px 1.5px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
+:is(.opt.on, .glass.sel, .glass-2.sel, .snow-card.snow-card) .iconbadge-word { color: var(--color-primary); }
 
 /* ─── the decision button: a quiet chevron until something is chosen, then it grows into "Next" ─── */
 .nextbtn { height: 52px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; overflow: hidden; position: relative; isolation: isolate;
@@ -280,6 +310,20 @@ input { font: inherit; color: inherit; }
 @keyframes v-s3 { 0% { translate: 0 0; scale: 1; } 50% { translate: -22% -16%; scale: 1.18; } 100% { translate: 16% -8%; scale: .9; } }
 @keyframes v-s4 { 0% { translate: 0 0; scale: 1; } 50% { translate: -22% -20%; scale: 1.2; } 100% { translate: 12% -32%; scale: 1.06; } }
 
+/* ─── night card (the welcome's mannequin): the landing page's loading-screen night (its sky-dark): flat night with
+   soft cornflower lights roaming the lower part, blurred less for a card than for a whole screen ─── */
+@layer components {
+.night { position: absolute; inset: 0; overflow: hidden; isolation: isolate; background: var(--color-bg); }
+.night .drift { position: absolute; border-radius: 50%; filter: blur(56px); pointer-events: none; mix-blend-mode: screen; }
+.night .n1 { width: 95%; aspect-ratio: 1; left: 2%; top: 45%; background: rgb(104 126 245 / .24); animation: v-g1 15s ease-in-out infinite alternate; }
+.night .n2 { width: 80%; aspect-ratio: 1; left: 10%; top: 55%; background: rgb(79 99 224 / .2); animation: v-g2 13s ease-in-out infinite alternate; }
+.night .n3 { width: 60%; aspect-ratio: 1; left: 20%; top: 60%; background: rgb(140 156 248 / .1); animation: v-g3 11s ease-in-out infinite alternate; }
+}
+@keyframes v-g1 { 0% { translate: -40% 20%; scale: .95; } 33% { translate: 35% 5%; scale: 1.1; } 66% { translate: -15% -25%; scale: 1; } 100% { translate: 30% 30%; scale: .9; } }
+@keyframes v-g2 { 0% { translate: 30% 0%; } 50% { translate: -35% 15%; } 100% { translate: 15% -20%; } }
+@keyframes v-g3 { 0% { translate: 0 20%; } 50% { translate: -25% -10%; } 100% { translate: 25% 10%; } }
+@media (prefers-reduced-motion: reduce) { .night .drift { animation: none !important; } }
+
 /* ─── welcome: the sky light slowly drifts ─── */
 .sky .drift { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; mix-blend-mode: screen; }
 .sky .d1 { width: 70%; aspect-ratio: 1; left: -15%; top: -10%; background: rgb(240 242 255 / .55); animation: v-d1 16s ease-in-out infinite alternate; }
@@ -332,12 +376,12 @@ input { font: inherit; color: inherit; }
 
 /* measuring − / + buttons: no swirl or glow; hover lifts the fill a little, a press flashes solid white like a key */
 .rb.rb-plain::after { display: none; }
-@media (hover: hover) { .rb.rb-plain:hover { transform: none; box-shadow: none; background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .26); } }
+@media (hover: hover) { .rb.rb-plain:hover { transform: none; } }
 .rb.rb-plain:active { transform: scale(.94); background: #fff; border-color: #fff; color: #0b0c15; transition: transform .08s, background-color .08s, color .08s; }
 
 /* phone tab bar: light, same family as the hero. Its shape (with the round notch for Create) is an SVG, see NotchShape */
 .tabbar { color: #26335f; }
-.tabbar-shape { filter: drop-shadow(0 14px 18px rgb(0 0 0 / .45)); }
+.tabbar-shape { filter: drop-shadow(0 1px 2px rgb(0 0 0 / .3)) drop-shadow(0 14px 18px rgb(0 0 0 / .45)); }
 /* home shortcuts share the Create button's periwinkle fill */
 .herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 10px 22px -10px rgb(53 66 170 / .8); }
@@ -361,8 +405,13 @@ input { font: inherit; color: inherit; }
     linear-gradient(180deg, #7988b8 0%, #5a6c99 30%, #353f62 55%, #1b2035 78%, #131523 100%); }
 .paper-card { background: #fff; border: 1px solid rgb(18 19 28 / .08); box-shadow: 0 10px 30px -22px rgb(28 34 82 / .5); color: #12131c; }
 @media (hover: hover) { .paper-card.tap:hover { border-color: rgb(79 99 224 / .35); } }
-/* home: a light, airy top on graph paper in periwinkle, text in a soft (but readable) indigo */
-.light-hero { background: linear-gradient(180deg, #f6f7fd 0%, #eceffd 55%, #e1e6fd 100%); color: #3d4bb3; }
+/* home and profile: a light top on graph paper in periwinkle, text in a soft (but readable) indigo. No gradient (23 Oct
+   2026): one even snow, built like the white secondary button: a fine ink rim, a white line along the top edge (seen on
+   a computer, where the block has four rounded corners), a slightly deeper snow along the bottom edge, a soft white
+   light inside, and a drop shadow onto the dark page */
+.light-hero { background: var(--color-snow); color: #3d4bb3;
+  box-shadow: inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .12), inset 0 0 28px 2px rgb(255 255 255 / .8),
+    0 1px 2px rgb(0 0 0 / .3), 0 14px 30px -14px rgb(0 0 0 / .75); }
 /* the graph paper rises from the bottom of the light block (anchored there, so whole squares sit on the bottom edge)
    and fades out towards the top */
 .light-mat { position: absolute; inset: 0; pointer-events: none;
@@ -374,10 +423,9 @@ input { font: inherit; color: inherit; }
 .avatar { background: #d9def4; }
 .avatar-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
   box-shadow: inset 0 0 0 1px rgb(104 126 245 / .35), inset 0 0 0 2px rgb(255 255 255 / .55); }
-.bell-btn { color: #3f4c80; background: linear-gradient(180deg, #fff 0%, #f4f6fd 100%);
-  box-shadow: inset 0 0 0 1px rgb(104 126 245 / .35), inset 0 0 0 2px rgb(255 255 255 / .9), 0 4px 12px -6px rgb(38 51 95 / .35);
-  transition: box-shadow .25s, color .25s, background .25s; }
-@media (hover: hover) { .bell-btn:hover { color: #26335f; box-shadow: inset 0 0 0 1px rgb(104 126 245 / .6), inset 0 0 0 2px rgb(255 255 255 / .9), 0 4px 12px -6px rgb(38 51 95 / .35); } }
+/* .bell-btn wears the white secondary (with .pill-white above); its icon keeps the light top's navy */
+.bell-btn { color: #3f4c80; transition: color .25s; }
+@media (hover: hover) { .bell-btn:hover { color: #26335f; } }
 }
 
 /* ─── onboarding paper (light, editorial) ─── */
