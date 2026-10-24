@@ -342,13 +342,16 @@ export function Home() {
               <p className="mt-2.5 max-w-[440px] text-[16px] leading-snug text-[#3f4c80] lg:text-[18px]">Design your own pattern, or start from one of ours.</p>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
-              <button onClick={make} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
-                <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Create a pattern</span><span className="mt-1 block text-[14px] leading-snug text-white/70 [text-wrap:balance]">From a photo, sketch or words</span></span>
+              {/* the two ways to start (24 Oct 2026, chosen in the lab as "icon on the right"): the name, top-left, with the icon
+                  at the right end of its row. Both names and both lines are broken by hand, so each takes two lines on every
+                  screen (on a wide phone "Create a pattern" would otherwise fit on one) and the two cards always match */}
+              <button onClick={make} className="pair-dark tap flex flex-col rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:justify-between lg:p-6">
+                <span className="flex items-start justify-between gap-2.5"><span className="min-w-0 pt-0.5 text-[16px] font-medium leading-tight lg:text-[20px]">Create a<br />pattern</span><span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full lg:h-11 lg:w-11"><Icon name="pencil" size={15} strokeWidth={2} className="lg:h-5 lg:w-5" /></span></span>
+                <span className="mt-2.5 block text-[14px] leading-snug text-white/70">From a photo,<br />sketch or words</span>
               </button>
-              <button onClick={() => go("templates")} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
-                <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Start from a pattern</span><span className="mt-1 block text-[14px] leading-snug text-white/70 [text-wrap:balance]">Pick a design, fit it to you</span></span>
+              <button onClick={() => go("templates")} className="pair-dark tap flex flex-col rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:justify-between lg:p-6">
+                <span className="flex items-start justify-between gap-2.5"><span className="min-w-0 pt-0.5 text-[16px] font-medium leading-tight lg:text-[20px]">Start from<br />a pattern</span><span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full lg:h-11 lg:w-11"><Icon name="dress" size={15} strokeWidth={2} className="lg:h-5 lg:w-5" /></span></span>
+                <span className="mt-2.5 block text-[14px] leading-snug text-white/70">Pick a design,<br />fit it to you</span>
               </button>
             </div>
           </div>
