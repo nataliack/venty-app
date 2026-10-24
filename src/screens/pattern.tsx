@@ -3,12 +3,18 @@ import { haptic } from "@/lib/haptics";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { FLUTTER, FITS, PIECE_LABEL, KIND_DETAILS, LENGTH_DIAL, NECK_CM, nameFor, lengthCmFor, lengthLabelFor, fitName, fabricAdvice, templateBy, kindOf, kindLabel, detailOpts, describe, type GarmentKey, type Kind, type PieceKey } from "@/lib/data";
+import { FLUTTER, TEMPLATE_DETAILS, FITS, PIECE_LABEL, KIND_DETAILS, LENGTH_DIAL, NECK_CM, nameFor, lengthCmFor, lengthLabelFor, fitName, fabricAdvice, templateBy, kindOf, kindLabel, detailOpts, describe, type GarmentKey, type Kind, type PieceKey } from "@/lib/data";
 import { Screen, TopBar, TopAction, H1, HS, Lead, Pill, RB, Arrows, Option, Segmented, Sheet, SheetHead, cx, Split, useDesk, useToast } from "@/components/ui";
 import { BodyFigure, Piece, type GarmentSpec } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { FlowHeader, MiniDial } from "./measure";
 import { Ico, SI } from "@/components/studio-icons";
+import dynamic from "next/dynamic";
+import { BodyLoader } from "@/components/BodyLoader";
+import { garment3dFor } from "@/lib/garment3d";
+
+// three.js only runs in the browser
+const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
 
 export const garmentName = (g: GarmentKey) => (g === "flutter" ? FLUTTER.name : templateBy(g).name);
 export const piecesFor = (g: GarmentKey): PieceKey[] => (g === "flutter" ? ["bodiceFront", "bodiceBack", "sleeve", "skirtFront", "skirtBack", "facing"] : templateBy(g).pieceSet);
@@ -336,14 +342,35 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   // Both views share one fixed height, so switching never moves the page. The light behind the figure is drawn inside
   // its own box and fades to nothing before the edges, so no scroll area can cut it into a line.
   const h = desk ? "h-[min(580px,62dvh)]" : "h-[min(440px,48dvh)]";
+  // On your body: the 3D body wearing the closest of the 3D garments to the design (garment3dFor), turning by itself
+  // (pause), in its fabric or with its pattern drawn on it. On a phone the stage fills the screen behind everything, the
+  // floor running on behind the buttons; on a computer it is a card in the left column.
+  const onBody = view === "On your body";
+  const kind = draftKind(draft);
+  const wear = [garment3dFor(kind, draft.details ?? TEMPLATE_DETAILS[draft.garment] ?? (draft.garment === "flutter" ? FLUTTER.read : undefined), b.sex, draft.garment)];
+  const [paused, setPaused] = useState(false);
+  const [look, setLook] = useState<"fabric" | "pattern">("fabric");
+  const controls = (
+    <>
+      <div className="pointer-events-auto absolute bottom-0 left-0 flex h-10 rounded-full bg-card p-1 text-[13px] font-medium">{([["fabric", "Fabric"], ["pattern", "Pattern"]] as const).map(([k, t]) => (
+        <button key={k} onClick={() => setLook(k)} aria-pressed={look === k} className={cx("rounded-full px-3.5 transition-colors", look === k ? "bg-white text-bg" : "text-white/70")}>{t}</button>
+      ))}</div>
+      <RB icon={paused ? "play" : "pause"} size={40} onClick={() => setPaused((p) => !p)} label={paused ? "Turn the body" : "Stop turning"} className="pointer-events-auto absolute bottom-0 right-0" />
+    </>
+  );
+  const body3d = (cls: string, room = 0) => (
+    <Body3D sex={b.sex} measures={b.measures} focus="height" stage="grid" lines="white" turn paused={paused} room={room} garments={wear} garmentLook={look} className={cls} />
+  );
   const stage = (
-    <div className={cx("relative mt-3", h)}>
+    <div className={cx("relative mt-3", h, !desk && onBody && "pointer-events-none")}>
       <AnimatePresence mode="wait" initial={false}>
-        {view === "On your body" ? (
-          <motion.div key="r" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="absolute inset-0">
-            <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(closest-side, rgb(104 126 245 / .26), rgb(104 126 245 / .08) 55%, transparent)" }} />
-            <BodyFigure sex={b.sex} width={180} variant="solid" garment={draft.garment} spec={draftSpec(draft)} glow={false} className="relative h-full w-full" />
-          </motion.div>
+        {onBody ? (
+          desk ? (
+            <motion.div key="r" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="stage-ink absolute inset-0 overflow-hidden rounded-[36px] border border-white/[.08]">
+              {body3d("absolute inset-0")}
+              <div className="pointer-events-none absolute inset-x-5 bottom-5 h-10">{controls}</div>
+            </motion.div>
+          ) : <div key="r" />
         ) : (
           <motion.div key="p" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="pattern-mat absolute inset-0 rounded-[28px] lg:rounded-[36px]">
             <div className="grid h-full grid-cols-3 place-content-center place-items-center gap-x-2 gap-y-3 px-4 pb-9 pt-4">
@@ -359,8 +386,15 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
       </AnimatePresence>
     </div>
   );
+  // on a phone, the stage behind the screen (the scroll area lets touches through to it where it has nothing of its own)
+  const phoneStage = !desk && onBody && (
+    <div className="stage-ink absolute inset-0">
+      {body3d("absolute inset-x-0 bottom-0 top-[calc(var(--top)+150px)]", 0.2)}
+      <div className="pointer-events-none absolute inset-x-6 h-10" style={{ bottom: "calc(var(--bottom) + 76px)" }}>{controls}</div>
+    </div>
+  );
   return (
-    <Screen footer={footer}>
+    <Screen footer={footer} bg={phoneStage || undefined} className={cx(!desk && onBody && "pointer-events-none [&_button]:pointer-events-auto")}>
       <TopBar left="back"><TopAction onClick={later}>Save for later</TopAction></TopBar>
       <div className={cx(desk && "mt-2 grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] items-center gap-14")}>
         <div className={cx(!desk && "text-center")}>
