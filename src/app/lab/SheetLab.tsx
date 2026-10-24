@@ -12,12 +12,14 @@ type V = "notch" | "inside" | "wide" | "now";
 const VARIANTS: { k: V; name: string; note: string; hw: number; hh: number; cy: number; r: number; f: number }[] = [
   { k: "notch", name: "A · Your cut, exact", note: "Your Figma, made exact: the 33 × 4 handle with its top on the sheet's top edge, in a cut that is its outline pushed out by 5px (43 × 14, round ends), so the channel is 5px all round. The cut's corners round off into the top edge, and the sheet's top corners are 45px.", hw: 33, hh: 4, cy: 2, r: 45, f: 6 },
   { k: "inside", name: "B · Handle inside the cut", note: "The handle (36 × 5) sits fully inside the sheet, 3.5px below its top edge, in a deeper cut (5px all round), so it reads as set into the sheet rather than resting on its edge.", hw: 36, hh: 5, cy: 6, r: 45, f: 6 },
-  { k: "wide", name: "C · Wider handle", note: "A longer, slightly thicker handle (48 × 5) in its 5px cut: easier to see and to aim for with a thumb.", hw: 48, hh: 5, cy: 4, r: 45, f: 6 },
+  { k: "wide", name: "C · Wider handle", note: "The chosen one, refined: a 48 × 5 handle with its top exactly on the sheet's top edge, in its 5px cut, drawn in the same picture as the cut so the two can never drift apart. At rest it is the sheet's own card colour, built like the dark secondary buttons (a soft light wash, a bright line along its top, a deeper line along its bottom, a fine rim), so it belongs to the sheet; pressed, it turns periwinkle.", hw: 48, hh: 5, cy: 2.5, r: 45, f: 2.5 },
   { k: "now", name: "D · Today", note: "The app's sheet now: 30px corners and a plain handle inside the sheet.", hw: 36, hh: 4, cy: 0, r: 30, f: 0 },
 ];
 
 // the sheet's outline: rounded top corners (r) and, in the top edge's centre, the cut round the handle (a stadium of the
-// handle plus G, its centre cy below the edge) with its corners rounded by f where it meets the edge
+// handle plus G, its centre cy below the edge) with its corners rounded by f where it meets the edge. With the handle's top on the
+// edge (cy = half its height), f = cy makes the corner curve start exactly at the handle's middle, so the gap at its
+// ends is G too (a larger f bends away there and widens it)
 function sheetPath(w: number, h: number, v: (typeof VARIANTS)[number]) {
   const { r } = v;
   if (v.k === "now") return `M ${r} 0 H ${w - r} A ${r} ${r} 0 0 1 ${w} ${r} V ${h} H 0 V ${r} A ${r} ${r} 0 0 1 ${r} 0 Z`;
@@ -43,11 +45,34 @@ function SheetCard({ v, forceOn }: { v: (typeof VARIANTS)[number]; forceOn: bool
         <defs><linearGradient id={`sh-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".14" /><stop offset=".12" stopColor="#fff" stopOpacity="0" /></linearGradient></defs>
         <path d={sheetPath(w, h, v)} fill="var(--color-card)" />
         <path d={sheetPath(w, h, v)} fill="none" stroke={`url(#sh-${v.k})`} strokeWidth="1" />
+        {/* the handle, in the same picture as the cut (the same centre, so it cannot sit off it by a half pixel) */}
+        {v.k !== "now" && (() => {
+          const x = w / 2 - v.hw / 2, y = v.cy - v.hh / 2, rr = v.hh / 2;
+          return (
+            <g>
+              <defs>
+                <linearGradient id={`hw-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".07" /><stop offset=".6" stopColor="#fff" stopOpacity="0" /></linearGradient>
+                <linearGradient id={`hr-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".26" /><stop offset=".5" stopColor="#fff" stopOpacity=".1" /><stop offset="1" stopColor="#000" stopOpacity=".45" /></linearGradient>
+                <linearGradient id={`hp-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7387f6" /><stop offset=".55" stopColor="#687ef5" /><stop offset="1" stopColor="#6479f2" /></linearGradient>
+                <linearGradient id={`hpr-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".45" /><stop offset="1" stopColor="#fff" stopOpacity=".15" /></linearGradient>
+              </defs>
+              {/* at rest: the sheet's card colour, built like the dark secondary (a wash, a bright top line, a deeper bottom line) */}
+              <rect x={x} y={y} width={v.hw} height={v.hh} rx={rr} fill="var(--color-card)" />
+              <rect x={x} y={y} width={v.hw} height={v.hh} rx={rr} fill={`url(#hw-${v.k})`} />
+              <rect x={x + 0.5} y={y + 0.5} width={v.hw - 1} height={v.hh - 1} rx={rr - 0.5} fill="none" stroke={`url(#hr-${v.k})`} strokeWidth="1" />
+              {/* pressed: home's card-icon periwinkle, its rim and a glow, fading in over the resting handle */}
+              <g className={cx("sheet-handle-on", on && "is-on")}>
+                <rect x={x} y={y} width={v.hw} height={v.hh} rx={rr} fill={`url(#hp-${v.k})`} />
+                <rect x={x + 0.5} y={y + 0.5} width={v.hw - 1} height={v.hh - 1} rx={rr - 0.5} fill="none" stroke={`url(#hpr-${v.k})`} strokeWidth="1" />
+              </g>
+            </g>
+          );
+        })()}
       </svg>
       {/* the touch zone: the top 44px of the sheet, across its width */}
       <div className="absolute inset-x-0 top-0 h-11 cursor-grab touch-none" onPointerDown={() => setTouch(true)} onPointerUp={() => setTouch(false)} onPointerCancel={() => setTouch(false)}
         onPointerEnter={(e) => { if (e.pointerType === "mouse") setTouch(true); }} onPointerLeave={() => setTouch(false)} />
-      <span className={cx("sheet-handle pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full", on && "is-on")} style={{ top: handleTop, width: v.hw, height: v.hh }} />
+      {v.k === "now" && <span className={cx("sheet-handle pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full", on && "is-on")} style={{ top: handleTop, width: v.hw, height: v.hh }} />}
       <SheetHead title="Add 20 more measurements?">Your base measurements are saved. The other 20 give the closest fit, and you can stop at any time.</SheetHead>
       <Pill className="mt-6" variant="white">Yes, add 20 more</Pill>
       <TextButton className="mt-1">Later</TextButton>
@@ -74,12 +99,14 @@ const CSS = `
 @layer components {
 /* the handle: quiet at rest; pressed (or pointed at), the periwinkle of home's card icons, with their rim and a glow */
 .sheet-handle { background: rgb(255 255 255 / .28); transition: background-color .25s, box-shadow .25s; }
+.sheet-handle-on { opacity: 0; transition: opacity .25s; filter: drop-shadow(0 0 4px rgb(104 126 245 / .85)) drop-shadow(0 1px 3px rgb(104 126 245 / .6)); }
+.sheet-handle-on.is-on { opacity: 1; }
 .sheet-handle.is-on { background: linear-gradient(180deg, #7387f6, #687ef5 55%, #6479f2);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 .5px rgb(255 255 255 / .18), 0 0 10px 1px rgb(104 126 245 / .7), 0 2px 8px -1px rgb(104 126 245 / .8); }
 }`;
 
 export function SheetLab() {
-  const [k, setK] = useState<V>("notch");
+  const [k, setK] = useState<V>("wide");
   const [forceOn, setForceOn] = useState(false);
   const v = VARIANTS.find((x) => x.k === k)!;
   return (
