@@ -395,7 +395,9 @@ function StagePieces({ stage, scale, chart }: { stage: Stage; scale: number; cha
           taller on it), quiet lines fading out from the feet (fadeFrom 0: from the middle, not from the camera) */}
       {stage === "grid" && (
         <>
-          <mesh position={[0, -0.001, 0.5]} rotation-x={-Math.PI / 2}><planeGeometry args={[12, 5]} /><meshBasicMaterial map={floorGradient()} transparent depthWrite={false} toneMapped={false} /></mesh>
+          {/* drawn first (renderOrder): both are see-through, and drawn after the grid the floor covered its far lines with
+              a hard edge instead of letting them fade */}
+          <mesh position={[0, -0.001, 0.5]} rotation-x={-Math.PI / 2} renderOrder={-2}><planeGeometry args={[12, 5]} /><meshBasicMaterial map={floorGradient()} transparent depthWrite={false} toneMapped={false} /></mesh>
           <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1} cellThickness={0.7} cellColor="#323a66" sectionSize={0.5} sectionThickness={0.9} sectionColor="#3e4a88" fadeDistance={1.5} fadeStrength={1.5} fadeFrom={0} infiniteGrid />
           {/* a dark pool under the feet (the floor darkens round where she stands), then the contact shadow */}
           <mesh position={[0, 0.0015, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[0.5, 96]} /><meshBasicMaterial map={floorPool()} transparent depthWrite={false} toneMapped={false} /></mesh>
