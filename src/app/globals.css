@@ -310,6 +310,20 @@ input { font: inherit; color: inherit; }
 @keyframes v-s3 { 0% { translate: 0 0; scale: 1; } 50% { translate: -22% -16%; scale: 1.18; } 100% { translate: 16% -8%; scale: .9; } }
 @keyframes v-s4 { 0% { translate: 0 0; scale: 1; } 50% { translate: -22% -20%; scale: 1.2; } 100% { translate: 12% -32%; scale: 1.06; } }
 
+/* ─── night card (the welcome's mannequin): the landing page's loading-screen night (its sky-dark): flat night with
+   soft cornflower lights roaming the lower part, blurred less for a card than for a whole screen ─── */
+@layer components {
+.night { position: absolute; inset: 0; overflow: hidden; isolation: isolate; background: var(--color-bg); }
+.night .drift { position: absolute; border-radius: 50%; filter: blur(56px); pointer-events: none; mix-blend-mode: screen; }
+.night .n1 { width: 95%; aspect-ratio: 1; left: 2%; top: 45%; background: rgb(104 126 245 / .24); animation: v-g1 15s ease-in-out infinite alternate; }
+.night .n2 { width: 80%; aspect-ratio: 1; left: 10%; top: 55%; background: rgb(79 99 224 / .2); animation: v-g2 13s ease-in-out infinite alternate; }
+.night .n3 { width: 60%; aspect-ratio: 1; left: 20%; top: 60%; background: rgb(140 156 248 / .1); animation: v-g3 11s ease-in-out infinite alternate; }
+}
+@keyframes v-g1 { 0% { translate: -40% 20%; scale: .95; } 33% { translate: 35% 5%; scale: 1.1; } 66% { translate: -15% -25%; scale: 1; } 100% { translate: 30% 30%; scale: .9; } }
+@keyframes v-g2 { 0% { translate: 30% 0%; } 50% { translate: -35% 15%; } 100% { translate: 15% -20%; } }
+@keyframes v-g3 { 0% { translate: 0 20%; } 50% { translate: -25% -10%; } 100% { translate: 25% 10%; } }
+@media (prefers-reduced-motion: reduce) { .night .drift { animation: none !important; } }
+
 /* ─── welcome: the sky light slowly drifts ─── */
 .sky .drift { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; mix-blend-mode: screen; }
 .sky .d1 { width: 70%; aspect-ratio: 1; left: -15%; top: -10%; background: rgb(240 242 255 / .55); animation: v-d1 16s ease-in-out infinite alternate; }

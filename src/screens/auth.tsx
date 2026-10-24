@@ -431,13 +431,28 @@ export function StartChoice() {
   const user = useApp((s) => s.user);
   const desk = useDesk();
   const hi = user.guest ? "Welcome." : `Welcome, ${user.name}.`;
-  // Its own layout (not the tour's picture-over-paper): paper all the way, the greeting at the top, left-aligned, then
-  // the body on a Crown card taking the room in between, one line on why, and the buttons in thumb reach.
+  // Its own layout (not the tour's picture-over-paper): paper all the way, the greeting and one line on why centred at
+  // the top, then the mannequin on a night card taking the room in between, and the buttons in thumb reach.
+  // The mannequin (a cut-out with a transparent background) is sized to the card's height, so it grows with the card on
+  // a taller phone. It comes out of the card at the top (a little: never into the words) and at the sides (the arms run
+  // off the screen), and is cut cleanly along the card's bottom edge and its rounded bottom corners.
+  const r = desk ? 36 : 28;
+  const arc = (cx: string, cy: string, from: number) => Array.from({ length: 7 }, (_, i) => {
+    const t = ((from + i * 15) * Math.PI) / 180;
+    return `calc(${cx} + ${(r * Math.cos(t)).toFixed(2)}px) calc(${cy} + ${(r * Math.sin(t)).toFixed(2)}px)`;
+  }).join(", ");
+  const far = "2000px";
+  const cut = `polygon(-${far} -${far}, calc(100% + ${far}) -${far}, calc(100% + ${far}) calc(100% - ${r}px), ${arc(`100% - ${r}px`, `100% - ${r}px`, 0)}, ${arc(`0% + ${r}px`, `100% - ${r}px`, 90)}, -${far} calc(100% - ${r}px))`;
   const figure = (
     <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
-      className="relative h-full min-h-[180px] overflow-hidden rounded-[28px] text-white lg:rounded-[36px]">
-      <Crown />
-      <div className="absolute inset-0 p-5 lg:p-10"><BodyFigure width={desk ? 170 : 100} markers={[{ kind: "ring", y: 140, w: 100 }, { kind: "ring", y: 205, w: 72 }, { kind: "ring", y: 275, w: 110 }]} className="h-full w-full" /></div>
+      className="relative h-full min-h-[240px]">
+      {/* the landing page's loading-screen night: flat night, soft cornflower lights roaming its lower part */}
+      <div className="night rounded-[28px] lg:rounded-[36px]" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      <div className="pointer-events-none absolute inset-0" style={{ clipPath: cut }} aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/start/mannequin.webp" srcSet="/start/mannequin-1100.webp 1100w, /start/mannequin.webp 2000w" sizes="(min-width: 1024px) 960px, 180vw" alt="" draggable={false}
+          className="absolute left-1/2 top-[-2.4%] h-[127%] w-auto max-w-none -translate-x-1/2 select-none" />
+      </div>
     </motion.div>
   );
   const words = (
@@ -445,20 +460,23 @@ export function StartChoice() {
       <h1 className="h1 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">{hi}<br />Let’s set up your body</h1>
     </>
   );
-  const why = <p className="lead max-w-[400px] [text-wrap:pretty]">Every pattern is drafted to your measurements. Add them once and they’re saved, ready for everything you make.</p>;
+  const why = <p className="lead mx-auto max-w-[296px] [text-wrap:pretty] lg:mx-0 lg:max-w-[400px]">Every pattern is drafted to your measurements. Add them once and they’re saved, ready for everything you make.</p>;
   const actions = <><Pill onClick={startBody}>Set up my body</Pill><TextButton tone="paper" className="mt-1" onClick={home}>Skip for now and go to home</TextButton></>;
   if (desk) return (
     <div className="paper absolute inset-0 grid grid-cols-[0.95fr_1.05fr]">
-      <div className="flex flex-col justify-center px-16"><div className="max-w-[480px]">{words}<div className="mt-4">{why}</div><div className="mt-10">{actions}</div></div></div>
-      <div className="p-5">{figure}</div>
+      <div className="relative z-10 flex flex-col justify-center px-16"><div className="max-w-[480px]">{words}<div className="mt-4">{why}</div><div className="mt-10">{actions}</div></div></div>
+      {/* a card in the reference's proportions, so the mannequin comes out of it the same way; the arms reach into the gap */}
+      <div className="flex items-center justify-center p-10"><div className="aspect-[345/382] w-[min(100%,520px)]">{figure}</div></div>
     </div>
   );
   return (
-    // the words together at the top, the body in between, the buttons alone at the bottom with room around them
-    <div className="paper absolute inset-0 flex flex-col px-6" style={{ paddingTop: "calc(var(--top) + 20px)", paddingBottom: "var(--bottom)" }}>
-      {words}
-      <div className="mt-3">{why}</div>
-      <div className="mt-6 min-h-0 flex-1">{figure}</div>
+    // the words together at the top, centred; the mannequin's card in between, taking whatever room is left (so it
+    // grows on a taller phone); the buttons alone at the bottom with room around them. Nothing scrolls sideways: the
+    // arms run off the screen's edges
+    <div className="paper absolute inset-0 flex flex-col overflow-hidden px-6" style={{ paddingTop: "calc(var(--top) + 30px)", paddingBottom: "var(--bottom)" }}>
+      <div className="text-center">{words}</div>
+      <div className="mt-5 text-center">{why}</div>
+      <div className="mt-11 min-h-0 flex-1">{figure}</div>
       <div className="mt-8">{actions}</div>
     </div>
   );
