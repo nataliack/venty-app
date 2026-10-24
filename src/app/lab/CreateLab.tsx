@@ -106,7 +106,7 @@ function TabBarCreate({ w, open, setOpen, id }: { w: number; open: boolean; setO
   return (
     <div className="relative" style={{ width: w, height: BAR_H }}>
       <AnimatePresence>{open && (
-        <motion.div key="card" className="absolute inset-x-0 z-20" style={{ bottom: BAR_H + G, transformOrigin: `50% calc(100% + ${G + NOTCH_Y}px)` }}
+        <motion.div key="card" className="absolute inset-x-0 z-10" style={{ bottom: BAR_H + G, transformOrigin: `50% calc(100% + ${G + NOTCH_Y}px)` }}
           initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 8 }} transition={{ duration: 0.38, ease: [0.2, 0.8, 0.2, 1] }}>
           {h > 0 && (
             <svg width={w} height={h + G + NOTCH_Y + RING} className="pointer-events-none absolute left-0 top-0 overflow-visible" style={{ filter: "drop-shadow(0 1px 2px rgb(0 0 0 / .3)) drop-shadow(0 18px 28px rgb(0 0 0 / .45))" }} aria-hidden>
@@ -116,10 +116,11 @@ function TabBarCreate({ w, open, setOpen, id }: { w: number; open: boolean; setO
           <CardBody onHeight={setH} />
         </motion.div>
       )}</AnimatePresence>
-      <svg width={w} height={BAR_H} className="tabbar-shape pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
+      {/* the bar is drawn over the card, so the card's shadow falls on the page but never on the bar */}
+      <svg width={w} height={BAR_H} className="tabbar-shape pointer-events-none absolute inset-0 z-20 overflow-visible" aria-hidden>
         <SnowShape id={`${id}-bar`} d={barPath(w, notch)} h={BAR_H} />
       </svg>
-      <div className="tabbar relative z-10 flex h-full items-stretch px-1.5">
+      <div className="tabbar relative z-20 flex h-full items-stretch px-1.5">
         {tab(items[0], true)}{tab(items[1])}<span className="w-[84px] shrink-0" />{tab(items[2])}{tab(items[3])}
       </div>
       {/* the plus: periwinkle closed; open, it turns 45° into × and fades into the dark secondary */}
