@@ -350,7 +350,8 @@ input { font: inherit; color: inherit; }
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 8px 18px -8px rgb(104 126 245 / .7); }
 /* home's second start card: the solid card colour, so it pairs with "Design your own" (Crown) yet reads as its own choice */
 .pair-dark { background: var(--color-card);
-  border: 1px solid rgb(255 255 255 / .1); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 18px 36px -18px rgb(28 34 82 / .9); }
+  /* the drop shadow of the white secondary buttons (the bell): a short one right under it, a wide faint one below */
+  border: 1px solid rgb(255 255 255 / .1); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 1px 2px rgb(19 21 35 / .1), 0 6px 14px -6px rgb(19 21 35 / .22); }
 .card-soft { background: var(--color-card); border: 1px solid rgb(255 255 255 / .08); box-shadow: inset 0 1px 0 rgb(255 255 255 / .05), 0 10px 30px -18px rgb(0 0 0 / .8); }
 @media (hover: hover) { .card-soft.tap:hover { border-color: rgb(255 255 255 / .16); background: var(--color-card-hover); } }
 /* the two ways to start, on the sky: a periwinkle primary card and a frosted one */

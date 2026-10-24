@@ -115,10 +115,12 @@ function CreateCardBody({ onHeight, onPick }: { onHeight: (h: number) => void; o
 }
 
 // Phone navigation: a light bar with the Create button sitting in a round notch in the centre (24 Oct 2026, chosen in
-// the lab). The tabs sit at fixed, even places: Home and You on the centres of the bar's top corners (BAR_R in), Bodies
-// and Patterns 68px either side of the plus (the closest a 40px circle keeps 5px from the widened notch). The current
-// tab's icon sits in a 40px circle pressed into the snow; on Home and You it shares its centre with the bar's corner,
-// so it runs parallel to it. It glides from tab to tab (one layout id across the pages, which cross-fade in place).
+// the lab). The tabs sit at fixed, even places: Bodies and Patterns 68px either side of the plus (the closest a 40px
+// circle keeps 5px from the widened notch), Home and You 74.5px beyond them, never closer to the ends than the centres
+// of the bar's top corners. On a 345px bar (most phones) that is exactly those centres; on a wider bar (a Pro Max, or
+// docked full width) the four stay a compact group round the plus. The current tab's icon sits in a 40px circle
+// pressed into the snow; on a 345px bar, on Home and You it shares its centre with the bar's corner, so it runs
+// parallel to it. It glides from tab to tab (one layout id across the pages, which cross-fade in place).
 // Each tab's tap area runs to the halfway point between its neighbours, and to the notch.
 // The plus opens the Create card out of the bar (see the channel above); the page behind blurs and darkens, the bar
 // stays; the plus turns 45° into × in the dark secondary style. A tab, the ×, a tap outside or Escape closes it.
@@ -131,7 +133,9 @@ const usePwaDock = () => {
   useEffect(() => { setDocked(document.documentElement.classList.contains("pwa") && window.matchMedia("(max-width: 639px)").matches); }, []);
   return docked;
 };
-const TAB_D = 40, TAB_TOP = 10, TAB_GAP = 68;
+// TAB_SPREAD: the outer tabs sit at most this far beyond the inner ones, so on a wide bar (a Pro Max, or docked full
+// width) the four stay a compact, even group round the plus; on a 345px bar it puts Home and You on the corners' centres
+const TAB_D = 40, TAB_TOP = 10, TAB_GAP = 68, TAB_SPREAD = 74.5;
 export function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
@@ -150,7 +154,7 @@ export function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" })
     window.addEventListener("keydown", esc); return () => window.removeEventListener("keydown", esc);
   }, [open]);
   const items: [typeof tab, IconName, string][] = [["home", "home", "Home"], ["bodies", "body", "Bodies"], ["patterns", "scissors", "Patterns"], ["you", "user", "You"]];
-  const centres = [BAR_R, w / 2 - TAB_GAP, w / 2 + TAB_GAP, w - BAR_R];
+  const centres = [Math.max(BAR_R, w / 2 - TAB_GAP - TAB_SPREAD), w / 2 - TAB_GAP, w / 2 + TAB_GAP, Math.min(w - BAR_R, w / 2 + TAB_GAP + TAB_SPREAD)];
   const edges = [0, (centres[0] + centres[1]) / 2, w / 2 - RING - G, w / 2 + RING + G, (centres[2] + centres[3]) / 2, w];
   const spans = [[edges[0], edges[1]], [edges[1], edges[2]], [edges[3], edges[4]], [edges[4], edges[5]]];
   const btn = ([k, ic, l]: (typeof items)[number], i: number) => {
