@@ -437,8 +437,8 @@ export function StartChoice() {
   // a taller phone. It comes out of the card at the top (a little: never into the words) and at the sides (the arms run
   // off the screen), and is cut cleanly along the card's bottom edge and its rounded bottom corners.
   const r = desk ? 36 : 28;
-  const arc = (cx: string, cy: string, from: number) => Array.from({ length: 7 }, (_, i) => {
-    const t = ((from + i * 15) * Math.PI) / 180;
+  const arc = (cx: string, cy: string, from: number) => Array.from({ length: 13 }, (_, i) => {
+    const t = ((from + i * 7.5) * Math.PI) / 180;
     return `calc(${cx} + ${(r * Math.cos(t)).toFixed(2)}px) calc(${cy} + ${(r * Math.sin(t)).toFixed(2)}px)`;
   }).join(", ");
   const far = "2000px";
@@ -446,8 +446,10 @@ export function StartChoice() {
   const figure = (
     <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1, duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
       className="relative h-full min-h-[240px]">
-      {/* the landing page's loading-screen night: flat night, soft cornflower lights roaming its lower part */}
-      <div className="night rounded-[28px] lg:rounded-[36px]" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      {/* the landing page's loading-screen night: flat night, soft cornflower lights roaming its lower part. Clipped by
+          clip-path as well as its rounded corners: Safari does not clip blurred, moving layers to a border radius, and the
+          glow showed in the square corners as flickering triangles */}
+      <div className="night rounded-[28px] lg:rounded-[36px]" style={{ clipPath: `inset(0 round ${r}px)` }} aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
       <div className="pointer-events-none absolute inset-0" style={{ clipPath: cut }} aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/start/mannequin.webp" srcSet="/start/mannequin-1100.webp 1100w, /start/mannequin.webp 2000w" sizes="(min-width: 1024px) 960px, 180vw" alt="" draggable={false}
