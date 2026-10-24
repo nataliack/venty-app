@@ -105,7 +105,7 @@ const DIALS: { k: DialStyle; name: string; note: string }[] = [
 ];
 
 // the measuring dial, as the app's measuring step draws it: − and + either side of the value, the ruler along the
-// bottom (or in a pressed track, the ticks and the needle running down to its floor, no gap). It moves the body in the lab (the same value as the panel). Every style is the same
+// bottom (or in a pressed track, the ticks and the needle stopping 1px above its floor). It moves the body in the lab (the same value as the panel). Every style is the same
 // height, so the screen still fits without scrolling
 function Dial({ value, min, max, onChange, style = "now" }: { value: number; min: number; max: number; onChange: (v: number) => void; style?: DialStyle }) {
   const set = (v: number) => onChange(Math.min(max, Math.max(min, Math.round(v * 2) / 2)));
@@ -120,7 +120,7 @@ function Dial({ value, min, max, onChange, style = "now" }: { value: number; min
         <RB icon="plus" size={inset ? 44 : 48} onClick={() => set(value + 0.5)} label="Plus 0.5 cm" className={btn} />
       </div>
       {inset
-        ? <div className={cx("mx-3 mt-1.5 overflow-hidden rounded-[16px] pt-[3px]", snow ? "shadow-[inset_0_2px_5px_rgb(28_34_82/.2),inset_0_-1px_0_rgb(255_255_255/.95)] bg-[#e3e8f6]" : "lab-inset")}><Ruler value={value} min={min} max={max} onChange={set} h={47} light={snow} /></div>
+        ? <div className={cx("mx-3 mt-1.5 overflow-hidden rounded-[16px] pb-px pt-[3px]", snow ? "shadow-[inset_0_2px_5px_rgb(28_34_82/.2),inset_0_-1px_0_rgb(255_255_255/.95)] bg-[#e3e8f6]" : "lab-inset")}><Ruler value={value} min={min} max={max} onChange={set} h={46} light={snow} /></div>
         : <Ruler value={value} min={min} max={max} onChange={set} light={snow} className="mt-2" />}
     </div>
   );
