@@ -11,6 +11,7 @@ import { MarkCover } from "@/components/art";
 import { LOOKS, type GarmentLook, type Look } from "@/components/Body3D";
 import { BodyLoader } from "@/components/BodyLoader";
 import { ALL_MEASURES, BASE } from "@/lib/data";
+import { ICON_SETS, LookSwitch, SWITCHES, type IconSet, type SwitchStyle } from "./LookSwitch";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
@@ -212,6 +213,11 @@ export function Studio3D() {
     return [...keep, name].sort((a, b) => order(a) - order(b));
   });
   const L = look as unknown as Look;
+  // the look switch concepts: the icon pair, the switch on the phone, and one state per switch in the gallery
+  const [iconSet, setIconSet] = useState<IconSet>("cube");
+  const [swStyle, setSwStyle] = useState<SwitchStyle>("inset");
+  const [tries, setTries] = useState<Record<string, GarmentLook>>({});
+  const [pausedS, setPausedS] = useState(false);
 
   if (!ready) return null;
   return (
@@ -220,7 +226,45 @@ export function Studio3D() {
       <Leva collapsed={false} hidden={typeof window !== "undefined" && window.location.search.includes("shots")} titleBar={{ title: "3D body" }} />
       <h2 className="h1 !text-[34px]">3D body</h2>
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the screens still being designed. The measuring steps and Body ready are live in the app. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
-      <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Garments on the 3D body (testing)</h3>
+      <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Look switch (concepts)</h3>
+      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">On your body: the garment true to life (its own fabric) or as its pattern. One switch, one above the other on the left edge, icons only (named True to life and Pattern for screen readers). Pick an icon pair, try each switch in the row below, then put the one you like on the phone; it changes the garment on the body for real.</p>
+      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="space-y-6">
+          <div>
+            <div className="mb-2 text-[14px] text-white/50">Icons</div>
+            <Pick items={ICON_SETS} value={iconSet} onChange={setIconSet} />
+            <p className="mt-3 max-w-[620px] text-[15px] leading-snug text-white/60">{ICON_SETS.find((x) => x.k === iconSet)!.note}</p>
+          </div>
+          <div>
+            <div className="mb-2 text-[14px] text-white/50">The five switches (try them)</div>
+            <div className="flex flex-wrap gap-4">{SWITCHES.map((x) => (
+              <figure key={x.k} className="flex w-[150px] flex-col items-center gap-3 rounded-[24px] p-5" style={{ background: INK }}>
+                <div className="grid h-[150px] place-items-center"><LookSwitch style={x.k} set={iconSet} value={tries[x.k] ?? "fabric"} onChange={(v) => setTries((t) => ({ ...t, [x.k]: v }))} /></div>
+                <figcaption className="text-center text-[14px] text-white/70">{x.name}</figcaption>
+              </figure>
+            ))}</div>
+          </div>
+          <div>
+            <div className="mb-2 text-[14px] text-white/50">On the phone</div>
+            <Pick items={SWITCHES} value={swStyle} onChange={setSwStyle} />
+            <p className="mt-3 max-w-[620px] text-[15px] leading-snug text-white/60">{SWITCHES.find((x) => x.k === swStyle)!.note} The garment is the one worn in the fitting room below.</p>
+          </div>
+        </div>
+        <Phone label="On your body · look switch">
+          <div className="absolute inset-0" style={{ background: INK }} />
+          <div className="relative px-5 pt-14 text-center text-white">
+            <h1 className="text-[24px] font-normal tracking-[-.02em]">Flutter midi dress</h1>
+            <p className="mt-1 text-[15px] text-white/60">Drafted to Me · easy fit</p>
+            <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 rounded-full bg-white py-2 text-bg">On your body</span><span className="flex-1 py-2 text-white/70">Pattern</span></div>
+          </div>
+          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={pausedS} room={0.2} garments={wear} garmentLook={gLook} className="absolute inset-x-0 bottom-0 top-44" />
+          <div className="absolute left-6 top-1/2 -translate-y-1/2"><LookSwitch style={swStyle} set={iconSet} value={gLook} onChange={setGLook} /></div>
+          <RB icon={pausedS ? "play" : "pause"} size={40} onClick={() => setPausedS((x) => !x)} label={pausedS ? "Turn the body" : "Stop turning"} className="absolute bottom-[100px] right-6" />
+          <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
+        </Phone>
+      </div>
+
+      <h3 className="mt-16 text-[22px] font-normal tracking-[-.02em]">Garments on the 3D body (testing)</h3>
       <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">MakeHuman garments, fitted to our bodies with the body&apos;s own size controls: change the measurements or the sex in the panel and the garment follows. Each one downloads only when you put it on. A top and a bottom can be worn together; a dress is worn alone. Look: each garment in its own fabric, or its pattern drawn on it (cornflower, the seams, seam allowances, grainlines, piece names and lengths in snow), generated from the garment&apos;s own layout. The ones marked with a dot stand in for the app&apos;s garments; the rest are extras.</p>
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="space-y-5">
