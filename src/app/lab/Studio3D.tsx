@@ -11,7 +11,7 @@ import { MarkCover } from "@/components/art";
 import { LOOKS, type GarmentLook, type Look } from "@/components/Body3D";
 import { BodyLoader } from "@/components/BodyLoader";
 import { ALL_MEASURES, BASE } from "@/lib/data";
-import { FABRIC_ICONS, LookSwitch, type FabricIcon } from "./LookSwitch";
+import { FABRIC_ICONS, FabricGlyph, IconTile, LookSwitch, PATTERN_ICONS, PatternGlyph, type FabricIcon, type PatternIcon } from "./LookSwitch";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
@@ -213,9 +213,10 @@ export function Studio3D() {
     return [...keep, name].sort((a, b) => order(a) - order(b));
   });
   const L = look as unknown as Look;
-  // the look switch: the fabric icon on the phone, and one state per icon in the row
-  const [fIcon, setFIcon] = useState<FabricIcon>("piece");
-  const [tries, setTries] = useState<Record<string, GarmentLook>>({});
+  // the look switch: the pair of icons picked (on the phone and in the try-it switch)
+  const [fIcon, setFIcon] = useState<FabricIcon>("swatch");
+  const [pIcon, setPIcon] = useState<PatternIcon>("dashed");
+  const [tryLook, setTryLook] = useState<GarmentLook>("fabric");
   const [pausedS, setPausedS] = useState(false);
 
   if (!ready) return null;
@@ -226,19 +227,24 @@ export function Studio3D() {
       <h2 className="h1 !text-[34px]">3D body</h2>
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the screens still being designed. The measuring steps and Body ready are live in the app. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
       <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Look switch</h3>
-      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">On your body: the garment in its own fabric, or as its pattern. The inset slider (picked from the five concepts), smaller, with flat icons: three for the fabric, each beside the pattern piece (dashed, with its grainline). Try them in the row, pick one for the phone; it changes the garment on the body for real. The pause sits centred, higher up, clear of the buttons.</p>
+      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">On your body: the garment in its own fabric, or as its pattern. The inset slider, with flat, bold icons: {FABRIC_ICONS.length} for the fabric and {PATTERN_ICONS.length} for the pattern. Each is shown big, then at its real size on the knob. Tap one of each to make a pair; try the pair in the switch, or on the phone, where it changes the garment on the body for real.</p>
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="space-y-6">
-          <div className="flex flex-wrap gap-4">{FABRIC_ICONS.map((x) => (
-            <figure key={x.k} className="flex w-[150px] flex-col items-center gap-3 rounded-[24px] p-5" style={{ background: INK }}>
-              <div className="grid h-[110px] place-items-center"><LookSwitch icon={x.k} value={tries[x.k] ?? "fabric"} onChange={(v) => setTries((t) => ({ ...t, [x.k]: v }))} /></div>
-              <figcaption className="text-center text-[14px] text-white/70">{x.name}</figcaption>
-            </figure>
-          ))}</div>
+        <div className="space-y-8">
           <div>
-            <div className="mb-2 text-[14px] text-white/50">On the phone</div>
-            <Pick items={FABRIC_ICONS} value={fIcon} onChange={setFIcon} />
-            <p className="mt-3 max-w-[620px] text-[15px] leading-snug text-white/60">{FABRIC_ICONS.find((x) => x.k === fIcon)!.note} The garment is the one worn in the fitting room below.</p>
+            <div className="mb-3 text-[14px] text-white/50">Fabric ({FABRIC_ICONS.length})</div>
+            <div className="flex flex-wrap gap-3">{FABRIC_ICONS.map((x) => (
+              <IconTile key={x.k} name={x.name} on={fIcon === x.k} onPick={() => setFIcon(x.k)} small={<FabricGlyph k={x.k} />}><FabricGlyph k={x.k} size={44} /></IconTile>
+            ))}</div>
+          </div>
+          <div>
+            <div className="mb-3 text-[14px] text-white/50">Pattern ({PATTERN_ICONS.length})</div>
+            <div className="flex flex-wrap gap-3">{PATTERN_ICONS.map((x) => (
+              <IconTile key={x.k} name={x.name} on={pIcon === x.k} onPick={() => setPIcon(x.k)} small={<PatternGlyph k={x.k} />}><PatternGlyph k={x.k} size={44} /></IconTile>
+            ))}</div>
+          </div>
+          <div className="flex items-center gap-5 rounded-[24px] p-5" style={{ background: INK }}>
+            <LookSwitch fabric={fIcon} pattern={pIcon} value={tryLook} onChange={setTryLook} />
+            <p className="text-[15px] leading-snug text-white/65">Your pair: {FABRIC_ICONS.find((x) => x.k === fIcon)!.name} and {PATTERN_ICONS.find((x) => x.k === pIcon)!.name.toLowerCase()}. Tap it to try the switch.</p>
           </div>
         </div>
         <Phone label="On your body · look switch">
@@ -249,7 +255,7 @@ export function Studio3D() {
             <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 rounded-full bg-white py-2 text-bg">On your body</span><span className="flex-1 py-2 text-white/70">Pattern</span></div>
           </div>
           <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={pausedS} room={0.2} garments={wear} garmentLook={gLook} className="absolute inset-x-0 bottom-0 top-44" />
-          <div className="absolute left-5 top-1/2 -translate-y-1/2"><LookSwitch icon={fIcon} value={gLook} onChange={setGLook} /></div>
+          <div className="absolute left-5 top-1/2 -translate-y-1/2"><LookSwitch fabric={fIcon} pattern={pIcon} value={gLook} onChange={setGLook} /></div>
           <RB icon={pausedS ? "play" : "pause"} size={40} onClick={() => setPausedS((x) => !x)} label={pausedS ? "Turn the body" : "Stop turning"} className="absolute bottom-[128px] left-1/2 -translate-x-1/2" />
           <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
         </Phone>
