@@ -306,6 +306,21 @@ function radial(key: string, stops: [number, string][]) {
   return (texCache[key] = t);
 }
 const floorGlow = () => radial("glow", [[0, "rgba(140,156,248,.55)"], [0.45, "rgba(104,126,245,.22)"], [1, "rgba(104,126,245,0)"]]);
+// the pattern floor's own colour: darker than the ink towards the horizon, a deeper, cornflower-tinted ink nearer the
+// camera (the canvas's top is the far edge)
+let floorTex: THREE.CanvasTexture | null = null;
+function floorGradient() {
+  if (floorTex) return floorTex;
+  const c = document.createElement("canvas");
+  c.width = 4; c.height = 256;
+  const g = c.getContext("2d")!;
+  const l = g.createLinearGradient(0, 0, 0, 256);
+  l.addColorStop(0, "#0c0d18"); l.addColorStop(0.55, "#111325"); l.addColorStop(1, "#1d2242");
+  g.fillStyle = l; g.fillRect(0, 0, 4, 256);
+  floorTex = new THREE.CanvasTexture(c);
+  floorTex.colorSpace = THREE.SRGBColorSpace;
+  return floorTex;
+}
 const floorTint = () => radial("tint", [[0, "rgba(193,200,217,.09)"], [0.55, "rgba(193,200,217,.035)"], [1, "rgba(193,200,217,0)"]]);
 const floorDisc = () => radial("disc", [[0, "rgba(240,244,254,.95)"], [0.62, "rgba(193,200,250,.75)"], [0.8, "rgba(140,156,248,.3)"], [1, "rgba(140,156,248,0)"]]);
 
@@ -376,7 +391,12 @@ function StagePieces({ stage, scale, chart }: { stage: Stage; scale: number; cha
       {stage === "plinth" && <RoundedBox args={[0.78 * scale, 0.07 * scale, 0.5 * scale]} radius={0.012 * scale} smoothness={4} position={[0, -0.035 * scale, 0]}><meshStandardMaterial color="#0e0f18" roughness={0.9} metalness={0} envMapIntensity={0.3} /></RoundedBox>}
       {/* the grid: real 10 cm squares, bolder every 50 cm, the same whatever the body's height (so a taller body stands
           taller on it), quiet lines fading out from the feet (fadeFrom 0: from the middle, not from the camera) */}
-      {stage === "grid" && <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1} cellThickness={0.6} cellColor="#262c4c" sectionSize={0.5} sectionThickness={0.9} sectionColor="#3a4580" fadeDistance={1.6} fadeStrength={1.6} fadeFrom={0} infiniteGrid />}
+      {stage === "grid" && (
+        <>
+          <mesh position={[0, -0.001, -2]} rotation-x={-Math.PI / 2}><planeGeometry args={[12, 8]} /><meshBasicMaterial map={floorGradient()} toneMapped={false} /></mesh>
+          <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1} cellThickness={0.7} cellColor="#323a66" sectionSize={0.5} sectionThickness={0.9} sectionColor="#3e4a88" fadeDistance={1.7} fadeStrength={1.5} fadeFrom={0} infiniteGrid />
+        </>
+      )}
       {stage === "ticks" && <Ticks r={0.36 * scale} />}
       {stage === "dots" && <Dots r={0.9 * scale} />}
       {stage === "line" && <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><ringGeometry args={[0.33 * scale, 0.335 * scale, 160]} /><meshBasicMaterial color="#8c9cf8" transparent opacity={0.9} toneMapped={false} /></mesh>}
@@ -388,10 +408,10 @@ function StagePieces({ stage, scale, chart }: { stage: Stage; scale: number; cha
       )}
       {(stage === "glow" || stage === "podium") && <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[stage === "podium" ? r * 0.7 : 0.6 * scale, 96]} /><meshBasicMaterial map={floorGlow()} transparent opacity={stage === "podium" ? 0.45 : 1} depthWrite={false} toneMapped={false} /></mesh>}
       {/* the floor round the feet a shade lighter (neutral, not a light), so the shadow under them reads */}
-      {(stage === "grid" || stage === "shadow") && <mesh position={[0, 0.0015, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[0.55, 96]} /><meshBasicMaterial map={floorTint()} transparent depthWrite={false} toneMapped={false} /></mesh>}
+      {stage === "shadow" && <mesh position={[0, 0.0015, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[0.55, 96]} /><meshBasicMaterial map={floorTint()} transparent depthWrite={false} toneMapped={false} /></mesh>}
       {stage === "disc" && <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[0.42 * scale, 96]} /><meshBasicMaterial map={floorDisc()} transparent depthWrite={false} toneMapped={false} /></mesh>}
       {/* on the pattern floor the feet stand in a shadow, not a light */}
-      {shadow && <ContactShadows position={[0, stage === "plinth" ? 0.0035 : 0.003, 0]} opacity={stage === "disc" ? 0.4 : stage === "grid" ? 0.85 : 0.6} blur={stage === "grid" ? 1.8 : 2.2} scale={1.6 * scale} far={1} resolution={512} frames={Infinity} color="#05060b" />}
+      {shadow && <ContactShadows position={[0, stage === "plinth" ? 0.0035 : 0.003, 0]} opacity={stage === "disc" ? 0.4 : stage === "grid" ? 1 : 0.6} blur={stage === "grid" ? 1.6 : 2.2} scale={1.6 * scale} far={1} resolution={512} frames={Infinity} color={stage === "grid" ? "#000000" : "#05060b"} />}
     </group>
   );
 }

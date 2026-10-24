@@ -45,7 +45,7 @@ type Deco = "crown" | "arch" | "strip" | "rings" | "frame" | "cone" | "beams" | 
 type Scene = { k: string; name: string; note: string; floor: Stage; chart?: boolean; bg: string; deco?: Deco };
 const DARK = "linear-gradient(180deg, #141626 0%, #0c0d16 100%)";
 // ink, with a cornflower light from above so faint it is felt more than seen
-const INK = "radial-gradient(75% 48% at 50% -8%, rgb(104 126 245 / .085), rgb(104 126 245 / .03) 45%, transparent 75%), var(--color-ink)";
+const INK = "radial-gradient(75% 50% at 50% -8%, rgb(104 126 245 / .15), rgb(104 126 245 / .055) 45%, transparent 76%), var(--color-ink)";
 const SCENES: Scene[] = [
   { k: "today", name: "1 · Today", note: "What the app has: the plain card colour, the body floating in it.", floor: "none", bg: "var(--color-card)" },
   { k: "pool", name: "2 · Pool of light", note: "Soft light from above falls into a pool of cornflower on the floor, a shadow under the feet. A quiet studio.", floor: "glow", bg: "radial-gradient(70% 55% at 50% 0%, rgb(140 156 248 / .2), transparent 72%), linear-gradient(180deg, #181a29 0%, #0e0f18 100%)" },
