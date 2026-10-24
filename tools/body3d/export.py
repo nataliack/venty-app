@@ -66,11 +66,66 @@ GARMENT_SRC = os.path.join(ROOT, "tools", "body3d", "garment-src")
 OUT_GARMENTS = os.path.join(OUT_GLB, "garments")
 
 
+def garment_material(folder, name):
+    """The garment's own look from its MakeHuman material (.mhmat): its colour texture, its surface detail (normal map)
+    where it has one, and see-through parts (lace, cut-outs) where its texture has them. Built as a plain Principled
+    material, which the glTF export carries over; the textures are shrunk to at most GARMENT_TEX px."""
+    import re
+    mh = [f for f in os.listdir(folder) if f.endswith(".mhmat")]
+    info = {}
+    if mh:
+        for line in open(os.path.join(folder, mh[0]), encoding="utf-8", errors="ignore"):
+            m = re.match(r"\s*(\w+)\s+(.+?)\s*$", line)
+            if m:
+                info[m.group(1)] = m.group(2)
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 0.8
+    size = int(os.environ.get("BODY3D_GARMENT_TEX", "1024"))
+
+    def image(key):
+        f = info.get(key)
+        if not f:
+            return None
+        path = os.path.join(folder, os.path.basename(f))
+        if not os.path.exists(path):
+            return None
+        img = bpy.data.images.load(path)
+        w, hgt = img.size
+        if max(w, hgt) > size:
+            k = size / max(w, hgt)
+            img.scale(max(1, int(w * k)), max(1, int(hgt * k)))
+        return img
+    diff = image("diffuseTexture")
+    if diff:
+        t = nt.nodes.new("ShaderNodeTexImage")
+        t.image = diff
+        nt.links.new(t.outputs["Color"], bsdf.inputs["Base Color"])
+        if info.get("transparent", "").lower() == "true" or info.get("alphaToCoverage", "").lower() == "true":
+            nt.links.new(t.outputs["Alpha"], bsdf.inputs["Alpha"])
+            mat.blend_method = "CLIP" if hasattr(mat, "blend_method") else mat.blend_method
+    else:
+        c = [float(x) for x in info.get("diffuseColor", "0.8 0.8 0.8").split()[:3]]
+        bsdf.inputs["Base Color"].default_value = (*c, 1.0)
+    nrm = image("normalmapTexture")
+    if nrm:
+        nrm.colorspace_settings.name = "Non-Color"
+        t = nt.nodes.new("ShaderNodeTexImage")
+        t.image = nrm
+        nm = nt.nodes.new("ShaderNodeNormalMap")
+        nm.inputs["Strength"].default_value = min(float(info.get("normalmapIntensity", "1") or 1), 2.0)
+        nt.links.new(t.outputs["Color"], nm.inputs["Color"])
+        nt.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
+    return mat
+
+
 def export_garments(h, rig, keys, sex):
     """Each garment in garments.json, put on this body with MPFB (its points pinned to the skin, its weights taken from
     the body's bones), then fitted again with each of the body's size controls switched on in turn: the garment gets the
     same shape keys as the body, under the same names, so the app moves both with one set of weights. Exported on its
-    own (the garment and the skeleton, no materials: the app gives it its fabric), one file per garment and sex, loaded
+    own (the garment, its own look and the skeleton), one file per garment and sex, loaded
     only when shown."""
     from bl_ext.user_default.mpfb.entities.clothes.mhclo import Mhclo
     from bl_ext.user_default.mpfb.services.clothesservice import ClothesService
@@ -113,11 +168,13 @@ def export_garments(h, rig, keys, sex):
         for k, a in shapes.items():
             sk = clothes.shape_key_add(name=k, from_mix=False)
             sk.data.foreach_set("co", a)
-        # no modifier but the skeleton's (MPFB can add a mask or a subdivision); no material (the app gives the fabric)
+        # no modifier but the skeleton's (MPFB can add a mask or a subdivision); its own look (the app can also give it
+        # a plain colour of ours)
         for m in list(clothes.modifiers):
             if m.type != "ARMATURE":
                 clothes.modifiers.remove(m)
         clothes.data.materials.clear()
+        clothes.data.materials.append(garment_material(os.path.dirname(path), g["name"]))
         for poly in cme.polygons:
             poly.use_smooth = True
         clothes.name = g["name"]
@@ -129,8 +186,8 @@ def export_garments(h, rig, keys, sex):
         dst = os.path.join(out, g["name"] + ".glb")
         bpy.ops.export_scene.gltf(filepath=dst, export_format="GLB", use_selection=True, export_apply=False,
                                   export_morph=True, export_morph_normal=False, export_try_sparse_sk=True,
-                                  export_texcoords=False, export_materials="NONE", export_skins=True, export_animations=False,
-                                  export_yup=True)
+                                  export_texcoords=True, export_materials="EXPORT", export_image_format="WEBP", export_image_quality=80,
+                                  export_skins=True, export_animations=False, export_yup=True)
         rig.location.z += zmin
         log(sex, "garment", g["name"], n, "verts", os.path.getsize(dst) // 1024, "KB")
         bpy.data.objects.remove(clothes, do_unlink=True)

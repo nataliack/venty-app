@@ -127,17 +127,12 @@ function poseTargets(rig: Rig, pose: PoseName): Record<string, THREE.Quaternion>
 // it gets the app's own fabric: one colour, soft and matt, drawn just in front of the skin where the two nearly touch.
 type Worn = { bones: [THREE.Bone, THREE.Bone][] };
 function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
-  name: string; sex: Sex3D; rig: Rig; weights: Record<string, number>; color: string; layer: number;
+  // color: a plain fabric of ours (keeping the garment's own surface detail), or null for the garment's own look
+  name: string; sex: Sex3D; rig: Rig; weights: Record<string, number>; color: string | null; layer: number;
   wornRef: React.MutableRefObject<Set<Worn>>; onShown: (on: boolean) => void;
 }) {
   const { scene } = useGLTF(`/body3d/garments/${sex}/${name}.glb`);
   const invalidate = useThree((s) => s.invalidate);
-  const material = useMemo(() => new THREE.MeshPhysicalMaterial({
-    roughness: 0.82, metalness: 0, sheen: 0.6, sheenRoughness: 0.7, sheenColor: new THREE.Color("#ffffff"), side: THREE.DoubleSide,
-    // each layer drawn a little further in front than the one under it (a top over the bottom's waistband)
-    polygonOffset: true, polygonOffsetFactor: -2 - 2 * layer, polygonOffsetUnits: -2 - 2 * layer,
-  }), [layer]);
-  useEffect(() => { material.color.set(color); invalidate(); }, [material, color, invalidate]);
   const g = useMemo(() => {
     const root = cloneSkinned(scene);
     const meshes: THREE.Mesh[] = [];
@@ -146,13 +141,33 @@ function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
       if ((o as THREE.Bone).isBone && rig.bones[o.name]) pairs.push([o as THREE.Bone, rig.bones[o.name]]);
       if ((o as THREE.Mesh).isMesh) { const m = o as THREE.Mesh; m.frustumCulled = false; meshes.push(m); }
     });
-    return { root, meshes, worn: { bones: pairs } as Worn };
-  }, [scene, rig]);
-  useEffect(() => { g.meshes.forEach((m) => { m.material = material; }); invalidate(); }, [g, material, invalidate]);
+    // both looks for each part: its own (the textures it came with), and a plain fabric with its surface detail.
+    // Both drawn on both sides, each layer a little further in front than the one under it (a top over the bottom's
+    // waistband). See-through parts (lace, cut-outs) are see-through in the garment's own look only
+    const looks = meshes.map((m) => {
+      const own = (m.material as THREE.MeshStandardMaterial).clone();
+      const plain = new THREE.MeshPhysicalMaterial({
+        roughness: 0.82, metalness: 0, sheen: 0.6, sheenRoughness: 0.7, sheenColor: new THREE.Color("#ffffff"),
+        normalMap: own.normalMap,
+      });
+      for (const mat of [own, plain]) {
+        mat.side = THREE.DoubleSide;
+        mat.polygonOffset = true; mat.polygonOffsetFactor = -2 - 2 * layer; mat.polygonOffsetUnits = -2 - 2 * layer;
+      }
+      return { m, own, plain };
+    });
+    return { root, looks, worn: { bones: pairs } as Worn };
+  }, [scene, rig, layer]);
+  useEffect(() => {
+    for (const { m, own, plain } of g.looks) {
+      if (color) { plain.color.set(color); m.material = plain; } else m.material = own;
+    }
+    invalidate();
+  }, [g, color, invalidate]);
   // follow the body's pose (copied in the body's own frame loop, after it moves)
   useEffect(() => { const set = wornRef.current; set.add(g.worn); return () => { set.delete(g.worn); }; }, [g, wornRef]);
   useEffect(() => {
-    for (const m of g.meshes) {
+    for (const { m } of g.looks) {
       const dict = m.morphTargetDictionary ?? {};
       const inf = m.morphTargetInfluences ?? [];
       for (const [n, i] of Object.entries(dict)) inf[i] = weights[n] ?? 0;
@@ -163,7 +178,7 @@ function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
   return <primitive object={g.root} />;
 }
 
-function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments, garmentColor, onGarment }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void; garments: string[]; garmentColor: string; onGarment: (on: boolean) => void }) {
+function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments, garmentColor, onGarment }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void; garments: string[]; garmentColor: string | null; onGarment: (on: boolean) => void }) {
   const wornRef = useRef<Set<Worn>>(new Set());
   const rig = useRig(sex);
   // the body is loaded once this mounts (Suspense held it back until then); gone again if it unmounts (a new body)
@@ -510,11 +525,12 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 // stage: what the body stands on (see Stage); chart: height lines on the wall behind; room: a share of the view kept
 // free at the bottom, the body framed above it (the floor runs on behind buttons laid over the view). turn: turn slowly by itself on this view too (the torso shots always
 // may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, garments, garmentColor = "#e8e3da", turn = false, paused = false, snapshot, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, garments, garmentColor = null, turn = false, paused = false, snapshot, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
   stage?: Stage; chart?: boolean; lines?: Lines; room?: number;
-  // garments to wear (MakeHuman garments by name, lab), from the innermost layer out, and their fabric colour
-  garments?: string[]; garmentColor?: string; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
+  // garments to wear (MakeHuman garments by name, lab), from the innermost layer out, and a plain fabric colour of ours
+  // (null: each garment's own look, its original textures)
+  garments?: string[]; garmentColor?: string | null; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   // the loader shows until the body is in the scene

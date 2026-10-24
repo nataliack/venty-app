@@ -203,7 +203,8 @@ export function Studio3D() {
   const [paused6, setPaused6] = useState(false);
   // what the body wears on the fitting screen: a top and a bottom can be worn together, a dress alone
   const [wear, setWear] = useState<string[]>(["mindfront_f_dress_01"]);
-  const [fabric, setFabric] = useState(FABRICS[0]);
+  // the fabric: each garment's own look (its original textures), or a plain colour of ours
+  const [fabric, setFabric] = useState<string | null>(null);
   const toggleWear = (name: string) => setWear((cur) => {
     if (cur.includes(name)) return cur.filter((x) => x !== name);
     const g = GARMENTS.find((x) => x.name === name)!.group;
@@ -222,7 +223,7 @@ export function Studio3D() {
       <h2 className="h1 !text-[34px]">3D body</h2>
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the screens still being designed. The measuring steps and Body ready are live in the app. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
       <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Garments on the 3D body (testing)</h3>
-      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">MakeHuman garments, fitted to our bodies with the body&apos;s own size controls: change the measurements or the sex in the panel and the garment follows. Each one downloads only when you put it on. A top and a bottom can be worn together; a dress is worn alone. The fabric is one plain colour of ours. The ones marked with a dot stand in for the app&apos;s garments; the rest are extras.</p>
+      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">MakeHuman garments, fitted to our bodies with the body&apos;s own size controls: change the measurements or the sex in the panel and the garment follows. Each one downloads only when you put it on. A top and a bottom can be worn together; a dress is worn alone. The fabric is each garment&apos;s own look (Original), or a plain colour of ours that keeps its surface detail. The ones marked with a dot stand in for the app&apos;s garments; the rest are extras.</p>
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="space-y-5">
           {(["Dresses", "Tops", "Trousers", "Skirts"] as const).map((grp) => (
@@ -238,9 +239,11 @@ export function Studio3D() {
           ))}
           <div>
             <div className="mb-2 text-[14px] text-white/50">Fabric</div>
-            <div className="flex flex-wrap items-center gap-2">{FABRICS.map((c) => (
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => setFabric(null)} aria-pressed={fabric === null} className={cx("h-9 rounded-full px-4 text-[14px] font-medium transition-colors", fabric === null ? "bg-white text-bg" : "border border-white/15 text-white/75 hover:text-white")}>Original</button>
+              {FABRICS.map((c) => (
               <button key={c} onClick={() => setFabric(c)} aria-label={`Fabric ${c}`} aria-pressed={fabric === c} className={cx("h-9 w-9 rounded-full border-2", fabric === c ? "border-white" : "border-white/15")} style={{ background: c }} />
-            ))}<input type="color" value={fabric} onChange={(e) => setFabric(e.target.value)} aria-label="Any fabric colour" className="h-9 w-12 cursor-pointer rounded-md bg-transparent" /></div>
+            ))}<input type="color" value={fabric ?? FABRICS[0]} onChange={(e) => setFabric(e.target.value)} aria-label="Any fabric colour" className="h-9 w-12 cursor-pointer rounded-md bg-transparent" /></div>
           </div>
         </div>
         <Phone label="Fitting room">
