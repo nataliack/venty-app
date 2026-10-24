@@ -306,8 +306,9 @@ function radial(key: string, stops: [number, string][]) {
   return (texCache[key] = t);
 }
 const floorGlow = () => radial("glow", [[0, "rgba(140,156,248,.55)"], [0.45, "rgba(104,126,245,.22)"], [1, "rgba(104,126,245,0)"]]);
-// the pattern floor's own colour: darker than the ink towards the horizon, a deeper, cornflower-tinted ink nearer the
-// camera (the canvas's top is the far edge)
+// the pattern floor's own colour: plain ink nearest the camera, a little darker behind the feet, then melting into the
+// backdrop a short way behind them, so the floor is only seen from about the knees down (Jose's line, 24 Oct 2026; no
+// horizon). The plane runs from 3 m in front of the feet (the canvas's bottom) to 2 m behind them (its top)
 let floorTex: THREE.CanvasTexture | null = null;
 function floorGradient() {
   if (floorTex) return floorTex;
@@ -315,12 +316,13 @@ function floorGradient() {
   c.width = 4; c.height = 256;
   const g = c.getContext("2d")!;
   const l = g.createLinearGradient(0, 0, 0, 256);
-  l.addColorStop(0, "#0c0d18"); l.addColorStop(0.55, "#111325"); l.addColorStop(1, "#1d2242");
+  l.addColorStop(0, "rgba(13,14,25,0)"); l.addColorStop(0.15, "rgba(13,14,25,1)"); l.addColorStop(0.4, "#10111e"); l.addColorStop(1, "#131523");
   g.fillStyle = l; g.fillRect(0, 0, 4, 256);
   floorTex = new THREE.CanvasTexture(c);
   floorTex.colorSpace = THREE.SRGBColorSpace;
   return floorTex;
 }
+const floorPool = () => radial("pool", [[0, "rgba(0,0,0,.6)"], [0.5, "rgba(0,0,0,.28)"], [1, "rgba(0,0,0,0)"]]);
 const floorTint = () => radial("tint", [[0, "rgba(193,200,217,.09)"], [0.55, "rgba(193,200,217,.035)"], [1, "rgba(193,200,217,0)"]]);
 const floorDisc = () => radial("disc", [[0, "rgba(240,244,254,.95)"], [0.62, "rgba(193,200,250,.75)"], [0.8, "rgba(140,156,248,.3)"], [1, "rgba(140,156,248,0)"]]);
 
@@ -393,8 +395,10 @@ function StagePieces({ stage, scale, chart }: { stage: Stage; scale: number; cha
           taller on it), quiet lines fading out from the feet (fadeFrom 0: from the middle, not from the camera) */}
       {stage === "grid" && (
         <>
-          <mesh position={[0, -0.001, -2]} rotation-x={-Math.PI / 2}><planeGeometry args={[12, 8]} /><meshBasicMaterial map={floorGradient()} toneMapped={false} /></mesh>
-          <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1} cellThickness={0.7} cellColor="#323a66" sectionSize={0.5} sectionThickness={0.9} sectionColor="#3e4a88" fadeDistance={1.7} fadeStrength={1.5} fadeFrom={0} infiniteGrid />
+          <mesh position={[0, -0.001, 0.5]} rotation-x={-Math.PI / 2}><planeGeometry args={[12, 5]} /><meshBasicMaterial map={floorGradient()} transparent depthWrite={false} toneMapped={false} /></mesh>
+          <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1} cellThickness={0.7} cellColor="#323a66" sectionSize={0.5} sectionThickness={0.9} sectionColor="#3e4a88" fadeDistance={1.5} fadeStrength={1.5} fadeFrom={0} infiniteGrid />
+          {/* a dark pool under the feet (the floor darkens round where she stands), then the contact shadow */}
+          <mesh position={[0, 0.0015, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[0.5, 96]} /><meshBasicMaterial map={floorPool()} transparent depthWrite={false} toneMapped={false} /></mesh>
         </>
       )}
       {stage === "ticks" && <Ticks r={0.36 * scale} />}
