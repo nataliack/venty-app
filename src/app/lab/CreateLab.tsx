@@ -1,0 +1,191 @@
+"use client";
+// Lab: the Create pop-up on the phone tab bar. Tapping the plus opens a snow card that grows out of the bar around the
+// button: the card wraps the plus in a ring, and a channel (the "river") of one width, 5px, runs between the card and
+// the bar all the way round, the bar's notch widening to make room. The page behind blurs and darkens; the bar stays.
+// The plus turns into × in the dark secondary style.
+//
+// Geometry, all from one set of numbers so the channel is exactly G everywhere (y down, origin at the bar's top left):
+// · the button: radius B, centred NOTCH_Y below the bar's top edge
+// · closed: the bar's notch is the button plus the channel (B + G), its corners rounded with F where it meets the top edge
+// · open: the card's bottom edge sits G above the bar; it wraps the button in a ring (B + G) and meets its bottom edge
+//   with a concave curve of F + G; the bar's notch widens to B + 2G. The card's outline pushed out by G is then the
+//   bar's outline exactly (same centres, every radius G larger or smaller), so the gap never changes and never closes
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { motion, AnimatePresence, animate } from "motion/react";
+import { Icon, type IconName } from "@/components/icons";
+import { cx } from "@/components/ui";
+
+const BAR_H = 80, BAR_R = 30, NOTCH_Y = 9, F = 9, B = 31, G = 5, CARD_R = 22;
+const RING = B + G; // the card's ring round the button (and the closed notch)
+
+// the bar: a rounded rectangle with the notch (radius n) cut into the top centre, its corners rounded with F
+const barPath = (w: number, n: number) => {
+  const c = w / 2, y = NOTCH_Y;
+  return [`M ${BAR_R} 0`, `H ${c - n - F}`, `A ${F} ${F} 0 0 1 ${c - n} ${y}`, `A ${n} ${n} 0 0 0 ${c} ${y + n}`, `A ${n} ${n} 0 0 0 ${c + n} ${y}`,
+    `A ${F} ${F} 0 0 1 ${c + n + F} 0`, `H ${w - BAR_R}`, `A ${BAR_R} ${BAR_R} 0 0 1 ${w} ${BAR_R}`, `V ${BAR_H - BAR_R}`, `A ${BAR_R} ${BAR_R} 0 0 1 ${w - BAR_R} ${BAR_H}`,
+    `H ${BAR_R}`, `A ${BAR_R} ${BAR_R} 0 0 1 0 ${BAR_H - BAR_R}`, `V ${BAR_R}`, `A ${BAR_R} ${BAR_R} 0 0 1 ${BAR_R} 0`, "Z"].join(" ");
+};
+// the card: a rounded rectangle (w × h) whose bottom edge dips into a ring round the button, G + NOTCH_Y below it
+const cardPath = (w: number, h: number) => {
+  const c = w / 2, cy = h + G + NOTCH_Y, fc = F + G, d = RING + fc; // the concave curve's centre sits d from the button's
+  return [`M ${CARD_R} 0`, `H ${w - CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 ${w} ${CARD_R}`, `V ${h - CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 ${w - CARD_R} ${h}`,
+    `H ${c + d}`, `A ${fc} ${fc} 0 0 0 ${c + RING} ${cy}`, `A ${RING} ${RING} 0 0 1 ${c} ${cy + RING}`, `A ${RING} ${RING} 0 0 1 ${c - RING} ${cy}`,
+    `A ${fc} ${fc} 0 0 0 ${c - d} ${h}`, `H ${CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 0 ${h - CARD_R}`, `V ${CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 ${CARD_R} 0`, "Z"].join(" ");
+};
+
+// a snow shape built like the white secondary: a soft white light inside the edge, a rim white along the top and a
+// slightly deeper snow towards the bottom
+function SnowShape({ id, d, h }: { id: string; d: string; h: number }) {
+  return (
+    <>
+      <defs>
+        <linearGradient id={`${id}-rim`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={h}><stop offset="0" stopColor="#fff" /><stop offset=".35" stopColor="rgb(19 21 35 / .06)" /><stop offset="1" stopColor="rgb(19 21 35 / .16)" /></linearGradient>
+        <clipPath id={`${id}-clip`}><path d={d} /></clipPath>
+        <filter id={`${id}-glow`} x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="4" /></filter>
+      </defs>
+      <path d={d} fill="var(--color-snow)" />
+      <path d={d} fill="none" stroke="#fff" strokeOpacity=".8" strokeWidth="12" clipPath={`url(#${id}-clip)`} filter={`url(#${id}-glow)`} />
+      <path d={d} fill="none" stroke={`url(#${id}-rim)`} strokeWidth="1" />
+    </>
+  );
+}
+
+// a number that eases to its target (the notch's radius): the outline is redrawn from it each frame, which works in
+// every browser (Safari cannot transition an SVG path in CSS, and motion cannot blend these path strings)
+function useEased(target: number) {
+  const [v, setV] = useState(target);
+  const cur = useRef(target);
+  useEffect(() => {
+    const c = animate(cur.current, target, { duration: 0.42, ease: [0.2, 0.8, 0.2, 1], onUpdate: (x) => { cur.current = x; setV(x); } });
+    return () => c.stop();
+  }, [target]);
+  return v;
+}
+
+const OPTIONS: [IconName, string, string][] = [
+  ["pencil", "Design from scratch", "Turn a photo, a sketch or your words into a pattern"],
+  ["dress", "Start from a pattern", "Choose a style, then fit it to you"],
+  ["body", "Make a body", "Add your measurements"],
+];
+
+// the card's words and options; its height is measured, so the card fits them
+function CardBody({ onHeight }: { onHeight: (h: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(() => onHeight(el.offsetHeight)); ro.observe(el); onHeight(el.offsetHeight);
+    return () => ro.disconnect();
+  }, [onHeight]);
+  return (
+    // .snow-card gives what sits inside the ink of a chosen card (the inset tiles pressed into the snow, the steel icons);
+    // the snow itself is the SVG under it
+    <div ref={ref} className="snow-card relative !bg-transparent px-5 pb-3 pt-5 text-[#131523]">
+      <h3 className="text-[22px] font-normal leading-tight tracking-[-.02em]">Create</h3>
+      <p className="mt-1 text-[15px] text-white/60">What would you like to start?</p>
+      <div className="mt-3 divide-y divide-[rgb(19_21_35/.09)]">{OPTIONS.map(([ic, t, d]) => (
+        <button key={t} className="tap flex w-full items-center gap-3.5 py-3.5 text-left">
+          <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name={ic} size={21} strokeWidth={2} /></span>
+          <span className="min-w-0 flex-1"><span className="block text-[16px] font-medium leading-tight">{t}</span><span className="mt-0.5 block text-[14px] leading-snug text-white/60">{d}</span></span>
+          <Icon name="chevR" size={18} className="shrink-0 text-white/40" />
+        </button>
+      ))}</div>
+    </div>
+  );
+}
+
+// the bar, the button and (when open) the card, laid out like the app's floating tab bar
+function TabBarCreate({ w, open, setOpen, id }: { w: number; open: boolean; setOpen: (v: boolean) => void; id: string }) {
+  const [h, setH] = useState(0);
+  const notch = useEased(open ? B + 2 * G : RING);
+  const items: [IconName, string][] = [["home", "Home"], ["body", "Bodies"], ["scissors", "Patterns"], ["user", "You"]];
+  const tab = ([ic, l]: [IconName, string], on = false) => (
+    <span key={l} className={cx("relative flex h-full flex-1 flex-col items-center justify-start gap-1 pt-[11px] text-[12px]", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")}>
+      <span className={cx("grid h-8 w-14 place-items-center rounded-full", on && "bg-[#687ef5]/25")}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>{l}
+    </span>
+  );
+  return (
+    <div className="relative" style={{ width: w, height: BAR_H }}>
+      <AnimatePresence>{open && (
+        <motion.div key="card" className="absolute inset-x-0 z-20" style={{ bottom: BAR_H + G, transformOrigin: `50% calc(100% + ${G + NOTCH_Y}px)` }}
+          initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 8 }} transition={{ duration: 0.38, ease: [0.2, 0.8, 0.2, 1] }}>
+          {h > 0 && (
+            <svg width={w} height={h + G + NOTCH_Y + RING} className="pointer-events-none absolute left-0 top-0 overflow-visible" style={{ filter: "drop-shadow(0 1px 2px rgb(0 0 0 / .3)) drop-shadow(0 18px 28px rgb(0 0 0 / .45))" }} aria-hidden>
+              <SnowShape id={`${id}-card`} d={cardPath(w, h)} h={h} />
+            </svg>
+          )}
+          <CardBody onHeight={setH} />
+        </motion.div>
+      )}</AnimatePresence>
+      <svg width={w} height={BAR_H} className="tabbar-shape pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
+        <SnowShape id={`${id}-bar`} d={barPath(w, notch)} h={BAR_H} />
+      </svg>
+      <div className="tabbar relative z-10 flex h-full items-stretch px-1.5">
+        {tab(items[0], true)}{tab(items[1])}<span className="w-[84px] shrink-0" />{tab(items[2])}{tab(items[3])}
+      </div>
+      {/* the plus: periwinkle closed; open, it turns 45° into × and fades into the dark secondary */}
+      <button onClick={() => setOpen(!open)} aria-label={open ? "Close" : "Create"} aria-expanded={open}
+        className="tap absolute left-1/2 z-30 grid -translate-x-1/2 place-items-center rounded-full text-white" style={{ top: NOTCH_Y - B, width: 2 * B, height: 2 * B }}>
+        <span className={cx("createbtn absolute inset-0 rounded-full transition-opacity duration-300", open && "opacity-0")} />
+        <span className={cx("sec-dark absolute inset-0 rounded-full transition-opacity duration-300", !open && "opacity-0")} />
+        <motion.span className="relative grid place-items-center" animate={{ rotate: open ? 45 : 0 }} transition={{ type: "spring", bounce: 0.3, duration: 0.45 }}><Icon name="plus" size={26} strokeWidth={2.2} /></motion.span>
+      </button>
+    </div>
+  );
+}
+
+function Phone({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <figure className="flex flex-col items-center gap-3">
+      <div className="relative isolate h-[760px] w-[360px] shrink-0 overflow-hidden rounded-[46px] bg-bg shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">{children}</div>
+      <figcaption className="text-[14px] text-white/55">{label}</figcaption>
+    </figure>
+  );
+}
+
+// home behind the bar, so the blur and the dimming read as they would in the app
+function HomeBehind() {
+  return (
+    <div className="absolute inset-0">
+      <div className="dotgrid" />
+      <section className="light-hero relative overflow-hidden rounded-b-[34px] px-5 pb-6 pt-12">
+        <div className="light-mat" aria-hidden />
+        <div className="relative">
+          <div className="text-[13px] text-[#3f4c80]/80">Good evening</div><div className="text-[16px] font-medium text-[#26335f]">Ana</div>
+          <h1 className="h1 mt-6 !text-[30px] text-[#26335f]">What are we making today?</h1>
+          <div className="mt-5 grid grid-cols-2 gap-2.5">{["Design from scratch", "Start from a pattern"].map((t) => (
+            <div key={t} className="card-soft rounded-[24px] p-4 text-white"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name={t.startsWith("Design") ? "pencil" : "dress"} size={20} strokeWidth={2} /></span><div className="mt-4 text-[16px] font-medium leading-tight">{t}</div></div>
+          ))}</div>
+        </div>
+      </section>
+      <div className="px-5 pt-5 text-white">
+        <div className="card-soft flex items-center gap-3.5 rounded-[22px] p-4"><span className="iconbadge grid h-11 w-11 place-items-center rounded-[13px]"><Icon name="ruler" size={20} strokeWidth={2} /></span><span className="text-[16px] font-medium">Continue finishing your measurements</span></div>
+        <div className="mt-6 text-[19px]">Your bodies</div>
+      </div>
+    </div>
+  );
+}
+
+function Screen({ start, id }: { start: boolean; id: string }) {
+  const [open, setOpen] = useState(start);
+  return (
+    <>
+      <HomeBehind />
+      {/* behind the card: the page blurs and darkens; the bar stays */}
+      <AnimatePresence>{open && <motion.div key="dim" className="absolute inset-0 z-10 bg-black/50 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)} />}</AnimatePresence>
+      <div className="absolute inset-x-6 bottom-6 z-20"><TabBarCreate w={312} open={open} setOpen={setOpen} id={id} /></div>
+    </>
+  );
+}
+
+export function CreateLab() {
+  return (
+    <section>
+      <h2 className="h1 !text-[34px]">Create pop-up</h2>
+      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">Tap the plus. A snow card grows out of the bar around it: the card wraps the plus in a ring, and one 5px channel runs between the card and the bar all the way round, the bar&apos;s notch widening to make room (closed, the same 5px channel runs round the plus). The page behind blurs and darkens; the bar stays. The plus turns into × in the dark secondary style. Tap it, or outside the card, to close.</p>
+      <div className="mt-10 flex flex-wrap justify-center gap-x-10 gap-y-12">
+        <Phone label="Tap the plus"><Screen start={false} id="cl-a" /></Phone>
+        <Phone label="Open"><Screen start id="cl-b" /></Phone>
+      </div>
+    </section>
+  );
+}
