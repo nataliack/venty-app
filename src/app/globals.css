@@ -381,6 +381,9 @@ input { font: inherit; color: inherit; }
 
 /* phone tab bar: light, same family as the hero. Its shape (with the round notch for Create) is an SVG, see NotchShape */
 .tabbar { color: #26335f; }
+/* the current tab: a circle pressed into the snow, like the inset icon tiles (a deeper shade along its top edge, a white lip) */
+.tab-pressed { background: rgb(52 62 110 / .07);
+  box-shadow: inset 0 3px 7px rgb(28 36 84 / .22), inset 0 1px 1.5px rgb(28 36 84 / .22), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
 .tabbar-shape { filter: drop-shadow(0 1px 2px rgb(0 0 0 / .3)) drop-shadow(0 14px 18px rgb(0 0 0 / .45)); }
 /* home shortcuts share the Create button's periwinkle fill */
 .herotile { background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);

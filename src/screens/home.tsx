@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence, animate } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
 import { fabricAdvice, fitName, metresFor, metresAt, notionsFor, kindOf, FLUTTER, SEED_PATTERNS, TEMPLATES, CATEGORIES, type GarmentKey } from "@/lib/data";
 import { TplCard } from "./templates";
@@ -15,9 +16,13 @@ import { Icon, type IconName } from "@/components/icons";
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
 // the corners are rounded too (fillets), so the bar wraps the button like a cradle. Docked (home-screen app), the
 // bottom corners are square: the bar runs into the screen's own rounded corners.
-const BAR_H = 80, BAR_R = 30, NOTCH_R = 38, NOTCH_Y = 9, FILLET = 9;
-function notchPath(w: number, H: number, docked: boolean) {
-  const c = w / 2, R = NOTCH_R, h = NOTCH_Y, f = FILLET;
+// One channel, G (5px), runs round everything (24 Oct 2026, from Jose's Figma): closed, round the plus (the notch is the
+// button plus G); open, between the Create card and the bar (the card wraps the plus in a ring of the button plus G,
+// and the notch widens to the button plus 2G). The card's outline pushed out by G is the bar's outline exactly (same
+// centres, every radius G apart), so the gap never changes and never closes.
+const BAR_H = 80, BAR_R = 30, NOTCH_Y = 9, FILLET = 9, BTN = 31, G = 5, RING = BTN + G, CARD_R = 22;
+function notchPath(w: number, H: number, docked: boolean, R: number) {
+  const c = w / 2, h = NOTCH_Y, f = FILLET;
   const dx = Math.sqrt((R + f) ** 2 - (h - f) ** 2); // fillet centre sits this far from the notch centre
   const k = R / (R + f); // touch point between fillet and notch, along the line joining their centres
   const p1 = [c + (-dx) * k, h + (f - h) * k], p2 = [c + dx * k, h + (f - h) * k];
@@ -31,96 +36,185 @@ function notchPath(w: number, H: number, docked: boolean) {
     `L ${rb} ${H}`, rb ? `A ${rb} ${rb} 0 0 1 0 ${H - rb}` : "", `L 0 ${r}`, `A ${r} ${r} 0 0 1 ${r} 0`, "Z",
   ].join(" ");
 }
-function NotchShape({ docked }: { docked: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [[w, h], setSize] = useState([353, BAR_H]);
-  useEffect(() => { const el = ref.current; if (!el) return; const fit = () => setSize([el.clientWidth, el.clientHeight || BAR_H]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
-  const d = notchPath(w, h, docked);
+// the Create card: a rounded rectangle (w × h) whose bottom edge dips into a ring round the plus, G + NOTCH_Y below it,
+// meeting it with a concave curve of FILLET + G
+function cardPath(w: number, h: number) {
+  const c = w / 2, cy = h + G + NOTCH_Y, fc = FILLET + G, d = RING + fc;
+  return [`M ${CARD_R} 0`, `H ${w - CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 ${w} ${CARD_R}`, `V ${h - CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 ${w - CARD_R} ${h}`,
+    `H ${c + d}`, `A ${fc} ${fc} 0 0 0 ${c + RING} ${cy}`, `A ${RING} ${RING} 0 0 1 ${c} ${cy + RING}`, `A ${RING} ${RING} 0 0 1 ${c - RING} ${cy}`,
+    `A ${fc} ${fc} 0 0 0 ${c - d} ${h}`, `H ${CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 0 ${h - CARD_R}`, `V ${CARD_R}`, `A ${CARD_R} ${CARD_R} 0 0 1 ${CARD_R} 0`, "Z"].join(" ");
+}
+// one even snow (no gradient; a docked bar meets the strip below, painted the same snow, with no seam), built like the
+// white secondary button: a soft white light inside the edge, and a rim that is white along the top and a slightly
+// deeper snow towards the bottom
+function SnowShape({ id, d, h }: { id: string; d: string; h: number }) {
   return (
-    <div ref={ref} className="pointer-events-none absolute inset-0" aria-hidden>
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="tabbar-shape absolute inset-0 overflow-visible">
-        {/* one even snow (no gradient; a docked bar meets the strip below, painted the same snow, with no seam), built like
-            the white secondary button: a soft white light inside the edge, and a rim that is white along the top and a
-            slightly deeper snow towards the bottom */}
-        <defs>
-          <linearGradient id="tabrim" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={BAR_H}><stop offset="0" stopColor="#fff" /><stop offset=".35" stopColor="rgb(19 21 35 / .06)" /><stop offset="1" stopColor="rgb(19 21 35 / .16)" /></linearGradient>
-          <clipPath id="tabclip"><path d={d} /></clipPath>
-          <filter id="tabglow" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="4" /></filter>
-        </defs>
-        <path d={d} fill="var(--color-snow)" />
-        <path d={d} fill="none" stroke="#fff" strokeOpacity=".8" strokeWidth="12" clipPath="url(#tabclip)" filter="url(#tabglow)" />
-        <path d={d} fill="none" stroke="url(#tabrim)" strokeWidth="1" />
-      </svg>
+    <>
+      <defs>
+        <linearGradient id={`${id}rim`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={h}><stop offset="0" stopColor="#fff" /><stop offset=".35" stopColor="rgb(19 21 35 / .06)" /><stop offset="1" stopColor="rgb(19 21 35 / .16)" /></linearGradient>
+        <clipPath id={`${id}clip`}><path d={d} /></clipPath>
+        <filter id={`${id}glow`} x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="4" /></filter>
+      </defs>
+      <path d={d} fill="var(--color-snow)" />
+      <path d={d} fill="none" stroke="#fff" strokeOpacity=".8" strokeWidth="12" clipPath={`url(#${id}clip)`} filter={`url(#${id}glow)`} />
+      <path d={d} fill="none" stroke={`url(#${id}rim)`} strokeWidth="1" />
+    </>
+  );
+}
+// a number that eases to its target (the notch's radius): the outline is redrawn from it each frame, which works in every
+// browser (Safari cannot transition an SVG path in CSS, and motion cannot blend these path strings)
+function useEased(target: number) {
+  const [v, setV] = useState(target);
+  const cur = useRef(target);
+  useEffect(() => {
+    const c = animate(cur.current, target, { duration: 0.42, ease: [0.2, 0.8, 0.2, 1], onUpdate: (x) => { cur.current = x; setV(x); } });
+    return () => c.stop();
+  }, [target]);
+  return v;
+}
+
+// The three ways to start, the same everywhere (the tab bar's Create card, the sidebar's Create dialog)
+const CREATE: [IconName, string, string][] = [
+  ["pencil", "Create a pattern", "From a photo, sketch or words"],
+  ["dress", "Start from a pattern", "Pick a design, fit it to you"],
+  ["body", "Add a body", "Take your measurements"],
+];
+function useCreateActions() {
+  const { go, newDraft, startBody } = useApp();
+  return [() => { newDraft(); go("patSelectBody"); }, () => go("templates"), () => startBody()];
+}
+// the rows: an inset icon tile, the name, one short line, a chevron; hairlines between
+function CreateRows({ onPick }: { onPick: (i: number) => void }) {
+  return (
+    <div className="divide-y divide-white/8">{CREATE.map(([ic, t, d], i) => (
+      <button key={t} onClick={() => onPick(i)} className="tap flex w-full items-center gap-3.5 py-3.5 text-left">
+        <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name={ic} size={21} strokeWidth={2} /></span>
+        <span className="min-w-0 flex-1"><span className="block text-[16px] font-medium leading-tight">{t}</span><span className="mt-0.5 block text-[14px] leading-snug text-white/60">{d}</span></span>
+        <Icon name="chevR" size={18} className="shrink-0 text-white/40" />
+      </button>
+    ))}</div>
+  );
+}
+// the card's words and rows; its height is measured, so the card's outline fits them
+function CreateCardBody({ onHeight, onPick }: { onHeight: (h: number) => void; onPick: (i: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(() => onHeight(el.offsetHeight)); ro.observe(el); onHeight(el.offsetHeight);
+    return () => ro.disconnect();
+  }, [onHeight]);
+  return (
+    // .snow-card gives what sits inside the ink of a chosen card (the inset tiles pressed into the snow, the steel
+    // icons, ink text); the snow itself is the outline under it
+    <div ref={ref} className="snow-card relative !bg-transparent px-5 pb-3 pt-5 text-[#131523]">
+      <h3 className="text-center text-[22px] font-normal leading-tight tracking-[-.02em]">Create</h3>
+      <p className="mt-1 text-center text-[15px] text-white/60">What would you like to start?</p>
+      <div className="mt-3"><CreateRows onPick={onPick} /></div>
     </div>
   );
 }
 
-// Phone navigation: a light bar with the Create button sitting in a round notch in the centre. The current tab sits in a
-// soft periwinkle capsule. No glows.
+// Phone navigation: a light bar with the Create button sitting in a round notch in the centre (24 Oct 2026, chosen in
+// the lab). The tabs sit at fixed, even places: Home and You on the centres of the bar's top corners (BAR_R in), Bodies
+// and Patterns 68px either side of the plus (the closest a 40px circle keeps 5px from the widened notch). The current
+// tab's icon sits in a 40px circle pressed into the snow; on Home and You it shares its centre with the bar's corner,
+// so it runs parallel to it. It glides from tab to tab (one layout id across the pages, which cross-fade in place).
+// Each tab's tap area runs to the halfway point between its neighbours, and to the notch.
+// The plus opens the Create card out of the bar (see the channel above); the page behind blurs and darkens, the bar
+// stays; the plus turns 45° into × in the dark secondary style. A tab, the ×, a tap outside or Escape closes it.
 // · Safari: a floating pill (Safari's own toolbar sits below it).
 // · Home-screen app (html.pwa): docked like a native iOS tab bar. It runs full width to the bottom edge; icons stay in the
-//   top 80px and the bar grows underneath by --tab-under, the space kept free for the iPhone's home bar.
+//   top 80px and the bar grows underneath by --tab-under, the space kept free for the iPhone's home bar. The Create
+//   card still keeps 24px from the screen's edges.
 const usePwaDock = () => {
   const [docked, setDocked] = useState(false);
   useEffect(() => { setDocked(document.documentElement.classList.contains("pwa") && window.matchMedia("(max-width: 639px)").matches); }, []);
   return docked;
 };
+const TAB_D = 40, TAB_TOP = 10, TAB_GAP = 68;
 export function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" }) {
   const { replace } = useApp();
   const [open, setOpen] = useState(false);
   const docked = usePwaDock();
+  const actions = useCreateActions();
+  const wrap = useRef<HTMLDivElement>(null);
+  const nav = useRef<HTMLElement>(null);
+  const [[w, h], setSize] = useState([353, BAR_H]);
+  const [cardH, setCardH] = useState(0);
+  const [screen, setScreen] = useState<Element | null>(null);
+  const notch = useEased(open ? BTN + 2 * G : RING);
+  useEffect(() => { const el = nav.current; if (!el) return; const fit = () => setSize([el.clientWidth, el.clientHeight || BAR_H]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", esc); return () => window.removeEventListener("keydown", esc);
+  }, [open]);
   const items: [typeof tab, IconName, string][] = [["home", "home", "Home"], ["bodies", "body", "Bodies"], ["patterns", "scissors", "Patterns"], ["you", "user", "You"]];
-  const btn = ([k, ic, l]: (typeof items)[number]) => {
-    const on = tab === k;
+  const centres = [BAR_R, w / 2 - TAB_GAP, w / 2 + TAB_GAP, w - BAR_R];
+  const edges = [0, (centres[0] + centres[1]) / 2, w / 2 - RING - G, w / 2 + RING + G, (centres[2] + centres[3]) / 2, w];
+  const spans = [[edges[0], edges[1]], [edges[1], edges[2]], [edges[3], edges[4]], [edges[4], edges[5]]];
+  const btn = ([k, ic, l]: (typeof items)[number], i: number) => {
+    const on = tab === k, [a, b] = spans[i], c = centres[i] - a;
     return (
-      <button key={k} onClick={() => replace(k)} aria-current={on ? "page" : undefined} className={cx("relative flex h-full flex-1 flex-col items-center justify-start gap-1 pt-[11px] text-[12px] transition-colors", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")}>
-        <span className={cx("grid h-8 w-14 place-items-center rounded-full transition-colors", on && "bg-[#687ef5]/25")}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
-        {l}
+      <button key={k} onClick={() => { setOpen(false); if (!on) replace(k); }} aria-current={on ? "page" : undefined}
+        className={cx("absolute top-0 text-[12px] transition-colors", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")} style={{ left: a, width: b - a, height: BAR_H }}>
+        {on && <motion.span layoutId="tab-active" transition={{ type: "spring", bounce: 0.18, duration: 0.5 }} className="tab-pressed absolute rounded-full" style={{ left: c - TAB_D / 2, top: TAB_TOP, width: TAB_D, height: TAB_D }} />}
+        <span className="absolute grid place-items-center" style={{ left: c - 14, top: TAB_TOP + TAB_D / 2 - 14, width: 28, height: 28 }}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
+        <span className="absolute -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: c, top: TAB_TOP + TAB_D + 4 }}>{l}</span>
       </button>
     );
   };
+  const cardW = docked ? w - 48 : w;
   return (
     <>
-      <div className={cx("relative mt-3", docked && "-mx-6")}>
-        {/* 80px of icons and labels, with room underneath; docked, plus the home bar's space (--tab-under) */}
-        <nav className={cx("tabbar relative flex items-stretch px-1.5", docked && "px-4")} style={{ height: docked ? "calc(80px + var(--tab-under, 0px))" : 80 }}>
-          <NotchShape docked={docked} />
-          {items.slice(0, 2).map(btn)}
-          <span className="w-[84px] shrink-0" />
-          {items.slice(2).map(btn)}
+      {screen && createPortal(
+        <AnimatePresence>{open && <motion.div key="dim" className="absolute inset-0 z-[15] bg-black/50 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)} aria-hidden />}</AnimatePresence>,
+        screen)}
+      <div ref={wrap} className={cx("relative mt-3", docked && "-mx-6")}>
+        <AnimatePresence>{open && (
+          <motion.div key="card" role="dialog" aria-label="Create" className={cx("absolute z-10", docked ? "inset-x-6" : "inset-x-0")} style={{ bottom: `calc(100% + ${G}px)`, transformOrigin: `50% calc(100% + ${G + NOTCH_Y}px)` }}
+            initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 8 }} transition={{ duration: 0.38, ease: [0.2, 0.8, 0.2, 1] }}>
+            {cardH > 0 && (
+              <svg width={cardW} height={cardH + G + NOTCH_Y + RING} className="pointer-events-none absolute left-0 top-0 overflow-visible" style={{ filter: "drop-shadow(0 1px 2px rgb(0 0 0 / .3)) drop-shadow(0 18px 28px rgb(0 0 0 / .45))" }} aria-hidden>
+                <SnowShape id="createcard" d={cardPath(cardW, cardH)} h={cardH} />
+              </svg>
+            )}
+            <CreateCardBody onHeight={setCardH} onPick={(i) => { setOpen(false); actions[i](); }} />
+          </motion.div>
+        )}</AnimatePresence>
+        {/* 80px of icons and labels, with room underneath; docked, plus the home bar's space (--tab-under). The bar is
+            drawn over the card, so the card's shadow falls on the page but never on the bar */}
+        <nav ref={nav} className="tabbar relative z-20" style={{ height: docked ? "calc(80px + var(--tab-under, 0px))" : 80 }}>
+          <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="tabbar-shape pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
+            <SnowShape id="tab" d={notchPath(w, h, docked, notch)} h={BAR_H} />
+          </svg>
+          {items.map(btn)}
         </nav>
-        {/* centred on the notch: its centre sits NOTCH_Y below the bar's top edge */}
-        <button onClick={() => setOpen(true)} aria-label="Create" className="createbtn tap absolute left-1/2 top-[-22px] grid h-[62px] w-[62px] -translate-x-1/2 place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></button>
+        {/* centred on the notch: its centre sits NOTCH_Y below the bar's top edge. Periwinkle; open, it turns 45° into × and
+            fades into the dark secondary */}
+        {/* opening finds this page, for the dimmed layer: it covers the page behind its footer, so the bar and the card stay above it */}
+        <button onClick={() => { if (!open) setScreen(wrap.current?.closest("[data-screen]") ?? null); setOpen(!open); }} aria-label={open ? "Close" : "Create"} aria-expanded={open}
+          className="tap absolute left-1/2 top-[-22px] z-30 grid h-[62px] w-[62px] -translate-x-1/2 place-items-center rounded-full text-white">
+          <span className={cx("createbtn absolute inset-0 rounded-full transition-opacity duration-300", open && "opacity-0")} />
+          <span className={cx("sec-dark absolute inset-0 rounded-full transition-opacity duration-300", !open && "opacity-0")} />
+          <motion.span className="relative grid place-items-center" animate={{ rotate: open ? 45 : 0 }} transition={{ type: "spring", bounce: 0.3, duration: 0.45 }}><Icon name="plus" size={26} strokeWidth={2.2} /></motion.span>
+        </button>
       </div>
-      <CreateSheet open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
 
+// On a computer the sidebar's Create opens the same three ways to start in a dialog
 export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { go, newDraft, startBody } = useApp();
-  const act = (fn: () => void) => () => { onClose(); fn(); };
-  const tile = (ic: IconName, t: string, d: string, fn: () => void) => (
-    <button onClick={act(fn)} className="card-soft tap flex min-h-[132px] flex-col justify-between rounded-[22px] p-4 text-left">
-      <span className="iconbadge grid h-11 w-11 place-items-center rounded-[13px]"><Icon name={ic} size={21} strokeWidth={2} /></span>
-      <span><span className="block text-[16px] font-medium leading-tight">{t}</span><span className="mt-1 block text-[14px] leading-snug text-white/60">{d}</span></span>
-    </button>
-  );
+  const actions = useCreateActions();
   return (
     <Sheet open={open} onClose={onClose}>
-      <div className="flex items-start justify-between gap-3">
-        <div><h3 className="text-[26px] font-normal leading-tight tracking-[-.02em]">Create</h3><p className="mt-1 text-[15px] text-white/60">What would you like to start?</p></div>
-        <RB icon="close" size={38} onClick={onClose} />
+      <div className="relative">
+        <h3 className="text-center text-[26px] font-normal leading-tight tracking-[-.02em]">Create</h3>
+        <p className="mt-1 text-center text-[15px] text-white/60">What would you like to start?</p>
+        <RB icon="close" size={38} onClick={onClose} label="Close" className="!absolute right-0 top-0" />
       </div>
-      <button onClick={act(() => { newDraft(); go("patSelectBody"); })} className="tap relative isolate mt-5 flex min-h-[150px] w-full flex-col justify-between overflow-hidden rounded-[26px] p-5 text-left text-white">
-        <Crown className="-z-10" />
-        <span className="flex items-center justify-between"><span className="iconbadge grid h-12 w-12 place-items-center rounded-[13px]"><Icon name="pencil" size={22} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/85" /></span>
-        <span><span className="block text-[21px] leading-tight tracking-[-.01em]">Design from scratch</span><span className="mt-1 block text-[15px] text-white/80">Turn a photo, a sketch or your words into a pattern</span></span>
-      </button>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        {tile("dress", "Start from a pattern", "Choose a style, then fit it to you", () => go("templates"))}
-        {tile("body", "Make a body", "Add measurements", () => startBody())}
-      </div>
+      <div className="mt-3"><CreateRows onPick={(i) => { onClose(); actions[i](); }} /></div>
     </Sheet>
   );
 }
@@ -246,11 +340,11 @@ export function Home() {
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
               <button onClick={make} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="pencil" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Design from scratch</span><span className="mt-1 block text-[14px] leading-snug text-white/70">From a photo, sketch or words</span></span>
+                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Create a pattern</span><span className="mt-1 block text-[14px] leading-snug text-white/70 [text-wrap:balance]">From a photo, sketch or words</span></span>
               </button>
               <button onClick={() => go("templates")} className="pair-dark tap flex min-h-[128px] flex-col justify-between rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:p-6">
                 <span className="flex items-center justify-between"><span className="icon-primary grid h-11 w-11 place-items-center rounded-full"><Icon name="dress" size={20} strokeWidth={2} /></span><Icon name="chevR" size={20} className="text-white/60" /></span>
-                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Start from a pattern</span><span className="mt-1 block text-[14px] leading-snug text-white/70">Choose a style, then fit it to you</span></span>
+                <span><span className="block text-[18px] font-medium leading-tight lg:text-[20px]">Start from a pattern</span><span className="mt-1 block text-[14px] leading-snug text-white/70 [text-wrap:balance]">Pick a design, fit it to you</span></span>
               </button>
             </div>
           </div>

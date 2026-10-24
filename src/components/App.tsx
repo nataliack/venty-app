@@ -69,6 +69,9 @@ function StatusBar() {
 const LIGHT_TOP: Record<string, string> = { home: "#f0f4fe", you: "#f0f4fe", prompt: "#f0f4fe", generating: "#f0f4fe", start: "#f3f1ec" };
 // splash, welcome and "Welcome, Ana" share one sky, so they cross-fade in place instead of sliding
 const SKY = new Set(["splash", "welcome", "signedin"]);
+// the tab bar's pages: from one to another they cross-fade in place (no slide), so the bar holds still and the current
+// tab's circle glides to the next tab, like a native tab bar
+const TAB_PAGES = new Set(["home", "bodies", "patterns", "you"]);
 const CROWN_TOP = new Set(["splash", "signedin", "welcome", "onboarding", "ready", "printed"]);
 function useStatusTint(id: string) {
   useEffect(() => {
@@ -103,6 +106,11 @@ export default function App() {
   const S = SCREENS[top.id] ?? Home;
   useStatusTint(top.id);
   const depth = useRef(stack.length);
+  // the page shown before this one, to tell a switch between tabs from any other move
+  const [shown, setShown] = useState(top.id);
+  const [from, setFrom] = useState(top.id);
+  if (shown !== top.id) { setFrom(shown); setShown(top.id); }
+  const tabSwap = TAB_PAGES.has(top.id) && TAB_PAGES.has(from);
   const [resetAsk, setResetAsk] = useState(false);
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -156,9 +164,15 @@ export default function App() {
         {ready && !FULL.has(top.id) && <Sidebar route={top.id} />}
         <div className={cx("relative h-full flex-1 overflow-hidden")}>
         {ready && (
-          <AnimatePresence initial={false} custom={dir} mode="popLayout">
-            <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={dir} className="absolute inset-0"
-              initial={{ x: SKY.has(top.id) ? 0 : dir > 0 ? 60 : -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: SKY.has(top.id) ? 0 : dir > 0 ? -60 : 60, opacity: 0 }}
+          <AnimatePresence initial={false} custom={{ dir, still: tabSwap }} mode="popLayout">
+            <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={{ dir, still: tabSwap }} className="absolute inset-0"
+              variants={{
+                enter: (c: { dir: number; still: boolean }) => ({ x: SKY.has(top.id) || c.still ? 0 : c.dir > 0 ? 60 : -60, opacity: 0 }),
+                shown: { x: 0, opacity: 1 },
+                // the leaving page reads the move from AnimatePresence's custom, so a tab switch leaves in place too
+                gone: (c: { dir: number; still: boolean }) => ({ x: SKY.has(top.id) || c.still ? 0 : c.dir > 0 ? -60 : 60, opacity: 0 }),
+              }}
+              initial="enter" animate="shown" exit="gone"
               transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}>
               <Guard k={top.id + stack.length}><S p={top.p} /></Guard>
             </motion.div>
