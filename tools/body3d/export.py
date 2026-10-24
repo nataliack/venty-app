@@ -121,6 +121,103 @@ def garment_material(folder, name):
     return mat
 
 
+HIDE_NEAR = 0.025   # m: skin this close under the garment (or through it) is covered
+HIDE_ERODE = 2      # rings of covered skin kept at the garment's edges (hems, necklines, armholes)
+
+
+def mhclo_deleted(path):
+    """The body vertices the garment's maker marked as covered (the .mhclo's delete_verts: numbers and "a - b" runs)."""
+    out, on = set(), False
+    toks = []
+    for line in open(path, encoding="utf-8", errors="ignore"):
+        line = line.strip()
+        if line.startswith("delete_verts"):
+            on = True
+            line = line[len("delete_verts"):]
+        elif on and line and not (line[0].isdigit() or line[0] == "-"):
+            break
+        if on:
+            toks += line.split()
+    i = 0
+    while i < len(toks):
+        if i + 2 < len(toks) and toks[i + 1] == "-":
+            out.update(range(int(toks[i]), int(toks[i + 2]) + 1))
+            i += 3
+        else:
+            if toks[i] != "-":
+                out.add(int(toks[i]))
+            i += 1
+    return out
+
+
+def covered_skin(h, clothes, keys, shapes):
+    """Body vertices the garment covers closely or that poke through it, at the body's own shape and with each size
+    control on (the garment refitted to each): a ray out along the skin's normal meets the garment within HIDE_NEAR, or
+    a ray in does (the skin is outside it). Then eroded HIDE_ERODE rings, so no skin goes missing at an edge."""
+    from mathutils.bvhtree import BVHTree
+    me, cme = h.data, clothes.data
+    body = h.vertex_groups["body"].index
+    ids = [v.index for v in me.vertices if any(g.group == body for g in v.groups)]
+    tris = [tuple(p.vertices) for p in cme.polygons]
+    kbs = me.shape_keys.key_blocks
+    hit = set()
+    n = len(cme.vertices)
+    states = [(None, None)] + [(k, shapes[k]) for k in keys]
+    base = np.empty(n * 3)
+    cme.vertices.foreach_get("co", base)
+    # MPFB masks the skin the garment's maker marked (a Mask modifier), which would renumber the measured vertices
+    masks = [m for m in h.modifiers if m.type != "ARMATURE" and m.show_viewport]
+    for m in masks:
+        m.show_viewport = False
+    for k, gco in states:
+        for kk in keys:
+            kbs[kk].value = 0.0
+        if k:
+            kbs[k].value = 1.0
+        dg = bpy.context.evaluated_depsgraph_get()
+        ev = h.evaluated_get(dg)
+        em = ev.to_mesh()
+        G = (gco if gco is not None else base).reshape(-1, 3)
+        tree = BVHTree.FromPolygons([mathutils.Vector(c) for c in G], tris)
+        for i in ids:
+            if i in hit:
+                continue
+            v = em.vertices[i]
+            co, nr = v.co, v.normal
+            a = tree.ray_cast(co + nr * 0.001, nr, HIDE_NEAR)
+            if a[0] is None:
+                a = tree.ray_cast(co - nr * 0.001, -nr, HIDE_NEAR)
+            if a[0] is not None:
+                hit.add(i)
+        ev.to_mesh_clear()
+    for kk in keys:
+        kbs[kk].value = 0.0
+    for m in masks:
+        m.show_viewport = True
+    nb = {i: [] for i in ids}
+    for e in me.edges:
+        a, b = e.vertices
+        if a in nb and b in nb:
+            nb[a].append(b)
+            nb[b].append(a)
+    for _ in range(HIDE_ERODE):
+        hit = {i for i in hit if all(j in hit for j in nb[i])}
+    return hit
+
+
+def runs(ids):
+    """Vertex numbers as compact runs: "4,7-12,30"."""
+    out, ids = [], sorted(ids)
+    i = 0
+    while i < len(ids):
+        j = i
+        while j + 1 < len(ids) and ids[j + 1] == ids[j] + 1:
+            j += 1
+        out.append(str(ids[i]) if i == j else f"{ids[i]}-{ids[j]}")
+        i = j + 1
+    return ",".join(out)
+
+
 def export_garments(h, rig, keys, sex):
     """Each garment in garments.json, put on this body with MPFB (its points pinned to the skin, its weights taken from
     the body's bones), then fitted again with each of the body's size controls switched on in turn: the garment gets the
@@ -164,6 +261,10 @@ def export_garments(h, rig, keys, sex):
             shapes[k] = coords()
             kbs[k].value = 0.0
         ClothesService.fit_clothes_to_human(clothes, h, mhclo, set_parent=False)
+        maker, near = mhclo_deleted(path), covered_skin(h, clothes, keys, shapes)
+        hide = maker | near
+        log(sex, g["name"], "maker", len(maker), "near", len(near), "both", len(maker & near))
+        clothes["venty_hide"] = runs(hide)
         clothes.shape_key_add(name="Basis", from_mix=False)
         for k, a in shapes.items():
             sk = clothes.shape_key_add(name=k, from_mix=False)
@@ -187,9 +288,9 @@ def export_garments(h, rig, keys, sex):
         bpy.ops.export_scene.gltf(filepath=dst, export_format="GLB", use_selection=True, export_apply=False,
                                   export_morph=True, export_morph_normal=False, export_try_sparse_sk=True,
                                   export_texcoords=True, export_materials="EXPORT", export_image_format="WEBP", export_image_quality=80,
-                                  export_skins=True, export_animations=False, export_yup=True)
+                                  export_skins=True, export_animations=False, export_extras=True, export_yup=True)
         rig.location.z += zmin
-        log(sex, "garment", g["name"], n, "verts", os.path.getsize(dst) // 1024, "KB")
+        log(sex, "garment", g["name"], n, "verts", len(hide), "hidden", os.path.getsize(dst) // 1024, "KB")
         bpy.data.objects.remove(clothes, do_unlink=True)
 
 
@@ -206,6 +307,8 @@ def build(sex):
     bpy.context.view_layer.objects.active = h
     # bake the macros into the basis, so the body's own shape is the rest shape
     TargetService.bake_targets(h)
+    orig = h.data.attributes.new("_ORIG", "FLOAT", "POINT")
+    orig.data.foreach_set("value", np.arange(1, len(h.data.vertices) + 1, dtype=np.float32))
     rig = HumanService.add_builtin_rig(h, "game_engine", import_weights=True)
     bones = {bn.name for bn in rig.data.bones}
     keys = []
@@ -1180,7 +1283,7 @@ def export(sex):
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=False,
                               export_morph=True, export_morph_normal=False, export_try_sparse_sk=True,
                               export_texcoords=False, export_materials="NONE", export_skins=True, export_animations=False,
-                              export_yup=True)
+                              export_attributes=True, export_yup=True)
     log(sex, "glb", path, os.path.getsize(path) // 1024, "KB")
     return {"base": {k: round(v, 2) for k, v in base.items()}, "rings": rings,
             "landmarks": {k: round(v * 100, 2) for k, v in lm.items()},
