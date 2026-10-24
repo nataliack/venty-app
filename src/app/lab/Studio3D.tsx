@@ -39,13 +39,47 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// where the body stands, and what the card behind it looks like
-const STAGES: { k: Stage; name: string; note: string; bg: string }[] = [
-  { k: "none", name: "Today", note: "The body floats in the plain card.", bg: "var(--color-card)" },
-  { k: "glow", name: "A · Pool of light", note: "A soft light from above falls into a pool of cornflower on the floor, with a shadow under the feet: a quiet studio.", bg: "radial-gradient(70% 55% at 50% 0%, rgb(140 156 248 / .2), transparent 72%), linear-gradient(180deg, #181a29 0%, #0e0f18 100%)" },
-  { k: "podium", name: "B · Podium", note: "The body stands on a low round podium with a fine cornflower edge, like a turntable, which suits the turning body.", bg: "radial-gradient(62% 46% at 50% 40%, rgb(104 126 245 / .18), transparent 72%), #0d0e17" },
-  { k: "grid", name: "C · Pattern floor", note: "A graph-paper floor, the grid of the pattern sheets, fading into the dark: the body stands where its pattern will be drawn.", bg: "linear-gradient(180deg, #141626 0%, #0c0d16 62%, #10121f 100%)" },
+// twenty ways to present the body: the card's backdrop (CSS, with a decoration behind the body) and what it stands on
+// (the floor, in the scene). Each takes a different approach
+type Deco = "crown" | "arch" | "strip" | "rings" | "frame" | "cone" | "beams" | "dots";
+type Scene = { k: string; name: string; note: string; floor: Stage; chart?: boolean; bg: string; deco?: Deco };
+const DARK = "linear-gradient(180deg, #141626 0%, #0c0d16 100%)";
+const SCENES: Scene[] = [
+  { k: "today", name: "1 · Today", note: "What the app has: the plain card colour, the body floating in it.", floor: "none", bg: "var(--color-card)" },
+  { k: "pool", name: "2 · Pool of light", note: "Soft light from above falls into a pool of cornflower on the floor, a shadow under the feet. A quiet studio.", floor: "glow", bg: "radial-gradient(70% 55% at 50% 0%, rgb(140 156 248 / .2), transparent 72%), linear-gradient(180deg, #181a29 0%, #0e0f18 100%)" },
+  { k: "podium", name: "3 · Podium", note: "A low round podium with a fine cornflower edge, a soft spot behind: a turntable for the turning body.", floor: "podium", bg: "radial-gradient(62% 46% at 50% 40%, rgb(104 126 245 / .18), transparent 72%), #0d0e17" },
+  { k: "grid", name: "4 · Pattern floor", note: "A graph-paper floor, the grid of the pattern sheets, fading into the dark: the body stands where its pattern is drawn.", floor: "grid", bg: "linear-gradient(180deg, #141626 0%, #0c0d16 62%, #10121f 100%)" },
+  { k: "horizon", name: "5 · Studio horizon", note: "A wall and a floor meeting in a soft horizon behind the feet, like a photo studio with the lights on the wall.", floor: "shadow", bg: "linear-gradient(180deg, #23273d 0%, #1b1e30 58%, #131523 67%, #0b0c14 100%)" },
+  { k: "slate", name: "6 · Slate sweep", note: "A mid blue-grey seamless backdrop (a cyclorama) with light falling off at the edges: the body reads in its own tones, like a product shot.", floor: "shadow", bg: "radial-gradient(95% 75% at 50% 38%, #3a4766 0%, #252c43 52%, #151927 100%)" },
+  { k: "crown", name: "7 · Crown", note: "The landing page's Crown gradient behind the body, a pool of light at the feet: the brand's own light.", floor: "glow", bg: "#0b0c15", deco: "crown" },
+  { k: "chart", name: "8 · Height chart", note: "Fine lines on the wall behind every 10 cm of real height, bolder every 50: the body is measured against them, which suits the height step.", floor: "shadow", chart: true, bg: DARK },
+  { k: "niche", name: "9 · Niche", note: "A soft, lighter arch behind the body, like a niche in a shop window: it frames the figure and gives the eye a place to land.", floor: "shadow", bg: DARK, deco: "arch" },
+  { k: "strip", name: "10 · Mirror light", note: "A tall soft light behind the body, like a fitting-room mirror, on a dark glossy floor that reflects it.", floor: "mirror", bg: DARK, deco: "strip" },
+  { k: "mirror", name: "11 · Mirror floor", note: "A dark, softly reflecting floor: the body and its reflection, nothing else. Premium and calm.", floor: "mirror", bg: "linear-gradient(180deg, #171929 0%, #0b0c14 100%)" },
+  { k: "ticks", name: "12 · Tape ring", note: "A ring of ruler ticks round the feet, like a dial on the floor: measuring, said with the floor.", floor: "ticks", bg: "radial-gradient(60% 40% at 50% 85%, rgb(104 126 245 / .12), transparent 75%), " + DARK },
+  { k: "dots", name: "13 · Dot floor", note: "The app's dot grid on the wall, and a floor of dots fading out round the feet.", floor: "dots", bg: DARK, deco: "dots" },
+  { k: "spot", name: "14 · Spotlight", note: "Near black, one cone of light from above onto the body and a pool at its feet: a stage, a moment.", floor: "glow", bg: "#07080d", deco: "cone" },
+  { k: "disc", name: "15 · Light disc", note: "The body stands on a disc of light, as on a lightbox: lit from below, it glows at the feet.", floor: "disc", bg: "linear-gradient(180deg, #121423 0%, #0a0b12 100%)" },
+  { k: "plinth", name: "16 · Plinth", note: "A low rounded plinth, like a display block in a gallery: the body as an object to look at.", floor: "plinth", bg: "radial-gradient(80% 60% at 50% 30%, #20243a 0%, #10121d 70%)" },
+  { k: "rings", name: "17 · Rings", note: "Faint rings spreading out behind the body, like a tape coiled: a pattern of measuring, very quiet.", floor: "shadow", bg: DARK, deco: "rings" },
+  { k: "window", name: "18 · Window light", note: "Two soft beams of daylight falling across the wall from a window to one side: warmer, a room rather than a studio.", floor: "shadow", bg: "linear-gradient(180deg, #1a1c2c 0%, #10111b 100%)", deco: "beams" },
+  { k: "mist", name: "19 · Mist", note: "The floor fades into a light haze, a pool of light in it: the body standing in morning mist.", floor: "glow", bg: "linear-gradient(180deg, #0e0f18 0%, #151726 45%, #2d3557 78%, #3a4470 100%)" },
+  { k: "outline", name: "20 · Line drawing", note: "No fill at all: a fine cornflower arch drawn round the body and a ring at its feet, like a pattern's outline.", floor: "line", bg: "#0b0c15", deco: "frame" },
 ];
+
+function Decor({ d }: { d?: Deco }) {
+  if (!d) return null;
+  if (d === "crown") return <><Crown /><div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 50%, rgb(11 12 21 / .6))" }} /></>;
+  if (d === "dots") return <div className="dotgrid" />;
+  const base = "pointer-events-none absolute";
+  if (d === "arch") return <div className={cx(base, "left-1/2 top-[7%] bottom-[16%] w-[58%] -translate-x-1/2 rounded-t-full")} style={{ background: "linear-gradient(180deg, rgb(140 156 248 / .17), rgb(140 156 248 / .05) 80%, transparent)" }} />;
+  if (d === "frame") return <div className={cx(base, "left-1/2 top-[7%] bottom-[14%] w-[56%] -translate-x-1/2 rounded-t-full border-[1.5px] border-b-0 border-[#8c9cf8]/60")} />;
+  if (d === "strip") return <div className={cx(base, "left-1/2 top-[5%] bottom-[20%] w-[24%] -translate-x-1/2 rounded-full blur-[18px]")} style={{ background: "rgb(193 200 250 / .22)" }} />;
+  if (d === "rings") return <div className={cx(base, "inset-0")} style={{ background: "repeating-radial-gradient(circle at 50% 46%, transparent 0 21px, rgb(140 156 248 / .1) 21px 22px)", maskImage: "radial-gradient(60% 60% at 50% 46%, #000 40%, transparent 100%)", WebkitMaskImage: "radial-gradient(60% 60% at 50% 46%, #000 40%, transparent 100%)" }} />;
+  if (d === "cone") return <div className={cx(base, "inset-0")} style={{ background: "linear-gradient(180deg, rgb(240 244 254 / .2), rgb(240 244 254 / .03) 85%)", clipPath: "polygon(42% 0, 58% 0, 82% 100%, 18% 100%)" }} />;
+  return <div className={cx(base, "inset-0")} style={{ background: "linear-gradient(115deg, transparent 18%, rgb(240 244 254 / .09) 27%, transparent 38%, transparent 50%, rgb(240 244 254 / .06) 57%, transparent 66%)" }} />;
+}
+
 type DialStyle = "now" | "snow" | "inset" | "snowInset";
 const DIALS: { k: DialStyle; name: string; note: string }[] = [
   { k: "now", name: "Today", note: "The card colour, the ruler along the bottom." },
@@ -76,11 +110,11 @@ function Dial({ value, min, max, onChange, style = "now" }: { value: number; min
   );
 }
 
-// the card the body stands in: its backdrop, the stage, and a pause button for the turning
-function StageCard({ stage, h, paused, onPause, children }: { stage: Stage; h: string; paused: boolean; onPause: () => void; children: ReactNode }) {
-  const bg = STAGES.find((x) => x.k === stage)!.bg;
+// the card the body stands in: its backdrop and decoration, the body (with its floor), and a pause button for the turning
+function StageCard({ scene, h, paused, onPause, children }: { scene: Scene; h: string; paused: boolean; onPause: () => void; children: ReactNode }) {
   return (
-    <div className={cx("relative mt-4 overflow-hidden rounded-[24px] border border-white/[.08]", h)} style={{ background: bg }}>
+    <div className={cx("relative mt-4 overflow-hidden rounded-[24px] border border-white/[.08]", h)} style={{ background: scene.bg }}>
+      <Decor d={scene.deco} />
       {children}
       <button onClick={onPause} aria-label={paused ? "Turn the body" : "Stop turning"} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#0b0c15]/55 text-white/80 backdrop-blur hover:text-white">
         <Icon name={paused ? "play" : "pause"} size={16} strokeWidth={2} />
@@ -146,7 +180,9 @@ export function Studio3D() {
   const measures = useMemo(() => ({ height: body.height, bust: body.bust, underbust: body.underbust, waist: body.waist, hips: body.hips, neck: body.neck, thigh: body.thigh }), [body.height, body.bust, body.underbust, body.waist, body.hips, body.neck, body.thigh]);
   const focus = body.measuring as string;
   const [edit, setEdit] = useState("waist");
-  const [stage, setStage] = useState<Stage>("glow");
+  const [sceneK, setSceneK] = useState("pool");
+  const scene = SCENES.find((x) => x.k === sceneK) ?? SCENES[0];
+  const stepScene = (d: number) => setSceneK(SCENES[(SCENES.indexOf(scene) + d + SCENES.length) % SCENES.length].k);
   const [dialStyle, setDialStyle] = useState<DialStyle>("inset");
   const [paused, setPaused] = useState(false);
   const fm = ALL_MEASURES.find((m) => m.key === focus);
@@ -162,7 +198,11 @@ export function Studio3D() {
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the app&apos;s screens that show a body (today a flat figure). Pick a measurement under Measuring: the body takes the pose for it and the camera frames it (the first phone). On the whole-body screens a taller body reaches higher: change the height to see it. Tap a row in Edit measures to move the tape. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
       <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Height and measuring: the stage and the dial</h3>
       <div className="mt-4 grid gap-6 lg:grid-cols-2">
-        <div><div className="mb-2 text-[14px] text-white/50">Stage</div><Pick items={STAGES} value={stage} onChange={setStage} /><p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{STAGES.find((x) => x.k === stage)!.note}</p></div>
+        <div>
+          <div className="mb-2 flex items-center gap-3 text-[14px] text-white/50">Stage, {SCENES.indexOf(scene) + 1} of {SCENES.length}<span className="flex-1" /><RB icon="back" size={36} onClick={() => stepScene(-1)} label="Previous stage" /><RB icon="chevR" size={36} onClick={() => stepScene(1)} label="Next stage" /></div>
+          <Pick items={SCENES} value={sceneK} onChange={setSceneK} />
+          <p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{scene.note}</p>
+        </div>
         <div><div className="mb-2 text-[14px] text-white/50">Dial</div><Pick items={DIALS} value={dialStyle} onChange={setDialStyle} /><p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{DIALS.find((x) => x.k === dialStyle)!.note}</p></div>
       </div>
       <p className="mt-4 max-w-[760px] text-[15px] leading-snug text-white/50">On both: drag the body to turn it, the button at the top right stops and starts the turning, and the ruler keeps following your finger even outside the dial until you let go.</p>
@@ -175,8 +215,8 @@ export function Studio3D() {
               <div><h1 className="h1 !text-[30px]">Height</h1><p className="mt-1.5 text-[15px] leading-snug text-white/60">Stand tall against a wall, heels together.</p></div>
               <RB icon="help" size={40} label="How to measure" className="shrink-0" />
             </div>
-            <StageCard stage={stage} h="h-[300px]" paused={paused} onPause={() => setPaused((x) => !x)}>
-              <Body3D sex={sex} measures={measures} look={L} focus="height" stage={stage} turn={body.turning} paused={paused} snapshot="stage" className="absolute inset-0" />
+            <StageCard scene={scene} h="h-[300px]" paused={paused} onPause={() => setPaused((x) => !x)}>
+              <Body3D sex={sex} measures={measures} look={L} focus="height" stage={scene.floor} chart={scene.chart} turn={body.turning} paused={paused} snapshot="stage" className="absolute inset-0" />
             </StageCard>
             <div className="mt-4"><Dial style={dialStyle} value={body.height} min={140} max={200} onChange={(v) => setBody({ height: v })} /></div>
           </div>
@@ -191,8 +231,8 @@ export function Studio3D() {
               <div><h1 className="h1 !text-[30px]">{MEASURE_NAMES[focus]}</h1><p className="mt-1.5 line-clamp-2 text-[15px] leading-snug text-white/60">{fm?.hint}</p></div>
               <RB icon="help" size={40} label="How to measure" className="shrink-0" />
             </div>
-            <StageCard stage={stage} h="h-[280px]" paused={paused} onPause={() => setPaused((x) => !x)}>
-              <Body3D sex={sex} measures={measures} look={L} focus={focus} stage={stage} paused={paused} autoRotate={body.turning} className="absolute inset-0" />
+            <StageCard scene={scene} h="h-[280px]" paused={paused} onPause={() => setPaused((x) => !x)}>
+              <Body3D sex={sex} measures={measures} look={L} focus={focus} stage={scene.floor} chart={scene.chart} paused={paused} autoRotate={body.turning} className="absolute inset-0" />
             </StageCard>
             <div className="mt-4">{focus in measures && fm
               ? <Dial style={dialStyle} value={(measures as Record<string, number>)[focus]} min={fm.min} max={fm.max} onChange={(v) => setBody({ [focus]: v })} />

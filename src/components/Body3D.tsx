@@ -10,7 +10,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, Grid, Lightformer, useGLTF, Line } from "@react-three/drei";
+import { ContactShadows, Environment, Grid, Lightformer, MeshReflectorMaterial, RoundedBox, useGLTF, Line } from "@react-three/drei";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { Line2 } from "three/examples/jsm/lines/Line2.js";
 import type { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
@@ -287,37 +287,106 @@ function Camera({ shot, height, still, stage }: { shot: Shot; height: number; st
 }
 
 // the slow turn on the torso shots (not while dragging)
-// where the body stands: nothing (floating in its card), a pool of cornflower light on the floor, a low round podium
-// (a turntable for the turning body), or a graph-paper floor fading into the dark (the pattern paper's grid)
-export type Stage = "none" | "glow" | "podium" | "grid";
-let glowTex: THREE.CanvasTexture | null = null;
-function floorGlow() {
-  if (glowTex) return glowTex;
+// where the body stands (the floor, in the scene; the backdrop behind it is the card's): nothing (floating in its
+// card), a soft shadow, a pool of cornflower light, a low round podium, a graph-paper floor (the pattern paper's grid),
+// a ring of ruler ticks round the feet, a floor of dots, a disc of light, a low plinth, a dark mirror floor, or one
+// fine ring. chart: lines on the wall behind every 10 cm of real height (bolder every 50), so the height reads
+export type Stage = "none" | "shadow" | "glow" | "podium" | "grid" | "ticks" | "dots" | "disc" | "plinth" | "mirror" | "line";
+const texCache: Record<string, THREE.CanvasTexture> = {};
+function radial(key: string, stops: [number, string][]) {
+  if (texCache[key]) return texCache[key];
   const c = document.createElement("canvas");
   c.width = c.height = 256;
   const g = c.getContext("2d")!;
   const r = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-  r.addColorStop(0, "rgba(140,156,248,.55)"); r.addColorStop(0.45, "rgba(104,126,245,.22)"); r.addColorStop(1, "rgba(104,126,245,0)");
+  for (const [o, col] of stops) r.addColorStop(o, col);
   g.fillStyle = r; g.fillRect(0, 0, 256, 256);
-  glowTex = new THREE.CanvasTexture(c);
-  glowTex.colorSpace = THREE.SRGBColorSpace;
-  return glowTex;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return (texCache[key] = t);
 }
-function StagePieces({ stage, scale }: { stage: Stage; scale: number }) {
-  if (stage === "none") return null;
+const floorGlow = () => radial("glow", [[0, "rgba(140,156,248,.55)"], [0.45, "rgba(104,126,245,.22)"], [1, "rgba(104,126,245,0)"]]);
+const floorDisc = () => radial("disc", [[0, "rgba(240,244,254,.95)"], [0.62, "rgba(193,200,250,.75)"], [0.8, "rgba(140,156,248,.3)"], [1, "rgba(140,156,248,0)"]]);
+
+function Ticks({ r }: { r: number }) {
+  const geo = useMemo(() => {
+    const pts: number[] = [];
+    for (let i = 0; i < 120; i++) {
+      const a = (i / 120) * Math.PI * 2, long = i % 10 === 0, mid = i % 5 === 0;
+      const r0 = r * (long ? 0.9 : mid ? 0.94 : 0.965);
+      pts.push(Math.cos(a) * r0, 0, Math.sin(a) * r0, Math.cos(a) * r, 0, Math.sin(a) * r);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+    return g;
+  }, [r]);
+  return (
+    <group position={[0, 0.002, 0]}>
+      <lineSegments geometry={geo}><lineBasicMaterial color="#8c9cf8" transparent opacity={0.75} toneMapped={false} /></lineSegments>
+      <mesh rotation-x={-Math.PI / 2}><ringGeometry args={[r * 0.998, r * 1.004, 160]} /><meshBasicMaterial color="#8c9cf8" transparent opacity={0.8} toneMapped={false} /></mesh>
+    </group>
+  );
+}
+
+function Dots({ r }: { r: number }) {
+  const geo = useMemo(() => {
+    const pos: number[] = [], col: number[] = [];
+    const step = 0.085;
+    for (let x = -r; x <= r; x += step) for (let z = -r; z <= r; z += step) {
+      const d = Math.hypot(x, z) / r;
+      if (d > 1) continue;
+      pos.push(x, 0.002, z);
+      col.push(0.55, 0.61, 0.97, Math.max(0, 1 - d) ** 1.4);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+    return g;
+  }, [r]);
+  return <points geometry={geo}><pointsMaterial size={2.4} sizeAttenuation={false} vertexColors transparent depthWrite={false} toneMapped={false} /></points>;
+}
+
+function Chart({ top }: { top: number }) {
+  const geo = useMemo(() => {
+    const pts: number[] = [];
+    for (let cm = 0; cm <= top * 100; cm += 10) {
+      const y = cm / 100, w = cm % 50 === 0 ? 0.5 : 0.36;
+      pts.push(-w, y, 0, w, y, 0);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+    return g;
+  }, [top]);
+  return <lineSegments geometry={geo} position={[0, 0, -0.32]}><lineBasicMaterial color="#c1c8d9" transparent opacity={0.3} toneMapped={false} /></lineSegments>;
+}
+
+function StagePieces({ stage, scale, chart }: { stage: Stage; scale: number; chart: boolean }) {
   const r = 0.42 * scale;
+  const shadow = stage !== "none" && stage !== "line";
   return (
     <group>
+      {chart && <Chart top={2.1} />}
       {stage === "podium" && (
         <>
-          <mesh position={[0, -0.03 * scale, 0]} receiveShadow><cylinderGeometry args={[r, r * 1.03, 0.06 * scale, 96]} /><meshStandardMaterial color="#0b0c14" roughness={0.9} metalness={0} envMapIntensity={0.25} /></mesh>
+          <mesh position={[0, -0.03 * scale, 0]}><cylinderGeometry args={[r, r * 1.03, 0.06 * scale, 96]} /><meshStandardMaterial color="#0b0c14" roughness={0.9} metalness={0} envMapIntensity={0.25} /></mesh>
           <mesh position={[0, 0.0005, 0]} rotation-x={-Math.PI / 2}><ringGeometry args={[r * 0.985, r, 128]} /><meshBasicMaterial color="#8c9cf8" toneMapped={false} transparent opacity={0.85} /></mesh>
         </>
       )}
+      {stage === "plinth" && <RoundedBox args={[0.78 * scale, 0.07 * scale, 0.5 * scale]} radius={0.012 * scale} smoothness={4} position={[0, -0.035 * scale, 0]}><meshStandardMaterial color="#0e0f18" roughness={0.9} metalness={0} envMapIntensity={0.3} /></RoundedBox>}
       {/* the grid fades out from the feet (fadeFrom 0: from the middle, not from the camera) */}
       {stage === "grid" && <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1 * scale} cellThickness={0.8} cellColor="#3a4680" sectionSize={0.5 * scale} sectionThickness={1.2} sectionColor="#687ef5" fadeDistance={1.5 * scale} fadeStrength={1.4} fadeFrom={0} infiniteGrid />}
-      <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[stage === "podium" ? r * 0.7 : 0.6 * scale, 96]} /><meshBasicMaterial map={floorGlow()} transparent opacity={stage === "podium" ? 0.45 : 1} depthWrite={false} toneMapped={false} /></mesh>
-      <ContactShadows position={[0, 0.003, 0]} opacity={0.6} blur={2.2} scale={1.6 * scale} far={1} resolution={512} frames={Infinity} color="#05060b" />
+      {stage === "ticks" && <Ticks r={0.36 * scale} />}
+      {stage === "dots" && <Dots r={0.9 * scale} />}
+      {stage === "line" && <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><ringGeometry args={[0.33 * scale, 0.335 * scale, 160]} /><meshBasicMaterial color="#8c9cf8" transparent opacity={0.9} toneMapped={false} /></mesh>}
+      {stage === "mirror" && (
+        <mesh position={[0, 0, 0]} rotation-x={-Math.PI / 2}>
+          <circleGeometry args={[1.6 * scale, 96]} />
+          <MeshReflectorMaterial blur={[260, 80]} resolution={512} mixBlur={1} mixStrength={40} roughness={0.9} depthScale={1.1} minDepthThreshold={0.4} maxDepthThreshold={1.3} color="#0d0e17" metalness={0.6} mirror={0.85} />
+        </mesh>
+      )}
+      {(stage === "glow" || stage === "podium" || stage === "grid") && <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[stage === "podium" ? r * 0.7 : 0.6 * scale, 96]} /><meshBasicMaterial map={floorGlow()} transparent opacity={stage === "podium" ? 0.45 : 1} depthWrite={false} toneMapped={false} /></mesh>}
+      {stage === "disc" && <mesh position={[0, 0.002, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[0.42 * scale, 96]} /><meshBasicMaterial map={floorDisc()} transparent depthWrite={false} toneMapped={false} /></mesh>}
+      {shadow && <ContactShadows position={[0, stage === "plinth" ? 0.0035 : 0.003, 0]} opacity={stage === "disc" ? 0.4 : 0.6} blur={2.2} scale={1.6 * scale} far={1} resolution={512} frames={Infinity} color="#05060b" />}
     </group>
   );
 }
@@ -347,11 +416,11 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 
 // whole: frame the whole body (front on, no turning by itself) but keep the measurement's pose and tape, for a figure
 // beside a list (Edit measures) rather than a close-up
-// stage: what the body stands on (see Stage). turn: turn slowly by itself on this view too (the torso shots always
+// stage: what the body stands on (see Stage); chart: height lines on the wall behind. turn: turn slowly by itself on this view too (the torso shots always
 // may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", turn = false, paused = false, snapshot, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, turn = false, paused = false, snapshot, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
-  stage?: Stage; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
+  stage?: Stage; chart?: boolean; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   useEffect(() => { const q = window.matchMedia("(prefers-reduced-motion: reduce)"); const f = () => setStill(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
@@ -387,7 +456,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
         <Suspense fallback={null}>
           <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} />
         </Suspense>
-        <StagePieces stage={stage} scale={height / 1.65} />
+        <StagePieces stage={stage} scale={height / 1.65} chart={chart} />
         {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}
       </Canvas>
     </div>
