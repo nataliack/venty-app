@@ -72,9 +72,9 @@ const OPTIONS: [IconName, string, string][] = [
 // the active tab. The shape sits 5px inside the bar on every side it meets (top, bottom, and the outer edge on Home
 // and You), so its corners (25) run parallel to the bar's (30) with the app's 5px channel between them; it keeps at
 // least 5px from the plus's notch too. It glides from tab to tab (a shared layout id), as it would from page to page
-type A = "now" | "tint" | "pressed" | "raised" | "solid" | "itop" | "icircle" | "itile" | "iraised" | "idisc" | "iline" | "rcircle" | "rtile";
+type A = "now" | "tint" | "pressed" | "raised" | "solid" | "itop" | "icircle" | "itile" | "iraised" | "idisc" | "iline" | "rcircle" | "rtile" | "mtile" | "mcircle";
 // the pressed-in tile, laid out on the river: the four tabs at fixed, even places (see riverTabs)
-const RIVER: A[] = ["rcircle", "rtile"];
+const RIVER: A[] = ["rcircle", "rtile", "mtile", "mcircle"];
 // the shapes that sit round the icon only (the label stays plain)
 const ICON_ONLY: A[] = ["itop", "icircle", "itile", "iraised", "idisc", "iline"];
 const ACTIVE: { k: A; name: string; note: string }[] = [
@@ -90,6 +90,8 @@ const ACTIVE: { k: A; name: string; note: string }[] = [
   { k: "idisc", name: "I · Icon periwinkle", note: "The icon in a periwinkle disc with a white icon, exactly like home's start-card icons and the plus. The label stays ink." },
   { k: "rcircle", name: "K · Pressed circle, on the river", note: "The pressed-in tile as a 50px circle, 5px below the bar's top edge. On Home and You it shares its centre with the bar's corner (25 inside 30), so the 5px channel runs round it exactly. The tabs sit at even places: the end ones on the corners' centres, the inner ones 70px from the plus, and each keeps 5px from the plus's notch, open or closed." },
   { k: "rtile", name: "L · Pressed tile, on the river", note: "The pressed-in rounded tile (16px corners), 50px and 5px below the bar's top edge. On Home and You its outer top corner opens to 25px, so it follows the bar's corner with the 5px channel. Same even places as K." },
+  { k: "mtile", name: "M · Smaller pressed tile", note: "A 44px pressed tile (14px corners), so the labels lift off the bar's bottom edge: 9.5px above the tile, 9.5px under the label. On Home and You its outer top corner shares its centre with the bar's corner (20.5 inside 30), so it runs parallel with a 9.5px channel: a 5px channel there would need a 50px tile. The inner tabs sit 68px from the plus and keep 5px from its notch, open or closed." },
+  { k: "mcircle", name: "N · Smaller pressed circle", note: "A 40px pressed circle centred on the bar's corner on Home and You (20 inside 30, a 10px channel), 10px below the bar's top edge, with room under the label. The inner tabs sit 68px from the plus." },
   { k: "iline", name: "J · Line on top", note: "No shape: a short periwinkle line 5px below the bar's top edge, over the icon, and the icon and label in ink. The lightest touch." },
 ];
 const PILL_W = 56;
@@ -144,23 +146,30 @@ function TabBarCreate({ w, open, setOpen, id, active, setActive, v }: { w: numbe
       </button>
     );
   };
-  // K and L: the tabs at fixed places. The end ones sit on the centres of the bar's corners (BAR_R in from each end), the
-  // inner ones 70px either side of the plus (the closest a 50px tile can be and keep 5px from the widened notch). Each
-  // tab's tap area runs to the halfway point between its neighbours, and to the notch
+  // K to N: the tabs at fixed places. The end ones sit on (or just in from) the centres of the bar's corners, the inner ones
+  // a fixed distance either side of the plus (the closest the tile can be and keep 5px from the widened notch). Each
+  // tab's tap area runs to the halfway point between its neighbours, and to the notch. The outer top corner of the end
+  // tiles shares its centre with the bar's corner, so it runs parallel to it
   const river = RIVER.includes(v);
-  const T = 50, centres = [BAR_R, w / 2 - 70, w / 2 + 70, w - BAR_R];
+  const R = ({
+    rcircle: { T: 50, top: 5, outer: 25, inner: 25, end: 30, gap: 70 },
+    rtile: { T: 50, top: 5, outer: 25, inner: 16, end: 30, gap: 70 },
+    mtile: { T: 44, top: 9.5, outer: 20.5, inner: 14, end: 31.5, gap: 68 },
+    mcircle: { T: 40, top: 10, outer: 20, inner: 20, end: 30, gap: 68 },
+  } as Record<string, { T: number; top: number; outer: number; inner: number; end: number; gap: number }>)[v] ?? { T: 50, top: 5, outer: 25, inner: 16, end: 30, gap: 70 };
+  const T = R.T, centres = [R.end, w / 2 - R.gap, w / 2 + R.gap, w - R.end];
   const edges = [0, (centres[0] + centres[1]) / 2, w / 2 - RING - G, w / 2 + RING + G, (centres[2] + centres[3]) / 2, w];
   const spans = [[edges[0], edges[1]], [edges[1], edges[2]], [edges[3], edges[4]], [edges[4], edges[5]]];
-  const radius = (i: number) => (v === "rcircle" ? "25px" : i === 0 ? "25px 16px 16px 16px" : i === 3 ? "16px 25px 16px 16px" : "16px");
+  const radius = (i: number) => (i === 0 ? `${R.outer}px ${R.inner}px ${R.inner}px ${R.inner}px` : i === 3 ? `${R.inner}px ${R.outer}px ${R.inner}px ${R.inner}px` : `${R.inner}px`);
   const riverTab = ([ic, l]: [IconName, string], i: number) => {
     const on = active === l, [a, b] = spans[i], c = centres[i] - a;
     return (
       <button key={l} onClick={() => { setOpen(false); setActive(l); }} aria-current={on ? "page" : undefined}
         className={cx("absolute top-0 h-full text-[12px] transition-colors duration-300", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")} style={{ left: a, width: b - a }}>
         {on && <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }} className="tab-on tab-on-river absolute"
-          style={{ left: c - T / 2, top: G, width: T, height: T, borderRadius: radius(i) }} />}
-        <span className="absolute grid place-items-center" style={{ left: c - 14, top: G + T / 2 - 14, width: 28, height: 28 }}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
-        <span className="absolute -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: c, top: G + T + 4 }}>{l}</span>
+          style={{ left: c - T / 2, top: R.top, width: T, height: T, borderRadius: radius(i) }} />}
+        <span className="absolute grid place-items-center" style={{ left: c - 14, top: R.top + T / 2 - 14, width: 28, height: 28 }}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
+        <span className="absolute -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: c, top: R.top + T + 4 }}>{l}</span>
       </button>
     );
   };
@@ -266,7 +275,7 @@ const CSS = `
 }`;
 
 export function CreateLab() {
-  const [v, setV] = useState<A>("rtile");
+  const [v, setV] = useState<A>("mtile");
   return (
     <section>
       <style>{CSS}</style>
