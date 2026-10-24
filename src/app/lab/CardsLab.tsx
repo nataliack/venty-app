@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { cx } from "@/components/ui";
 
-type V = "now" | "rows" | "small" | "main" | "names" | "split" | "wide" | "arrow" | "mark" | "titlefirst" | "big" | "swipe" | "snow" | "stack" | "tag";
+type V = "now" | "rows" | "small" | "main" | "names" | "split" | "wide" | "arrow" | "mark" | "titlefirst" | "big" | "swipe" | "snow" | "stack" | "tag" | "right";
 const VARIANTS: { k: V; name: string; note: string }[] = [
   { k: "now", name: "Today", note: "Two cards side by side, about 166px each: “Start from a pattern” and both lines wrap to two lines, crowding the icon." },
   { k: "rows", name: "A · Two wide rows", note: "Each card runs the full width: the icon on the left, the name and its line beside it, a chevron at the end. Every name and line fits on one line, so nothing wraps and the two read the same. The section is a little taller." },
@@ -21,6 +21,7 @@ const VARIANTS: { k: V; name: string; note: string }[] = [
   { k: "swipe", name: "K · Swipe sideways", note: "Two wide cards in a row you swipe sideways, the second one peeking in: each with the icon on the left and the name and line on one line each. Not two columns, but the content stays complete." },
   { k: "snow", name: "L · Snow cards", note: "The cards in the light top's snow, raised like the white buttons (a rim, a white line on top, a soft shadow), ink words. Sized like F. A lighter, airier top." },
   { k: "stack", name: "M · Icon beside the name", note: "Two columns, with a smaller icon (32) on the same row as the name and the line spanning the card's full width below. One row less at the top, so the cards are shorter." },
+  { k: "right", name: "O · Icon on the right", note: "Like M, with the icon at the right end of the name's row: the name starts at the card's left edge, top-aligned with the icon, and its line runs the card's full width below. No chevron: the icon sits where it would be." },
   { k: "tag", name: "N · Name on top, line as a tag", note: "Two columns: the icon and chevron on top, the name, and the line set as a small pill (like a tag) under it, so it reads as a quick hint rather than a sentence." },
 ];
 
@@ -136,6 +137,14 @@ function Cards({ v }: { v: V }) {
       </div>
     ))}</div>
   );
+  if (v === "right") return (
+    <div className="mt-6 grid grid-cols-2 gap-3">{CARDS.map(([ic, t, d]) => (
+      <div key={t} className="pair-dark flex flex-col rounded-[24px] p-4 text-white">
+        <span className="flex items-start justify-between gap-2.5"><span className="min-w-0 pt-0.5 text-[16px] font-medium leading-tight [text-wrap:balance]">{t}</span><Dot ic={ic} size={32} /></span>
+        <span className="mt-2.5 block text-[14px] leading-snug text-white/70"><Two d={d} /></span>
+      </div>
+    ))}</div>
+  );
   if (v === "tag") return (
     <div className="mt-6 grid grid-cols-2 gap-3">{CARDS.map(([ic, t, d]) => (
       <div key={t} className="pair-dark flex min-h-[140px] flex-col justify-between rounded-[24px] p-4 text-white">
@@ -191,7 +200,7 @@ function HomeTop({ v }: { v: V }) {
 }
 
 export function CardsLab() {
-  const [v, setV] = useState<V>("rows");
+  const [v, setV] = useState<V>("right");
   return (
     <section>
       <h2 className="h1 !text-[34px]">Home start cards</h2>
