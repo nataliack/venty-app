@@ -62,11 +62,25 @@ function useEased(target: number) {
   return v;
 }
 
+// the copy (a first draft, for Jose to edit): one short line each
 const OPTIONS: [IconName, string, string][] = [
-  ["pencil", "Design from scratch", "Turn a photo, a sketch or your words into a pattern"],
-  ["dress", "Start from a pattern", "Choose a style, then fit it to you"],
-  ["body", "Make a body", "Add your measurements"],
+  ["pencil", "Create a pattern", "From a photo, sketch or words"],
+  ["dress", "Start from a pattern", "Pick a design, fit it to you"],
+  ["body", "Add a body", "Take your measurements"],
 ];
+
+// the active tab. The shape sits 5px inside the bar on every side it meets (top, bottom, and the outer edge on Home
+// and You), so its corners (25) run parallel to the bar's (30) with the app's 5px channel between them; it keeps at
+// least 5px from the plus's notch too. It glides from tab to tab (a shared layout id), as it would from page to page
+type A = "now" | "tint" | "pressed" | "raised" | "solid";
+const ACTIVE: { k: A; name: string; note: string }[] = [
+  { k: "now", name: "Today", note: "A small periwinkle capsule round the icon. Its corners have nothing to do with the bar's." },
+  { k: "tint", name: "A · Channel tint", note: "A soft periwinkle tint, 5px inside the bar on every side it meets, its corners parallel to the bar's: the same channel as everywhere else." },
+  { k: "pressed", name: "B · Pressed in", note: "The same shape pressed into the snow, like the inset icon tiles: a deeper shade along its top edge, a white lip below. The icon and label turn ink." },
+  { k: "raised", name: "C · Raised", note: "The same shape raised off the bar like the white secondary buttons: a white line along the top, a slightly deeper snow at the bottom and a soft shadow." },
+  { k: "solid", name: "D · Periwinkle", note: "The same shape in the periwinkle of the plus and home's icons, the icon and label white. The loudest: the current page is unmissable." },
+];
+const PILL_W = 56;
 
 // the card's words and options; its height is measured, so the card fits them
 function CardBody({ onHeight }: { onHeight: (h: number) => void }) {
@@ -80,8 +94,8 @@ function CardBody({ onHeight }: { onHeight: (h: number) => void }) {
     // .snow-card gives what sits inside the ink of a chosen card (the inset tiles pressed into the snow, the steel icons);
     // the snow itself is the SVG under it
     <div ref={ref} className="snow-card relative !bg-transparent px-5 pb-3 pt-5 text-[#131523]">
-      <h3 className="text-[22px] font-normal leading-tight tracking-[-.02em]">Create</h3>
-      <p className="mt-1 text-[15px] text-white/60">What would you like to start?</p>
+      <h3 className="text-center text-[22px] font-normal leading-tight tracking-[-.02em]">Create</h3>
+      <p className="mt-1 text-center text-[15px] text-white/60">What would you like to start?</p>
       <div className="mt-3 divide-y divide-[rgb(19_21_35/.09)]">{OPTIONS.map(([ic, t, d]) => (
         <button key={t} className="tap flex w-full items-center gap-3.5 py-3.5 text-left">
           <span className="iconbadge grid h-11 w-11 shrink-0 place-items-center rounded-[13px]"><Icon name={ic} size={21} strokeWidth={2} /></span>
@@ -94,15 +108,27 @@ function CardBody({ onHeight }: { onHeight: (h: number) => void }) {
 }
 
 // the bar, the button and (when open) the card, laid out like the app's floating tab bar
-function TabBarCreate({ w, open, setOpen, id }: { w: number; open: boolean; setOpen: (v: boolean) => void; id: string }) {
+function TabBarCreate({ w, open, setOpen, id, active, setActive, v }: { w: number; open: boolean; setOpen: (v: boolean) => void; id: string; active: string; setActive: (k: string) => void; v: A }) {
   const [h, setH] = useState(0);
   const notch = useEased(open ? B + 2 * G : RING);
   const items: [IconName, string][] = [["home", "Home"], ["body", "Bodies"], ["scissors", "Patterns"], ["user", "You"]];
-  const tab = ([ic, l]: [IconName, string], on = false) => (
-    <span key={l} className={cx("relative flex h-full flex-1 flex-col items-center justify-start gap-1 pt-[11px] text-[12px]", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")}>
-      <span className={cx("grid h-8 w-14 place-items-center rounded-full", on && "bg-[#687ef5]/25")}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>{l}
-    </span>
-  );
+  const tab = ([ic, l]: [IconName, string]) => {
+    const on = active === l;
+    const shape = v === "now" ? null : <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }}
+      className={cx("tab-on absolute rounded-[25px]", `tab-on-${v}`)} style={{ top: G, bottom: G, left: `calc(50% - ${PILL_W / 2}px)`, width: PILL_W }} />;
+    return (
+      // tapping a tab goes to its page and closes the Create card
+      <button key={l} onClick={() => { setOpen(false); setActive(l); }} aria-current={on ? "page" : undefined}
+        className={cx("relative flex h-full flex-1 flex-col items-center justify-start gap-1 pt-[11px] text-[12px] transition-colors duration-300", on ? cx("font-semibold", v === "solid" ? "text-white" : "text-[#26335f]") : "font-medium text-[#26335f]/60")}>
+        {on && shape}
+        <span className="relative grid h-8 w-14 place-items-center">
+          {on && v === "now" && <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }} className="absolute inset-0 rounded-full bg-[#687ef5]/25" />}
+          <Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} className="relative" />
+        </span>
+        <span className="relative">{l}</span>
+      </button>
+    );
+  };
   return (
     <div className="relative" style={{ width: w, height: BAR_H }}>
       <AnimatePresence>{open && (
@@ -121,7 +147,7 @@ function TabBarCreate({ w, open, setOpen, id }: { w: number; open: boolean; setO
         <SnowShape id={`${id}-bar`} d={barPath(w, notch)} h={BAR_H} />
       </svg>
       <div className="tabbar relative z-20 flex h-full items-stretch px-1.5">
-        {tab(items[0], true)}{tab(items[1])}<span className="w-[84px] shrink-0" />{tab(items[2])}{tab(items[3])}
+        {tab(items[0])}{tab(items[1])}<span className="w-[84px] shrink-0" />{tab(items[2])}{tab(items[3])}
       </div>
       {/* the plus: periwinkle closed; open, it turns 45° into × and fades into the dark secondary */}
       <button onClick={() => setOpen(!open)} aria-label={open ? "Close" : "Create"} aria-expanded={open}
@@ -166,26 +192,46 @@ function HomeBehind() {
   );
 }
 
-function Screen({ start, id }: { start: boolean; id: string }) {
+function Screen({ start, id, v }: { start: boolean; id: string; v: A }) {
   const [open, setOpen] = useState(start);
+  const [active, setActive] = useState("Home");
   return (
     <>
       <HomeBehind />
       {/* behind the card: the page blurs and darkens; the bar stays */}
       <AnimatePresence>{open && <motion.div key="dim" className="absolute inset-0 z-10 bg-black/50 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)} />}</AnimatePresence>
-      <div className="absolute inset-x-6 bottom-6 z-20"><TabBarCreate w={312} open={open} setOpen={setOpen} id={id} /></div>
+      <div className="absolute inset-x-6 bottom-6 z-20"><TabBarCreate w={312} open={open} setOpen={setOpen} id={id} active={active} setActive={setActive} v={v} /></div>
     </>
   );
 }
 
+const CSS = `
+@layer components {
+.tab-on { z-index: 0; }
+.tab-on-tint { background: rgb(104 126 245 / .16); }
+.tab-on-pressed { background: rgb(52 62 110 / .07);
+  box-shadow: inset 0 3px 7px rgb(28 36 84 / .2), inset 0 1px 1.5px rgb(28 36 84 / .2), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
+.tab-on-raised { background: var(--color-snow);
+  box-shadow: inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .1), inset 0 0 12px 1px rgb(255 255 255 / .75), 0 1px 2px rgb(19 21 35 / .1), 0 6px 14px -6px rgb(19 21 35 / .22); }
+.tab-on-solid { background: linear-gradient(180deg, #7387f6, #687ef5 55%, #6479f2);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 8px 18px -8px rgb(104 126 245 / .7); }
+}`;
+
 export function CreateLab() {
+  const [v, setV] = useState<A>("tint");
   return (
     <section>
+      <style>{CSS}</style>
       <h2 className="h1 !text-[34px]">Create pop-up</h2>
       <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">Tap the plus. A snow card grows out of the bar around it: the card wraps the plus in a ring, and one 5px channel runs between the card and the bar all the way round, the bar&apos;s notch widening to make room (closed, the same 5px channel runs round the plus). The page behind blurs and darkens; the bar stays. The plus turns into × in the dark secondary style. Tap it, or outside the card, to close.</p>
+      <p className="mt-6 text-[15px] text-white/50">The active tab</p>
+      <div className="mt-2 flex flex-wrap gap-2">{ACTIVE.map((x) => (
+        <button key={x.k} onClick={() => setV(x.k)} aria-pressed={v === x.k} className={cx("h-10 rounded-full px-4 text-[14px] font-medium transition-colors", v === x.k ? "bg-white text-bg" : "border border-white/15 text-white/75 hover:text-white")}>{x.name}</button>
+      ))}</div>
+      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/65">{ACTIVE.find((x) => x.k === v)!.note} Tap the tabs: it glides from one to the next, as it would from page to page. With the card open, a tab closes it and goes to its page.</p>
       <div className="mt-10 flex flex-wrap justify-center gap-x-10 gap-y-12">
-        <Phone label="Tap the plus"><Screen start={false} id="cl-a" /></Phone>
-        <Phone label="Open"><Screen start id="cl-b" /></Phone>
+        <Phone label="Tap the plus, or a tab"><Screen start={false} id="cl-a" v={v} /></Phone>
+        <Phone label="Open"><Screen start id="cl-b" v={v} /></Phone>
       </div>
     </section>
   );
