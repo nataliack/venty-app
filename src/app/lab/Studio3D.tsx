@@ -127,14 +127,14 @@ function Dial({ value, min, max, onChange, style = "now" }: { value: number; min
 }
 
 // the card the body stands in: its backdrop and decoration, the body (with its floor), and a pause button for the turning
+// (paused, it stays still until the button is tapped again, dragging included)
 function StageCard({ scene, h, paused, onPause, children }: { scene: Scene; h: string; paused: boolean; onPause: () => void; children: ReactNode }) {
   return (
     <div className={cx("relative mt-4 overflow-hidden rounded-[24px] border border-white/[.08]", h)} style={{ background: scene.bg }}>
       <Decor d={scene.deco} />
       {children}
-      <button onClick={onPause} aria-label={paused ? "Turn the body" : "Stop turning"} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#0b0c15]/55 text-white/80 backdrop-blur hover:text-white">
-        <Icon name={paused ? "play" : "pause"} size={16} strokeWidth={2} />
-      </button>
+      {/* the app's own round button (as help, above), bottom right: clear of help, by the feet, in thumb reach */}
+      <RB icon={paused ? "play" : "pause"} size={40} onClick={onPause} label={paused ? "Turn the body" : "Stop turning"} className="absolute bottom-3 right-3" />
     </div>
   );
 }
@@ -223,7 +223,7 @@ export function Studio3D() {
         </div>
         <div><div className="mb-2 text-[14px] text-white/50">Dial</div><Pick items={DIALS} value={dialStyle} onChange={setDialStyle} /><p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{DIALS.find((x) => x.k === dialStyle)!.note}</p></div>
       </div>
-      <p className="mt-4 max-w-[760px] text-[15px] leading-snug text-white/50">On both: drag the body to turn it, the button at the top right stops and starts the turning, and the ruler keeps following your finger even outside the dial until you let go.</p>
+      <p className="mt-4 max-w-[760px] text-[15px] leading-snug text-white/50">On both: drag the body to turn it, the button at the bottom right stops and starts the turning, and the ruler keeps following your finger even outside the dial until you let go.</p>
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {/* the height step: slide the ruler and the body grows or shrinks, feet on the floor; it turns slowly (pause) */}
         <Phone label="Height: slide to change it">
