@@ -481,16 +481,21 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
         <Camera shot={shot} height={height} still={still} stage={stage} room={room} />
         {snapshot && <Snapshot id={snapshot} />}
         <ambientLight intensity={look.ambient} />
-        <directionalLight position={dir(look.keyAzimuth, look.keyElevation)} intensity={look.keyIntensity} color={look.keyColor} />
-        <directionalLight position={dir(look.keyAzimuth - 150, 15)} intensity={look.fillIntensity} color={look.fillColor} />
-        <directionalLight position={dir(180, 30)} intensity={look.rimIntensity} color={look.rimColor} />
-        {/* soft studio reflections, made here (no image to download): a big softbox above, one in front, two strips */}
-        <Environment resolution={256} frames={1}>
+        {/* the lights and the reflections turn with the camera, so a back or side shot is lit like the front (fixed in the
+            room, the cornflower rim light behind the body lit the side seen from the back and turned the body purple) */}
+        <directionalLight position={dir(look.keyAzimuth + shot.az, look.keyElevation)} intensity={look.keyIntensity} color={look.keyColor} />
+        <directionalLight position={dir(look.keyAzimuth - 150 + shot.az, 15)} intensity={look.fillIntensity} color={look.fillColor} />
+        <directionalLight position={dir(180 + shot.az, 30)} intensity={look.rimIntensity} color={look.rimColor} />
+        {/* soft studio reflections, made here (no image to download): a big softbox above, one in front, two strips. Made
+            again when the camera's side changes (key), turned to match it */}
+        <Environment key={shot.az} resolution={256} frames={1}>
           <color attach="background" args={["#1b1c26"]} />
-          <Lightformer form="rect" intensity={5} position={[0, 4, 2]} scale={[6, 3, 1]} rotation-x={Math.PI / 2} />
-          <Lightformer form="rect" intensity={3} color="#e6e9ff" position={[0, 1.4, 5]} scale={[4, 2, 1]} />
-          <Lightformer form="rect" intensity={3} color="#c1c8d9" position={[-4, 1.5, 1]} scale={[1, 4, 1]} rotation-y={Math.PI / 2} />
-          <Lightformer form="rect" intensity={3} color="#8c9cf8" position={[4, 1.5, -1]} scale={[1, 4, 1]} rotation-y={-Math.PI / 2} />
+          <group rotation-y={(shot.az * Math.PI) / 180}>
+            <Lightformer form="rect" intensity={5} position={[0, 4, 2]} scale={[6, 3, 1]} rotation-x={Math.PI / 2} />
+            <Lightformer form="rect" intensity={3} color="#e6e9ff" position={[0, 1.4, 5]} scale={[4, 2, 1]} />
+            <Lightformer form="rect" intensity={3} color="#c1c8d9" position={[-4, 1.5, 1]} scale={[1, 4, 1]} rotation-y={Math.PI / 2} />
+            <Lightformer form="rect" intensity={3} color="#8c9cf8" position={[4, 1.5, -1]} scale={[1, 4, 1]} rotation-y={-Math.PI / 2} />
+          </group>
         </Environment>
         <Suspense fallback={null}>
           <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} />

@@ -40,6 +40,8 @@ DRIVERS = {
     "acrossFront": "torso/measure-frontchest-dist",
     "neck": "neck/measure-neck-circ",
     "upperArm": "arms/measure-upperarm-circ",
+    "upperArmLength": "arms/measure-upperarm-length",
+    "lowerArmLength": "arms/measure-lowerarm-length",
     "wrist": "hands/measure-wrist-circ",
     "thigh": "legs/measure-thigh-circ",
     "upperLeg": "legs/measure-upperleg-height",
@@ -908,11 +910,90 @@ def landmarks(P, E):
     return {"height": H, "bust": bust, "underbust": under, "waist": waist, "highHip": (waist + hips) / 2, "hips": hips, "neck": neck, "crotch": crotch, "thigh": thigh}
 
 
-def measure(P, E, lm):
-    """The measurements the app fits, in cm, at fixed slice heights (scaled with the body's height)."""
+def group_weights(h, name):
+    """Each vertex's weight in one vertex group (a bone's), 0 where it is not in it."""
+    g = h.vertex_groups.get(name)
+    w = np.zeros(len(h.data.vertices))
+    if not g:
+        return w
+    for v in h.data.vertices:
+        for x in v.groups:
+            if x.group == g.index:
+                w[v.index] = x.weight
+    return w
+
+
+def tape_points(h, P, lm):
+    """The skin the length and arm tapes follow, chosen once on the base body so every shape key is measured on the same
+    points: the nape, the waist at the back and the side, the hip at the side, the crotch, the top of each shoulder, and
+    rings of skin across the upper arm and the wrist (cut square to the arm, not level)."""
+    def pick(mask, score):
+        idx = np.nonzero(mask)[0]
+        return int(idx[np.argmax(score[idx])]) if len(idx) else 0
+    x, y, z = P[:, 0], P[:, 1], P[:, 2]
+    mid = np.abs(x) < 0.012
+    # the torso only: at the waist and the hips the hanging arms are the widest thing
+    arm = sum(group_weights(h, f"{b}_{sd}") for b in ("upperarm", "lowerarm", "hand") for sd in "lr")
+    trunk = arm < 0.05
+    sel = {
+        "nape": pick(mid & (np.abs(z - lm["neck"]) < 0.012), y),
+        "waistBack": pick(mid & (np.abs(z - lm["waist"]) < 0.012), y),
+        "waistSide": pick(trunk & (np.abs(z - lm["waist"]) < 0.01) & (x > 0), x),
+        "hipSide": pick(trunk & (np.abs(z - lm["hips"]) < 0.01) & (x > 0), x),
+        "crotch": pick(mid & (z > lm["crotch"] - 0.05) & (z < lm["crotch"] + 0.08) & (np.abs(y - y[mid].mean()) < 0.06), -z),
+    }
+    up, lo, hand = (group_weights(h, f"{b}_l") for b in ("upperarm", "lowerarm", "hand"))
+    sel["shoulderL"] = pick((up > 0.2) & (x > 0), z)
+    sel["shoulderR"] = int(np.argmin(np.linalg.norm(P - P[sel["shoulderL"]] * np.array([-1, 1, 1]), axis=1)))
+
+    def ring(mask_axis, mask_ring, at, toward):
+        """A ring of skin square to a limb: its axis from the limb's own skin, the ring at a share of its length."""
+        C = P[mask_axis]
+        c = C.mean(0)
+        a = np.linalg.svd(C - c)[2][0]
+        if np.dot(toward - c, a) < 0:
+            a = -a
+        t = (P - c) @ a
+        tm = t[mask_axis]
+        t0 = tm.min() + (tm.max() - tm.min()) * at
+        ids = np.nonzero(mask_ring & (np.abs(t - t0) < 0.007))[0]
+        e1 = np.cross(a, [0, 0, 1.0]); e1 /= np.linalg.norm(e1)
+        e2 = np.cross(a, e1)
+        return {"ids": ids.tolist(), "e1": e1, "e2": e2}
+    U = (up > 0.6) & (x > 0)
+    Lw = (lo > 0.6) & (x > 0)
+    sel["upperArm"] = ring(U, U, 0.42, P[Lw].mean(0))
+    sel["wrist"] = ring(Lw, ((lo + hand) > 0.6) & (x > 0), 0.93, P[(hand > 0.6) & (x > 0)].mean(0))
+    shoulder_z = P[sel["shoulderL"], 2]
+    zf = (lm["bust"] + shoulder_z) / 2
+    front = (np.abs(z - zf) < 0.006) & (up < 0.3) & (y < y[np.abs(z - zf) < 0.006].mean())
+    sel["acrossFront"] = np.nonzero(front)[0].tolist()
+    return sel
+
+
+def measure(P, E, lm, sel=None):
+    """The measurements the app fits, in cm. The circumferences at fixed slice heights (scaled with the body's height);
+    the lengths, the shoulders and the arms on the skin points chosen in tape_points (so a shape key that moves them
+    shows)."""
     H = P[:, 2].max()
     s = H / lm["height"]
     z = {k: v * s for k, v in lm.items()}
+    out = {}
+    if sel:
+        def circ(r):
+            Q = P[r["ids"]]
+            return hull_perimeter(np.stack([Q @ r["e1"], Q @ r["e2"]], 1)) * 100 if len(Q) > 3 else 0.0
+        F = P[sel["acrossFront"]]
+        out = {
+            "napeWaist": (P[sel["nape"], 2] - P[sel["waistBack"], 2]) * 100,
+            "waistHip": (P[sel["waistSide"], 2] - P[sel["hipSide"], 2]) * 100,
+            "insideLeg": (P[sel["crotch"], 2] - P[:, 2].min()) * 100,
+            "acrossShoulder": float(np.linalg.norm(P[sel["shoulderL"]] - P[sel["shoulderR"]])) * 100,
+            "acrossFront": float(F[:, 0].max() - F[:, 0].min()) * 100 if len(F) else 0.0,
+            "upperArm": circ(sel["upperArm"]),
+            "wrist": circ(sel["wrist"]),
+            "shoulderWrist": float(np.linalg.norm(P[sel["shoulderL"]] - P[sel["wrist"]["ids"]].mean(0))) * 100,
+        }
     return {
         "height": H * 100,
         "bust": torso_circ(P, E, z["bust"]),
@@ -925,6 +1006,7 @@ def measure(P, E, lm):
         "napeWaist": (z["neck"] - z["waist"]) * 100,
         "waistHip": (z["waist"] - z["hips"]) * 100,
         "insideLeg": z["crotch"] * 100,
+        **out,
     }
 
 
@@ -933,10 +1015,11 @@ def export(sex):
     E = edges_of(h)
     P0 = coords(h, {})
     lm = landmarks(P0, E)
-    base = measure(P0, E, lm)
+    sel = tape_points(h, P0, lm)
+    base = measure(P0, E, lm, sel)
     effects = {}
     for k in keys:
-        m = measure(coords(h, {k: 1.0}), E, lm)
+        m = measure(coords(h, {k: 1.0}), E, lm, sel)
         effects[k] = {q: round(m[q] - base[q], 3) for q in base if abs(m[q] - base[q]) > 0.05}
     log(sex, "base", {k: round(v, 1) for k, v in base.items()})
     rings = {k: torso_outline(P0, E, lm[k]) for k in ("bust", "underbust", "waist", "highHip", "hips")}
