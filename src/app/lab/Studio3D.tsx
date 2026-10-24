@@ -8,7 +8,7 @@ import { Leva, useControls, button, folder } from "leva";
 import { Icon } from "@/components/icons";
 import { Blob, Crown, cx, Glass, Glow, Pill, RB } from "@/components/ui";
 import { MarkCover, Ruler } from "@/components/art";
-import { LOOKS, type Look, type Stage } from "@/components/Body3D";
+import { LOOKS, type Lines, type Look, type Stage } from "@/components/Body3D";
 import { MEASURE_NAMES, SHOTS } from "@/lib/bodyShots";
 import { ALL_MEASURES, BASE } from "@/lib/data";
 
@@ -197,6 +197,7 @@ export function Studio3D() {
   const focus = body.measuring as string;
   const [edit, setEdit] = useState("waist");
   const [sceneK, setSceneK] = useState("grid");
+  const [lines, setLines] = useState<Lines>("white");
   const scene = SCENES.find((x) => x.k === sceneK) ?? SCENES[0];
   const stepScene = (d: number) => setSceneK(SCENES[(SCENES.indexOf(scene) + d + SCENES.length) % SCENES.length].k);
   const [dialStyle, setDialStyle] = useState<DialStyle>("inset");
@@ -218,6 +219,7 @@ export function Studio3D() {
           <div className="mb-2 flex items-center gap-3 text-[14px] text-white/50">Stage, {SCENES.indexOf(scene) + 1} of {SCENES.length}<span className="flex-1" /><RB icon="back" size={36} onClick={() => stepScene(-1)} label="Previous stage" /><RB icon="chevR" size={36} onClick={() => stepScene(1)} label="Next stage" /></div>
           <Pick items={SCENES} value={sceneK} onChange={setSceneK} />
           <p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{scene.note}</p>
+          {scene.floor === "grid" && <div className="mt-4"><div className="mb-2 text-[14px] text-white/50">Floor lines</div><Pick items={[{ k: "cornflower" as Lines, name: "Cornflower" }, { k: "white" as Lines, name: "White" }]} value={lines} onChange={setLines} /></div>}
         </div>
         <div><div className="mb-2 text-[14px] text-white/50">Dial</div><Pick items={DIALS} value={dialStyle} onChange={setDialStyle} /><p className="mt-3 max-w-[520px] text-[15px] leading-snug text-white/60">{DIALS.find((x) => x.k === dialStyle)!.note}</p></div>
       </div>
@@ -232,7 +234,7 @@ export function Studio3D() {
               <RB icon="help" size={40} label="How to measure" className="shrink-0" />
             </div>
             <StageCard scene={scene} h="h-[300px]" paused={paused} onPause={() => setPaused((x) => !x)}>
-              <Body3D sex={sex} measures={measures} look={L} focus="height" stage={scene.floor} chart={scene.chart} turn={body.turning} paused={paused} snapshot="stage" className="absolute inset-0" />
+              <Body3D sex={sex} measures={measures} look={L} focus="height" stage={scene.floor} chart={scene.chart} lines={lines} turn={body.turning} paused={paused} snapshot="stage" className="absolute inset-0" />
             </StageCard>
             <div className="mt-4"><Dial style={dialStyle} value={body.height} min={140} max={200} onChange={(v) => setBody({ height: v })} /></div>
           </div>
@@ -248,7 +250,7 @@ export function Studio3D() {
               <RB icon="help" size={40} label="How to measure" className="shrink-0" />
             </div>
             <StageCard scene={scene} h="h-[280px]" paused={paused} onPause={() => setPaused((x) => !x)}>
-              <Body3D sex={sex} measures={measures} look={L} focus={focus} stage={scene.floor} chart={scene.chart} paused={paused} autoRotate={body.turning} className="absolute inset-0" />
+              <Body3D sex={sex} measures={measures} look={L} focus={focus} stage={scene.floor} chart={scene.chart} lines={lines} paused={paused} autoRotate={body.turning} className="absolute inset-0" />
             </StageCard>
             <div className="mt-4">{focus in measures && fm
               ? <Dial style={dialStyle} value={(measures as Record<string, number>)[focus]} min={fm.min} max={fm.max} onChange={(v) => setBody({ [focus]: v })} />

@@ -378,7 +378,13 @@ function Chart({ top }: { top: number }) {
   return <lineSegments geometry={geo} position={[0, 0, -0.32]}><lineBasicMaterial color="#c1c8d9" transparent opacity={0.3} toneMapped={false} /></lineSegments>;
 }
 
-function StagePieces({ stage, scale, chart }: { stage: Stage; scale: number; chart: boolean }) {
+// the pattern floor's lines: cornflower, or a whitish grey (as quiet)
+export type Lines = "cornflower" | "white";
+const LINES: Record<Lines, { cell: string; section: string }> = {
+  cornflower: { cell: "#323a66", section: "#3e4a88" },
+  white: { cell: "#33364a", section: "#4b4f63" },
+};
+function StagePieces({ stage, scale, chart, lines }: { stage: Stage; scale: number; chart: boolean; lines: Lines }) {
   const r = 0.42 * scale;
   const shadow = stage !== "none" && stage !== "line";
   return (
@@ -398,7 +404,7 @@ function StagePieces({ stage, scale, chart }: { stage: Stage; scale: number; cha
           {/* drawn first (renderOrder): both are see-through, and drawn after the grid the floor covered its far lines with
               a hard edge instead of letting them fade */}
           <mesh position={[0, -0.001, 0.5]} rotation-x={-Math.PI / 2} renderOrder={-2}><planeGeometry args={[12, 5]} /><meshBasicMaterial map={floorGradient()} transparent depthWrite={false} toneMapped={false} /></mesh>
-          <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1} cellThickness={0.7} cellColor="#323a66" sectionSize={0.5} sectionThickness={0.9} sectionColor="#3e4a88" fadeDistance={1.5} fadeStrength={1.5} fadeFrom={0} infiniteGrid />
+          <Grid position={[0, 0.001, 0]} args={[6, 6]} cellSize={0.1} cellThickness={0.7} cellColor={LINES[lines].cell} sectionSize={0.5} sectionThickness={0.9} sectionColor={LINES[lines].section} fadeDistance={1.5} fadeStrength={1.5} fadeFrom={0} infiniteGrid />
           {/* a dark pool under the feet (the floor darkens round where she stands), then the contact shadow */}
           <mesh position={[0, 0.0015, 0]} rotation-x={-Math.PI / 2}><circleGeometry args={[0.5, 96]} /><meshBasicMaterial map={floorPool()} transparent depthWrite={false} toneMapped={false} /></mesh>
         </>
@@ -449,9 +455,9 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 // beside a list (Edit measures) rather than a close-up
 // stage: what the body stands on (see Stage); chart: height lines on the wall behind. turn: turn slowly by itself on this view too (the torso shots always
 // may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, turn = false, paused = false, snapshot, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", turn = false, paused = false, snapshot, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
-  stage?: Stage; chart?: boolean; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
+  stage?: Stage; chart?: boolean; lines?: Lines; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   useEffect(() => { const q = window.matchMedia("(prefers-reduced-motion: reduce)"); const f = () => setStill(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
@@ -487,7 +493,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
         <Suspense fallback={null}>
           <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} />
         </Suspense>
-        <StagePieces stage={stage} scale={height / 1.65} chart={chart} />
+        <StagePieces stage={stage} scale={height / 1.65} chart={chart} lines={lines} />
         {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}
       </Canvas>
     </div>
