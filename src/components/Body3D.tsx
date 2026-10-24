@@ -18,6 +18,7 @@ import { fitBody, landmarks, type Sex3D } from "@/lib/fitBody";
 import { POSES, SHOTS, type PoseName, type Shot } from "@/lib/bodyShots";
 import model from "@/lib/body3d.json";
 import { BodyLoader } from "@/components/BodyLoader";
+import { patternTextures } from "@/components/patternLook";
 
 // the model's address carries a stamp of its bytes (written by the export), so a new export is never served from a cache
 const glbUrl = (sex: Sex3D) => `/body3d/${sex}.glb?v=${(model as { glb?: Record<string, string> }).glb?.[sex] ?? "0"}`;
@@ -126,9 +127,10 @@ function poseTargets(rig: Rig, pose: PoseName): Record<string, THREE.Quaternion>
 // copy the body's every frame (the pose, the turning), its shape keys take the body's weights (every measurement), and
 // it gets the app's own fabric: one colour, soft and matt, drawn just in front of the skin where the two nearly touch.
 type Worn = { bones: [THREE.Bone, THREE.Bone][] };
-function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
-  // color: a plain fabric of ours (keeping the garment's own surface detail), or null for the garment's own look
-  name: string; sex: Sex3D; rig: Rig; weights: Record<string, number>; color: string | null; layer: number;
+export type GarmentLook = "fabric" | "pattern";
+function Garment({ name, sex, rig, weights, scale, look, layer, wornRef, onShown }: {
+  // look: the garment's own fabric (its original textures), or its pattern (cornflower, the pattern drawn on in snow)
+  name: string; sex: Sex3D; rig: Rig; weights: Record<string, number>; scale: number; look: GarmentLook; layer: number;
   wornRef: React.MutableRefObject<Set<Worn>>; onShown: (on: boolean) => void;
 }) {
   const { scene } = useGLTF(`/body3d/garments/${sex}/${name}.glb`);
@@ -146,9 +148,13 @@ function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
     // waistband). See-through parts (lace, cut-outs) are see-through in the garment's own look only
     const looks = meshes.map((m) => {
       const own = (m.material as THREE.MeshStandardMaterial).clone();
-      const plain = new THREE.MeshPhysicalMaterial({
-        roughness: 0.82, metalness: 0, sheen: 0.6, sheenRoughness: 0.7, sheenColor: new THREE.Color("#ffffff"),
-        normalMap: own.normalMap,
+      // the pattern look (patternLook.ts): drawn from the garment's own layout; its snow lines also lit from within a
+      // little, so they stay crisp on the side in shadow
+      const drawn = (m as THREE.SkinnedMesh).isSkinnedMesh ? patternTextures(m as THREE.SkinnedMesh, scale) : null;
+      const plain = new THREE.MeshStandardMaterial({
+        roughness: 0.8, metalness: 0, normalMap: own.normalMap,
+        map: drawn?.map ?? null, emissiveMap: drawn?.lines ?? null, emissive: new THREE.Color(drawn ? "#f0f4fe" : "#000000"), emissiveIntensity: 0.35,
+        color: drawn ? "#ffffff" : "#687ef5",
       });
       for (const mat of [own, plain]) {
         mat.side = THREE.DoubleSide;
@@ -157,13 +163,15 @@ function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
       return { m, own, plain };
     });
     return { root, looks, worn: { bones: pairs } as Worn };
+    // the length labels are worked out at the body's size when the garment is first worn
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, rig, layer]);
   useEffect(() => {
     for (const { m, own, plain } of g.looks) {
-      if (color) { plain.color.set(color); m.material = plain; } else m.material = own;
+      m.material = look === "pattern" ? plain : own;
     }
     invalidate();
-  }, [g, color, invalidate]);
+  }, [g, look, invalidate]);
   // follow the body's pose (copied in the body's own frame loop, after it moves)
   useEffect(() => { const set = wornRef.current; set.add(g.worn); return () => { set.delete(g.worn); }; }, [g, wornRef]);
   useEffect(() => {
@@ -178,7 +186,7 @@ function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
   return <primitive object={g.root} />;
 }
 
-function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments, garmentColor, onGarment }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void; garments: string[]; garmentColor: string | null; onGarment: (on: boolean) => void }) {
+function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments, garmentLook, onGarment }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void; garments: string[]; garmentLook: GarmentLook; onGarment: (on: boolean) => void }) {
   const wornRef = useRef<Set<Worn>>(new Set());
   const rig = useRig(sex);
   // the body is loaded once this mounts (Suspense held it back until then); gone again if it unmounts (a new body)
@@ -301,7 +309,7 @@ function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments
           <primitive object={rig.root} />
           {garments.map((name, i) => (
             <Suspense key={name} fallback={null}>
-              <Garment name={name} sex={sex} rig={rig} weights={fit.weights} color={garmentColor} layer={i} wornRef={wornRef} onShown={onGarment} />
+              <Garment name={name} sex={sex} rig={rig} weights={fit.weights} scale={fit.scale} look={garmentLook} layer={i} wornRef={wornRef} onShown={onGarment} />
             </Suspense>
           ))}
           {/* the tape: flat colour (no light, no reflection, no tone mapping), thick enough to read at a glance */}
@@ -525,12 +533,12 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 // stage: what the body stands on (see Stage); chart: height lines on the wall behind; room: a share of the view kept
 // free at the bottom, the body framed above it (the floor runs on behind buttons laid over the view). turn: turn slowly by itself on this view too (the torso shots always
 // may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, garments, garmentColor = null, turn = false, paused = false, snapshot, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, garments, garmentLook = "fabric", turn = false, paused = false, snapshot, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
   stage?: Stage; chart?: boolean; lines?: Lines; room?: number;
-  // garments to wear (MakeHuman garments by name, lab), from the innermost layer out, and a plain fabric colour of ours
-  // (null: each garment's own look, its original textures)
-  garments?: string[]; garmentColor?: string | null; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
+  // garments to wear (MakeHuman garments by name, lab), from the innermost layer out, and how they look: their own
+  // fabric, or their pattern drawn on them
+  garments?: string[]; garmentLook?: GarmentLook; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   // the loader shows until the body is in the scene
@@ -549,6 +557,13 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
   const yawRef = useRef(0);
   const dragRef = useRef<{ x: number; yaw: number } | null>(null);
   useEffect(() => { yawRef.current = 0; }, [focus]);
+  // design work (with snapshot): face the body to the front, window.__ventyFace[id](0) (or any turn, in radians)
+  useEffect(() => {
+    if (!snapshot) return;
+    const w = window as unknown as { __ventyFace?: Record<string, (yaw: number) => void> };
+    w.__ventyFace = { ...(w.__ventyFace ?? {}), [snapshot]: (yaw: number) => { yawRef.current = yaw; } };
+    return () => { if (w.__ventyFace) delete w.__ventyFace[snapshot]; };
+  }, [snapshot]);
   return (
     <div className={className} style={{ touchAction: "pan-y", ...(placed ? null : { position: "relative" }) }}
       onPointerDown={(e) => { dragRef.current = { x: e.clientX, yaw: yawRef.current }; (e.target as Element).setPointerCapture?.(e.pointerId); }}
@@ -576,7 +591,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
           </group>
         </Environment>
         <Suspense fallback={null}>
-          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} onShown={setShown} garments={wearing} garmentColor={garmentColor} onGarment={onGarment} />
+          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} onShown={setShown} garments={wearing} garmentLook={garmentLook} onGarment={onGarment} />
         </Suspense>
         <StagePieces stage={stage} scale={height / 1.65} chart={chart} lines={lines} />
         {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}

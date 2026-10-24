@@ -8,7 +8,7 @@ import { Leva, useControls, button, folder } from "leva";
 import { Icon } from "@/components/icons";
 import { cx, Glass, Pill, RB } from "@/components/ui";
 import { MarkCover } from "@/components/art";
-import { LOOKS, type Look } from "@/components/Body3D";
+import { LOOKS, type GarmentLook, type Look } from "@/components/Body3D";
 import { BodyLoader } from "@/components/BodyLoader";
 import { ALL_MEASURES, BASE } from "@/lib/data";
 
@@ -72,8 +72,6 @@ const GARMENTS: { name: string; label: string; group: "Dresses" | "Tops" | "Trou
   { name: "toigo_skirt_with_lace_ruffle", label: "Knee skirt", group: "Skirts" },
   { name: "elvs_pencil_skirt", label: "Pencil skirt", group: "Skirts" },
 ];
-// fabric colours to try (any colour works: the garment is one plain fabric)
-const FABRICS = ["#e8e3da", "#1c1d26", "#687ef5", "#c9a27e", "#7d8b6a", "#b4475a", "#f0f4fe"];
 
 // the body library's cards: a picture of each body (Jose will bring a cinematic one; the mannequin stands in), in one of
 // five styles, after the looks already chosen for the app (the start screen's night card, snow, inset tiles, the pattern
@@ -203,8 +201,8 @@ export function Studio3D() {
   const [paused6, setPaused6] = useState(false);
   // what the body wears on the fitting screen: a top and a bottom can be worn together, a dress alone
   const [wear, setWear] = useState<string[]>(["mindfront_f_dress_01"]);
-  // the fabric: each garment's own look (its original textures), or a plain colour of ours
-  const [fabric, setFabric] = useState<string | null>(null);
+  // how the garments look: their own fabric, or their pattern drawn on them (cornflower and snow)
+  const [gLook, setGLook] = useState<GarmentLook>("fabric");
   const toggleWear = (name: string) => setWear((cur) => {
     if (cur.includes(name)) return cur.filter((x) => x !== name);
     const g = GARMENTS.find((x) => x.name === name)!.group;
@@ -223,7 +221,7 @@ export function Studio3D() {
       <h2 className="h1 !text-[34px]">3D body</h2>
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the screens still being designed. The measuring steps and Body ready are live in the app. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
       <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Garments on the 3D body (testing)</h3>
-      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">MakeHuman garments, fitted to our bodies with the body&apos;s own size controls: change the measurements or the sex in the panel and the garment follows. Each one downloads only when you put it on. A top and a bottom can be worn together; a dress is worn alone. The fabric is each garment&apos;s own look (Original), or a plain colour of ours that keeps its surface detail. The ones marked with a dot stand in for the app&apos;s garments; the rest are extras.</p>
+      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">MakeHuman garments, fitted to our bodies with the body&apos;s own size controls: change the measurements or the sex in the panel and the garment follows. Each one downloads only when you put it on. A top and a bottom can be worn together; a dress is worn alone. Look: each garment in its own fabric, or its pattern drawn on it (cornflower, the seams, seam allowances, grainlines, piece names and lengths in snow), generated from the garment&apos;s own layout. The ones marked with a dot stand in for the app&apos;s garments; the rest are extras.</p>
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="space-y-5">
           {(["Dresses", "Tops", "Trousers", "Skirts"] as const).map((grp) => (
@@ -238,17 +236,13 @@ export function Studio3D() {
             </div>
           ))}
           <div>
-            <div className="mb-2 text-[14px] text-white/50">Fabric</div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => setFabric(null)} aria-pressed={fabric === null} className={cx("h-9 rounded-full px-4 text-[14px] font-medium transition-colors", fabric === null ? "bg-white text-bg" : "border border-white/15 text-white/75 hover:text-white")}>Original</button>
-              {FABRICS.map((c) => (
-              <button key={c} onClick={() => setFabric(c)} aria-label={`Fabric ${c}`} aria-pressed={fabric === c} className={cx("h-9 w-9 rounded-full border-2", fabric === c ? "border-white" : "border-white/15")} style={{ background: c }} />
-            ))}<input type="color" value={fabric ?? FABRICS[0]} onChange={(e) => setFabric(e.target.value)} aria-label="Any fabric colour" className="h-9 w-12 cursor-pointer rounded-md bg-transparent" /></div>
+            <div className="mb-2 text-[14px] text-white/50">Look</div>
+            <Pick items={[{ k: "fabric" as GarmentLook, name: "Fabric" }, { k: "pattern" as GarmentLook, name: "Pattern" }]} value={gLook} onChange={setGLook} />
           </div>
         </div>
         <Phone label="Fitting room">
           <div className="absolute inset-0" style={{ background: INK }} />
-          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={paused6} garments={wear} garmentColor={fabric} snapshot="fit" className="absolute inset-0" />
+          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={paused6} garments={wear} garmentLook={gLook} snapshot="fit" className="absolute inset-0" />
           <RB icon={paused6 ? "play" : "pause"} size={40} onClick={() => setPaused6((x) => !x)} label={paused6 ? "Turn the body" : "Stop turning"} className="absolute bottom-6 right-5" />
         </Phone>
       </div>
@@ -323,8 +317,12 @@ export function Studio3D() {
             <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 rounded-full bg-white py-2 text-bg">On your body</span><span className="flex-1 py-2 text-white/70">Pattern</span></div>
           </div>
           {/* the stage runs to the bottom of the screen, so the floor shows behind the buttons too */}
-          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={paused6} room={0.2} garments={["mindfront_f_dress_01"]} garmentColor={fabric} className="absolute inset-x-0 bottom-0 top-44" />
+          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={paused6} room={0.2} garments={["mindfront_f_dress_01"]} garmentLook={gLook} className="absolute inset-x-0 bottom-0 top-44" />
           <RB icon={paused6 ? "play" : "pause"} size={40} onClick={() => setPaused6((x) => !x)} label={paused6 ? "Turn the body" : "Stop turning"} className="absolute bottom-[100px] right-5" />
+          {/* the garment's look: its fabric, or its pattern drawn on it; bottom left, across from the pause */}
+          <div className="absolute bottom-[100px] left-5 flex h-10 rounded-full bg-card p-1 text-[13px] font-medium">{(["fabric", "pattern"] as const).map((k) => (
+            <button key={k} onClick={() => setGLook(k)} aria-pressed={gLook === k} className={cx("rounded-full px-3.5 capitalize transition-colors", gLook === k ? "bg-white text-bg" : "text-white/70")}>{k}</button>
+          ))}</div>
           <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
         </Phone>
       </div>
