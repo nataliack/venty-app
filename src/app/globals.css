@@ -729,3 +729,10 @@ input { font: inherit; color: inherit; }
 @keyframes v-live-base { from { background-position: 50% 0%; } to { background-position: 50% 100%; } }
 @media (max-width: 1023px) { .sky.sky-light.sky-live .drift { opacity: .85; } }
 @media (prefers-reduced-motion: reduce) { .sky.sky-light.sky-live { animation: none; } }
+
+/* the 3D body's loader (BodyLoader): shows after a beat (a cached body never flashes it), the ring turning */
+.body-loader-in { opacity: 0; animation: body-loader-in .3s ease .25s forwards; }
+@keyframes body-loader-in { to { opacity: 1; } }
+.body-loader-ring { animation: body-loader-turn .9s linear infinite; }
+@keyframes body-loader-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .body-loader-ring { animation: none; } }

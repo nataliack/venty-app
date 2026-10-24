@@ -5,11 +5,12 @@
 import { useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { cx, RB } from "@/components/ui";
+import { BodyLoader } from "@/components/BodyLoader";
 import { SHOTS } from "@/lib/bodyShots";
 import type { Sex3D } from "@/lib/fitBody";
 
 // three.js only runs in the browser
-const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false });
+const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
 
 export function BodyStage({ sex, measures, focus = "height", turn, floor = true, className, children }: {
   sex: Sex3D; measures: Partial<Record<string, number>>; focus?: string;

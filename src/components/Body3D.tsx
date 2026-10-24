@@ -17,6 +17,7 @@ import type { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { fitBody, landmarks, type Sex3D } from "@/lib/fitBody";
 import { POSES, SHOTS, type PoseName, type Shot } from "@/lib/bodyShots";
 import model from "@/lib/body3d.json";
+import { BodyLoader } from "@/components/BodyLoader";
 
 // the model's address carries a stamp of its bytes (written by the export), so a new export is never served from a cache
 const glbUrl = (sex: Sex3D) => `/body3d/${sex}.glb?v=${(model as { glb?: Record<string, string> }).glb?.[sex] ?? "0"}`;
@@ -119,8 +120,10 @@ function poseTargets(rig: Rig, pose: PoseName): Record<string, THREE.Quaternion>
   return out;
 }
 
-function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number> }) {
+function Mannequin({ sex, measures, look, shot, still, yawRef, onShown }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void }) {
   const rig = useRig(sex);
+  // the body is loaded once this mounts (Suspense held it back until then); gone again if it unmounts (a new body)
+  useEffect(() => { onShown(true); return () => onShown(false); }, [onShown, rig]);
   const invalidate = useThree((s) => s.invalidate);
   const group = useRef<THREE.Group>(null);
   const material = useMemo(() => new THREE.MeshPhysicalMaterial(), []);
@@ -462,6 +465,9 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
   stage?: Stage; chart?: boolean; lines?: Lines; room?: number; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
+  // the loader shows until the body is in the scene
+  const [shown, setShown] = useState(false);
+  const placed = (className ?? "").split(/\s+/).some((c) => c === "absolute" || c === "fixed" || c === "relative");
   useEffect(() => { const q = window.matchMedia("(prefers-reduced-motion: reduce)"); const f = () => setStill(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
   const base = SHOTS[focus] ?? SHOTS.height;
   const shot = useMemo<Shot>(() => (whole ? { ...base, y: [0, 1], x: 0, az: 0, spin: false } : base), [base, whole]);
@@ -472,7 +478,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
   const dragRef = useRef<{ x: number; yaw: number } | null>(null);
   useEffect(() => { yawRef.current = 0; }, [focus]);
   return (
-    <div className={className} style={{ touchAction: "pan-y" }}
+    <div className={className} style={{ touchAction: "pan-y", ...(placed ? null : { position: "relative" }) }}
       onPointerDown={(e) => { dragRef.current = { x: e.clientX, yaw: yawRef.current }; (e.target as Element).setPointerCapture?.(e.pointerId); }}
       onPointerMove={(e) => { if (dragRef.current) yawRef.current = dragRef.current.yaw + (e.clientX - dragRef.current.x) * 0.012; }}
       onPointerUp={() => (dragRef.current = null)} onPointerCancel={() => (dragRef.current = null)}>
@@ -498,11 +504,12 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
           </group>
         </Environment>
         <Suspense fallback={null}>
-          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} />
+          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} onShown={setShown} />
         </Suspense>
         <StagePieces stage={stage} scale={height / 1.65} chart={chart} lines={lines} />
         {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}
       </Canvas>
+      <BodyLoader show={!shown} />
     </div>
   );
 }
