@@ -250,7 +250,7 @@ function Mannequin({ sex, measures, look, shot, still, yawRef }: { sex: Sex3D; m
 }
 
 // The camera glides to the shot: the band of the body it frames, from the front, side or back.
-function Camera({ shot, height, still, stage }: { shot: Shot; height: number; still: boolean; stage: Stage }) {
+function Camera({ shot, height, still, stage, room }: { shot: Shot; height: number; still: boolean; stage: Stage; room: number }) {
   const { camera, size, invalidate } = useThree();
   const goal = useMemo(() => {
     const cam = camera as THREE.PerspectiveCamera;
@@ -261,16 +261,17 @@ function Camera({ shot, height, still, stage }: { shot: Shot; height: number; st
     const H = whole ? Math.max(height, FULL_FRAME) : height;
     // on a stage the camera looks down a little, and the frame takes in the floor round the feet
     const under = whole && stage !== "none" ? 0.12 * H : 0;
-    const bandH = (y1 - y0) * H * 1.12 + under;
+    // room: a share of the view kept free at the bottom (the floor runs on behind buttons there), the body framed above it
+    const bandH = ((y1 - y0) * H * 1.12 + under) / (1 - room);
     // across: the whole body needs its own width (arms out at most about 0.6 of its height); a band, some room round it
     const bandW = whole ? 0.6 * height : Math.max(0.5 * H * (y1 - y0 > 0.6 ? 1 : 0.7), bandH * 0.62);
     const aspect = size.width / size.height;
     const d = Math.max(bandH / 2 / Math.tan(fov / 2), bandW / 2 / (Math.tan(fov / 2) * aspect));
     const az = (shot.az * Math.PI) / 180;
-    const look = new THREE.Vector3((shot.x ?? 0) * height, ((y0 + y1) / 2) * H - under / 2, 0);
+    const look = new THREE.Vector3((shot.x ?? 0) * height, ((y0 + y1) / 2) * H - under / 2 - (bandH * room) / 2, 0);
     const el = stage !== "none" ? (9 * Math.PI) / 180 : 0;
     return { look, pos: look.clone().add(new THREE.Vector3(Math.sin(az) * d * Math.cos(el), d * Math.sin(el), Math.cos(az) * d * Math.cos(el))) };
-  }, [camera, size, shot, height, stage]);
+  }, [camera, size, shot, height, stage, room]);
   const lookAt = useRef<THREE.Vector3 | null>(null);
   useFrame((_, dt) => {
     const k = ease(dt, still ? 0 : 5);
@@ -453,11 +454,12 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 
 // whole: frame the whole body (front on, no turning by itself) but keep the measurement's pose and tape, for a figure
 // beside a list (Edit measures) rather than a close-up
-// stage: what the body stands on (see Stage); chart: height lines on the wall behind. turn: turn slowly by itself on this view too (the torso shots always
+// stage: what the body stands on (see Stage); chart: height lines on the wall behind; room: a share of the view kept
+// free at the bottom, the body framed above it (the floor runs on behind buttons laid over the view). turn: turn slowly by itself on this view too (the torso shots always
 // may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", turn = false, paused = false, snapshot, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, turn = false, paused = false, snapshot, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
-  stage?: Stage; chart?: boolean; lines?: Lines; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
+  stage?: Stage; chart?: boolean; lines?: Lines; room?: number; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   useEffect(() => { const q = window.matchMedia("(prefers-reduced-motion: reduce)"); const f = () => setStill(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
@@ -476,7 +478,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
       onPointerUp={() => (dragRef.current = null)} onPointerCancel={() => (dragRef.current = null)}>
       <Canvas frameloop={spin || (shot.ring && !still) ? "always" : "demand"} dpr={[1, 2]} camera={{ fov: 26, near: 0.05, far: 50 }} gl={{ antialias: true, alpha: true }} shadows>
         <Spinner on={spin} yawRef={yawRef} dragRef={dragRef} />
-        <Camera shot={shot} height={height} still={still} stage={stage} />
+        <Camera shot={shot} height={height} still={still} stage={stage} room={room} />
         {snapshot && <Snapshot id={snapshot} />}
         <ambientLight intensity={look.ambient} />
         <directionalLight position={dir(look.keyAzimuth, look.keyElevation)} intensity={look.keyIntensity} color={look.keyColor} />

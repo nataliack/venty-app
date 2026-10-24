@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import dynamic from "next/dynamic";
 import { Leva, useControls, button, folder } from "leva";
 import { Icon } from "@/components/icons";
-import { Blob, Crown, cx, Glass, Pill, RB } from "@/components/ui";
+import { Crown, cx, Glass, Pill, RB } from "@/components/ui";
 import { MarkCover, Ruler } from "@/components/art";
 import { LOOKS, type Lines, type Look, type Stage } from "@/components/Body3D";
 import { MEASURE_NAMES, SHOTS } from "@/lib/bodyShots";
@@ -267,6 +267,7 @@ export function Studio3D() {
   const [sceneK, setSceneK] = useState("grid");
   const [lines, setLines] = useState<Lines>("white");
   const [libStyle, setLibStyle] = useState<LibStyle>("night");
+  const [paused6, setPaused6] = useState(false);
   const scene = SCENES.find((x) => x.k === sceneK) ?? SCENES[0];
   const stepScene = (d: number) => setSceneK(SCENES[(SCENES.indexOf(scene) + d + SCENES.length) % SCENES.length].k);
   const [dialStyle, setDialStyle] = useState<DialStyle>("inset");
@@ -334,14 +335,14 @@ export function Studio3D() {
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {/* 2 · the body after setup (Preview): turn it, the four base numbers */}
         <Phone label="2 · Your body (after setup)">
+          <div className="absolute inset-0" style={{ background: INK }} />
           <div className="px-5 pt-12 text-white">
             <div className="flex h-11 items-center"><RB icon="back" size={40} label="Back" /><div className="flex-1" /><RB icon="more" size={40} label="More" /></div>
             <h1 className="h-serif mt-3">Me, Spring 26</h1>
             <div className="mt-1 text-[15px] text-white/55">24 of 24 measurements</div>
           </div>
           <div className="absolute inset-x-5 top-[170px] h-[390px]">
-            <Blob className="left-1/2 top-1/2 h-[300px] w-[220px] -translate-x-1/2 -translate-y-1/2 opacity-40" />
-            <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={body.turning} snapshot="body" className="absolute inset-0" />
+            <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines={lines} autoRotate={body.turning} snapshot="body" className="absolute inset-0" />
             <RB icon="back" className="absolute left-0 top-1/2 -translate-y-1/2" label="Turn left" />
             <RB icon="chevR" className="absolute right-0 top-1/2 -translate-y-1/2" label="Turn right" />
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2"><span className="glass-2 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] text-white">Front · drag to turn</span></div>
@@ -383,7 +384,8 @@ export function Studio3D() {
             </div>
             <div className="flex flex-1 flex-col justify-center px-6 text-center">
               <div className="flex items-center justify-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
-              <h1 className="h1 mt-3 !text-[30px] text-[#12131c] [text-wrap:balance]">Well done! Your body is ready</h1>
+              {/* the heading and its text are one group (12px apart); the saved line above sits further off (24px) */}
+              <h1 className="h1 mt-6 !text-[30px] text-[#12131c] [text-wrap:balance]">Well done! Your body is ready</h1>
               <p className="lead mx-auto mt-3 max-w-[300px] [text-wrap:pretty]">Every pattern you make for Me, Spring 26 will be drafted to these measurements.</p>
             </div>
             <div className="flex flex-col items-center gap-1 px-6 pb-7"><Pill>Choose what to make</Pill><span className="h-12 px-4 pt-3 text-[16px] font-medium text-[#12131c]/65">Go to home</span></div>
@@ -415,7 +417,9 @@ export function Studio3D() {
             <p className="mt-1 text-[15px] text-white/60">Drafted to Me · easy fit</p>
             <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 rounded-full bg-white py-2 text-bg">On your body</span><span className="flex-1 py-2 text-white/70">Pattern</span></div>
           </div>
-          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines={lines} autoRotate={body.turning} className="absolute inset-x-0 bottom-28 top-44" />
+          {/* the stage runs to the bottom of the screen, so the floor shows behind the buttons too */}
+          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines={lines} turn paused={paused6} room={0.2} className="absolute inset-x-0 bottom-0 top-44" />
+          <RB icon={paused6 ? "play" : "pause"} size={40} onClick={() => setPaused6((x) => !x)} label={paused6 ? "Turn the body" : "Stop turning"} className="absolute bottom-[100px] right-5" />
           <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
         </Phone>
       </div>
