@@ -729,3 +729,10 @@ input { font: inherit; color: inherit; }
    the card, a soft shadow falls inside from the top edge, the bottom lip catches a faint light, and the icon is quiet. */
 .lab-inset { color: rgb(193 200 230 / .5); background: linear-gradient(180deg, #121320 0%, #171823 100%);
   box-shadow: inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06), 0 1px 0 rgb(255 255 255 / .07); }
+
+/* the 3D body's loader (BodyLoader): shows after a beat (a cached body never flashes it), the ring turning */
+.body-loader-in { opacity: 0; animation: body-loader-in .3s ease .25s forwards; }
+@keyframes body-loader-in { to { opacity: 1; } }
+.body-loader-ring { animation: body-loader-turn .9s linear infinite; }
+@keyframes body-loader-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .body-loader-ring { animation: none; } }
