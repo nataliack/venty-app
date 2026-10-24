@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import dynamic from "next/dynamic";
 import { Leva, useControls, button, folder } from "leva";
 import { Icon } from "@/components/icons";
-import { Blob, Crown, cx, Glass, Glow, Pill, RB } from "@/components/ui";
+import { Blob, Crown, cx, Glass, Pill, RB } from "@/components/ui";
 import { MarkCover, Ruler } from "@/components/art";
 import { LOOKS, type Lines, type Look, type Stage } from "@/components/Body3D";
 import { MEASURE_NAMES, SHOTS } from "@/lib/bodyShots";
@@ -139,6 +139,74 @@ function StageCard({ scene, h, paused, onPause, children }: { scene: Scene; h: s
   );
 }
 
+// the body library's cards: a picture of each body (Jose will bring a cinematic one; the mannequin stands in), in one of
+// five styles, after the looks already chosen for the app (the start screen's night card, snow, inset tiles, the pattern
+// floor). No 3D on these
+type LibStyle = "night" | "poster" | "floor" | "snow" | "inset";
+const LIB_STYLES: { k: LibStyle; name: string; note: string }[] = [
+  { k: "night", name: "A · Night card", note: "The start screen's night card: flat night with cornflower lights roaming its lower part, the body rising out of the top of the card, the name on the night." },
+  { k: "poster", name: "B · Portrait poster", note: "The picture fills the card from the head down, fading into ink at the bottom where the name sits: a film poster." },
+  { k: "floor", name: "C · Pattern floor", note: "Ink, the faint cornflower light from above and the pattern floor, the body standing on it: the measuring screens' stage, small." },
+  { k: "snow", name: "D · Snow", note: "A snow card (the app's light tops and chosen cards), the body standing with a soft shadow, ink words." },
+  { k: "inset", name: "E · Inset window", note: "The card colour, the body standing in a window pressed into the card (the inset tiles' look), the name and count below it." },
+];
+
+function BodyCard({ style, name, n, img }: { style: LibStyle; name: string; n: number; img: string }) {
+  const label = (dark = true) => (
+    <div className="absolute bottom-4 left-4 right-4">
+      <div className={cx("text-[15px] font-medium", !dark && "text-[#12131c]")}>{name}</div>
+      <div className={cx("text-[13px]", dark ? "text-white/65" : "text-[#12131c]/60")}><span className={cx("serif text-[15px]", dark ? "text-white" : "text-[#12131c]")}>{n}</span> of 24 measurements</div>
+    </div>
+  );
+  // eslint-disable-next-line @next/next/no-img-element
+  const pic = (cls: string) => <img src={img} alt="" draggable={false} className={cx("pointer-events-none absolute select-none", cls)} />;
+  if (style === "night") return (
+    <div className="relative h-[230px]">
+      {/* on the dark page the night needs an edge to read as a card (on the start screen it sits on paper) */}
+      <div className="night rounded-[26px]" style={{ clipPath: "inset(0 round 26px)", boxShadow: "inset 0 0 0 1px rgb(255 255 255 / .08), inset 0 1px 0 rgb(255 255 255 / .1)" }} aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      {/* the body comes out of the card at the top, cut cleanly along its bottom edge */}
+      <div className="absolute inset-0" style={{ clipPath: "inset(-40px -40px 0 -40px round 0 0 26px 26px)" }}>{pic("left-1/2 top-[-12px] h-[150%] w-auto max-w-none -translate-x-1/2")}</div>
+      <div className="absolute inset-x-0 bottom-0 h-[44%] rounded-b-[26px]" style={{ background: "linear-gradient(180deg, transparent, rgb(11 12 21 / .85))" }} />
+      {label()}
+    </div>
+  );
+  if (style === "poster") return (
+    <div className="relative h-[230px] overflow-hidden rounded-[26px] border border-white/[.08]" style={{ background: "radial-gradient(80% 50% at 50% 0%, rgb(104 126 245 / .16), transparent 70%), var(--color-ink)" }}>
+      {pic("left-1/2 top-[6%] h-[170%] w-auto max-w-none -translate-x-1/2")}
+      <div className="absolute inset-x-0 bottom-0 h-[55%]" style={{ background: "linear-gradient(180deg, transparent, var(--color-ink) 78%)" }} />
+      {label()}
+    </div>
+  );
+  if (style === "floor") return (
+    <div className="relative h-[230px] overflow-hidden rounded-[26px] border border-white/[.08]" style={{ background: INK }}>
+      <div className="absolute inset-x-0 bottom-0 h-[46%]" style={{ perspective: "180px", perspectiveOrigin: "50% 0%" }}>
+        <div className="absolute -inset-x-[60%] bottom-[-40%] top-0" style={{ transform: "rotateX(62deg)", transformOrigin: "50% 0%",
+          background: "repeating-linear-gradient(0deg, rgb(75 79 99 / .7) 0 1px, transparent 1px 18px), repeating-linear-gradient(90deg, rgb(75 79 99 / .7) 0 1px, transparent 1px 18px)",
+          maskImage: "radial-gradient(40% 55% at 50% 15%, #000 15%, transparent 100%)", WebkitMaskImage: "radial-gradient(40% 55% at 50% 15%, #000 15%, transparent 100%)" }} />
+      </div>
+      <div className="absolute left-1/2 top-[66%] h-3 w-20 -translate-x-1/2 rounded-[50%] bg-black/70 blur-[5px]" />
+      {pic("left-1/2 top-[10%] h-[58%] w-auto -translate-x-1/2")}
+      <div className="absolute left-4 top-4 right-4"><div className="text-[15px] font-medium">{name}</div><div className="text-[13px] text-white/65"><span className="serif text-[15px] text-white">{n}</span> of 24</div></div>
+    </div>
+  );
+  if (style === "snow") return (
+    <div className="relative h-[230px] overflow-hidden rounded-[26px] bg-snow shadow-[inset_0_1px_0_#fff,0_10px_24px_-14px_rgb(0_0_0/.6)]">
+      <div className="absolute left-1/2 top-[60%] h-3 w-16 -translate-x-1/2 rounded-[50%] bg-[#1c2252]/25 blur-[5px]" />
+      {pic("left-1/2 top-[8%] h-[54%] w-auto -translate-x-1/2")}
+      {label(false)}
+    </div>
+  );
+  return (
+    <div className="glass relative h-[230px] rounded-[26px] p-2.5">
+      <div className="lab-inset relative h-[150px] overflow-hidden rounded-[18px]">
+        <div className="absolute left-1/2 top-[86%] h-2.5 w-14 -translate-x-1/2 rounded-[50%] bg-black/70 blur-[4px]" />
+        {pic("left-1/2 top-[7%] h-[82%] w-auto -translate-x-1/2")}
+      </div>
+      {label()}
+    </div>
+  );
+}
+
 function Pick<T extends string>({ items, value, onChange }: { items: { k: T; name: string }[]; value: T; onChange: (k: T) => void }) {
   return (
     <div className="flex flex-wrap gap-2">{items.map((x) => (
@@ -198,6 +266,7 @@ export function Studio3D() {
   const [edit, setEdit] = useState("waist");
   const [sceneK, setSceneK] = useState("grid");
   const [lines, setLines] = useState<Lines>("white");
+  const [libStyle, setLibStyle] = useState<LibStyle>("night");
   const scene = SCENES.find((x) => x.k === sceneK) ?? SCENES[0];
   const stepScene = (d: number) => setSceneK(SCENES[(SCENES.indexOf(scene) + d + SCENES.length) % SCENES.length].k);
   const [dialStyle, setDialStyle] = useState<DialStyle>("inset");
@@ -260,7 +329,8 @@ export function Studio3D() {
         </Phone>
       </div>
 
-      <h3 className="mt-16 text-[22px] font-normal tracking-[-.02em]">The other screens (on hold)</h3>
+      <h3 className="mt-16 text-[22px] font-normal tracking-[-.02em]">The other screens</h3>
+      <div className="mt-4"><div className="mb-2 text-[14px] text-white/50">Body library cards</div><Pick items={LIB_STYLES} value={libStyle} onChange={setLibStyle} /><p className="mt-3 max-w-[620px] text-[15px] leading-snug text-white/60">{LIB_STYLES.find((x) => x.k === libStyle)!.note} The mannequin stands in for the picture you are choosing.</p></div>
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {/* 2 · the body after setup (Preview): turn it, the four base numbers */}
         <Phone label="2 · Your body (after setup)">
@@ -303,10 +373,14 @@ export function Studio3D() {
           <div className="absolute inset-x-5 bottom-7"><Pill>Save changes</Pill></div>
         </Phone>
 
-        {/* 4 · Body ready: a moment, so paper and the Crown, the body standing in the Crown */}
+        {/* 4 · Body ready: a moment, so paper below and a cinematic shot above: the night card (the start screen's), the
+            body from the waist up, three-quarter, posed */}
         <Phone label="4 · Your body is ready">
           <div className="paper absolute inset-0 flex flex-col">
-            <div className="relative h-[40%] shrink-0 overflow-hidden rounded-b-[32px] text-white"><Crown /><Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={body.turning} className="absolute inset-x-6 bottom-3 top-12" /></div>
+            <div className="relative h-[44%] shrink-0 overflow-hidden rounded-b-[32px] text-white">
+              <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+              <Body3D sex={sex} measures={measures} look={L} focus="portrait" autoRotate={false} className="absolute inset-0" />
+            </div>
             <div className="flex flex-1 flex-col justify-center px-6 text-center">
               <div className="flex items-center justify-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
               <h1 className="h1 mt-3 !text-[30px] text-[#12131c] [text-wrap:balance]">Well done! Your body is ready</h1>
@@ -316,17 +390,15 @@ export function Studio3D() {
           </div>
         </Phone>
 
-        {/* 5 · the body library: each body standing in its card */}
+        {/* 5 · the body library: a picture per body (no 3D here), in the card style picked above */}
         <Phone label="5 · Body library">
           <div className="relative px-5 text-white">
             <MarkCover className="-mx-5 h-[150px]" />
             <h1 className="h-serif relative -mt-6">Body library</h1>
             <div className="field mt-4 flex h-12 items-center gap-2.5 px-4"><Icon name="search" size={18} className="text-white/50" /><span className="text-[16px] text-white/40">Search bodies</span></div>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <Glow color="#4d5e85" variant="fade" className="relative h-[230px] rounded-[26px] p-4">
-                <div className="relative h-[150px]"><Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={false} className="absolute inset-0" /></div>
-                <div className="absolute bottom-4 left-4 right-4"><div className="text-[15px] font-medium">Me, Spring 26</div><div className="text-[13px] text-white/65"><span className="serif text-[15px] text-white">24</span> of 24 measurements</div></div>
-              </Glow>
+              <BodyCard style={libStyle} name="Me, Spring 26" n={24} img="/lab/body-female.webp" />
+              <BodyCard style={libStyle} name="Tom" n={4} img="/lab/body-male.webp" />
               <div className="flex h-[230px] flex-col items-center justify-center rounded-[26px] border border-dashed border-white/25">
                 <span className="grid h-12 w-12 place-items-center rounded-full bg-primary"><Icon name="plus" size={24} /></span>
                 <span className="mt-3 text-[15px] font-medium">New body</span><span className="text-[13px] text-white/50">4 measures to start</span>
@@ -335,16 +407,16 @@ export function Studio3D() {
           </div>
         </Phone>
 
-        {/* 6 · the result screen's stage (the garment on the 3D body comes later) */}
+        {/* 6 · the result screen: the body on the pattern floor, the whole screen its backdrop (the garment comes later) */}
         <Phone label="6 · On your body (garment later)">
-          <div className="px-5 pt-14 text-center text-white">
+          <div className="absolute inset-0" style={{ background: INK }} />
+          <div className="relative px-5 pt-14 text-center text-white">
             <h1 className="text-[24px] font-normal tracking-[-.02em]">Flutter midi dress</h1>
             <p className="mt-1 text-[15px] text-white/60">Drafted to Me · easy fit</p>
             <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 rounded-full bg-white py-2 text-bg">On your body</span><span className="flex-1 py-2 text-white/70">Pattern</span></div>
           </div>
-          <Body3D sex={sex} measures={measures} look={L} focus="height" autoRotate={body.turning} className="absolute inset-x-0 bottom-28 top-44" />
+          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines={lines} autoRotate={body.turning} className="absolute inset-x-0 bottom-28 top-44" />
           <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
-          <span className="absolute left-1/2 top-[52%] -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-[12px] text-white/70 backdrop-blur"><Icon name="dress" size={13} className="mr-1 inline" />Garment: next step</span>
         </Phone>
       </div>
     </section>

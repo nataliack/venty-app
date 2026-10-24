@@ -6,7 +6,7 @@
 // side is +x. Or an aim: the bone turned to point that way (in the body's axes), whatever its parents did, so a
 // forearm can hang straight down from the elbow.
 
-export type PoseName = "relaxed" | "open" | "stance" | "seated";
+export type PoseName = "relaxed" | "open" | "stance" | "seated" | "portrait";
 export type Turn = { bone: string; axis: "x" | "y" | "z"; deg: number } | { bone: string; aim: [number, number, number] };
 
 // arms hanging naturally: the upper arms in to the sides, the elbows softly bent so the forearms come a little
@@ -32,6 +32,13 @@ export const POSES: Record<PoseName, Turn[]> = {
   ],
   // feet a little apart, so the inside leg and the thighs are in view
   stance: [...armsHang, { bone: "thigh_l", axis: "z", deg: 6 }, { bone: "thigh_r", axis: "z", deg: -6 }],
+  // a portrait (a moment, not a measurement): the torso turned a little away from the camera, the head turned back
+  // towards it and tilted a touch, the arms hanging
+  portrait: [
+    { bone: "spine_02", axis: "y", deg: -6 }, { bone: "spine_03", axis: "y", deg: -5 },
+    { bone: "neck_01", axis: "y", deg: 6 }, { bone: "head", axis: "y", deg: 9 }, { bone: "head", axis: "z", deg: -3 },
+    ...armsHang,
+  ],
   // sitting on a stool: thighs forward, shins down, hands resting on the thighs
   seated: [
     { bone: "thigh_l", axis: "x", deg: -86 }, { bone: "thigh_r", axis: "x", deg: -86 },
@@ -49,6 +56,8 @@ export type Shot = { pose: PoseName; y: [number, number]; x?: number; az: number
 const torso = (ring: string, y: [number, number]): Shot => ({ pose: "open", y, az: 0, spin: true, ring });
 export const SHOTS: Record<string, Shot> = {
   height: { pose: "relaxed", y: [0, 1], az: 0 },
+  // the body ready screen: from the waist up, a three-quarter view, posed (not a measurement)
+  portrait: { pose: "portrait", y: [0.44, 1.07], az: 24 },
   bust: torso("bust", [0.56, 0.84]),
   underbust: torso("underbust", [0.54, 0.82]),
   waist: torso("waist", [0.48, 0.76]),
@@ -78,6 +87,6 @@ export const MEASURE_NAMES: Record<string, string> = {
   height: "Height", bust: "Bust", underbust: "Underbust", waist: "Waist", highHip: "High hip", hips: "Hips", neck: "Neck",
   acrossFront: "Across front", apexApex: "Apex to apex", shoulderApex: "Shoulder to apex", frontNeckWaist: "Front neck to waist",
   napeWaist: "Nape to waist", acrossBack: "Across back", waistHip: "Waist to hip", shoulderLength: "Shoulder length",
-  acrossShoulder: "Across shoulder", armhole: "Armhole depth", upperArm: "Upper arm", elbow: "Elbow", wrist: "Wrist",
+  portrait: "Portrait (body ready)", acrossShoulder: "Across shoulder", armhole: "Armhole depth", upperArm: "Upper arm", elbow: "Elbow", wrist: "Wrist",
   shoulderWrist: "Shoulder to wrist", thigh: "Thigh", insideLeg: "Inside leg", rise: "Rise",
 };
