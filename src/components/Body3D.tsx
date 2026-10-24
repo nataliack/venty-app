@@ -128,10 +128,88 @@ function poseTargets(rig: Rig, pose: PoseName): Record<string, THREE.Quaternion>
 // it gets the app's own fabric: one colour, soft and matt, drawn just in front of the skin where the two nearly touch.
 type Worn = { bones: [THREE.Bone, THREE.Bone][] };
 export type GarmentLook = "fabric" | "pattern";
-function Garment({ name, sex, rig, weights, scale, look, layer, wornRef, onShown }: {
+
+// the skin a garment covers (tools/body3d/export.py: its maker's list, and the skin close under it or through it), as
+// MakeHuman vertex numbers: "4,7-12,30"
+function hideSet(runs: unknown): Set<number> | null {
+  if (typeof runs !== "string" || !runs) return null;
+  const out = new Set<number>();
+  for (const r of runs.split(",")) {
+    const [a, b] = r.split("-").map(Number);
+    for (let i = a; i <= (b ?? a); i++) out.add(i);
+  }
+  return out;
+}
+
+// the body without the skin its garments cover, so it never shows through them: its own copy of the body's geometry
+// (the same buffers, its own list of triangles), the whole body again when nothing is worn
+const HIDE_KEEP = 1;
+function hideSkin(body: THREE.Mesh, hides: Set<number>[]) {
+  const ud = body.userData as { full?: THREE.BufferAttribute | null; own?: boolean };
+  if (!ud.own && !hides.length) return;
+  if (!ud.own) {
+    const src = body.geometry, g = new THREE.BufferGeometry();
+    for (const [k, a] of Object.entries(src.attributes)) g.setAttribute(k, a);
+    g.morphAttributes = src.morphAttributes; g.morphTargetsRelative = src.morphTargetsRelative;
+    g.setIndex(src.index); g.groups = src.groups;
+    g.boundingBox = src.boundingBox; g.boundingSphere = src.boundingSphere;
+    body.geometry = g; ud.own = true; ud.full = src.index;
+  }
+  const full = ud.full, orig = body.geometry.attributes._orig as THREE.BufferAttribute | undefined;
+  if (!full || !orig || !hides.length) { body.geometry.setIndex(full ?? null); return; }
+  // (the head the script rebuilt has blended numbers: none of MakeHuman's)
+  const gone = (v: number) => { const r = orig.getX(v), o = Math.round(r) - 1; return Math.abs(r - o - 1) < 1e-3 && o >= 0 && hides.some((h) => h.has(o)); };
+  let hidden = new Uint8Array(orig.count);
+  for (let v = 0; v < orig.count; v++) hidden[v] = gone(v) ? 1 : 0;
+  // one more ring of skin kept all round (at a neckline, an armhole or a hem the garment's edge sits on the skin, and a
+  // gap there shows the inside of the garment), and a triangle goes only when all its corners are covered
+  for (let r = 0; r < HIDE_KEEP; r++) {
+    const next = hidden.slice();
+    for (let t = 0; t < full.count; t += 3) {
+      const a = full.getX(t), b = full.getX(t + 1), c = full.getX(t + 2);
+      if (!(hidden[a] && hidden[b] && hidden[c])) next[a] = next[b] = next[c] = 0;
+    }
+    hidden = next;
+  }
+  const keep: number[] = [];
+  for (let t = 0; t < full.count; t += 3) {
+    const a = full.getX(t), b = full.getX(t + 1), c = full.getX(t + 2);
+    if (!(hidden[a] && hidden[b] && hidden[c])) keep.push(a, b, c);
+  }
+  body.geometry.setIndex(keep);
+}
+
+// a small round sample of the garment's own fabric, for the look switch: its colour texture around the front of the
+// garment, half way up (or its plain colour)
+function swatchOf(meshes: THREE.Mesh[]): string | null {
+  if (typeof document === "undefined") return null;
+  const m = meshes[0];
+  if (!m) return null;
+  const mat = m.material as THREE.MeshStandardMaterial;
+  const c = document.createElement("canvas");
+  c.width = c.height = 96;
+  const x = c.getContext("2d");
+  if (!x) return null;
+  x.fillStyle = "#" + mat.color.getHexString();
+  x.fillRect(0, 0, 96, 96);
+  const img = mat.map?.image as CanvasImageSource & { width: number; height: number } | undefined;
+  const pos = m.geometry.attributes.position as THREE.BufferAttribute, uv = m.geometry.attributes.uv as THREE.BufferAttribute | undefined;
+  if (img && uv && img.width) {
+    let y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i < pos.count; i++) { y0 = Math.min(y0, pos.getY(i)); y1 = Math.max(y1, pos.getY(i)); }
+    const mid = (y0 + y1) / 2;
+    let best = 0, bz = -Infinity;
+    for (let i = 0; i < pos.count; i++) if (Math.abs(pos.getY(i) - mid) < (y1 - y0) * 0.08 && pos.getZ(i) > bz) { bz = pos.getZ(i); best = i; }
+    const w = img.width * 0.22, u = uv.getX(best) * img.width, v = uv.getY(best) * img.height;
+    try { x.drawImage(img, Math.max(0, u - w / 2), Math.max(0, v - w / 2), w, w, 0, 0, 96, 96); } catch { /* the plain colour */ }
+  }
+  return c.toDataURL("image/png");
+}
+function Garment({ name, sex, rig, weights, scale, look, layer, wornRef, onShown, onHide, onSwatch }: {
   // look: the garment's own fabric (its original textures), or its pattern (cornflower, the pattern drawn on in snow)
   name: string; sex: Sex3D; rig: Rig; weights: Record<string, number>; scale: number; look: GarmentLook; layer: number;
   wornRef: React.MutableRefObject<Set<Worn>>; onShown: (on: boolean) => void;
+  onHide: (name: string, hide: Set<number> | null) => void; onSwatch?: (url: string | null) => void;
 }) {
   const { scene } = useGLTF(`/body3d/garments/${sex}/${name}.glb`);
   const invalidate = useThree((s) => s.invalidate);
@@ -139,7 +217,9 @@ function Garment({ name, sex, rig, weights, scale, look, layer, wornRef, onShown
     const root = cloneSkinned(scene);
     const meshes: THREE.Mesh[] = [];
     const pairs: [THREE.Bone, THREE.Bone][] = [];
+    let hide: Set<number> | null = null;
     root.traverse((o) => {
+      hide = hide ?? hideSet(o.userData?.venty_hide);
       if ((o as THREE.Bone).isBone && rig.bones[o.name]) pairs.push([o as THREE.Bone, rig.bones[o.name]]);
       if ((o as THREE.Mesh).isMesh) { const m = o as THREE.Mesh; m.frustumCulled = false; meshes.push(m); }
     });
@@ -162,7 +242,7 @@ function Garment({ name, sex, rig, weights, scale, look, layer, wornRef, onShown
       }
       return { m, own, plain };
     });
-    return { root, looks, worn: { bones: pairs } as Worn };
+    return { root, looks, hide, swatch: swatchOf(meshes), worn: { bones: pairs } as Worn };
     // the length labels are worked out at the body's size when the garment is first worn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, rig, layer]);
@@ -183,15 +263,26 @@ function Garment({ name, sex, rig, weights, scale, look, layer, wornRef, onShown
     invalidate();
   }, [g, weights, invalidate]);
   useEffect(() => { onShown(true); return () => onShown(false); }, [g, onShown]);
+  useEffect(() => { onHide(name, g.hide); return () => onHide(name, null); }, [g, name, onHide]);
+  useEffect(() => { onSwatch?.(g.swatch); }, [g, onSwatch]);
   return <primitive object={g.root} />;
 }
 
-function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments, garmentLook, onGarment }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void; garments: string[]; garmentLook: GarmentLook; onGarment: (on: boolean) => void }) {
+function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments, garmentLook, onGarment, onSwatch }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void; garments: string[]; garmentLook: GarmentLook; onGarment: (on: boolean) => void; onSwatch?: (url: string | null) => void }) {
   const wornRef = useRef<Set<Worn>>(new Set());
   const rig = useRig(sex);
+  // the skin each worn garment covers, hidden while it is on
+  const [hides, setHides] = useState<Record<string, Set<number>>>({});
+  const onHide = useCallback((name: string, hide: Set<number> | null) => setHides((cur) => {
+    if ((cur[name] ?? null) === hide) return cur;
+    const next = { ...cur };
+    if (hide) next[name] = hide; else delete next[name];
+    return next;
+  }), []);
   // the body is loaded once this mounts (Suspense held it back until then); gone again if it unmounts (a new body)
   useEffect(() => { onShown(true); return () => onShown(false); }, [onShown, rig]);
   const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => { hideSkin(rig.body, Object.values(hides)); invalidate(); }, [rig, hides, invalidate]);
   const group = useRef<THREE.Group>(null);
   const material = useMemo(() => new THREE.MeshPhysicalMaterial(), []);
   useEffect(() => {
@@ -309,7 +400,7 @@ function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments
           <primitive object={rig.root} />
           {garments.map((name, i) => (
             <Suspense key={name} fallback={null}>
-              <Garment name={name} sex={sex} rig={rig} weights={fit.weights} scale={fit.scale} look={garmentLook} layer={i} wornRef={wornRef} onShown={onGarment} />
+              <Garment name={name} sex={sex} rig={rig} weights={fit.weights} scale={fit.scale} look={garmentLook} layer={i} wornRef={wornRef} onShown={onGarment} onHide={onHide} onSwatch={i === 0 ? onSwatch : undefined} />
             </Suspense>
           ))}
           {/* the tape: flat colour (no light, no reflection, no tone mapping), thick enough to read at a glance */}
@@ -533,12 +624,13 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 // stage: what the body stands on (see Stage); chart: height lines on the wall behind; room: a share of the view kept
 // free at the bottom, the body framed above it (the floor runs on behind buttons laid over the view). turn: turn slowly by itself on this view too (the torso shots always
 // may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, garments, garmentLook = "fabric", turn = false, paused = false, snapshot, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, garments, garmentLook = "fabric", onSwatch, turn = false, paused = false, snapshot, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
   stage?: Stage; chart?: boolean; lines?: Lines; room?: number;
   // garments to wear (MakeHuman garments by name, lab), from the innermost layer out, and how they look: their own
   // fabric, or their pattern drawn on them
-  garments?: string[]; garmentLook?: GarmentLook; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
+  // onSwatch: a small sample of the (first) garment's own fabric, for a look switch
+  garments?: string[]; garmentLook?: GarmentLook; onSwatch?: (url: string | null) => void; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   // the loader shows until the body is in the scene
@@ -591,7 +683,7 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
           </group>
         </Environment>
         <Suspense fallback={null}>
-          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} onShown={setShown} garments={wearing} garmentLook={garmentLook} onGarment={onGarment} />
+          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} onShown={setShown} garments={wearing} garmentLook={garmentLook} onGarment={onGarment} onSwatch={onSwatch} />
         </Suspense>
         <StagePieces stage={stage} scale={height / 1.65} chart={chart} lines={lines} />
         {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}
