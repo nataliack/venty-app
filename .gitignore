@@ -45,3 +45,6 @@ tools/body3d/preview/
 
 # Blender backups
 *.blend1
+
+# garment sources (MakeHuman packs, downloaded; see tools/body3d/garments.json)
+tools/body3d/garment-src/

@@ -1,0 +1,221 @@
+{
+ "note": "MakeHuman Community clothes used by the lab's 3D garments (tools/body3d/export.py, BODY3D_GARMENTS=1). Sources are not kept in git: download each pack from https://static.makehumancommunity.org/assets/assetpacks/<pack>.html and put the garment's folder in tools/body3d/garment-src/<name>/. CC-BY garments need their author credited in the app.",
+ "garments": [
+  {
+   "name": "toigo_camisole_dress_with_full_skirt",
+   "tier": "must",
+   "venty": "slip",
+   "pack": "dress01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "aethelraed_flapper_dress",
+   "tier": "must",
+   "venty": "wrap",
+   "pack": "dress01",
+   "licence": "CC0",
+   "author": "Aethelraed_Unraed"
+  },
+  {
+   "name": "mindfront_f_dress_02",
+   "tier": "must",
+   "venty": "aline",
+   "pack": "dress03",
+   "licence": "CC-BY",
+   "author": "Mindfront"
+  },
+  {
+   "name": "mindfront_f_dress_01",
+   "tier": "must",
+   "venty": "flutter",
+   "pack": "dress03",
+   "licence": "CC-BY",
+   "author": "Mindfront"
+  },
+  {
+   "name": "toigo_camisole_top",
+   "tier": "must",
+   "venty": "cami",
+   "pack": "shirts01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "joepal_crude_t-shirt_female",
+   "tier": "must",
+   "venty": "tee",
+   "pack": "shirts01",
+   "licence": "CC0",
+   "author": "joepal"
+  },
+  {
+   "name": "elvs_crude_t-shirt_male",
+   "tier": "must",
+   "venty": "tee",
+   "pack": "shirts01",
+   "licence": "CC0",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "elvs_male_shirt_untucked_bd1",
+   "tier": "must",
+   "venty": "shirt",
+   "pack": "shirts02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "elvs_gored_elephant_pants",
+   "tier": "must",
+   "venty": "wideleg",
+   "pack": "pants02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "toigo_wool_pants",
+   "tier": "must",
+   "venty": "straight",
+   "pack": "pants01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "elvs_gored_midi_skirt",
+   "tier": "must",
+   "venty": "biasskirt",
+   "pack": "skirts02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "scsouza_mini_denin_skirt",
+   "tier": "must",
+   "venty": "mini",
+   "pack": "skirts02",
+   "licence": "CC-BY",
+   "author": "scsouza"
+  },
+  {
+   "name": "elvs_halter_dress_mini",
+   "tier": "nice",
+   "venty": null,
+   "pack": "dress02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "elvs_halter_dress_knee_length",
+   "tier": "nice",
+   "venty": null,
+   "pack": "dress02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "elvs_halter_dress_long",
+   "tier": "nice",
+   "venty": null,
+   "pack": "dress02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "toigo_halter_dress_midi",
+   "tier": "nice",
+   "venty": null,
+   "pack": "dress01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "toigo_shift_dress",
+   "tier": "nice",
+   "venty": null,
+   "pack": "dress01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "toigo_long_full_skirt",
+   "tier": "nice",
+   "venty": null,
+   "pack": "skirts01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "toigo_skirt_with_lace_ruffle",
+   "tier": "nice",
+   "venty": null,
+   "pack": "skirts01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "elvs_pencil_skirt",
+   "tier": "nice",
+   "venty": null,
+   "pack": "skirts02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "mindfront_male_trousers_1",
+   "tier": "nice",
+   "venty": null,
+   "pack": "pants02",
+   "licence": "CC-BY",
+   "author": "Mindfront"
+  },
+  {
+   "name": "elvs_jeans_straight_leg",
+   "tier": "nice",
+   "venty": null,
+   "pack": "pants02",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "punkduck_spaghetti_strap_tank_top",
+   "tier": "nice",
+   "venty": null,
+   "pack": "shirts03",
+   "licence": "CC-BY",
+   "author": "punkduck"
+  },
+  {
+   "name": "punkduck_v_neck_top",
+   "tier": "nice",
+   "venty": null,
+   "pack": "shirts03",
+   "licence": "CC-BY",
+   "author": "punkduck"
+  },
+  {
+   "name": "elvs_ruffle_sleeve_peasant_blouse_1",
+   "tier": "nice",
+   "venty": null,
+   "pack": "shirts03",
+   "licence": "CC-BY",
+   "author": "Elvaerwyn"
+  },
+  {
+   "name": "toigo_fisherman_sweater",
+   "tier": "nice",
+   "venty": null,
+   "pack": "shirts01",
+   "licence": "CC0",
+   "author": "Margaret Toigo"
+  },
+  {
+   "name": "mindfront_cardigan_long_open_front",
+   "tier": "nice",
+   "venty": null,
+   "pack": "shirts02",
+   "licence": "CC-BY",
+   "author": "Mindfront"
+  }
+ ]
+}

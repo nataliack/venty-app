@@ -7,7 +7,7 @@
 // of easing).
 /* eslint-disable react-hooks/immutability -- three.js objects (materials, meshes, bones) are changed in place by design;
    React Three Fiber renders them, React does not */
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Grid, Lightformer, MeshReflectorMaterial, RoundedBox, useGLTF, Line } from "@react-three/drei";
@@ -50,6 +50,7 @@ const AXIS = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: 
 // the whole body is framed as if it stood this tall (m, the tallest the app takes), feet on the same line: so a
 // taller body visibly reaches higher, rather than every height filling the frame alike
 const FULL_FRAME = 2.0;
+const NONE: string[] = [];
 // how fast the tape's dashes run round the body (m/s, before the body's scale)
 const TAPE_SPEED = 0.12;
 // how much of the way to go this frame (speed per second); 0 = cut straight there
@@ -120,7 +121,50 @@ function poseTargets(rig: Rig, pose: PoseName): Record<string, THREE.Quaternion>
   return out;
 }
 
-function Mannequin({ sex, measures, look, shot, still, yawRef, onShown }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void }) {
+// A garment on the body (lab, 24 Oct 2026): a MakeHuman garment exported with the body's skeleton and the body's own size
+// controls under the same names (tools/body3d/export.py, BODY3D_GARMENTS), downloaded only when it is shown. Its bones
+// copy the body's every frame (the pose, the turning), its shape keys take the body's weights (every measurement), and
+// it gets the app's own fabric: one colour, soft and matt, drawn just in front of the skin where the two nearly touch.
+type Worn = { bones: [THREE.Bone, THREE.Bone][] };
+function Garment({ name, sex, rig, weights, color, layer, wornRef, onShown }: {
+  name: string; sex: Sex3D; rig: Rig; weights: Record<string, number>; color: string; layer: number;
+  wornRef: React.MutableRefObject<Set<Worn>>; onShown: (on: boolean) => void;
+}) {
+  const { scene } = useGLTF(`/body3d/garments/${sex}/${name}.glb`);
+  const invalidate = useThree((s) => s.invalidate);
+  const material = useMemo(() => new THREE.MeshPhysicalMaterial({
+    roughness: 0.82, metalness: 0, sheen: 0.6, sheenRoughness: 0.7, sheenColor: new THREE.Color("#ffffff"), side: THREE.DoubleSide,
+    // each layer drawn a little further in front than the one under it (a top over the bottom's waistband)
+    polygonOffset: true, polygonOffsetFactor: -2 - 2 * layer, polygonOffsetUnits: -2 - 2 * layer,
+  }), [layer]);
+  useEffect(() => { material.color.set(color); invalidate(); }, [material, color, invalidate]);
+  const g = useMemo(() => {
+    const root = cloneSkinned(scene);
+    const meshes: THREE.Mesh[] = [];
+    const pairs: [THREE.Bone, THREE.Bone][] = [];
+    root.traverse((o) => {
+      if ((o as THREE.Bone).isBone && rig.bones[o.name]) pairs.push([o as THREE.Bone, rig.bones[o.name]]);
+      if ((o as THREE.Mesh).isMesh) { const m = o as THREE.Mesh; m.frustumCulled = false; meshes.push(m); }
+    });
+    return { root, meshes, worn: { bones: pairs } as Worn };
+  }, [scene, rig]);
+  useEffect(() => { g.meshes.forEach((m) => { m.material = material; }); invalidate(); }, [g, material, invalidate]);
+  // follow the body's pose (copied in the body's own frame loop, after it moves)
+  useEffect(() => { const set = wornRef.current; set.add(g.worn); return () => { set.delete(g.worn); }; }, [g, wornRef]);
+  useEffect(() => {
+    for (const m of g.meshes) {
+      const dict = m.morphTargetDictionary ?? {};
+      const inf = m.morphTargetInfluences ?? [];
+      for (const [n, i] of Object.entries(dict)) inf[i] = weights[n] ?? 0;
+    }
+    invalidate();
+  }, [g, weights, invalidate]);
+  useEffect(() => { onShown(true); return () => onShown(false); }, [g, onShown]);
+  return <primitive object={g.root} />;
+}
+
+function Mannequin({ sex, measures, look, shot, still, yawRef, onShown, garments, garmentColor, onGarment }: { sex: Sex3D; measures: Partial<Record<string, number>>; look: Look; shot: Shot; still: boolean; yawRef: React.MutableRefObject<number>; onShown: (on: boolean) => void; garments: string[]; garmentColor: string; onGarment: (on: boolean) => void }) {
+  const wornRef = useRef<Set<Worn>>(new Set());
   const rig = useRig(sex);
   // the body is loaded once this mounts (Suspense held it back until then); gone again if it unmounts (a new body)
   useEffect(() => { onShown(true); return () => onShown(false); }, [onShown, rig]);
@@ -154,6 +198,7 @@ function Mannequin({ sex, measures, look, shot, still, yawRef, onShown }: { sex:
       const to = target[n] ?? rig.rest[n].local;
       if (b.quaternion.angleTo(to) > 1e-4) { b.quaternion.slerp(to, k); moving = true; }
     }
+    for (const w of wornRef.current) for (const [gb, bb] of w.bones) { gb.quaternion.copy(bb.quaternion); gb.position.copy(bb.position); }
     const g = group.current;
     if (g) {
       const y = -drop * fit.scale;
@@ -239,6 +284,11 @@ function Mannequin({ sex, measures, look, shot, still, yawRef, onShown }: { sex:
       <group ref={group}>
         <group scale={fit.scale}>
           <primitive object={rig.root} />
+          {garments.map((name, i) => (
+            <Suspense key={name} fallback={null}>
+              <Garment name={name} sex={sex} rig={rig} weights={fit.weights} color={garmentColor} layer={i} wornRef={wornRef} onShown={onGarment} />
+            </Suspense>
+          ))}
           {/* the tape: flat colour (no light, no reflection, no tone mapping), thick enough to read at a glance */}
           {ringPts && <Line ref={tapeRef} points={ringPts} color={look.ringColor} lineWidth={3.5} toneMapped={false} dashed dashSize={0.014} gapSize={0.009} />}
         </group>
@@ -460,13 +510,19 @@ function Spinner({ on, yawRef, dragRef }: { on: boolean; yawRef: React.MutableRe
 // stage: what the body stands on (see Stage); chart: height lines on the wall behind; room: a share of the view kept
 // free at the bottom, the body framed above it (the floor runs on behind buttons laid over the view). turn: turn slowly by itself on this view too (the torso shots always
 // may); paused stops it. snapshot: an id to save a transparent picture of the view by (design work, the lab)
-export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, turn = false, paused = false, snapshot, className }: {
+export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focus = "height", autoRotate = true, whole = false, stage = "none", chart = false, lines = "cornflower", room = 0, garments, garmentColor = "#e8e3da", turn = false, paused = false, snapshot, className }: {
   sex?: Sex3D; measures?: Partial<Record<string, number>>; look?: Look; focus?: string; autoRotate?: boolean; whole?: boolean;
-  stage?: Stage; chart?: boolean; lines?: Lines; room?: number; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
+  stage?: Stage; chart?: boolean; lines?: Lines; room?: number;
+  // garments to wear (MakeHuman garments by name, lab), from the innermost layer out, and their fabric colour
+  garments?: string[]; garmentColor?: string; turn?: boolean; paused?: boolean; snapshot?: string; className?: string;
 }) {
   const [still, setStill] = useState(false);
   // the loader shows until the body is in the scene
   const [shown, setShown] = useState(false);
+  // and until the garment (downloaded when first worn) is on the body
+  const [worn, setWorn] = useState(0);
+  const onGarment = useCallback((on: boolean) => setWorn((n) => n + (on ? 1 : -1)), []);
+  const wearing = garments ?? NONE;
   const placed = (className ?? "").split(/\s+/).some((c) => c === "absolute" || c === "fixed" || c === "relative");
   useEffect(() => { const q = window.matchMedia("(prefers-reduced-motion: reduce)"); const f = () => setStill(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
   const base = SHOTS[focus] ?? SHOTS.height;
@@ -504,12 +560,12 @@ export function Body3D({ sex = "female", measures = {}, look = LOOKS.venty, focu
           </group>
         </Environment>
         <Suspense fallback={null}>
-          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} onShown={setShown} />
+          <Mannequin sex={sex} measures={measures} look={look} shot={shot} still={still} yawRef={yawRef} onShown={setShown} garments={wearing} garmentColor={garmentColor} onGarment={onGarment} />
         </Suspense>
         <StagePieces stage={stage} scale={height / 1.65} chart={chart} lines={lines} />
         {look.shadowOpacity > 0 && <ContactShadows position={[0, 0.001, 0]} opacity={look.shadowOpacity} blur={look.shadowBlur} scale={1.8} far={1} resolution={512} frames={Infinity} />}
       </Canvas>
-      <BodyLoader show={!shown} />
+      <BodyLoader show={!shown || worn < wearing.length} />
     </div>
   );
 }

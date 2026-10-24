@@ -42,6 +42,39 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 // ink, with a cornflower light from above so faint it is felt more than seen (the app's .stage-ink)
 const INK = "radial-gradient(75% 50% at 50% -8%, rgb(104 126 245 / .15), rgb(104 126 245 / .055) 45%, transparent 76%), var(--color-ink)";
 
+// the garments being tried (tools/body3d/garments.json): what each stands in for, and the group it is shown in
+const GARMENTS: { name: string; label: string; group: "Dresses" | "Tops" | "Trousers" | "Skirts"; must?: boolean }[] = [
+  { name: "toigo_camisole_dress_with_full_skirt", label: "Slip dress", group: "Dresses", must: true },
+  { name: "aethelraed_flapper_dress", label: "Wrap dress", group: "Dresses", must: true },
+  { name: "mindfront_f_dress_02", label: "A-line midi", group: "Dresses", must: true },
+  { name: "mindfront_f_dress_01", label: "Flutter midi", group: "Dresses", must: true },
+  { name: "elvs_halter_dress_mini", label: "Halter, mini", group: "Dresses" },
+  { name: "elvs_halter_dress_knee_length", label: "Halter, knee", group: "Dresses" },
+  { name: "toigo_halter_dress_midi", label: "Halter, midi", group: "Dresses" },
+  { name: "elvs_halter_dress_long", label: "Halter, long", group: "Dresses" },
+  { name: "toigo_shift_dress", label: "Shift dress", group: "Dresses" },
+  { name: "toigo_camisole_top", label: "Cami", group: "Tops", must: true },
+  { name: "joepal_crude_t-shirt_female", label: "Tee (female)", group: "Tops", must: true },
+  { name: "elvs_crude_t-shirt_male", label: "Tee (male)", group: "Tops", must: true },
+  { name: "elvs_male_shirt_untucked_bd1", label: "Shirt", group: "Tops", must: true },
+  { name: "punkduck_spaghetti_strap_tank_top", label: "Strap tank", group: "Tops" },
+  { name: "punkduck_v_neck_top", label: "V-neck top", group: "Tops" },
+  { name: "elvs_ruffle_sleeve_peasant_blouse_1", label: "Ruffle blouse", group: "Tops" },
+  { name: "toigo_fisherman_sweater", label: "Sweater", group: "Tops" },
+  { name: "mindfront_cardigan_long_open_front", label: "Long cardigan", group: "Tops" },
+  { name: "elvs_gored_elephant_pants", label: "Wide-leg", group: "Trousers", must: true },
+  { name: "toigo_wool_pants", label: "Straight pant", group: "Trousers", must: true },
+  { name: "mindfront_male_trousers_1", label: "Trousers (male)", group: "Trousers" },
+  { name: "elvs_jeans_straight_leg", label: "Straight jeans", group: "Trousers" },
+  { name: "elvs_gored_midi_skirt", label: "Bias midi skirt", group: "Skirts", must: true },
+  { name: "scsouza_mini_denin_skirt", label: "A-line mini", group: "Skirts", must: true },
+  { name: "toigo_long_full_skirt", label: "Long full skirt", group: "Skirts" },
+  { name: "toigo_skirt_with_lace_ruffle", label: "Knee skirt", group: "Skirts" },
+  { name: "elvs_pencil_skirt", label: "Pencil skirt", group: "Skirts" },
+];
+// fabric colours to try (any colour works: the garment is one plain fabric)
+const FABRICS = ["#e8e3da", "#1c1d26", "#687ef5", "#c9a27e", "#7d8b6a", "#b4475a", "#f0f4fe"];
+
 // the body library's cards: a picture of each body (Jose will bring a cinematic one; the mannequin stands in), in one of
 // five styles, after the looks already chosen for the app (the start screen's night card, snow, inset tiles, the pattern
 // floor). No 3D on these
@@ -134,6 +167,8 @@ export function Studio3D() {
     thigh: { value: BODY_DEFAULTS.female.thigh, min: 40, max: 80, step: 0.5 },
     turning: true,
   }));
+  // for testing the lab from the browser's console: window.__labSetBody({ bust: 120 })
+  useEffect(() => { (window as unknown as { __labSetBody?: typeof setBody }).__labSetBody = setBody; }, [setBody]);
   // each body starts from its own measurements (Jose's, 23 Oct 2026), also when the sex is switched
   useEffect(() => { setBody(BODY_DEFAULTS[body.sex as "female" | "male"]); }, [body.sex, setBody]);
   const [look, setLook] = useControls(() => ({
@@ -166,6 +201,17 @@ export function Studio3D() {
   const [edit, setEdit] = useState("waist");
   const [libStyle, setLibStyle] = useState<LibStyle>("night");
   const [paused6, setPaused6] = useState(false);
+  // what the body wears on the fitting screen: a top and a bottom can be worn together, a dress alone
+  const [wear, setWear] = useState<string[]>(["mindfront_f_dress_01"]);
+  const [fabric, setFabric] = useState(FABRICS[0]);
+  const toggleWear = (name: string) => setWear((cur) => {
+    if (cur.includes(name)) return cur.filter((x) => x !== name);
+    const g = GARMENTS.find((x) => x.name === name)!.group;
+    const keep = g === "Dresses" ? [] : cur.filter((x) => { const h = GARMENTS.find((y) => y.name === x)!.group; return h !== g && h !== "Dresses" && !(g === "Skirts" && h === "Trousers") && !(g === "Trousers" && h === "Skirts"); });
+    // innermost first: a bottom under a top (the top's hem over the waistband)
+    const order = (x: string) => (GARMENTS.find((y) => y.name === x)!.group === "Tops" ? 1 : 0);
+    return [...keep, name].sort((a, b) => order(a) - order(b));
+  });
   const L = look as unknown as Look;
 
   if (!ready) return null;
@@ -175,7 +221,36 @@ export function Studio3D() {
       <Leva collapsed={false} hidden={typeof window !== "undefined" && window.location.search.includes("shots")} titleBar={{ title: "3D body" }} />
       <h2 className="h1 !text-[34px]">3D body</h2>
       <p className="mt-3 max-w-[640px] text-[16px] leading-snug text-white/65">The MakeHuman mannequin, fitted to the measurements in the panel and lit by the look, in copies of the screens still being designed. The measuring steps and Body ready are live in the app. Drag a body to turn it. Your settings stay in this browser; Copy settings puts the exact values on the clipboard.</p>
-      <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Screens in progress</h3>
+      <h3 className="mt-10 text-[22px] font-normal tracking-[-.02em]">Garments on the 3D body (testing)</h3>
+      <p className="mt-3 max-w-[760px] text-[15px] leading-snug text-white/60">MakeHuman garments, fitted to our bodies with the body&apos;s own size controls: change the measurements or the sex in the panel and the garment follows. Each one downloads only when you put it on. A top and a bottom can be worn together; a dress is worn alone. The fabric is one plain colour of ours. The ones marked with a dot stand in for the app&apos;s garments; the rest are extras.</p>
+      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="space-y-5">
+          {(["Dresses", "Tops", "Trousers", "Skirts"] as const).map((grp) => (
+            <div key={grp}>
+              <div className="mb-2 text-[14px] text-white/50">{grp}</div>
+              <div className="flex flex-wrap gap-2">{GARMENTS.filter((x) => x.group === grp).map((x) => (
+                <button key={x.name} onClick={() => toggleWear(x.name)} aria-pressed={wear.includes(x.name)} title={x.name}
+                  className={cx("flex h-10 items-center gap-2 rounded-full px-4 text-[14px] font-medium transition-colors", wear.includes(x.name) ? "bg-white text-bg" : "border border-white/15 text-white/75 hover:text-white")}>
+                  {x.must && <span className={cx("h-1.5 w-1.5 rounded-full", wear.includes(x.name) ? "bg-primary" : "bg-peri")} />}{x.label}
+                </button>
+              ))}</div>
+            </div>
+          ))}
+          <div>
+            <div className="mb-2 text-[14px] text-white/50">Fabric</div>
+            <div className="flex flex-wrap items-center gap-2">{FABRICS.map((c) => (
+              <button key={c} onClick={() => setFabric(c)} aria-label={`Fabric ${c}`} aria-pressed={fabric === c} className={cx("h-9 w-9 rounded-full border-2", fabric === c ? "border-white" : "border-white/15")} style={{ background: c }} />
+            ))}<input type="color" value={fabric} onChange={(e) => setFabric(e.target.value)} aria-label="Any fabric colour" className="h-9 w-12 cursor-pointer rounded-md bg-transparent" /></div>
+          </div>
+        </div>
+        <Phone label="Fitting room">
+          <div className="absolute inset-0" style={{ background: INK }} />
+          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={paused6} garments={wear} garmentColor={fabric} snapshot="fit" className="absolute inset-0" />
+          <RB icon={paused6 ? "play" : "pause"} size={40} onClick={() => setPaused6((x) => !x)} label={paused6 ? "Turn the body" : "Stop turning"} className="absolute bottom-6 right-5" />
+        </Phone>
+      </div>
+
+      <h3 className="mt-16 text-[22px] font-normal tracking-[-.02em]">Screens in progress</h3>
       <div className="mt-4"><div className="mb-2 text-[14px] text-white/50">Body library cards</div><Pick items={LIB_STYLES} value={libStyle} onChange={setLibStyle} /><p className="mt-3 max-w-[620px] text-[15px] leading-snug text-white/60">{LIB_STYLES.find((x) => x.k === libStyle)!.note} The mannequin stands in for the picture you are choosing.</p></div>
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {/* 2 · the body after setup (Preview): turn it, the four base numbers */}
@@ -237,7 +312,7 @@ export function Studio3D() {
         </Phone>
 
         {/* 6 · the result screen: the body on the pattern floor, the whole screen its backdrop (the garment comes later) */}
-        <Phone label="6 · On your body (garment later)">
+        <Phone label="6 · On your body">
           <div className="absolute inset-0" style={{ background: INK }} />
           <div className="relative px-5 pt-14 text-center text-white">
             <h1 className="text-[24px] font-normal tracking-[-.02em]">Flutter midi dress</h1>
@@ -245,7 +320,7 @@ export function Studio3D() {
             <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 rounded-full bg-white py-2 text-bg">On your body</span><span className="flex-1 py-2 text-white/70">Pattern</span></div>
           </div>
           {/* the stage runs to the bottom of the screen, so the floor shows behind the buttons too */}
-          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={paused6} room={0.2} className="absolute inset-x-0 bottom-0 top-44" />
+          <Body3D sex={sex} measures={measures} look={L} focus="height" stage="grid" lines="white" turn paused={paused6} room={0.2} garments={["mindfront_f_dress_01"]} garmentColor={fabric} className="absolute inset-x-0 bottom-0 top-44" />
           <RB icon={paused6 ? "play" : "pause"} size={40} onClick={() => setPaused6((x) => !x)} label={paused6 ? "Turn the body" : "Stop turning"} className="absolute bottom-[100px] right-5" />
           <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
         </Phone>
