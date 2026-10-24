@@ -11,6 +11,7 @@ import { CheckLab } from "./CheckLab";
 import { ButtonLab } from "./ButtonLab";
 import { CreateLab } from "./CreateLab";
 import { CardsLab } from "./CardsLab";
+import { SheetLab } from "./SheetLab";
 
 type V = "now" | "tile" | "line" | "light" | "inset";
 const VARIANTS: { k: V; name: string; note: string }[] = [
@@ -306,6 +307,8 @@ export default function Lab() {
       <div className="mx-auto max-w-[1280px] px-6 py-10">
         <p className="text-[14px] text-white/50">Venty lab</p>
         <div className="mt-6"><Studio3D /></div>
+        <div className="my-16 h-px bg-white/10" />
+        <div className="mt-6"><SheetLab /></div>
         <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><CardsLab /></div>
         <div className="my-16 h-px bg-white/10" />
