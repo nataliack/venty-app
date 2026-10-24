@@ -12,7 +12,7 @@ type V = "notch" | "inside" | "wide" | "now";
 const VARIANTS: { k: V; name: string; note: string; hw: number; hh: number; cy: number; r: number; f: number }[] = [
   { k: "notch", name: "A · Your cut, exact", note: "Your Figma, made exact: the 33 × 4 handle with its top on the sheet's top edge, in a cut that is its outline pushed out by 5px (43 × 14, round ends), so the channel is 5px all round. The cut's corners round off into the top edge, and the sheet's top corners are 45px.", hw: 33, hh: 4, cy: 2, r: 45, f: 6 },
   { k: "inside", name: "B · Handle inside the cut", note: "The handle (36 × 5) sits fully inside the sheet, 3.5px below its top edge, in a deeper cut (5px all round), so it reads as set into the sheet rather than resting on its edge.", hw: 36, hh: 5, cy: 6, r: 45, f: 6 },
-  { k: "wide", name: "C · Wider handle", note: "The chosen one, refined: a 48 × 5 handle with its top exactly on the sheet's top edge, in its 5px cut, drawn in the same picture as the cut so the two can never drift apart. At rest it is the sheet's own card colour, built like the dark secondary buttons (a soft light wash, a bright line along its top, a deeper line along its bottom, a fine rim), so it belongs to the sheet; pressed, it turns periwinkle.", hw: 48, hh: 5, cy: 2.5, r: 45, f: 2.5 },
+  { k: "wide", name: "C · Wider handle", note: "The chosen one, refined: a 48 × 5 handle with its top exactly on the sheet's top edge, in its 5px cut, drawn in the same picture as the cut so the two can never drift apart. At rest it is the sheet's own card colour, built like the dark secondary buttons (a faint light wash, a hairline of light along its top, a deeper hairline along its bottom: half a pixel, like the sheet's own rim), so it belongs to the sheet; pressed, it turns periwinkle.", hw: 48, hh: 5, cy: 2.5, r: 45, f: 2.5 },
   { k: "now", name: "D · Today", note: "The app's sheet now: 30px corners and a plain handle inside the sheet.", hw: 36, hh: 4, cy: 0, r: 30, f: 0 },
 ];
 
@@ -51,19 +51,21 @@ function SheetCard({ v, forceOn }: { v: (typeof VARIANTS)[number]; forceOn: bool
           return (
             <g>
               <defs>
-                <linearGradient id={`hw-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".07" /><stop offset=".6" stopColor="#fff" stopOpacity="0" /></linearGradient>
-                <linearGradient id={`hr-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".26" /><stop offset=".5" stopColor="#fff" stopOpacity=".1" /><stop offset="1" stopColor="#000" stopOpacity=".45" /></linearGradient>
+                <linearGradient id={`hw-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".04" /><stop offset=".6" stopColor="#fff" stopOpacity="0" /></linearGradient>
+                <linearGradient id={`hr-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".22" /><stop offset=".5" stopColor="#fff" stopOpacity=".07" /><stop offset="1" stopColor="#000" stopOpacity=".45" /></linearGradient>
                 <linearGradient id={`hp-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7387f6" /><stop offset=".55" stopColor="#687ef5" /><stop offset="1" stopColor="#6479f2" /></linearGradient>
                 <linearGradient id={`hpr-${v.k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".45" /><stop offset="1" stopColor="#fff" stopOpacity=".15" /></linearGradient>
               </defs>
               {/* at rest: the sheet's card colour, built like the dark secondary (a wash, a bright top line, a deeper bottom line) */}
               <rect x={x} y={y} width={v.hw} height={v.hh} rx={rr} fill="var(--color-card)" />
               <rect x={x} y={y} width={v.hw} height={v.hh} rx={rr} fill={`url(#hw-${v.k})`} />
-              <rect x={x + 0.5} y={y + 0.5} width={v.hw - 1} height={v.hh - 1} rx={rr - 0.5} fill="none" stroke={`url(#hr-${v.k})`} strokeWidth="1" />
+              {/* half a pixel, just inside the edge: the sheet's own 1px rim sits on its outline, so only half of it shows, and on a
+                  5px handle a full pixel top and bottom reads heavy */}
+              <rect x={x + 0.25} y={y + 0.25} width={v.hw - 0.5} height={v.hh - 0.5} rx={rr - 0.25} fill="none" stroke={`url(#hr-${v.k})`} strokeWidth="0.5" />
               {/* pressed: home's card-icon periwinkle, its rim and a glow, fading in over the resting handle */}
               <g className={cx("sheet-handle-on", on && "is-on")}>
                 <rect x={x} y={y} width={v.hw} height={v.hh} rx={rr} fill={`url(#hp-${v.k})`} />
-                <rect x={x + 0.5} y={y + 0.5} width={v.hw - 1} height={v.hh - 1} rx={rr - 0.5} fill="none" stroke={`url(#hpr-${v.k})`} strokeWidth="1" />
+                <rect x={x + 0.25} y={y + 0.25} width={v.hw - 0.5} height={v.hh - 0.5} rx={rr - 0.25} fill="none" stroke={`url(#hpr-${v.k})`} strokeWidth="0.5" />
               </g>
             </g>
           );
