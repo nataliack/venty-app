@@ -343,13 +343,14 @@ export function Home() {
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 lg:mt-0 lg:gap-4">
               {/* the two ways to start (24 Oct 2026, chosen in the lab as "icon on the right"): the name, top-left, with the icon
-                  at the right end of its row; the line under it broken at its comma, so both cards break the same way */}
+                  at the right end of its row. Both names and both lines are broken by hand, so each takes two lines on every
+                  screen (on a wide phone "Create a pattern" would otherwise fit on one) and the two cards always match */}
               <button onClick={make} className="pair-dark tap flex flex-col rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:justify-between lg:p-6">
-                <span className="flex items-start justify-between gap-2.5"><span className="min-w-0 pt-0.5 text-[16px] font-medium leading-tight [text-wrap:balance] lg:text-[20px]">Create a pattern</span><span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full lg:h-11 lg:w-11"><Icon name="pencil" size={15} strokeWidth={2} className="lg:h-5 lg:w-5" /></span></span>
+                <span className="flex items-start justify-between gap-2.5"><span className="min-w-0 pt-0.5 text-[16px] font-medium leading-tight lg:text-[20px]">Create a<br />pattern</span><span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full lg:h-11 lg:w-11"><Icon name="pencil" size={15} strokeWidth={2} className="lg:h-5 lg:w-5" /></span></span>
                 <span className="mt-2.5 block text-[14px] leading-snug text-white/70">From a photo,<br />sketch or words</span>
               </button>
               <button onClick={() => go("templates")} className="pair-dark tap flex flex-col rounded-[24px] p-4 text-left text-white lg:min-h-[170px] lg:justify-between lg:p-6">
-                <span className="flex items-start justify-between gap-2.5"><span className="min-w-0 pt-0.5 text-[16px] font-medium leading-tight [text-wrap:balance] lg:text-[20px]">Start from a pattern</span><span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full lg:h-11 lg:w-11"><Icon name="dress" size={15} strokeWidth={2} className="lg:h-5 lg:w-5" /></span></span>
+                <span className="flex items-start justify-between gap-2.5"><span className="min-w-0 pt-0.5 text-[16px] font-medium leading-tight lg:text-[20px]">Start from<br />a pattern</span><span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full lg:h-11 lg:w-11"><Icon name="dress" size={15} strokeWidth={2} className="lg:h-5 lg:w-5" /></span></span>
                 <span className="mt-2.5 block text-[14px] leading-snug text-white/70">Pick a design,<br />fit it to you</span>
               </button>
             </div>
