@@ -72,7 +72,9 @@ const OPTIONS: [IconName, string, string][] = [
 // the active tab. The shape sits 5px inside the bar on every side it meets (top, bottom, and the outer edge on Home
 // and You), so its corners (25) run parallel to the bar's (30) with the app's 5px channel between them; it keeps at
 // least 5px from the plus's notch too. It glides from tab to tab (a shared layout id), as it would from page to page
-type A = "now" | "tint" | "pressed" | "raised" | "solid" | "itop" | "icircle" | "itile" | "iraised" | "idisc" | "iline";
+type A = "now" | "tint" | "pressed" | "raised" | "solid" | "itop" | "icircle" | "itile" | "iraised" | "idisc" | "iline" | "rcircle" | "rtile";
+// the pressed-in tile, laid out on the river: the four tabs at fixed, even places (see riverTabs)
+const RIVER: A[] = ["rcircle", "rtile"];
 // the shapes that sit round the icon only (the label stays plain)
 const ICON_ONLY: A[] = ["itop", "icircle", "itile", "iraised", "idisc", "iline"];
 const ACTIVE: { k: A; name: string; note: string }[] = [
@@ -86,6 +88,8 @@ const ACTIVE: { k: A; name: string; note: string }[] = [
   { k: "itile", name: "G · Icon pressed in", note: "A small rounded tile pressed into the snow round the icon, the same build as the inset icon tiles across the app." },
   { k: "iraised", name: "H · Icon raised", note: "A raised snow circle round the icon, built like the white secondary buttons: a white line along the top, a soft shadow under it." },
   { k: "idisc", name: "I · Icon periwinkle", note: "The icon in a periwinkle disc with a white icon, exactly like home's start-card icons and the plus. The label stays ink." },
+  { k: "rcircle", name: "K · Pressed circle, on the river", note: "The pressed-in tile as a 50px circle, 5px below the bar's top edge. On Home and You it shares its centre with the bar's corner (25 inside 30), so the 5px channel runs round it exactly. The tabs sit at even places: the end ones on the corners' centres, the inner ones 70px from the plus, and each keeps 5px from the plus's notch, open or closed." },
+  { k: "rtile", name: "L · Pressed tile, on the river", note: "The pressed-in rounded tile (16px corners), 50px and 5px below the bar's top edge. On Home and You its outer top corner opens to 25px, so it follows the bar's corner with the 5px channel. Same even places as K." },
   { k: "iline", name: "J · Line on top", note: "No shape: a short periwinkle line 5px below the bar's top edge, over the icon, and the icon and label in ink. The lightest touch." },
 ];
 const PILL_W = 56;
@@ -140,6 +144,26 @@ function TabBarCreate({ w, open, setOpen, id, active, setActive, v }: { w: numbe
       </button>
     );
   };
+  // K and L: the tabs at fixed places. The end ones sit on the centres of the bar's corners (BAR_R in from each end), the
+  // inner ones 70px either side of the plus (the closest a 50px tile can be and keep 5px from the widened notch). Each
+  // tab's tap area runs to the halfway point between its neighbours, and to the notch
+  const river = RIVER.includes(v);
+  const T = 50, centres = [BAR_R, w / 2 - 70, w / 2 + 70, w - BAR_R];
+  const edges = [0, (centres[0] + centres[1]) / 2, w / 2 - RING - G, w / 2 + RING + G, (centres[2] + centres[3]) / 2, w];
+  const spans = [[edges[0], edges[1]], [edges[1], edges[2]], [edges[3], edges[4]], [edges[4], edges[5]]];
+  const radius = (i: number) => (v === "rcircle" ? "25px" : i === 0 ? "25px 16px 16px 16px" : i === 3 ? "16px 25px 16px 16px" : "16px");
+  const riverTab = ([ic, l]: [IconName, string], i: number) => {
+    const on = active === l, [a, b] = spans[i], c = centres[i] - a;
+    return (
+      <button key={l} onClick={() => { setOpen(false); setActive(l); }} aria-current={on ? "page" : undefined}
+        className={cx("absolute top-0 h-full text-[12px] transition-colors duration-300", on ? "font-semibold text-[#26335f]" : "font-medium text-[#26335f]/60")} style={{ left: a, width: b - a }}>
+        {on && <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }} className="tab-on tab-on-river absolute"
+          style={{ left: c - T / 2, top: G, width: T, height: T, borderRadius: radius(i) }} />}
+        <span className="absolute grid place-items-center" style={{ left: c - 14, top: G + T / 2 - 14, width: 28, height: 28 }}><Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} /></span>
+        <span className="absolute -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: c, top: G + T + 4 }}>{l}</span>
+      </button>
+    );
+  };
   return (
     <div className="relative" style={{ width: w, height: BAR_H }}>
       <AnimatePresence>{open && (
@@ -157,9 +181,9 @@ function TabBarCreate({ w, open, setOpen, id, active, setActive, v }: { w: numbe
       <svg width={w} height={BAR_H} className="tabbar-shape pointer-events-none absolute inset-0 z-20 overflow-visible" aria-hidden>
         <SnowShape id={`${id}-bar`} d={barPath(w, notch)} h={BAR_H} />
       </svg>
-      <div className="tabbar relative z-20 flex h-full items-stretch px-1.5">
-        {tab(items[0])}{tab(items[1])}<span className="w-[84px] shrink-0" />{tab(items[2])}{tab(items[3])}
-      </div>
+      {river
+        ? <div className="tabbar relative z-20 h-full">{items.map(riverTab)}</div>
+        : <div className="tabbar relative z-20 flex h-full items-stretch px-1.5">{tab(items[0])}{tab(items[1])}<span className="w-[84px] shrink-0" />{tab(items[2])}{tab(items[3])}</div>}
       {/* the plus: periwinkle closed; open, it turns 45° into × and fades into the dark secondary */}
       <button onClick={() => setOpen(!open)} aria-label={open ? "Close" : "Create"} aria-expanded={open}
         className="tap absolute left-1/2 z-30 grid -translate-x-1/2 place-items-center rounded-full text-white" style={{ top: NOTCH_Y - B, width: 2 * B, height: 2 * B }}>
@@ -233,13 +257,16 @@ const CSS = `
   box-shadow: inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .1), inset 0 0 10px 1px rgb(255 255 255 / .75), 0 1px 2px rgb(19 21 35 / .12), 0 6px 12px -6px rgb(19 21 35 / .25); }
 .tab-on-idisc { left: 8px; top: -4px; width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(180deg, #7387f6, #687ef5 55%, #6479f2);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 6px 14px -6px rgb(104 126 245 / .7); }
+/* K and L: pressed into the snow like the inset icon tiles; size, place and corners are set inline */
+.tab-on-river { background: rgb(52 62 110 / .07);
+  box-shadow: inset 0 3px 7px rgb(28 36 84 / .22), inset 0 1px 1.5px rgb(28 36 84 / .22), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
 .tab-on-iline { left: 18px; top: -6px; width: 20px; height: 3px; border-radius: 999px; background: var(--color-primary); }
 .tab-on-solid { background: linear-gradient(180deg, #7387f6, #687ef5 55%, #6479f2);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 8px 18px -8px rgb(104 126 245 / .7); }
 }`;
 
 export function CreateLab() {
-  const [v, setV] = useState<A>("tint");
+  const [v, setV] = useState<A>("rtile");
   return (
     <section>
       <style>{CSS}</style>
