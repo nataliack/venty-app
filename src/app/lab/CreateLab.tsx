@@ -72,13 +72,21 @@ const OPTIONS: [IconName, string, string][] = [
 // the active tab. The shape sits 5px inside the bar on every side it meets (top, bottom, and the outer edge on Home
 // and You), so its corners (25) run parallel to the bar's (30) with the app's 5px channel between them; it keeps at
 // least 5px from the plus's notch too. It glides from tab to tab (a shared layout id), as it would from page to page
-type A = "now" | "tint" | "pressed" | "raised" | "solid";
+type A = "now" | "tint" | "pressed" | "raised" | "solid" | "itop" | "icircle" | "itile" | "iraised" | "idisc" | "iline";
+// the shapes that sit round the icon only (the label stays plain)
+const ICON_ONLY: A[] = ["itop", "icircle", "itile", "iraised", "idisc", "iline"];
 const ACTIVE: { k: A; name: string; note: string }[] = [
   { k: "now", name: "Today", note: "A small periwinkle capsule round the icon. Its corners have nothing to do with the bar's." },
   { k: "tint", name: "A · Channel tint", note: "A soft periwinkle tint, 5px inside the bar on every side it meets, its corners parallel to the bar's: the same channel as everywhere else." },
   { k: "pressed", name: "B · Pressed in", note: "The same shape pressed into the snow, like the inset icon tiles: a deeper shade along its top edge, a white lip below. The icon and label turn ink." },
   { k: "raised", name: "C · Raised", note: "The same shape raised off the bar like the white secondary buttons: a white line along the top, a slightly deeper snow at the bottom and a soft shadow." },
   { k: "solid", name: "D · Periwinkle", note: "The same shape in the periwinkle of the plus and home's icons, the icon and label white. The loudest: the current page is unmissable." },
+  { k: "itop", name: "E · Icon, from the top", note: "Round the icon only: a soft periwinkle tint that starts 5px below the bar's top edge (its top corners parallel to the bar's on Home and You) and ends just under the icon. The label stays plain." },
+  { k: "icircle", name: "F · Icon circle", note: "A soft periwinkle circle round the icon only. The quietest of the icon ones." },
+  { k: "itile", name: "G · Icon pressed in", note: "A small rounded tile pressed into the snow round the icon, the same build as the inset icon tiles across the app." },
+  { k: "iraised", name: "H · Icon raised", note: "A raised snow circle round the icon, built like the white secondary buttons: a white line along the top, a soft shadow under it." },
+  { k: "idisc", name: "I · Icon periwinkle", note: "The icon in a periwinkle disc with a white icon, exactly like home's start-card icons and the plus. The label stays ink." },
+  { k: "iline", name: "J · Line on top", note: "No shape: a short periwinkle line 5px below the bar's top edge, over the icon, and the icon and label in ink. The lightest touch." },
 ];
 const PILL_W = 56;
 
@@ -114,7 +122,8 @@ function TabBarCreate({ w, open, setOpen, id, active, setActive, v }: { w: numbe
   const items: [IconName, string][] = [["home", "Home"], ["body", "Bodies"], ["scissors", "Patterns"], ["user", "You"]];
   const tab = ([ic, l]: [IconName, string]) => {
     const on = active === l;
-    const shape = v === "now" ? null : <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }}
+    const iconOnly = ICON_ONLY.includes(v);
+    const shape = v === "now" || iconOnly ? null : <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }}
       className={cx("tab-on absolute rounded-[25px]", `tab-on-${v}`)} style={{ top: G, bottom: G, left: `calc(50% - ${PILL_W / 2}px)`, width: PILL_W }} />;
     return (
       // tapping a tab goes to its page and closes the Create card
@@ -123,7 +132,9 @@ function TabBarCreate({ w, open, setOpen, id, active, setActive, v }: { w: numbe
         {on && shape}
         <span className="relative grid h-8 w-14 place-items-center">
           {on && v === "now" && <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }} className="absolute inset-0 rounded-full bg-[#687ef5]/25" />}
-          <Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} className="relative" />
+          {/* the icon's own shape, centred on the icon (the icon box is 56 × 32 and starts 11px below the bar's top edge) */}
+          {on && iconOnly && <motion.span layoutId={`${id}-pill`} transition={{ type: "spring", bounce: 0.18, duration: 0.5 }} className={cx("tab-on absolute", `tab-on-${v}`)} />}
+          <Icon name={ic} size={22} strokeWidth={on ? 2.1 : 1.7} className={cx("relative", on && v === "idisc" && "text-white")} />
         </span>
         <span className="relative">{l}</span>
       </button>
@@ -213,6 +224,16 @@ const CSS = `
   box-shadow: inset 0 3px 7px rgb(28 36 84 / .2), inset 0 1px 1.5px rgb(28 36 84 / .2), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
 .tab-on-raised { background: var(--color-snow);
   box-shadow: inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .1), inset 0 0 12px 1px rgb(255 255 255 / .75), 0 1px 2px rgb(19 21 35 / .1), 0 6px 14px -6px rgb(19 21 35 / .22); }
+/* round the icon only: positioned on the icon's 56 × 32 box (its top is 11px below the bar's top edge) */
+.tab-on-itop { left: 0; right: 0; top: -6px; bottom: -6px; border-radius: 25px 25px 18px 18px; background: rgb(104 126 245 / .16); }
+.tab-on-icircle { left: 8px; top: -4px; width: 40px; height: 40px; border-radius: 999px; background: rgb(104 126 245 / .18); }
+.tab-on-itile { left: 6px; top: -3px; width: 44px; height: 38px; border-radius: 13px; background: rgb(52 62 110 / .07);
+  box-shadow: inset 0 3px 7px rgb(28 36 84 / .22), inset 0 1px 1.5px rgb(28 36 84 / .22), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9); }
+.tab-on-iraised { left: 8px; top: -4px; width: 40px; height: 40px; border-radius: 999px; background: var(--color-snow);
+  box-shadow: inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .1), inset 0 0 10px 1px rgb(255 255 255 / .75), 0 1px 2px rgb(19 21 35 / .12), 0 6px 12px -6px rgb(19 21 35 / .25); }
+.tab-on-idisc { left: 8px; top: -4px; width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(180deg, #7387f6, #687ef5 55%, #6479f2);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 6px 14px -6px rgb(104 126 245 / .7); }
+.tab-on-iline { left: 18px; top: -6px; width: 20px; height: 3px; border-radius: 999px; background: var(--color-primary); }
 .tab-on-solid { background: linear-gradient(180deg, #7387f6, #687ef5 55%, #6479f2);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), inset 0 0 0 1px rgb(255 255 255 / .18), 0 8px 18px -8px rgb(104 126 245 / .7); }
 }`;
