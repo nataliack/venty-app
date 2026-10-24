@@ -4,8 +4,9 @@ import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, fmt } from "@/lib/store";
 import { BASE, WIZARD, GROUPS, type Measure } from "@/lib/data";
-import { Screen, RB, Arrows, Sheet, Pill, FlowProgress, Glass, cx, useDesk } from "@/components/ui";
+import { Screen, RB, Arrows, Sheet, Pill, FlowProgress, cx, useDesk } from "@/components/ui";
 import { BodyFigure, SeatedFigure, Ruler } from "@/components/art";
+import { BodyStage } from "@/components/BodyStage";
 import { Icon } from "@/components/icons";
 
 // ─── Flow header: exit on the left, then labelled progress running to the right edge ───
@@ -53,7 +54,7 @@ export function HowSheet({ open, onClose, m }: { open: boolean; onClose: () => v
   );
 }
 
-// Value control: − [ value ] + , then the ruler flush along the card's bottom edge. Empty until the user sets it.
+// Value control: − [ value ] + , then the ruler in a pressed track along the card's bottom. Empty until the user sets it.
 // The value row has a fixed height, so the card never changes size between empty, set and typing.
 function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; set: (v: number) => void; onSet: () => void }) {
   const units = useApp((s) => s.units);
@@ -64,9 +65,9 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
   const bump = (d: number) => { if (val === null) { setTyping(true); return; } set(Math.min(m.max, Math.max(m.min, base + d))); onSet(); };
   return (
     <div data-need={val === null ? "1" : "0"} className="dial">
-      <div className="flex items-center justify-between gap-2 px-3 pt-3">
-        <RB icon="minus" size={48} onClick={() => bump(-step)} label={`Minus ${step} ${units}`} className="rb-plain" />
-        <button onClick={() => setTyping(true)} className="flex h-[60px] min-w-0 flex-1 items-center justify-center" aria-label={val === null ? "Type a value" : `${fmt(base, units)} ${units}. Type a value`}>
+      <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
+        <RB icon="minus" size={44} onClick={() => bump(-step)} label={`Minus ${step} ${units}`} className="rb-plain" />
+        <button onClick={() => setTyping(true)} className="flex h-[56px] min-w-0 flex-1 items-center justify-center" aria-label={val === null ? "Type a value" : `${fmt(base, units)} ${units}. Type a value`}>
           {typing ? (
             <span className="flex items-baseline gap-2">
               <input inputMode="decimal" defaultValue={val === null ? "" : fmt(base, units)} placeholder="—"
@@ -75,7 +76,7 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
               onFocus={(e) => e.currentTarget.select()}
                 onBlur={(e) => { const n = parseFloat(e.target.value.replace(",", ".")); if (!isNaN(n)) { set(Math.min(m.max, Math.max(m.min, units === "in" ? n * 2.54 : n))); onSet(); } setTyping(false); }}
                 onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                className="serif h-[60px] w-[130px] bg-transparent text-center text-[44px] leading-none outline-none placeholder:text-white/20" />
+                className="serif h-[56px] w-[130px] bg-transparent text-center text-[44px] leading-none outline-none placeholder:text-white/20" />
               <span className="unit" translate="no">{units}</span>
             </span>
           ) : val === null ? (
@@ -89,9 +90,13 @@ function ValueControl({ m, val, set, onSet }: { m: Measure; val: number | null; 
             </span>
           )}
         </button>
-        <RB icon="plus" size={48} onClick={() => bump(step)} label={`Plus ${step} ${units}`} className="rb-plain" />
+        <RB icon="plus" size={44} onClick={() => bump(step)} label={`Plus ${step} ${units}`} className="rb-plain" />
       </div>
-      <Ruler value={base} min={m.min} max={m.max} onChange={(v) => { set(v); onSet(); }} className={cx("mt-2 transition-opacity", val === null && "opacity-50")} />
+      {/* the ruler in a track pressed into the dial (the same height as before: the screen still fits without scrolling);
+          its ticks stop 1px above the track's floor */}
+      <div className={cx("ruler-track mx-3 mb-2.5 mt-1.5 overflow-hidden rounded-[16px] pb-px pt-[3px] transition-opacity", val === null && "opacity-50")}>
+        <Ruler value={base} min={m.min} max={m.max} onChange={(v) => { set(v); onSet(); }} h={46} />
+      </div>
     </div>
   );
 }
@@ -145,10 +150,11 @@ export function MeasureStep({ m, header, nextLabel, onNext, onPrev }: { m: Measu
       <RB icon="help" size={40} onClick={() => setHelp(true)} label="How to measure" className="shrink-0" />
     </div>
   );
-  // the how-to steps live only in the help sheet; the screen shows the figure, full width and centred
-  // (svg fills its box and centres itself through the viewBox, so it never drifts off-centre)
+  // the how-to steps live only in the help sheet; the screen shows the 3D body on its stage, posed and framed for this
+  // measurement (the tape on it), fitted to the measurements so far and to the value being set; on the height step it
+  // turns slowly by itself (pause bottom right)
   const figure = (h: string) => (
-    <Glass className={cx("overflow-hidden", h)}>{m.group === "sitting" ? <SeatedFigure className="h-full w-full p-[7%]" /> : <BodyFigure sex={body.sex} width={120} markers={[m.marker]} className="h-full w-full py-[4%]" />}</Glass>
+    <BodyStage sex={body.sex} measures={{ ...body.measures, [m.key]: val ?? m.value }} focus={m.key} turn={m.key === "height"} className={h} />
   );
   const est = isEst && (
     <div className="mt-3 flex items-center gap-2 text-[14px] text-peri"><Icon name="sparkle" size={16} className="shrink-0" />AI estimate from your photos. Check it, change it if needed.</div>

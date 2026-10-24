@@ -359,11 +359,28 @@ export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, h = 52, c
   const clamp = useCallback((v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step)), [min, max, step]);
   const n = Math.round((max - min) / step);
   const offset = w / 2 - ((value - min) / step) * px;
-  const onDown = (e: React.PointerEvent) => { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); drag.current = { x: e.clientX, v: value }; };
-  const onMove = (e: React.PointerEvent) => { if (!drag.current) return; const dv = ((drag.current.x - e.clientX) / px) * step; const nv = clamp(drag.current.v + dv); if (nv !== value) { onChange(nv); try { navigator.vibrate?.(3); } catch {} } };
-  const onUp = () => { drag.current = null; };
+  // a drag keeps going wherever the finger goes until it lifts, even far outside the ruler: the moves are followed on
+  // the whole window (the latest value and onChange are read through refs, so a long drag never acts on old ones)
+  const live = useRef({ value, onChange });
+  useEffect(() => { live.current = { value, onChange }; });
+  const onDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    drag.current = { x: e.clientX, v: value };
+    const id = e.pointerId;
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== id || !drag.current) return;
+      const nv = clamp(drag.current.v + ((drag.current.x - ev.clientX) / px) * step);
+      if (nv !== live.current.value) { live.current.value = nv; live.current.onChange(nv); try { navigator.vibrate?.(3); } catch {} }
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      drag.current = null;
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+  };
   return (
-    <div ref={ref} className={`relative touch-none select-none overflow-hidden ${className ?? ""}`} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+    <div ref={ref} className={`relative touch-none select-none overflow-hidden ${className ?? ""}`} onPointerDown={onDown}
       style={{ height: h, maskImage: "linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)", cursor: "ew-resize" }}>
       <svg width={w} height={h} className="absolute inset-0">
         <g transform={`translate(${offset} 0)`}>
@@ -378,7 +395,7 @@ export function Ruler({ value, onChange, min, max, step = 0.5, px = 9, h = 52, c
           })}
         </g>
       </svg>
-      <span className="pointer-events-none absolute bottom-0 left-1/2 w-[2px] -translate-x-1/2 rounded-t-full bg-white" style={{ height: h * 0.62 }} />
+      <span className={`pointer-events-none absolute bottom-0 left-1/2 w-[2px] -translate-x-1/2 rounded-t-full ${light ? "bg-[#4f63e0]" : "bg-white"}`} style={{ height: h * 0.62 }} />
     </div>
   );
 }

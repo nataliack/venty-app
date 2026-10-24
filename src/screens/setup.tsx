@@ -8,6 +8,10 @@ import { BodyFigure, Ruler } from "@/components/art";
 import { Icon, type IconName } from "@/components/icons";
 import { FlowHeader, bodySteps } from "./measure";
 import { useInstall } from "@/components/Install";
+import dynamic from "next/dynamic";
+
+// three.js only runs in the browser
+const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false });
 export { MeasureBase, HowSheet } from "./measure";
 
 const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={cx("text-[15px] font-medium text-white/80", className)}>{children}</div>;
@@ -471,19 +475,23 @@ export function Ready() {
   const body = useApp((s) => s.body());
   const count = body.done.length;
   const left = 24 - count;
-  const desk = useDesk();
   useEffect(() => { set({ resumeBody: left > 0 ? activeBody : null }); }, [left, activeBody, set]);
-  // a moment, so it uses the onboarding's paper and violet
+  // a moment, so the onboarding's paper below, and above it a cinematic shot: the start screen's night card, the 3D body
+  // from the waist up, three-quarter, posed
   const art = (
-    <div className="absolute inset-0 px-6 pb-5 pt-[calc(var(--top)+8px)] lg:p-10">
-      <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.8 }} className="h-full w-full"><BodyFigure sex={body.sex} width={desk ? 160 : 110} className="h-full w-full" /></motion.div>
-    </div>
+    <>
+      <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="absolute inset-0 pt-[var(--top)]">
+        <Body3D sex={body.sex} measures={body.measures} focus="portrait" autoRotate={false} className="h-full w-full" />
+      </motion.div>
+    </>
   );
   return (
     <PaperScreen art={art} artH="h-[40%]" footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
       <div className="text-center lg:text-left">
         <div className="flex items-center justify-center gap-2 text-[15px] text-[#12131c]/70 lg:justify-start"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
-        <h1 className="h1 mt-3 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Well done! Your body is ready</h1>
+        {/* the heading and its text are one group (12px apart); the saved line above sits further off (24px) */}
+        <h1 className="h1 mt-6 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Well done! Your body is ready</h1>
         <p className="lead mx-auto mt-3 max-w-[360px] [text-wrap:pretty] lg:mx-0">Every pattern you make for {body.name || "this body"} will be drafted to these measurements.</p>
       </div>
       <div className="mt-5 border-t border-[#12131c]/10 pt-4">

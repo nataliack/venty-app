@@ -393,6 +393,12 @@ input { font: inherit; color: inherit; }
 /* the app's own dark blue (the page background, lifted a touch) with a white icon and a fine light edge */
 .iconbadge { color: rgb(193 200 230 / .55); background: rgb(0 0 0 / .26);
   box-shadow: inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06), 0 1px 0 rgb(255 255 255 / .07); }
+/* the measuring ruler's track: pressed into the dial like the inset tiles (a shadow inside along the top, a faint lip of
+   light along the bottom), so it reads as something to slide */
+.ruler-track { background: linear-gradient(180deg, #121320 0%, #171823 100%);
+  box-shadow: inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06), 0 1px 0 rgb(255 255 255 / .07); }
+/* the 3D body's stage: ink, with a cornflower light from above so faint it is felt more than seen */
+.stage-ink { background: radial-gradient(75% 50% at 50% -8%, rgb(104 126 245 / .15), rgb(104 126 245 / .055) 45%, transparent 76%), var(--color-ink); }
 .createbtn { color: #fff;
   background: radial-gradient(circle at 34% 28%, #a9b5fb 0%, #687ef5 52%, #4f63e0 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), inset 0 0 0 1px rgb(255 255 255 / .2), 0 10px 20px -8px rgb(53 66 170 / .7); }
