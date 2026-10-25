@@ -15,9 +15,18 @@ const bird = [...art.slice(start, art.indexOf("];", start)).matchAll(/"(M[^"]+)"
 const out = "public/lab/mc3/icons";
 fs.mkdirSync(out, { recursive: true });
 const keys = ICONS.map((i) => i.k).filter((k) => k !== "today");
+// icons with a long dark fade get a touch of grain at their final size (each pixel nudged by up to 1.5 levels), so an 8-bit
+// PNG shows a smooth fade instead of bands, as the landing page's favicon does
+const GRAIN = new Set(["night"]);
 for (const k of keys) {
   const svg = Buffer.from(iconSvg(k, bird));
-  for (const size of [180, 192, 512]) await sharp(svg, { density: 72 * (size / 1024) * 4 }).resize(size, size).png().toFile(path.join(out, `${k}-${size}.png`));
+  for (const size of [180, 192, 512]) {
+    const img = sharp(svg, { density: 72 * (size / 1024) * 4 }).resize(size, size);
+    if (!GRAIN.has(k)) { await img.png().toFile(path.join(out, `${k}-${size}.png`)); continue; }
+    const { data, info } = await img.removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    for (let i = 0; i < data.length; i++) data[i] = Math.max(0, Math.min(255, Math.round(data[i] + (Math.random() - 0.5) * 3)));
+    await sharp(data, { raw: info }).png().toFile(path.join(out, `${k}-${size}.png`));
+  }
 }
 console.log(`${keys.length} icons in ${out}`);
 

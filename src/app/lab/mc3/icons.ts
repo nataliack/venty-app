@@ -4,7 +4,7 @@
 // the lab is what lands on the phone. Plain TypeScript with no imports, so Node can load it as it is.
 // One rule: the bird is the same size and in the same place on every icon, today's (measured from public/icon-512.png).
 
-export type IconKey = "today" | "night" | "primary" | "snow" | "pattern" | "pressed" | "raised" | "paper" | "line" | "denim" | "glow";
+export type IconKey = "today" | "night" | "primary" | "snow" | "pattern" | "pressed" | "raised" | "denim";
 
 export const ICONS: { k: IconKey; name: string; note: string }[] = [
   { k: "today", name: "Today", note: "The icon on the home screen now: the bird in white on Crown's navy." },
@@ -14,10 +14,7 @@ export const ICONS: { k: IconKey; name: string; note: string }[] = [
   { k: "pattern", name: "Pattern", note: "Pattern paper with its periwinkle grid, the bird in steel, lit from the top." },
   { k: "pressed", name: "Pressed", note: "The bird pressed into snow, like the app's inset tiles: a shade inside its top edge, a lip of light at its foot." },
   { k: "raised", name: "Raised", note: "The bird raised off the night like the app's knobs: lit along its top, a soft shadow under it." },
-  { k: "paper", name: "Paper", note: "The warm paper of the app's moments, the bird in ink." },
-  { k: "line", name: "Line", note: "The bird drawn as a line in periwinkle on the ink, like a pattern piece's outline." },
   { k: "denim", name: "Denim", note: "The app's denim, lit from the top, the bird in snow." },
-  { k: "glow", name: "Glow", note: "The ink, the bird in a periwinkle to cornflower gradient with a soft glow behind it." },
 ];
 
 // the bird's box inside LOGO[4]'s own units (measured: x 207 to 1543, y 0 to 797)
@@ -38,6 +35,12 @@ const light = (id: string, cx: number, cy: number, r: number, color: string, a: 
   `<stop offset=".5" stop-color="${color}" stop-opacity="${a * 0.45}"/><stop offset=".75" stop-color="${color}" stop-opacity="${a * 0.14}"/>` +
   `<stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`;
 
+// a light that fades on a bell curve (no edge anywhere), as wide as r and sy times as tall
+const bell = (id: string, cx: number, cy: number, r: number, sy: number, color: string, a: number) =>
+  `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 ${cy}) scale(1 ${sy}) translate(0 ${-cy})">` +
+  Array.from({ length: 11 }, (_, i) => `<stop offset="${i / 10}" stop-color="${color}" stop-opacity="${+(a * Math.exp(-(((i / 10) * 2.2) ** 2))).toFixed(4)}"/>`).join("") +
+  `</radialGradient>`;
+
 // lit from the top, as the app's buttons are: a white wash fading down the face
 const wash = (a: number, to = 0.6) =>
   `<linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${a}"/><stop offset="${to}" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
@@ -52,9 +55,10 @@ export function iconSvg(k: Exclude<IconKey, "today">, bird: string): string {
   const mark = (fill: string, extra = "") => `<path d="${bird}" fill="${fill}" transform="${T}"${extra}/>`;
   switch (k) {
     case "night":
-      // the night with its glow low down, much softer at its edges than before
+      // the night with a glow rising from below, very soft: the lights wider than the tile (so no edge of them shows), each
+      // fading on a bell curve, low. The PNGs carry a touch of grain (GRAIN in tools/lab-mc3-icons.mjs) so the fade never bands
       return wrap(
-        `<defs>${light("n1", 512, 1080, 780, "#687ef5", 0.36, 0.8)}${light("n2", 512, 1140, 560, "#4f63e0", 0.3, 0.8)}${light("n3", 512, 1160, 380, "#8c9cf8", 0.14, 0.8)}</defs>` +
+        `<defs>${bell("n1", 512, 960, 950, 0.7, "#687ef5", 0.25)}${bell("n2", 512, 1020, 650, 0.62, "#4f63e0", 0.17)}${bell("n3", 512, 1060, 440, 0.55, "#8c9cf8", 0.07)}</defs>` +
         rect("#0b0c15") + rect("url(#n1)") + rect("url(#n2)") + rect("url(#n3)") + mark("#f0f4fe"),
       );
     case "primary":
@@ -97,23 +101,10 @@ export function iconSvg(k: Exclude<IconKey, "today">, bird: string): string {
         `<linearGradient id="rf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0f4fe"/><stop offset="1" stop-color="#c1c8d9"/></linearGradient>${light("rg", 512, 1060, 700, "#687ef5", 0.22, 0.8)}</defs>` +
         rect("#0b0c15") + rect("url(#rg)") + mark("#000", ` filter="url(#ds)"`) + mark("url(#rf)") + mark("#fff", ` filter="url(#rt)"`) + mark("#fff", ` filter="url(#rb)"`),
       );
-    case "paper":
-      return wrap(`<defs>${wash(0.5)}</defs>${rect("#f3f1ec")}${rect("url(#w)")}${mark("#12131c")}`);
-    case "line":
-      // the outline drawn inside the bird's edge (clipped to it), so the bird stays exactly the size of the others
-      return wrap(
-        `<defs>${wash(0.07)}<clipPath id="lc"><path d="${bird}"/></clipPath></defs>` +
-        rect("#131523") + rect("url(#w)") + `<path d="${bird}" transform="${T}" fill="none" stroke="#8c9cf8" stroke-width="${(2 * 22) / S}" stroke-linejoin="round" clip-path="url(#lc)"/>`,
-      );
     case "denim":
       return wrap(
         `<defs>${wash(0.16)}<linearGradient id="dn" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#131523" stop-opacity="0"/><stop offset="1" stop-color="#131523" stop-opacity=".22"/></linearGradient></defs>` +
         rect("#4d5e85") + rect("url(#w)") + rect("url(#dn)") + mark("#f0f4fe"),
-      );
-    case "glow":
-      return wrap(
-        `<defs>${wash(0.06)}${light("gl", CX, CY + 40, 420, "#687ef5", 0.45, 0.75)}<linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8c9cf8"/><stop offset="1" stop-color="#687ef5"/></linearGradient></defs>` +
-        rect("#131523") + rect("url(#w)") + rect("url(#gl)") + mark("url(#gb)"),
       );
   }
 }

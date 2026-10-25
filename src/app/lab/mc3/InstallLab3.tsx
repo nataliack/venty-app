@@ -72,7 +72,7 @@ const OSES: { k: OS; name: string }[] = [{ k: "ios", name: "iPhone" }, { k: "and
 const NOTES = [
   "On an iPhone, Done is gone: a page cannot open Safari's Add to Home Screen, so Done would only do what Continue in my browser does. On Android, Add to home screen stays the primary, as Chrome installs for real.",
   "To check on your iPhone: Test the share sheet (above the phones) opens the share sheet a page is allowed to open. If Add to Home Screen is not in it, a button for it cannot exist.",
-  "The icons: one rule, the bird the same size and in the same place on every one (today's, matched to the pixel). Today, Night (its glow softer), Primary (the landing page's favicon gradient, Haze), Snow, Pattern (the grid, the bird in steel), and six new: Pressed, Raised, Paper, Line, Denim, Glow.",
+  "The icons: one rule, the bird the same size and in the same place on every one (today's, matched to the pixel). Today, Night (its glow a soft haze from below, wider than the icon so no edge shows, fading on a bell curve, with a touch of grain so it never bands), Primary (the landing page's favicon gradient, Haze), Snow, Pattern (the grid, the bird in steel), Pressed, Raised and Denim.",
 ]
 
 export function InstallLab3() {
