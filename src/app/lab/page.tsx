@@ -11,6 +11,7 @@ import { AboutLab } from "./AboutLab";
 import { MatLab } from "./MatLab";
 import { ReadyLab } from "./ReadyLab";
 import { NotifyLab } from "./NotifyLab";
+import { SexCapture, SexLab } from "./SexLab";
 
 // ─── a phone ───
 function Phone({ label, children }: { label: string; children: ReactNode }) {
@@ -167,6 +168,9 @@ export default function Lab() {
     <div className="fixed inset-0 overflow-y-auto bg-[#05060b] text-white">
       <div className="mx-auto max-w-[1280px] px-6 py-10">
         <p className="text-[14px] text-white/50">Venty lab</p>
+        <SexCapture />
+        <div className="mt-6"><SexLab /></div>
+        <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><NotifyLab /></div>
         <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><ReadyLab /></div>
