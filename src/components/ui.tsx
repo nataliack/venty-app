@@ -293,7 +293,7 @@ function sheetTopPath(w: number, h: number) {
 }
 // the sheet's surface on a phone: its outline with the cut, its rim, and the handle. tone: the sheet's colour (dark: the
 // card colour, the app's sheets today; snow: a light sheet, its handle in the same snow)
-function SheetSurface({ w, h, on, tone }: { w: number; h: number; on: boolean; tone: "dark" | "snow" }) {
+export function SheetSurface({ w, h, on, tone }: { w: number; h: number; on: boolean; tone: "dark" | "snow" }) {
   const id = useId().replace(/:/g, "");
   const d = sheetTopPath(w, h);
   const snow = tone === "snow";

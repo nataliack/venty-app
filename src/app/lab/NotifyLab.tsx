@@ -1,42 +1,68 @@
 "use client";
-// Lab · notifications (25 Oct 2026): what opens behind home's bell. Four ways: A, today's bottom sheet refined (unread
-// dots, Today and Earlier, a chevron on the rows that lead somewhere, Mark all as read, an empty state); B, a screen of
-// its own; C, a panel that grows out of the bell; D, on a computer, a panel that drops from the bell. Each phone works:
-// tap the bell to open and close, tap a row to read it. The tabs switch what there is to show.
-import { useState, type ReactNode } from "react";
+// Lab · notifications (25 Oct 2026), round 2: the bottom sheet (chosen), with the app's own sheet (its surface and the
+// handle in a cut in its top edge: SheetSurface) and the feed refined (unread dots, Today and Earlier, a chevron on the
+// rows that lead somewhere, Mark all as read, straight hairlines, an empty state). A short notification goes straight to
+// its place (Finish your measurements: the measuring steps). A long one, with paragraphs, pictures and links, opens a
+// screen of its own that slides in over the sheet; back returns to the sheet.
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon, type IconName } from "@/components/icons";
-import { cx } from "@/components/ui";
+import { cx, SheetSurface } from "@/components/ui";
 
-type Item = { id: string; icon: IconName; t: string; d: string; when: string; group: "Today" | "Earlier"; leads: boolean; unread: boolean };
+// a long notification's content: a picture at the top, paragraphs (a link may sit in one), pictures with captions,
+// and one thing to do
+type Rich = { kicker: string; image: string; body: ReactNode[]; gallery?: { src: string; caption: string }[]; cta: string };
+type Item = { id: string; icon: IconName; t: string; d: string; when: string; group: "Today" | "Earlier"; leads: boolean; unread: boolean; rich?: Rich; goes?: string };
+const A = ({ children }: { children: ReactNode }) => <span className="font-medium text-[#a9b5fb] underline decoration-[#a9b5fb]/40 underline-offset-[3px]">{children}</span>;
 const BASE: Item[] = [
-  { id: "measure", icon: "ruler", t: "Finish Me’s measurements", d: "18 of 24 saved. Pick up where you left off.", when: "Today", group: "Today", leads: true, unread: true },
-  { id: "print", icon: "printer", t: "Midi A-line skirt is ready to print", d: "Drafted to Me. Lay it out on your sheets when you’re ready.", when: "Today", group: "Today", leads: true, unread: true },
-  { id: "new", icon: "dress", t: "New patterns to make", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", group: "Earlier", leads: true, unread: false },
-  { id: "sketch", icon: "pencil", t: "New: sketch on your photos", d: "Add a photo and draw your changes on top of it.", when: "This week", group: "Earlier", leads: false, unread: false },
+  { id: "measure", icon: "ruler", t: "Finish Me’s measurements", d: "18 of 24 saved. Pick up where you left off.", when: "Today", group: "Today", leads: true, unread: true, goes: "the measuring steps" },
+  { id: "print", icon: "printer", t: "Midi A-line skirt is ready to print", d: "Drafted to Me. Lay it out on your sheets when you’re ready.", when: "Today", group: "Today", leads: true, unread: true, goes: "the pattern" },
+  {
+    id: "new", icon: "dress", t: "New patterns to make", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", group: "Earlier", leads: true, unread: true,
+    rich: {
+      kicker: "New in Patterns to make", image: "/auth/look-street-green.webp",
+      body: [
+        <>Two new patterns are in the library, both drafted to your own measurements the moment you choose them.</>,
+        <>The <b className="font-medium text-white">wrap dress</b> has a crossover bodice, flutter sleeves and a tie at the waist. It adjusts as you wear it, so it is a kind first fit.</>,
+        <>The <b className="font-medium text-white">wide-leg trousers</b> sit high on the waist with front pleats. Venty grades them to your waist, hip and rise. See <A>how the rise is measured</A> before you start.</>,
+      ],
+      gallery: [{ src: "/auth/look-limo-mauve.webp", caption: "Wrap dress · Intermediate" }, { src: "/auth/look-street-burgundy.webp", caption: "Wide-leg trouser · Intermediate" }],
+      cta: "See the new patterns",
+    },
+  },
+  {
+    id: "sketch", icon: "pencil", t: "New: sketch on your photos", d: "Add a photo and draw your changes on top of it.", when: "This week", group: "Earlier", leads: true, unread: false,
+    rich: {
+      kicker: "What’s new", image: "/auth/detail-bows.webp",
+      body: [
+        <>You can now draw straight onto a photo of a garment you like. Circle a neckline, sketch a longer hem, add bows. Venty reads your lines with the picture and drafts the pattern with your changes.</>,
+        <>Tap the pencil in the studio, choose a colour, and draw. Use two fingers to move the photo. Read <A>tips for clear sketches</A> to get the best result.</>,
+      ],
+      gallery: [{ src: "/auth/detail-hems.webp", caption: "A longer hem, drawn on" }, { src: "/auth/detail-corset.webp", caption: "A new neckline" }],
+      cta: "Try it in the studio",
+    },
+  },
 ];
 const MORE: Item[] = [
-  { id: "m1", icon: "printer", t: "Bias midi skirt was printed", d: "12 sheets. Tape them together along the marks.", when: "Mon", group: "Earlier", leads: true, unread: false },
-  { id: "m2", icon: "body", t: "Ana’s body is ready", d: "All 24 measurements saved.", when: "Sun", group: "Earlier", leads: true, unread: false },
-  { id: "m3", icon: "dress", t: "New patterns to make", d: "A cami and a boxy tee were added to the library.", when: "Sat", group: "Earlier", leads: true, unread: false },
-  { id: "m4", icon: "ruler", t: "Finish Ana’s measurements", d: "20 of 24 saved.", when: "Fri", group: "Earlier", leads: true, unread: false },
-  { id: "m5", icon: "pencil", t: "New: change the design in words", d: "Tell Venty what to change and it updates the pattern.", when: "Last week", group: "Earlier", leads: false, unread: false },
+  { id: "m1", icon: "printer", t: "Bias midi skirt was printed", d: "12 sheets. Tape them together along the marks.", when: "Mon", group: "Earlier", leads: true, unread: false, goes: "the pattern" },
+  { id: "m2", icon: "body", t: "Ana’s body is ready", d: "All 24 measurements saved.", when: "Sun", group: "Earlier", leads: true, unread: false, goes: "the body" },
+  { id: "m3", icon: "ruler", t: "Finish Ana’s measurements", d: "20 of 24 saved.", when: "Fri", group: "Earlier", leads: true, unread: false, goes: "the measuring steps" },
 ];
 type Kind = "some" | "read" | "none" | "many";
 const items = (k: Kind): Item[] => k === "none" ? [] : k === "read" ? BASE.map((x) => ({ ...x, unread: false })) : k === "many" ? [...BASE, ...MORE] : BASE;
 
-// one list's state: which are read
 function useFeed(kind: Kind) {
   const [read, setRead] = useState<Record<string, boolean>>({});
   const list = items(kind).map((x) => ({ ...x, unread: x.unread && !read[x.id] }));
   return { list, unread: list.filter((x) => x.unread).length, markAll: () => setRead(Object.fromEntries(list.map((x) => [x.id, true]))), markOne: (id: string) => setRead((r) => ({ ...r, [id]: true })) };
 }
 
-// a row: the icon in its pressed tile (a cornflower dot on it while unread), the title (white while unread, softer once
-// read), when, the line under it; a chevron on the rows that lead somewhere
-function Row({ x, onTap, compact }: { x: Item; onTap: () => void; compact?: boolean }) {
-  const inner = (
-    <>
+// a row: the icon in its pressed tile (a cornflower dot on it while unread), the title (white while unread), when, the
+// line under it, a chevron on the rows that lead somewhere
+function Row({ x, onTap }: { x: Item; onTap: () => void }) {
+  return (
+    <button onClick={onTap} className="group relative flex w-full items-start gap-3 px-2 py-3.5 text-left">
+      <span aria-hidden className="absolute inset-x-0 inset-y-1 rounded-[14px] transition-colors group-hover:bg-white/[.04]" />
       <span className="iconbadge relative grid h-9 w-9 shrink-0 place-items-center rounded-[11px]">
         <Icon name={x.icon} size={17} strokeWidth={1.9} />
         {x.unread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#687ef5] ring-2 ring-[#1b1c26]" />}
@@ -46,17 +72,14 @@ function Row({ x, onTap, compact }: { x: Item; onTap: () => void; compact?: bool
           <span className={cx("text-[15px] leading-snug", x.unread ? "font-medium text-white" : "text-white/80")}>{x.t}</span>
           <span className="shrink-0 text-[12px] text-white/40">{x.when}</span>
         </span>
-        {!compact && <span className="mt-0.5 block text-[13.5px] leading-snug text-white/55">{x.d}</span>}
+        <span className="mt-0.5 block text-[13.5px] leading-snug text-white/55">{x.d}</span>
       </span>
       {x.leads && <Icon name="chevR" size={16} className="relative mt-0.5 shrink-0 text-white/30" />}
-    </>
+    </button>
   );
-  const cls = cx("group relative flex w-full items-start gap-3 px-2 text-left", compact ? "py-2.5" : "py-3.5");
-  return <button onClick={onTap} className={cls}><span aria-hidden className="absolute inset-x-0 inset-y-1 rounded-[14px] transition-colors group-hover:bg-white/[.04]" />{inner}</button>;
 }
 
-// the list: Today and Earlier, straight hairlines between rows (not between groups), or the empty state
-function Feed({ list, markOne, compact }: { list: Item[]; markOne: (id: string) => void; compact?: boolean }) {
+function Feed({ list, onTap }: { list: Item[]; onTap: (x: Item) => void }) {
   if (!list.length) return (
     <div className="flex flex-col items-center px-6 py-10 text-center">
       <span className="iconbadge grid h-12 w-12 place-items-center rounded-[14px]"><Icon name="bell" size={20} /></span>
@@ -75,22 +98,12 @@ function Feed({ list, markOne, compact }: { list: Item[]; markOne: (id: string) 
             {rows.map((x, i) => (
               <div key={x.id}>
                 {i > 0 && <span aria-hidden className="mx-2 block h-px bg-white/[.07]" />}
-                <Row x={x} onTap={() => markOne(x.id)} compact={compact} />
+                <Row x={x} onTap={() => onTap(x)} />
               </div>
             ))}
           </section>
         );
       })}
-    </div>
-  );
-}
-
-function Header({ unread, markAll, left, title = "Notifications" }: { unread: number; markAll: () => void; left?: ReactNode; title?: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      {left}
-      <h3 className="flex-1 text-[20px] font-normal tracking-[-.02em] text-white">{title}{unread > 0 && <span className="ml-2 align-middle text-[13px] text-white/45">{unread} new</span>}</h3>
-      {unread > 0 && <button onClick={markAll} className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[13px] font-medium text-[#a9b5fb] hover:bg-white/[.05]"><Icon name="check" size={14} strokeWidth={2.4} />Mark all as read</button>}
     </div>
   );
 }
@@ -119,6 +132,59 @@ function HomeTop({ unread, onBell }: { unread: number; onBell: () => void }) {
   );
 }
 
+// the app's sheet, drawn inside the phone: its own surface and the handle in a cut in its top edge (SheetSurface), the
+// handle turning periwinkle while it is held; drag it down (or tap outside) to close
+function PhoneSheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [[w, h], setSize] = useState([0, 0]);
+  const [press, setPress] = useState(false);
+  const [drag, setDrag] = useState(false);
+  useEffect(() => { const el = ref.current; if (!el) return; const fit = () => setSize([el.offsetWidth, el.offsetHeight]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
+  return (
+    <>
+      <motion.div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+      {/* the app's sheet surface hides itself on a wide screen (a computer gets a dialog there); the lab is seen on one,
+          so inside these phones it stays */}
+      <style>{`.lab-phone-sheet > svg { display: block !important; }`}</style>
+      <motion.div ref={ref} className="lab-phone-sheet absolute inset-x-0 bottom-0 z-50 isolate flex max-h-[80%] flex-col px-6 pb-8 pt-[34px] text-white"
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}
+        drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.5 }} onDragStart={() => setDrag(true)} onDragEnd={(_, i) => { setDrag(false); if (i.offset.y > 90) onClose(); }}>
+        {w > 0 && <SheetSurface w={w} h={h} on={press || drag} tone="dark" />}
+        <div className="absolute inset-x-0 top-0 h-11" aria-hidden onPointerDown={() => setPress(true)} onPointerUp={() => setPress(false)} onPointerCancel={() => setPress(false)} onPointerLeave={() => setPress(false)} />
+        {children}
+      </motion.div>
+    </>
+  );
+}
+
+// a long notification, on a screen of its own: back to the sheet, the picture, what it is and when, the title, the
+// paragraphs (links in them), pictures with captions, and one thing to do at the foot
+function Detail({ x, onBack }: { x: Item; onBack: () => void }) {
+  const r = x.rich!;
+  return (
+    <motion.div className="absolute inset-0 z-[60] flex flex-col bg-bg text-white" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
+      <div className="min-h-0 flex-1 overflow-y-auto noscroll">
+        <div className="relative">
+          <img src={r.image} alt="" className="h-[300px] w-full object-cover" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgb(11 12 21 / .45), transparent 30%, transparent 60%, var(--color-bg))" }} />
+          <button onClick={onBack} aria-label="Back to notifications" className="rb rb-sm absolute left-5 top-12"><Icon name="back" size={18} /></button>
+        </div>
+        <div className="relative -mt-6 px-6 pb-8">
+          <div className="text-[13px] text-white/50">{r.kicker} · {x.when}</div>
+          <h1 className="mt-2 text-[30px] font-normal leading-[1.08] tracking-[-.03em]">{x.t}</h1>
+          <div className="mt-4 space-y-3.5 text-[16px] leading-relaxed text-white/75">{r.body.map((p, i) => <p key={i}>{p}</p>)}</div>
+          {r.gallery && (
+            <div className="mt-6 grid grid-cols-2 gap-3">{r.gallery.map((g) => (
+              <figure key={g.src}><img src={g.src} alt="" className="aspect-[4/5] w-full rounded-[18px] object-cover" /><figcaption className="mt-2 text-[13px] text-white/55">{g.caption}</figcaption></figure>
+            ))}</div>
+          )}
+        </div>
+      </div>
+      <div className="shrink-0 px-6 pb-8 pt-3"><span className="pill pill-primary w-full text-[16px] text-white">{r.cta}</span></div>
+    </motion.div>
+  );
+}
+
 function Phone({ label, children }: { label: string; children: ReactNode }) {
   return (
     <figure className="flex flex-col items-center gap-3">
@@ -128,118 +194,50 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// A · the sheet, refined
-function A({ kind }: { kind: Kind }) {
+// one phone, working: the bell opens the sheet; a short row says where it would go; a long one opens its screen
+function Notifications({ kind, label, startOn }: { kind: Kind; label: string; startOn?: string }) {
   const f = useFeed(kind);
   const [open, setOpen] = useState(true);
+  const [detail, setDetail] = useState<Item | null>(() => (startOn ? items(kind).find((x) => x.id === startOn) ?? null : null));
+  const [toast, setToast] = useState<string | null>(null);
+  const tap = (x: Item) => {
+    f.markOne(x.id);
+    if (x.rich) { setDetail(x); return; }
+    setToast(`Opens ${x.goes}`); setTimeout(() => setToast(null), 1400);
+  };
   return (
-    <Phone label="A · Sheet, refined">
+    <Phone label={label}>
       <HomeTop unread={f.unread} onBell={() => setOpen(true)} />
       <AnimatePresence>{open && (
-        <>
-          <motion.div className="absolute inset-0 z-40 bg-black/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)} />
-          <motion.div className="absolute inset-x-0 bottom-0 z-50 flex max-h-[78%] flex-col rounded-t-[32px] border-t border-white/[.08] bg-[#1b1c26] px-6 pb-8 pt-3"
-            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}>
-            <span className="mx-auto mb-4 block h-[5px] w-12 rounded-full bg-white/20" />
-            <Header unread={f.unread} markAll={f.markAll} />
-            <div className="-mr-2 mt-2 min-h-0 flex-1 overflow-y-auto pr-2 noscroll"><Feed list={f.list} markOne={f.markOne} /></div>
-          </motion.div>
-        </>
+        <PhoneSheet key="sheet" onClose={() => setOpen(false)}>
+          <div className="flex items-center gap-3">
+            <h3 className="flex-1 text-[20px] font-normal tracking-[-.02em] text-white">Notifications{f.unread > 0 && <span className="ml-2 align-middle text-[13px] text-white/45">{f.unread} new</span>}</h3>
+            {f.unread > 0 && <button onClick={f.markAll} className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[13px] font-medium text-[#a9b5fb] hover:bg-white/[.05]"><Icon name="check" size={14} strokeWidth={2.4} />Mark all as read</button>}
+          </div>
+          <div className="-mr-2 mt-2 min-h-0 flex-1 overflow-y-auto pr-2 noscroll"><Feed list={f.list} onTap={tap} /></div>
+        </PhoneSheet>
       )}</AnimatePresence>
+      <AnimatePresence>{detail && <Detail key="detail" x={detail} onBack={() => setDetail(null)} />}</AnimatePresence>
+      <AnimatePresence>{toast && <motion.div className="absolute inset-x-6 top-14 z-[70] rounded-full bg-white px-4 py-3 text-center text-[14px] font-medium text-bg" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>{toast}</motion.div>}</AnimatePresence>
     </Phone>
-  );
-}
-
-// B · a screen of its own, sliding in from the right like any other screen
-function B({ kind }: { kind: Kind }) {
-  const f = useFeed(kind);
-  const [open, setOpen] = useState(true);
-  return (
-    <Phone label="B · A screen of its own">
-      <HomeTop unread={f.unread} onBell={() => setOpen(true)} />
-      <AnimatePresence>{open && (
-        <motion.div className="absolute inset-0 z-50 flex flex-col bg-bg px-5 pt-12" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
-          <Header unread={f.unread} markAll={f.markAll} left={<button onClick={() => setOpen(false)} aria-label="Back" className="rb rb-sm"><Icon name="back" size={18} /></button>} />
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-8 noscroll"><Feed list={f.list} markOne={f.markOne} /></div>
-        </motion.div>
-      )}</AnimatePresence>
-    </Phone>
-  );
-}
-
-// C · a panel that grows out of the bell: anchored under it, opening from its corner, the page dimmed a little
-function C({ kind }: { kind: Kind }) {
-  const f = useFeed(kind);
-  const [open, setOpen] = useState(true);
-  return (
-    <Phone label="C · From the bell">
-      <HomeTop unread={f.unread} onBell={() => setOpen((o) => !o)} />
-      <AnimatePresence>{open && (
-        <>
-          <motion.div className="absolute inset-0 z-40 bg-black/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)} />
-          <motion.div className="absolute right-4 top-[104px] z-50 flex max-h-[600px] w-[352px] flex-col rounded-[26px] border border-white/[.08] bg-[#1b1c26] px-5 pb-4 pt-4 shadow-[0_30px_80px_-20px_rgb(0_0_0/.8)]"
-            style={{ transformOrigin: "calc(100% - 22px) -10px" }}
-            initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.2 }} transition={{ type: "spring", bounce: 0.18, duration: 0.45 }}>
-            {/* the little point to the bell */}
-            <span aria-hidden className="absolute -top-[7px] right-[22px] h-3.5 w-3.5 rotate-45 rounded-[3px] border-l border-t border-white/[.08] bg-[#1b1c26]" />
-            <Header unread={f.unread} markAll={f.markAll} />
-            <div className="mt-1 min-h-0 flex-1 overflow-y-auto noscroll"><Feed list={f.list.slice(0, 5)} markOne={f.markOne} compact /></div>
-            {f.list.length > 5 && <button className="mt-2 h-10 rounded-full bg-white/[.06] text-[14px] font-medium text-white/85">See all {f.list.length}</button>}
-          </motion.div>
-        </>
-      )}</AnimatePresence>
-    </Phone>
-  );
-}
-
-// D · on a computer: the panel drops from the bell, no dimming, closes on a click outside
-function D({ kind }: { kind: Kind }) {
-  const f = useFeed(kind);
-  const [open, setOpen] = useState(true);
-  return (
-    <figure className="flex flex-col items-center gap-3">
-      <div className="relative isolate h-[640px] w-[1000px] max-w-full shrink-0 overflow-hidden rounded-[22px] bg-bg shadow-[0_0_0_1px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]" onClick={() => setOpen(false)}>
-        <div className="absolute inset-y-0 left-0 w-[220px] border-r border-white/[.06] p-5 text-[14px] text-white/60"><div className="text-[20px] text-white">Venty</div>{["Home", "Make a pattern", "Patterns to make", "Body library", "Pattern library"].map((t) => <div key={t} className="mt-4">{t}</div>)}</div>
-        <div className="absolute inset-y-0 left-[220px] right-0">
-          <section className="light-hero relative m-4 h-[300px] overflow-hidden rounded-[28px] px-8 pt-6">
-            <div className="flex items-center justify-end">
-              <button onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} aria-label="Notifications" className="bell-btn tap relative grid h-10 w-10 place-items-center rounded-full">
-                <Icon name="bell" size={19} strokeWidth={1.8} />{f.unread > 0 && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-white" />}
-              </button>
-            </div>
-            <h1 className="mt-6 text-[44px] font-normal leading-[1.05] tracking-[-.03em] text-[#12131c]">What are we making today?</h1>
-          </section>
-        </div>
-        <AnimatePresence>{open && (
-          <motion.div onClick={(e) => e.stopPropagation()} className="absolute right-8 top-[76px] z-50 flex max-h-[520px] w-[400px] flex-col rounded-[24px] border border-white/[.08] bg-[#1b1c26] px-5 pb-4 pt-4 shadow-[0_30px_80px_-20px_rgb(0_0_0/.8)]"
-            style={{ transformOrigin: "calc(100% - 22px) -10px" }}
-            initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.97 }} transition={{ duration: 0.2, ease: "easeOut" }}>
-            <Header unread={f.unread} markAll={f.markAll} />
-            <div className="mt-1 min-h-0 flex-1 overflow-y-auto noscroll"><Feed list={f.list} markOne={f.markOne} /></div>
-          </motion.div>
-        )}</AnimatePresence>
-      </div>
-      <figcaption className="text-[14px] text-white/55">D · On a computer, from the bell</figcaption>
-    </figure>
   );
 }
 
 export function NotifyLab() {
   const [kind, setKind] = useState<Kind>("some");
-  const KINDS: [Kind, string][] = [["some", "Two new"], ["read", "All read"], ["none", "Nothing yet"], ["many", "A long list"]];
+  const KINDS: [Kind, string][] = [["some", "Three new"], ["read", "All read"], ["none", "Nothing yet"], ["many", "A long list"]];
   return (
     <section>
       <h2 className="h1 !text-[34px]">Notifications</h2>
-      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">What opens behind home&apos;s bell. Every version has the same feed, refined: a cornflower dot on what&apos;s new, Today and Earlier, a chevron on the rows that lead somewhere, Mark all as read, straight hairlines between rows, and an empty state. A keeps today&apos;s bottom sheet; B gives notifications a screen of their own; C grows a panel out of the bell; D is a computer, the panel dropping from the bell. Tap the bell to open and close, tap a row to read it.</p>
+      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">The bottom sheet (chosen), with the app&apos;s own sheet and its handle in the cut in the top edge (hold or drag it: it turns periwinkle; drag down to close). A short notification goes straight to its place; a long one, with paragraphs, pictures and links, opens a screen of its own over the sheet, and back returns to the sheet. Left: the sheet, working (tap New patterns to make, or New: sketch on your photos). Right: a long one already open.</p>
       <div className="sticky top-0 z-30 -mx-6 mt-5 border-b border-white/10 bg-[#05060b]/90 px-6 py-3 backdrop-blur">
         <div role="tablist" aria-label="What there is to show" className="flex w-fit rounded-full bg-white/[.06] p-1">
           {KINDS.map(([k, t]) => <button key={k} role="tab" aria-selected={kind === k} onClick={() => setKind(k)} className={cx("h-10 rounded-full px-5 text-[15px] font-medium transition-colors", kind === k ? "bg-white text-bg" : "text-white/70 hover:text-white")}>{t}</button>)}
         </div>
       </div>
-      {/* a new key per kind, so each phone starts open with that kind's list */}
       <div key={kind} className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
-        <A kind={kind} /><B kind={kind} /><C kind={kind} />
-        <D kind={kind} />
+        <Notifications kind={kind} label="The sheet" />
+        {kind !== "none" && <Notifications kind={kind} label="A long notification, opened" startOn="new" />}
       </div>
     </section>
   );
