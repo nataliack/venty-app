@@ -35,11 +35,40 @@ const light = (id: string, cx: number, cy: number, r: number, color: string, a: 
   `<stop offset=".5" stop-color="${color}" stop-opacity="${a * 0.45}"/><stop offset=".75" stop-color="${color}" stop-opacity="${a * 0.14}"/>` +
   `<stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`;
 
-// a light that fades on a bell curve (no edge anywhere), as wide as r and sy times as tall
-const bell = (id: string, cx: number, cy: number, r: number, sy: number, color: string, a: number) =>
+// a light that fades on a bell curve (no edge anywhere), as wide as r and sy times as tall; `soft`: how fast it fades
+// (lower is softer and reaches further)
+const bell = (id: string, cx: number, cy: number, r: number, sy: number, color: string, a: number, soft = 2.2) =>
   `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 ${cy}) scale(1 ${sy}) translate(0 ${-cy})">` +
-  Array.from({ length: 11 }, (_, i) => `<stop offset="${i / 10}" stop-color="${color}" stop-opacity="${+(a * Math.exp(-(((i / 10) * 2.2) ** 2))).toFixed(4)}"/>`).join("") +
+  Array.from({ length: 11 }, (_, i) => `<stop offset="${i / 10}" stop-color="${color}" stop-opacity="${+(a * Math.exp(-(((i / 10) * soft) ** 2))).toFixed(4)}"/>`).join("") +
   `</radialGradient>`;
+
+// ─── Night, from its settings, so it can be tuned in the lab (NightTuner) and baked from the very same numbers ───
+// the background runs from `top` to `bottom`; each light has a colour, a centre (x, y in 1024 units: y past 1024 is below
+// the icon), a width, a height (against its width), a strength and a softness; `grain` nudges each pixel of the PNGs by up
+// to that many levels so the fade never bands
+export type NightLight = { color: string; x: number; y: number; w: number; h: number; a: number; soft: number };
+export type Night = { top: string; bottom: string; lights: NightLight[]; grain: number };
+export const NIGHT: Night = {
+  top: "#0b0c15", bottom: "#0b0c15", grain: 1.5,
+  lights: [
+    { color: "#687ef5", x: 512, y: 1500, w: 1200, h: 0.75, a: 0.3, soft: 2.2 },
+    { color: "#4f63e0", x: 512, y: 1400, w: 800, h: 0.75, a: 0, soft: 2.2 },
+  ],
+};
+// `preview`: draws the grain too (a fine noise), for the lab; the PNGs get real grain from tools/lab-mc3-icons.mjs
+export function nightSvg(n: Night, bird: string, preview = false): string {
+  const lights = n.lights.filter((l) => l.a > 0);
+  const grain = preview && n.grain > 0
+    ? `<filter id="gr" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>`
+    : "";
+  return wrap(
+    `<defs><linearGradient id="nb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${n.top}"/><stop offset="1" stop-color="${n.bottom}"/></linearGradient>` +
+    lights.map((l, i) => bell(`n${i}`, l.x, l.y, l.w, l.h, l.color, l.a, l.soft)).join("") + grain + `</defs>` +
+    rect("url(#nb)") + lights.map((_, i) => rect(`url(#n${i})`)).join("") +
+    (grain ? `<rect width="1024" height="1024" filter="url(#gr)" opacity="${Math.min(0.12, n.grain * 0.025)}" style="mix-blend-mode:overlay"/>` : "") +
+    `<path d="${bird}" fill="#f0f4fe" transform="${T}"/>`,
+  );
+}
 
 // lit from the top, as the app's buttons are: a white wash fading down the face
 const wash = (a: number, to = 0.6) =>
@@ -55,13 +84,8 @@ export function iconSvg(k: Exclude<IconKey, "today">, bird: string): string {
   const mark = (fill: string, extra = "") => `<path d="${bird}" fill="${fill}" transform="${T}"${extra}/>`;
   switch (k) {
     case "night":
-      // the night, lifted very faintly from below: one light whose centre sits far under the icon (about 480 units below its
-      // bottom edge), so only the outer part of its fade reaches in, rising very gradually, never a spot or an edge. The PNGs
-      // carry a touch of grain (GRAIN in tools/lab-mc3-icons.mjs) so the fade never bands
-      return wrap(
-        `<defs>${bell("n1", 512, 1500, 1200, 0.75, "#687ef5", 0.3)}</defs>` +
-        rect("#0b0c15") + rect("url(#n1)") + mark("#f0f4fe"),
-      );
+      // the night, from its settings (NIGHT, tuned in the lab)
+      return nightSvg(NIGHT, bird);
     case "primary":
       // Haze, the landing page's favicon (its purple sky, rendered with its lights spread wide): matched to the favicon's
       // colours, sampled at nine points. A diagonal from light periwinkle to cornflower, the pale light in the top left, and a
