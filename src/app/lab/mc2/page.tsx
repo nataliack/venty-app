@@ -4,6 +4,7 @@
 import { useState, type ReactNode } from "react";
 import { cx } from "@/components/ui";
 import { StartLab } from "./StartLab";
+import { BodyLab } from "./BodyLab";
 import { Today, Lookbook, Runway, Editorial, FittingRoom, BRIEFS, type Props, type LookOpts } from "./concepts";
 
 const CONCEPTS: { k: string; name: string; note: string; C: (p: Props) => ReactNode }[] = [
@@ -55,7 +56,10 @@ export default function LabMC2() {
   return (
     // the app pins html and body (position: fixed, overflow hidden), so the lab scrolls in its own layer
     <main className="fixed inset-0 overflow-y-auto bg-bg px-5 pb-24 pt-10 text-white lg:px-14">
-      {/* newest first: Start from a pattern (25 Oct 2026), then the pattern library */}
+      {/* newest first: the Body library, then Start from a pattern, then the pattern library (25 Oct 2026) */}
+      <BodyLab />
+      <hr className="mx-auto my-16 max-w-[1000px] border-white/10" />
+      
       <StartLab />
       <hr className="mx-auto my-16 max-w-[1000px] border-white/10" />
       <div className="mx-auto max-w-[1000px]">
