@@ -13,6 +13,8 @@ import { PatSelectBody, AIRead, Generating, Garment, Edits } from "@/screens/pat
 import { Prompt } from "@/screens/studio";
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
 import { Seam, Arrange, PrintMethod, PrintReady, MiniMap, Printed } from "@/screens/print";
+import { About, Credits } from "@/screens/about";
+import dynamic from "next/dynamic";
 import { Pill, cx } from "./ui";
 import { InstallGuide, useAppIconLinks } from "./Install";
 import { Sidebar } from "./Sidebar";
@@ -20,6 +22,8 @@ import { Sidebar } from "./Sidebar";
 // Screens shown full-bleed on desktop (no sidebar)
 const FULL = new Set(["splash", "welcome", "signup", "login", "email", "signedin", "tourAsk", "onboarding", "start", "scanCam"]);
 import { Icon } from "./icons";
+// Natalia's business cards: the 3D and the card maker load only when the screen is opened (the page's dark meanwhile)
+const Cards = dynamic(() => import("@/screens/cards").then((m) => m.Cards), { ssr: false, loading: () => <div className="absolute inset-0 bg-bg" /> });
 
 type ScreenC = ComponentType<{ p?: Record<string, unknown> }>;
 const SCREENS: Record<string, ScreenC> = {
@@ -32,6 +36,7 @@ const SCREENS: Record<string, ScreenC> = {
   templates: Templates, template: TemplateDetail, tplBody: TplBody, tplFit: TplFit, tplResult: TplResult,
   install: InstallGuide,
   seam: Seam, arrange: Arrange, printMethod: PrintMethod, print: PrintReady, minimap: MiniMap, printed: Printed,
+  about: About, credits: Credits, cards: Cards,
 };
 
 // If any screen throws, never show a broken page: offer a way home.
