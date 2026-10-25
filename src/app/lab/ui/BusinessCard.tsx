@@ -482,18 +482,23 @@ function cardShape(W: number, H: number, r: number) {
 // cards mark the stencil buffer where their faces are drawn, so the shadow of a card above can be drawn on the cards
 // below and nowhere else (never on the background)
 const MARK_STENCIL = { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp };
-// the shadow a card throws on the ones below it: a soft dark rounded rectangle spreading a little past the card's edges,
-// a touch down and to the right (the light is up and to the left), drawn only where a card below was drawn
-let shadowTex: THREE.CanvasTexture | null = null;
-function softShadow() {
-  if (shadowTex) return shadowTex;
-  const c = document.createElement("canvas"); c.width = 360; c.height = 240;
+// the shadow a card throws on the ones below it. It lives in the card's own plane (a child of the card, turning, tilting
+// and foreshortening exactly as the card does), a little larger than the card and nudged down and to the right (the
+// light is up and to the left), with a soft edge; drawn only where a card below has marked the stencil, so never on the
+// background, never on the card itself. A real shadow cannot be cast here: the layers draw each card over the ones below
+// whatever their depth, so the shadow has to be the card's own silhouette, offset
+const SH_PAD = 6, SH_PX = 4; // mm of soft edge round the card; texture pixels per mm
+const shadowTexs = new Map<string, THREE.CanvasTexture>();
+function softShadow(w: number, h: number) {
+  const key = `${w}x${h}`; const hit = shadowTexs.get(key); if (hit) return hit;
+  const c = document.createElement("canvas"); c.width = Math.round((w + 2 * SH_PAD) * SH_PX); c.height = Math.round((h + 2 * SH_PAD) * SH_PX);
   const x = c.getContext("2d")!;
-  x.shadowColor = "#fff"; x.shadowBlur = 22; x.shadowOffsetX = 1000; x.fillStyle = "#fff"; // white: it is used as the alpha (the shape), the colour comes from the material
-  x.beginPath(); x.roundRect(-1000 + 55, 54, 250, 132, 10); x.fill(); // a touch inside the card, so the dark core never shows past its edge
-  shadowTex = new THREE.CanvasTexture(c); return shadowTex;
+  // white, used as the alpha (the shape); the colour comes from the material. Inset 1 mm, so its dark core stays under
+  // the card and only the soft edge shows past it
+  x.shadowColor = "#fff"; x.shadowBlur = 4.5 * SH_PX; x.shadowOffsetX = 10000; x.fillStyle = "#fff";
+  x.beginPath(); x.roundRect(-10000 + (SH_PAD + 1) * SH_PX, (SH_PAD + 1) * SH_PX, (w - 2) * SH_PX, (h - 2) * SH_PX, 2 * SH_PX); x.fill();
+  const t = new THREE.CanvasTexture(c); shadowTexs.set(key, t); return t;
 }
-const SHADOW_GEO = new THREE.PlaneGeometry(1, 1);
 function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
   if (!m.normal) return new THREE.MeshPhysicalMaterial({ ...MARK_STENCIL, transparent: true, map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
   return new THREE.MeshPhysicalMaterial({
@@ -556,13 +561,15 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   // turning it: drag sideways to spin, it settles face up or face down; double click (or tap) flips it; at rest it
   // leans toward the pointer, or sways a little
   const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null), shade = useRef<THREE.Mesh>(null);
-  const shadeMat = useMemo(() => new THREE.MeshBasicMaterial({ alphaMap: softShadow(), color: "#05060d", transparent: true, opacity: 0, depthTest: false, depthWrite: false,
-    stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp }), []);
+  const shadeGeo = useMemo(() => new THREE.PlaneGeometry(S.w + 2 * SH_PAD, S.h + 2 * SH_PAD), [S.w, S.h]);
+  useEffect(() => () => shadeGeo.dispose(), [shadeGeo]);
+  const shadeMat = useMemo(() => new THREE.MeshBasicMaterial({ alphaMap: softShadow(S.w, S.h), color: "#05060d", transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+    stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp }), [S.w, S.h]);
   useEffect(() => () => shadeMat.dispose(), [shadeMat]);
   const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter, ...from };
   const y0 = startBack ? Math.PI : 0;
   const st = useRef({ yaw: y0 + (from?.yaw ?? 0), vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1,
-    p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0 });
+    p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0, sh: layer > 0 ? 1 : 0 });
   const { gl } = useThree();
   useEffect(() => {
     if (!interactive) return;
@@ -637,19 +644,16 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
     const fx = show ? Math.sin(T * 0.37) * 0.05 : 0, fy = show ? Math.sin(T * 0.53) * 0.06 : 0, fz = show ? Math.sin(T * 0.29) * 0.12 : 0;
     place.current?.position.set(s.p.x + fx, s.p.y + lift + fy, s.p.z + fz); place.current?.rotation.set(0, 0, s.p.rz + (show ? Math.sin(T * 0.23) * 0.02 : 0)); place.current?.scale.setScalar(s.p.s);
     g.current?.rotation.set(s.pitch + extraPitch, s.yaw, 0);
-    // the shadow narrows as the card turns, and fades with it
-    if (shade.current) {
-      const W = (S.w / 30) * (360 / 260), H = (S.h / 30) * (240 / 140);
-      shade.current.scale.set(W * Math.max(0.08, Math.abs(Math.cos(s.yaw))), H * Math.max(0.2, Math.abs(Math.cos(s.pitch + extraPitch))), 1);
-      (shade.current.material as THREE.MeshBasicMaterial).opacity = 0.42 * s.o;
-    }
+    // the shadow fades in and out as the card goes up or down a layer (so it never pops), and with the card
+    s.sh += ((layer > 0 ? 1 : 0) - s.sh) * Math.min(1, dt * 7);
+    if (shade.current) (shade.current.material as THREE.MeshBasicMaterial).opacity = 0.38 * s.o * s.sh;
   });
 
   return (
     <group ref={place} position={[p0.x, p0.y, p0.z]} rotation={[0, 0, p0.rz]} scale={p0.s} onClick={onTap ? (e) => { if (e.delta < 8) { e.stopPropagation(); onTap(); } } : undefined}>
-      {layer > 0 && <mesh ref={shade} geometry={SHADOW_GEO} material={shadeMat} renderOrder={layer * 10 - 1} position={[0.03, -0.07, -0.02]} frustumCulled={false} />}
       {layer > 0 && <DepthClear order={layer * 10} />}
       <group ref={g} scale={1 / 30}>
+        <mesh ref={shade} geometry={shadeGeo} material={shadeMat} renderOrder={layer * 10 - 1} position={[1, -1.6, -t / 2 - 0.05]} frustumCulled={false} />
         <mesh geometry={geo.side} material={[mats.caps, mats.edge]} renderOrder={layer * 10 + 1} />
         <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} renderOrder={layer * 10 + 1} />
         <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} renderOrder={layer * 10 + 1} />
