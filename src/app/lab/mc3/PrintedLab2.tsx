@@ -9,7 +9,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { BodyFigure, PIECES, VentyLogo } from "@/components/art";
 import { cx, NextButton, TextButton } from "@/components/ui";
 import { useApp } from "@/lib/store";
-import { FLUTTER, metresAt, notionsFor, templateBy, type GarmentKey, type PieceKey } from "@/lib/data";
+import { FLUTTER, metresAt, notionsFor, templateBy, type PieceKey } from "@/lib/data";
 import { draftSpec, piecesFor } from "@/screens/pattern";
 import { COLS, ROWS, SHEET_H, SHEET_W, W_MM, H_MM, pack, pieceW, type At } from "@/screens/print";
 import { Phone } from "./parts";
@@ -228,12 +228,12 @@ function Tape() {
     if (on.has(`${r + 1}-${c}`)) joins.push({ x: p.x + cell / 2, y: p.y + cell * RATIO, v: false });
   });
   const total = 0.2 + m.sheets.length * 0.28 + 0.4;
+  // the tape goes on once every sheet is down (at once, with reduced motion); Show me again takes it off first
   useEffect(() => {
-    setTaped(still ?? false);
-    if (still) return;
-    const t = setTimeout(() => setTaped(true), total * 1000);
+    const t = setTimeout(() => setTaped(true), still ? 0 : total * 1000);
     return () => clearTimeout(t);
   }, [run, still, total]);
+  const again = () => { setTaped(false); setRun((x) => x + 1); };
   return (
     <Page>
       {/* the table: a surface pressed into the paper */}
@@ -259,7 +259,7 @@ function Tape() {
           ))}
         </div>
       </div>
-      <button onClick={() => setRun((x) => x + 1)} className={cx("mx-auto mt-3 flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium text-[#12131c]/70", raised)}><Icon name="refresh" size={14} />Show me again</button>
+      <button onClick={again} className={cx("mx-auto mt-3 flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium text-[#12131c]/70", raised)}><Icon name="refresh" size={14} />Show me again</button>
       <div className="min-h-4 flex-1" />
       <Title line={<>Tape the {m.sheets.length} sheets together in this order, then cut along the lines.</>}>Your pattern is complete</Title>
       <div className="min-h-2 flex-1" />
