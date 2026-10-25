@@ -157,8 +157,8 @@ export function Today({ has, tab }: Props) {
 // build, or flat photos), every card a fixed size so a name or line never shifts it; the first-pattern card's looks
 // spilling over or held in its pressed surface; three kinds of kind filter, each with its own slim form once you
 // scroll; search on both tabs, and filters and the order in bottom sheets (like a shop), so the top stays calm.
-export type LookOpts = { card: "light" | "dark" | "flat"; empty: "spill" | "contain"; kinds: "tiles" | "track" | "cards"; filters: "shrink" | "away"; tools: "row" | "title"; cta: "row" | "title" };
-const LOOK_DEFAULT: LookOpts = { card: "dark", empty: "contain", kinds: "tiles", filters: "shrink", tools: "row", cta: "row" };
+export type LookOpts = { card: "light" | "dark" | "flat"; empty: "spill" | "contain"; kinds: "tiles" | "track" | "cards"; filters: "shrink" | "away" };
+const LOOK_DEFAULT: LookOpts = { card: "dark", empty: "spill", kinds: "tiles", filters: "shrink" };
 
 // ─── the builds ───
 const gridLines = (thin: string, thick: string) => ({
@@ -218,14 +218,6 @@ const TplSmall = ({ t, has, s, w, imgH }: { t: Tpl; has: boolean; s: Skin; w?: n
   <Frame s={s} w={w} imgH={imgH} pic={<Photo src={PHOTO[t.key]} made={madeOf(has, t.key)} />} name={t.name} line={<Lvl t={t} s={s} />} />
 );
 const MineSmall = ({ m, s, imgH }: { m: Mine; s: Skin; imgH: number }) => <Frame s={s} imgH={imgH} pic={<Img src={m.photo} />} name={m.name} line={<StatusLine m={m} s={s} short />} />;
-// Create a pattern as a card among your own: the same frame, an empty pattern surface where the photo would be
-const PlusOnSurface = ({ s }: { s: Skin }) => (
-  <span className="absolute inset-0 grid place-items-center" style={s.surface}>
-    <span className="icon-primary grid h-14 w-14 place-items-center rounded-full text-white"><Icon name="plus" size={26} strokeWidth={2.2} /></span>
-  </span>
-);
-const NewSmall = ({ s, imgH }: { s: Skin; imgH: number }) => <Frame s={s} imgH={imgH} pic={<PlusOnSurface s={s} />} name="Create a pattern" line={<span className={cx("text-[13px]", s.sub)}>Photo, sketch or words</span>} />;
-
 const TALL_H = 400, BAND = 72;
 function TallCard({ m, s }: { m: Mine; s: Skin }) {
   if (s.tray) return (
@@ -256,59 +248,44 @@ function TallCard({ m, s }: { m: Mine; s: Skin }) {
     </button>
   );
 }
-// a slim column at the start of the row (104 wide), so most of your newest pattern still shows beside it
-const NEW_W = 104;
-function NewTall({ s }: { s: Skin }) {
-  const words = <span className={cx("block text-center text-[15px] leading-[1.2]", s.name)}>Create a<br />pattern</span>;
-  if (s.tray) return (
-    <button className="tap flex shrink-0 snap-start flex-col rounded-[30px] p-[7px]" style={{ width: NEW_W, height: TALL_H, ...s.rim }}>
-      <span className="relative block min-h-0 flex-1 overflow-hidden rounded-[25px]"><PlusOnSurface s={s} /></span>
-      <span className="flex shrink-0 items-center justify-center" style={{ height: BAND - 7 }}>{words}</span>
-    </button>
-  );
-  return (
-    <button className="card-soft tap flex shrink-0 snap-start flex-col items-center justify-center gap-4 rounded-[30px]" style={{ width: NEW_W, height: TALL_H }}>
-      <span className="icon-primary grid h-14 w-14 place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></span>{words}
-    </button>
-  );
-}
-
 // ─── the first-pattern card: three looks fanned out, spilling over the card or held in its pressed surface ───
 const FAN = [P.rust, P.green, P.mauve];
 // always the light tray, whatever the cards: with no patterns yet it is the one thing on the page, and it is primary.
 // The words are broken by hand, so neither line leaves a word on its own
 function FirstCard({ contain }: { contain: boolean }) {
   const s = SKINS.light;
-  const text = (
-    <div className="absolute inset-x-5 bottom-5 text-center">
+  const words = (
+    <>
       <p className={cx("text-[24px] leading-[1.12] tracking-[-.025em]", s.name)}>If you can imagine it,<br />you can wear it.</p>
       <p className="mx-auto mt-2 text-[15px] leading-snug text-slate">A photo, a sketch or a few words,<br />drafted to your measurements.</p>
       <Pill className="mt-4">Create a pattern</Pill>
-    </div>
+    </>
   );
-  const fan = (w: number, h: number, dx: number, rot: number, drop: number) => FAN.map((src, i) => (
+  // the middle look can be larger than the two beside it (mid), so it covers their inner bottom corners
+  const fan = (w: number, h: number, dx: number, rot: number, drop: number, mid = [w, h]) => FAN.map((src, i) => (
     <span key={src} className="absolute left-1/2 top-0 overflow-hidden rounded-[16px] shadow-[0_16px_30px_-12px_rgb(0_0_0/.7)]"
-      style={{ width: w, height: h, transform: `translateX(calc(-50% + ${(i - 1) * dx}px)) translateY(${i === 1 ? 0 : drop}px) rotate(${(i - 1) * rot}deg)`, zIndex: i === 1 ? 2 : 1 }}>
+      style={{ width: i === 1 ? mid[0] : w, height: i === 1 ? mid[1] : h, transform: `translateX(calc(-50% + ${(i - 1) * dx}px)) translateY(${i === 1 ? 0 : drop}px) rotate(${(i - 1) * rot}deg)`, zIndex: i === 1 ? 2 : 1 }}>
       <Img src={src} />
     </span>
   ));
-  const frame = cx("relative mx-6 h-[420px] rounded-[30px]", !s.tray && "card-soft", contain ? "mt-5" : "mt-[58px]");
   if (contain) return (
-    // held in: the looks lie in the pressed surface (the tray's, or an inset well on a flat card), clipped by its edge
-    <div className={frame} style={s.tray ? s.rim : undefined}>
+    // held in: the looks lie in the tray's pressed surface, clipped by its edge
+    <div className="relative mx-6 mt-5 h-[420px] rounded-[30px]" style={s.rim}>
       <div className="absolute inset-[7px] bottom-[196px] overflow-hidden rounded-[25px]" style={s.surface}>
         <div className="absolute inset-x-0 top-[22px]">{fan(118, 158, 84, 8, 14)}</div>
-        <Sunk s={s.tray ? s : SKINS.dark} />
+        <Sunk s={s} />
       </div>
-      {text}
+      <div className="absolute inset-x-5 bottom-5 text-center">{words}</div>
     </div>
   );
   return (
-    // spilling over: the looks rise 34px above the card and past its sides (it starts low enough to keep clear of the tabs)
-    <div className={frame} style={s.tray ? s.rim : undefined}>
-      {s.tray && <div className="absolute inset-[7px] bottom-[196px] rounded-[25px]" style={s.surface} />}
-      <div className="absolute inset-x-0 top-[-34px]">{fan(150, 200, 104, 10, 22)}</div>
-      {text}
+    // spilling over: the snow card alone (no pressed surface), the looks rising 34px above it and past its sides. The
+    // middle one (176 × 232) is big enough to hide the inner bottom corners of the two beside it (150 × 200, turned 10°:
+    // those corners sit 13px either side of the middle and 208px down; it reaches 88px either side and 232px down).
+    // The words are centred in the room left under the looks
+    <div className="relative mx-6 mt-[58px] h-[420px] rounded-[30px]" style={s.rim}>
+      <div className="absolute inset-x-0 top-[-34px]">{fan(150, 200, 104, 10, 22, [176, 232])}</div>
+      <div className="absolute inset-x-5 bottom-5 top-[214px] flex flex-col items-center justify-center text-center">{words}</div>
     </div>
   );
 }
@@ -370,10 +347,22 @@ function KindFilter({ v, value, onChange }: { v: LookOpts["kinds"]; value: strin
     </div>
   );
 }
-function KindBar({ v, value, onChange }: { v: LookOpts["kinds"]; value: string; onChange: (k: string) => void }) {
+// pinned once you scroll past the kinds: the two tabs, slim, so you always see where you are and can go back to your own
+// patterns in one tap, then the kinds in their slim form. It starts under the status bar (the top 54px of the screen)
+function KindBar({ v, value, onChange, onTab }: { v: LookOpts["kinds"]; value: string; onChange: (k: string) => void; onTab: (v: string) => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }}
       className="absolute inset-x-0 top-0 z-10 border-b border-white/8 bg-bg pb-3 pt-[54px]">
+      <div className="mb-2.5 px-6">
+        <div className="glass relative flex h-9 rounded-full p-[3px]">
+          {TABS.map((t) => (
+            <button key={t} onClick={() => onTab(t)} className="relative z-10 flex-1 rounded-full text-[13px] font-medium">
+              {t === "Patterns to make" && <span className="absolute inset-0 -z-10 rounded-full bg-white" />}
+              <span className={t === "Patterns to make" ? "font-semibold text-bg" : "text-white/70"}>{t}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       {v === "tiles" ? (
         <div className="noscroll flex gap-2 overflow-x-auto px-6">
           {KINDS.map((k) => (
@@ -493,6 +482,19 @@ function SearchOpen({ q, setQ, placeholder, onCancel }: { q: string; setQ: (q: s
     </motion.div>
   );
 }
+// carousel or grid: two icons in a pressed track, the chosen one raised out of it (the look switch's knob)
+function ViewSlider({ grid, setGrid }: { grid: boolean; setGrid: (g: boolean) => void }) {
+  return (
+    <span className="ruler-track flex h-10 items-center rounded-full p-1" role="radiogroup" aria-label="Show as">
+      {[false, true].map((g) => (
+        <button key={String(g)} role="radio" aria-checked={grid === g} aria-label={g ? "Grid" : "Carousel"} onClick={() => setGrid(g)} className={cx("relative grid h-8 w-11 place-items-center rounded-full transition-colors", grid === g ? "text-white" : "text-white/45")}>
+          {grid === g && <motion.span layoutId="lbview" className="knob absolute inset-0 rounded-full" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
+          <Icon name={g ? "grid" : "image"} size={16} className="relative" />
+        </button>
+      ))}
+    </span>
+  );
+}
 const Count = ({ n }: { n: number }) => <><span className="tabular-nums">{n}</span> {n === 1 ? "pattern" : "patterns"}</>;
 // what is on, each removable (only shown when something is on)
 const OnChips = ({ items, onClear }: { items: { k: string; off: () => void }[]; onClear: () => void }) =>
@@ -537,7 +539,9 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const [grid, setGrid] = useState(false);
   const [sheet, setSheet] = useState<null | "filter" | "mfilter">(null);
   const [searching, setSearching] = useState(false);
+  const scroller = useRef<HTMLDivElement | null>(null);
   const scrolled = (el: HTMLDivElement) => {
+    scroller.current = el;
     const r = kinds.current;
     setBar(!!r && make && opts.filters === "shrink" && el.scrollTop > r.offsetTop + r.offsetHeight - 96);
   };
@@ -554,13 +558,10 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const tpls = TEMPLATES.filter((t) => (cat === "All" || CAT[t.category] === cat) && (!lv.length || lv.includes(t.level)) && (!pc.length || pc.some((p) => piecesIn(t.pieces, p))) && (!mq.trim() || t.name.toLowerCase().includes(mq.trim().toLowerCase())));
   const mOn = [...lv.map((x) => ({ k: x, off: () => setLv(lv.filter((y) => y !== x)) })), ...pc.map((x) => ({ k: `${x} pieces`, off: () => setPc(pc.filter((y) => y !== x)) }))];
   const narrowed = cat !== "All" || mOn.length > 0 || !!mq.trim();
-  const byTitle = opts.tools === "title";
-  // beside the title there is room for the tools or for Create, not both: with the tools there, Create is the first card
-  const cta = byTitle ? "row" : opts.cta;
-  const titleCta = cta === "title" && has && !make;
-  const tools = make || has;
-  // while searching or filtering, only what matches shows (no Create card among the results)
+  // Your patterns: Create beside the title, the tools in a row under the tabs. Patterns to make: the tools beside the title
+  const titleCta = has && !make;
   const looking = on.length > 0 || !!q.trim();
+  const goTab = (v: string) => { setView(v); setBar(false); setSearching(false); scroller.current?.scrollTo({ top: 0 }); };
   const cancel = () => { setSearching(false); if (make) setMq(""); else setQ(""); };
   const search = <SearchOpen q={make ? mq : q} setQ={make ? setMq : setQ} placeholder={make ? "Search patterns to make" : "Search your patterns"} onCancel={cancel} />;
   const nOn = make ? mOn.length : on.length;
@@ -570,11 +571,10 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   </>;
   return (
     <Shell onScroll={scrolled} overlay={<>
-      <AnimatePresence>{bar && <KindBar v={opts.kinds} value={cat} onChange={setCat} />}</AnimatePresence>
+      <AnimatePresence>{bar && <KindBar v={opts.kinds} value={cat} onChange={setCat} onTab={goTab} />}</AnimatePresence>
       <PhoneSheet open={sheet === "filter"} onClose={() => setSheet(null)}>
         <SheetTitle>Filter and sort</SheetTitle>
         <One title="Sort by" items={SORTS} value={sort} onChange={setSort} />
-        {byTitle && <One title="Show as" items={["Carousel", "Grid"] as const} value={grid ? "Grid" : "Carousel"} onChange={(v) => setGrid(v === "Grid")} />}
         <Group title="Where it stands" items={STATUSES} value={st as (typeof STATUSES)[number][]} onChange={setSt} />
         <Group title="Kind" items={KIND_LIST} value={kd as (typeof KIND_LIST)[number][]} onChange={setKd} />
         <Group title="Fit" items={FITS} value={ft as (typeof FITS)[number][]} onChange={setFt} />
@@ -588,24 +588,24 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
       </PhoneSheet>
     </>}>
       <div className="px-6">
-        {byTitle && tools && searching ? search : (
+        {make && searching ? search : (
           <div className="flex h-11 items-center justify-between gap-3">
             <Title />
             <span className="flex shrink-0 items-center gap-2">
               {titleCta && <Pill className="!h-10 !w-auto gap-1.5 px-4 !text-[15px]" icon={<Icon name="plus" size={18} strokeWidth={2.2} />}>Create</Pill>}
-              {byTitle && tools && btns}
+              {make && btns}
             </span>
           </div>
         )}
-        <Segmented className="mt-4" items={TABS} value={view} onChange={(v) => { setView(v); setBar(false); setSearching(false); }} />
-        {/* one row under the tabs: how many, then the tools (or the search, once opened) */}
-        {!byTitle && tools && (
+        <Segmented className="mt-4" items={TABS} value={view} onChange={goTab} />
+        {/* Your patterns: the two ways to find one together on the left (the search opens across the row), how they
+            show on the right, with room between */}
+        {!make && has && (
           <div className="mt-4">
             {searching ? search : (
-              <div className="flex h-11 items-center gap-2">
-                <span className="flex-1 text-[14px] text-white/55"><Count n={make ? tpls.length : mine.length} /></span>
-                {btns}
-                {!make && <ToolBtn icon={grid ? "image" : "grid"} label={grid ? "Show as carousel" : "Show as grid"} onClick={() => setGrid(!grid)} />}
+              <div className="flex h-10 items-center justify-between">
+                <span className="flex items-center gap-2">{btns}</span>
+                <ViewSlider grid={grid} setGrid={setGrid} />
               </div>
             )}
           </div>
@@ -613,7 +613,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
       </div>
       {make ? (
         <>
-          <div ref={kinds} className={byTitle ? "mt-5" : "mt-3"}><KindFilter v={opts.kinds} value={cat} onChange={setCat} /></div>
+          <div ref={kinds} className="mt-5"><KindFilter v={opts.kinds} value={cat} onChange={setCat} /></div>
           <OnChips items={mOn} onClear={() => { setLv([]); setPc([]); }} />
           {!narrowed ? (
             // a row per kind, like albums
@@ -625,8 +625,8 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
             ))
           ) : tpls.length ? (
             <>
-              {byTitle && <p className="mt-5 px-6 text-[14px] text-white/55"><Count n={tpls.length} /></p>}
-              <div className={cx(byTitle ? "mt-3" : "mt-5", "grid grid-cols-2 items-start gap-x-3 gap-y-4 px-6")}>{tpls.map((t) => <TplSmall key={t.key} t={t} has={has} s={s} imgH={GRID_H} />)}</div>
+              <p className="mt-5 px-6 text-[14px] text-white/55"><Count n={tpls.length} /></p>
+              <div className="mt-3 grid grid-cols-2 items-start gap-x-3 gap-y-4 px-6">{tpls.map((t) => <TplSmall key={t.key} t={t} has={has} s={s} imgH={GRID_H} />)}</div>
             </>
           ) : (
             <div className="mt-10 px-6 text-center">
@@ -638,7 +638,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
       ) : has ? (
         <>
           <OnChips items={on} onClear={clearMine} />
-          {byTitle && (on.length > 0 || !!q.trim()) && <p className="mt-4 px-6 text-[14px] text-white/55"><Count n={mine.length} /></p>}
+          {looking && <p className="mt-4 px-6 text-[14px] text-white/55"><Count n={mine.length} /></p>}
           {mine.length === 0 ? (
             <div className="mt-10 text-center">
               <p className="text-[17px]">No patterns match</p>
@@ -649,7 +649,6 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
               <section key={mo} className="mt-3 px-6">
                 {mo && <h3 className="mb-3 text-[15px] text-white/55">{mo}</h3>}
                 <div className="grid grid-cols-2 items-start gap-x-3 gap-y-4 pb-3">
-                  {cta === "row" && !looking && mo === months[0] && <NewSmall s={s} imgH={GRID_H} />}
                   {mine.filter((m) => !mo || m.month === mo).map((m) => <MineSmall key={m.id} m={m} s={s} imgH={GRID_H} />)}
                 </div>
               </section>
@@ -657,7 +656,6 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
           ) : (
             <>
               <div className="noscroll -mb-6 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-9 pt-2">
-                {cta === "row" && !looking && <NewTall s={s} />}
                 {mine.map((m) => <TallCard key={m.id} m={m} s={s} />)}
               </div>
               <section className="mt-5">
