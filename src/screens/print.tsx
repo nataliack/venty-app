@@ -3,8 +3,8 @@ import { haptic } from "@/lib/haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { PIECE_LABEL, FLUTTER, nameFor, templateBy, fabricAdvice, fitName, metresFor, metresAt, notionsFor, type GarmentKey, type PieceKey } from "@/lib/data";
-import { Screen, TopBar, HS, H1, Lead, Pill, Glass, Option, Arrows, RB, TextButton, PaperScreen, cx, useToast, Split, useDesk } from "@/components/ui";
+import { PIECE_LABEL, nameFor, fabricAdvice, fitName, metresFor, metresAt, type GarmentKey, type PieceKey } from "@/lib/data";
+import { Screen, TopBar, HS, H1, Lead, Pill, Glass, Option, Arrows, RB, TextButton, cx, useToast, Split, useDesk } from "@/components/ui";
 import { Piece, pieceSize } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { garmentName, piecesFor } from "./pattern";
@@ -102,12 +102,12 @@ export function Seam() {
 // 3 · arrange the pieces on the sheets. The grid is the real paper: each cell is one A4 sheet.
 // Drag pieces closer together and the count of sheets to print goes down. The layout is saved, and the
 // mini map later draws exactly this arrangement.
-const COLS = 4, ROWS = 4, SHEET_W = 210, SHEET_H = 297; // mm
+export const COLS = 4, ROWS = 4, SHEET_W = 210, SHEET_H = 297; // mm
 const MM_PER_UNIT = 1.8; // pattern-piece units to mm
-const W_MM = COLS * SHEET_W, H_MM = ROWS * SHEET_H;
-type At = Record<string, { x: number; y: number; r: number }>;
-const pieceW = (k: PieceKey) => ((pieceSize(k).w * MM_PER_UNIT) / W_MM) * 100; // width, % of the sheet area
-function pack(pieces: PieceKey[]): At {
+export const W_MM = COLS * SHEET_W, H_MM = ROWS * SHEET_H;
+export type At = Record<string, { x: number; y: number; r: number }>;
+export const pieceW = (k: PieceKey) => ((pieceSize(k).w * MM_PER_UNIT) / W_MM) * 100; // width, % of the sheet area
+export function pack(pieces: PieceKey[]): At {
   // simple shelf packing, left to right, in mm; stored as piece centres in %
   const gap = 24; let x = gap, y = gap, row = 0; const out: At = {};
   pieces.forEach((k) => {
@@ -119,7 +119,7 @@ function pack(pieces: PieceKey[]): At {
   return out;
 }
 // which sheets a set of piece boxes touches
-function sheetsUsed(box: DOMRect, rects: DOMRect[]) {
+export function sheetsUsed(box: DOMRect, rects: DOMRect[]) {
   const cw = box.width / COLS, ch = box.height / ROWS, on = new Set<string>();
   rects.forEach((r) => {
     for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
@@ -388,43 +388,5 @@ export function MiniMap({ p }: { p?: Record<string, unknown> }) {
       </>} right={desk ? <MapBoard garment={garment} printer={printer} at={at} className="mx-auto" style={paperStyle(true, 300)} /> : null} />
       {!desk && <FitBox className="mt-4 min-h-[300px] flex-1">{(st) => <MapBoard garment={garment} printer={printer} at={at} style={st} />}</FitBox>}
     </Screen>
-  );
-}
-
-// The end: the pattern is done, now the sewing starts. A moment, so it uses paper and violet. The picture is the
-// pattern map itself (the one thing you need while taping the sheets), not decoration; tap it to open it large.
-export function Printed({ p }: { p?: Record<string, unknown> }) {
-  const { home, go, draft } = useApp();
-  const n = Number(p?.n ?? 9);
-  const { toast, node } = useToast();
-  const kind = draft.garment === "flutter" ? "dress" : ({ Dresses: "dress", Tops: "top", Pants: "trousers", Skirts: "skirt" } as const)[templateBy(draft.garment).category];
-  const at = draft.layout?.garment === draft.garment ? draft.layout.at : undefined;
-  const art = (
-    <button onClick={() => go("minimap")} aria-label="Open your pattern map" className="absolute inset-0 flex flex-col items-center px-6 pb-4 pt-[calc(var(--top)+10px)] lg:px-12 lg:pb-8 lg:pt-12">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }} className="relative min-h-0 w-full flex-1">
-        <FitBox className="h-full">{(st) => <MapBoard garment={draft.garment} printer={draft.printer} at={at} className="shadow-[0_20px_50px_-24px_rgb(11_12_21/.8)]" style={st} />}</FitBox>
-      </motion.div>
-      <span className="mt-3 flex items-center gap-1.5 text-[14px] text-white/90">Your pattern map<Icon name="chevR" size={15} /></span>
-    </button>
-  );
-  return (
-    <PaperScreen art={art} artH="h-[46%]" footer={<Pill onClick={home}>Back to home</Pill>}>
-      <div className="flex items-center gap-2 text-[15px] text-[#12131c]/70"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>{n === 1 ? "Your sheet is printed" : `All ${n} sheets are printed`}</div>
-      <h1 className="h1 mt-3 !text-[32px] text-[#12131c] lg:!text-[52px]">Your pattern is complete</h1>
-      <p className="lead mt-2">Now you can start making your {kind}.</p>
-      <div className="mt-4 border-t border-[#12131c]/10 pt-3">
-        <div className="text-[14px] text-[#12131c]/55">Fabric to buy</div>
-        <div className="mt-0.5 text-[16px]">{fabricLine(draft.garment, draft.ease, draft.chosen?.stretch ? draft.stretch : undefined)}</div>
-        {/* fabric comes in other widths too, and the pattern needs more than fabric */}
-        <div className="mt-1 text-[14px] leading-snug text-[#12131c]/60">{otherWidths(draft.garment, draft.ease)}</div>
-        <div className="mt-2.5 text-[14px] text-[#12131c]/55">You will also need</div>
-        <div className="mt-0.5 text-[15px] leading-snug">{notionsFor(draft.details ?? FLUTTER.read, piecesFor(draft.garment)).join(" · ")}</div>
-      </div>
-      <div className="mt-4 flex flex-col gap-2">{([["book", `Sewing guide for this ${kind}`], ["layers", "Sewing words, explained"], ["video", "Video: taping the sheets together"]] as const).map(([ic, t]) => (
-        <button key={t} onClick={() => toast("Opening " + t.toLowerCase())} className="paper-card tap flex min-h-[54px] items-center gap-3 rounded-[16px] px-4 text-left text-[16px]"><Icon name={ic} size={19} className="text-[#3c4b63]" /><span className="flex-1">{t}</span><Icon name="chevR" size={16} className="text-[#12131c]/40" /></button>
-      ))}</div>
-      <div className="h-4" />
-      {node}
-    </PaperScreen>
   );
 }

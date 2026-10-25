@@ -13,7 +13,8 @@ import { You, ProfileEdit, Info } from "@/screens/profile";
 import { PatSelectBody, AIRead, Generating, Garment, Edits } from "@/screens/pattern";
 import { Prompt } from "@/screens/studio";
 import { Templates, TemplateDetail, TplBody, TplFit, TplResult } from "@/screens/templates";
-import { Seam, Arrange, PrintMethod, PrintReady, MiniMap, Printed } from "@/screens/print";
+import { Seam, Arrange, PrintMethod, PrintReady, MiniMap } from "@/screens/print";
+import { Printed } from "@/screens/printed";
 import { About, Credits } from "@/screens/about";
 import dynamic from "next/dynamic";
 import { Pill, cx } from "./ui";
@@ -73,13 +74,13 @@ function StatusBar() {
 }
 
 // light screens: the colour at their top (Safari's bar follows it) and at their bottom
-const LIGHT_TOP: Record<string, string> = { home: "#f0f4fe", you: "#f0f4fe", prompt: "#f0f4fe", generating: "#f0f4fe", start: "#f3f1ec", install: "#f3f1ec" };
+const LIGHT_TOP: Record<string, string> = { home: "#f0f4fe", you: "#f0f4fe", prompt: "#f0f4fe", generating: "#f0f4fe", start: "#f3f1ec", install: "#f3f1ec", printed: "#f3f1ec" };
 // splash, welcome and "Welcome, Ana" share one sky, so they cross-fade in place instead of sliding
 const SKY = new Set(["splash", "welcome", "signedin"]);
 // the tab bar's pages: from one to another they cross-fade in place (no slide), so the bar holds still and the current
 // tab's circle glides to the next tab, like a native tab bar
 const TAB_PAGES = new Set(["home", "bodies", "patterns", "you"]);
-const CROWN_TOP = new Set(["splash", "welcome", "onboarding", "ready", "printed"]);
+const CROWN_TOP = new Set(["splash", "welcome", "onboarding", "ready"]);
 // "Welcome, Ana" is on Haze (26 Oct 2026): its colour at the top and at the bottom
 const HAZE_TOP = "#96a7f9", HAZE_BOTTOM = "#7086ec";
 function useStatusTint(id: string) {
