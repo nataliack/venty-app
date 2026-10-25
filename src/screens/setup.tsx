@@ -77,7 +77,9 @@ export function Prefs() {
 // turned to the right) rises out of that row, in a box exactly as wide as the row and ending at its top, so nothing of it
 // shows past the row's sides; it fades out just above the row, so it never touches it. Chosen, the card turns snow
 // (Option's .on), the row its snow version, the circle the primary's tick.
-const FORM_FADE: React.CSSProperties = { maskImage: "linear-gradient(180deg, #000 58%, transparent calc(100% - 6px))", WebkitMaskImage: "linear-gradient(180deg, #000 58%, transparent calc(100% - 6px))" };
+// the fade eases out over the lower two thirds of the body (a curve, not a straight ramp, so it has no hard start)
+const FORM_FADE_MASK = "linear-gradient(180deg, #000 32%, rgb(0 0 0 / .9) 44%, rgb(0 0 0 / .7) 56%, rgb(0 0 0 / .46) 68%, rgb(0 0 0 / .24) 79%, rgb(0 0 0 / .09) 88%, transparent calc(100% - 4px))";
+const FORM_FADE: React.CSSProperties = { maskImage: FORM_FADE_MASK, WebkitMaskImage: FORM_FADE_MASK };
 const FORM_ROW: React.CSSProperties = { background: "rgb(0 0 0 / .26)", boxShadow: "inset 0 2px 5px rgb(0 0 0 / .55), inset 0 1px 1.5px rgb(0 0 0 / .5), inset 0 -1px 0 rgb(255 255 255 / .06)" };
 const FORM_ROW_ON: React.CSSProperties = { background: "rgb(52 62 110 / .07)", boxShadow: "inset 0 3px 7px rgb(28 36 84 / .22), inset 0 1px 1.5px rgb(28 36 84 / .22), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9)" };
 function FormCard({ sex, on, onClick }: { sex: "female" | "male"; on: boolean; onClick: () => void }) {
