@@ -66,43 +66,39 @@ function TapeTable({ m, run, taped, onAgain }: { m: ReturnType<typeof useMade>; 
   );
 }
 
-// ─── slide 2: the fabric to buy, on the night (the landing page's loading night, its lights drifting). The metres in
-// Bigilla, large; a switch pressed into the night for the fabric's width, its knob raised, the metres changing with it;
-// what else you need; and the three guides as raised tiles (Body ready's version A) ───
+// ─── slide 2: what to buy, on the same light surface pressed into the paper as the table. Only what matters at the fabric
+// shop: how many metres (large, for the width chosen on the switch under it), the stretch in a few words, and the extras;
+// then the three guides as raised tiles, one word each ───
 function Fabric({ m }: { m: ReturnType<typeof useMade> }) {
   const widths = [115, 140, 150];
   const [w, setW] = useState(140);
   const still = useReducedMotion();
-  const guides: [IconName, string, string][] = [["book", "Sewing guide", `for this ${m.kind}`], ["layers", "Sewing words", "explained"], ["video", "Video", "taping the sheets"]];
-  const at = widths.indexOf(w), seg = 64;
+  const guides: [IconName, string][] = [["book", "Guide"], ["layers", "Glossary"], ["video", "Video"]];
+  const at = widths.indexOf(w), seg = 72;
   return (
-    <div className="relative h-full overflow-hidden rounded-[26px] text-white [clip-path:inset(0_round_26px)]">
-      <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
-      <div className="relative flex h-full flex-col px-5 pb-4 pt-5">
-        <div className="text-[14px] text-white/60">Fabric to buy</div>
-        <div className="mt-1 flex items-baseline gap-2">
-          <AnimatePresence mode="popLayout" initial={false}>
-            <motion.span key={w} className="serif text-[56px] leading-none" initial={still ? false : { y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -14, opacity: 0 }} transition={{ duration: 0.25 }}>{m.metres(w)}</motion.span>
-          </AnimatePresence>
-          <span className="text-[17px] text-white/80">metres</span>
-        </div>
-        <div className="mt-1 text-[14px] text-white/60">{m.stretch === "A lot" ? "A stretchy fabric" : m.stretch === "No" ? "With no stretch" : "With a little stretch"}, {w} cm wide</div>
-        {/* the width: a track pressed into the night, a raised knob that slides to the width chosen */}
-        <div className="ruler-track relative mt-3 flex h-10 rounded-full p-[5px]" role="radiogroup" aria-label="Fabric width" style={{ width: seg * 3 + 10 }}>
-          <motion.span className="knob absolute top-[5px] h-[30px] rounded-full" style={{ width: seg }} initial={false} animate={{ left: 5 + at * seg }} transition={still ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 28 }} aria-hidden />
-          {widths.map((x) => (
-            <button key={x} role="radio" aria-checked={w === x} onClick={() => setW(x)} className={cx("relative z-10 h-[30px] text-[13px] font-medium transition-colors", w === x ? "text-white" : "text-white/50")} style={{ width: seg }}>{x} cm</button>
-          ))}
-        </div>
-        <div className="mt-4 text-[13px] text-white/55">You will also need</div>
-        <ul className="mt-1 space-y-0.5 text-[14px] leading-snug text-white/90">{m.extras.map((t) => <li key={t} className="flex gap-2"><span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-white/50" />{t}</li>)}</ul>
-        <div className="flex-1" />
-        <div className="grid grid-cols-3 gap-2">{guides.map(([ic, t, d]) => (
-          <button key={t} className={cx("flex flex-col items-center gap-1 rounded-[18px] px-1.5 py-2.5 text-center text-[#12131c]", raised)}>
-            <Icon name={ic} size={18} className="text-[#3c4b63]" /><span className="text-[13px] leading-tight">{t}<span className="block text-[11.5px] text-[#12131c]/50">{d}</span></span>
-          </button>
-        ))}</div>
+    <div className="relative flex h-full flex-col overflow-hidden rounded-[26px] bg-[#12131c]/[.045] px-[18px] pb-[18px] pt-5 text-[#12131c] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85)]">
+      {/* how much fabric: the metres for the width chosen */}
+      <div className="flex items-end gap-2.5">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span key={w} className="serif text-[56px] leading-[.9]" initial={still ? false : { y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -14, opacity: 0 }} transition={{ duration: 0.25 }}>{m.metres(w)}</motion.span>
+        </AnimatePresence>
+        <span className="pb-1 text-[16px] leading-tight">metres of fabric<span className="block text-[15px] text-[#12131c]/55">{m.stretch === "A lot" ? "Stretchy" : m.stretch === "No" ? "No stretch" : "A little stretch"}</span></span>
       </div>
+      {/* the fabric's width: a track pressed in, the knob raised, sliding to the width chosen */}
+      <div className="relative mt-4 flex h-11 self-start rounded-full bg-[#12131c]/[.07] p-[5px] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85)]" role="radiogroup" aria-label="Fabric width">
+        <motion.span className={cx("absolute top-[5px] h-[34px] rounded-full", raised)} style={{ width: seg }} initial={false} animate={{ left: 5 + at * seg }} transition={still ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 28 }} aria-hidden />
+        {widths.map((x) => (
+          <button key={x} role="radio" aria-checked={w === x} onClick={() => setW(x)} className={cx("relative z-10 h-[34px] text-[15px] transition-colors", w === x ? "font-medium text-[#12131c]" : "text-[#12131c]/50")} style={{ width: seg }}>{x} cm</button>
+        ))}
+      </div>
+      {/* and the rest to buy, in a raised card */}
+      <ul className={cx("mt-4 divide-y divide-[#12131c]/[.07] rounded-[18px] px-3.5", raised)}>
+        {m.extras.map((t) => <li key={t} className="py-2.5 text-[15px] leading-snug">{t}</li>)}
+      </ul>
+      <div className="min-h-3 flex-1" />
+      <div className="grid grid-cols-3 gap-2.5">{guides.map(([ic, t]) => (
+        <button key={t} className={cx("flex h-[58px] flex-col items-center justify-center gap-1 rounded-[16px] text-[14px]", raised)}><Icon name={ic} size={18} className="text-[#3c4b63]" />{t}</button>
+      ))}</div>
     </div>
   );
 }
@@ -165,7 +161,7 @@ export function PrintedLab3() {
   return (
     <section>
       <h2 className="h1 !text-[34px]">Your pattern is complete, round 3</h2>
-      <p className="mt-3 max-w-[640px] text-[15px] leading-snug text-white/65">From round 2&apos;s C (Tape it together), with your notes: the printed label pressed in at the top; a carousel you can drag, the taping first (solid number badges, Show me again inside it), then the fabric to buy on the night with the metres for each width, what else you need and the three guides; the pager from Add to home screen under it.</p>
+      <p className="mt-3 max-w-[640px] text-[15px] leading-snug text-white/65">From round 2&apos;s C (Tape it together), with your notes: the printed label pressed in at the top; a carousel you can drag, the taping first (solid number badges, Show me again inside it), then what to buy on the same light surface (the metres for each width, the extras, the three guides); the pager from Add to home screen under it.</p>
       <button onClick={() => setK((x) => x + 1)} className="mt-4 h-10 rounded-full border border-white/15 px-4 text-[14px] font-medium text-white/75 hover:text-white">Start again</button>
       <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-10">
         <Phone label="Round 3"><Complete key={k} /></Phone>
