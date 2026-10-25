@@ -3,7 +3,7 @@ import { haptic } from "@/lib/haptics";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { FLUTTER, TEMPLATE_DETAILS, FITS, PIECE_LABEL, KIND_DETAILS, LENGTH_DIAL, NECK_CM, nameFor, lengthCmFor, lengthLabelFor, fitName, fabricAdvice, templateBy, kindOf, kindLabel, detailOpts, describe, type GarmentKey, type Kind, type PieceKey } from "@/lib/data";
+import { FLUTTER, TEMPLATE_DETAILS, FITS, KIND_DETAILS, LENGTH_DIAL, NECK_CM, nameFor, lengthCmFor, lengthLabelFor, fitName, fabricAdvice, templateBy, kindOf, kindLabel, detailOpts, describe, type GarmentKey, type Kind, type PieceKey } from "@/lib/data";
 import { Screen, TopBar, TopAction, H1, HS, Lead, Pill, RB, Arrows, Option, Segmented, Sheet, SheetHead, cx, Split, useDesk, useToast } from "@/components/ui";
 import { BodyFigure, Piece, type GarmentSpec } from "@/components/art";
 import { Icon } from "@/components/icons";
@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 import { BodyLoader } from "@/components/BodyLoader";
 import { garment3dFor } from "@/lib/garment3d";
 import { LookSwitch } from "@/components/LookSwitch";
+import { PatternTray } from "@/components/PatternTray";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
@@ -367,15 +368,9 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
             </motion.div>
           ) : <div key="r" />
         ) : (
-          <motion.div key="p" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="pattern-mat absolute inset-0 rounded-[28px] lg:rounded-[36px]">
-            <div className="grid h-full grid-cols-3 place-content-center place-items-center gap-x-2 gap-y-3 px-4 pb-9 pt-4">
-              {pieces.map((k, i) => (
-                <motion.div key={k} initial={{ opacity: 0, y: 14, rotate: 0 }} animate={{ opacity: 1, y: 0, rotate: (i % 3 - 1) * 4 }} transition={{ delay: 0.06 * i, duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}>
-                  <Piece k={k} tone="light" width={desk ? 150 : 92} label={PIECE_LABEL[k]} />
-                </motion.div>
-              ))}
-            </div>
-            <div className="absolute inset-x-4 bottom-3 flex items-baseline justify-between text-[13px] text-[#3c4b63]"><span>{pieces.length} pieces</span><span>Drafted to {b.name}</span></div>
+          // the pieces on a tray (PatternTray): a raised rim round a pressed-in grid, the count on its band
+          <motion.div key="p" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="absolute inset-0">
+            <PatternTray pieces={pieces} who={b.name} radius={desk ? 36 : 30} className="h-full" />
           </motion.div>
         )}
       </AnimatePresence>
