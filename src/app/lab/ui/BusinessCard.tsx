@@ -13,10 +13,10 @@
 // Approach from two open projects (ideas only, no code taken): KonradJam/business-card-viewer (AGPL-3.0: masks driving a
 // clear coat map for spot UV, and a height map for emboss) and 1to1-Digital-Solutions/contact-card (MIT: an R3F card
 // drawn on canvas at runtime, damped springs, flip on double tap).
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer, SoftShadows } from "@react-three/drei";
+import { Environment, Lightformer } from "@react-three/drei";
 
 export const PX = 16; // texture pixels per mm (406 dpi)
 
@@ -532,6 +532,12 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   const st = useRef({ yaw: y0 + (from?.yaw ?? 0), vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1,
     p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0 });
   const { gl } = useThree();
+  const casters = useContext(CastersCtx), id = useId();
+  useEffect(() => {
+    if (!casters) return;
+    casters.set(id, { g: () => g.current, w: S.w, h: S.h, t, r: stock.corner, o: () => st.current.o });
+    return () => { casters.delete(id); };
+  }, [casters, id, S.w, S.h, t, stock.corner]);
   useEffect(() => {
     if (!interactive) return;
     const el = gl.domElement, s = st.current;
@@ -610,9 +616,9 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   return (
     <group ref={place} position={[p0.x, p0.y, p0.z]} rotation={[0, 0, p0.rz]} scale={p0.s} onClick={onTap ? (e) => { if (e.delta < 8) { e.stopPropagation(); onTap(); } } : undefined}>
       <group ref={g} scale={1 / 30}>
-        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} castShadow receiveShadow />
-        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} castShadow receiveShadow />
-        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} castShadow receiveShadow />
+        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} />
+        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} />
+        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} />
       </group>
     </group>
   );
@@ -671,40 +677,120 @@ export function Sweep({ on }: { on: boolean }) {
   return <pointLight ref={l} color="#e9ecff" intensity={0} distance={9} decay={1.2} />;
 }
 
-// the shadow light: a spotlight riding with the camera, a hair below and to the right of the eye. From there a card's
-// shadow on the cards behind lines up with the card's own outline as you see it, so it hugs the card's edges (a soft,
-// dark fringe just past them, the slightest bit up and to the left) and it turns exactly as the card turns. Softened
-// by SoftShadows (below). It can only land on the cards behind (nothing else is there). The key light, up and to the
-// left, casts none
-function ShadowLight() {
-  const l = useRef<THREE.SpotLight>(null);
-  const { scene } = useThree();
-  useEffect(() => {
-    const s = l.current; if (!s) return;
-    scene.add(s.target);
-    s.shadow.mapSize.set(2048, 2048); s.shadow.bias = -0.0002;
-    s.shadow.camera.near = 4; s.shadow.camera.far = 40;
-    return () => { scene.remove(s.target); };
-  }, [scene]);
-  useFrame(({ camera }) => {
-    const s = l.current; if (!s) return;
-    s.position.set(camera.position.x + 0.32, camera.position.y - 0.28, camera.position.z);
-    s.target.position.set(camera.position.x, camera.position.y, 0); s.target.updateMatrixWorld();
-  });
-  return <spotLight ref={l} intensity={2.4} angle={0.42} penumbra={1} decay={0} distance={0} castShadow />;
+// ─── the shadows the cards throw on each other: worked out, not taken from a shadow map ───
+// The cards stand far apart in depth (so a turning card can never reach the next), but a shadow from that far would be
+// a big vague blur off to one side. So each shadow is worked out as if the card in front rested just above the card
+// behind, as cards in a hand do: it is set down right behind where it is seen (scaled to look the same size), keeping
+// its turn and tilt, its lowest corner a couple of millimetres off the card below. The light comes from up and to the
+// left, a little in front. Every point of the card behind looks back along the light: if it meets the card set down
+// above it, it is in shadow. The edge is soft, softer the higher the card is there, and the shadow is faint, fainter
+// the higher. So at rest it is a faint soft fringe just off the card, down and to the right; as the card turns its
+// shadow slides out, skews and spreads across the card behind (not the card's own outline). Worked out per pixel, so
+// nothing is pixelated, and drawn only on the card it falls on.
+type Caster = { g: () => THREE.Group | null; w: number; h: number; t: number; r: number; o: () => number };
+const CastersCtx = createContext<Map<string, Caster> | null>(null);
+const LIGHT = new THREE.Vector3(0.24, -0.22, -1).normalize(); // the way the light travels: from a broad light in front, a little up and to the left
+const REST = 0.075; // how far the lowest corner rests above the card below, in scene units (about 2 mm on a card)
+const castVert = `varying vec2 vLocal; varying vec3 vWorld;
+void main() { vLocal = position.xy; vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const castFrag = `varying vec2 vLocal; varying vec3 vWorld;
+uniform vec3 uL; uniform vec3 uPa; uniform vec3 uEx; uniform vec3 uEy; uniform vec2 uHalf; uniform float uR;
+uniform vec2 uBHalf; uniform float uBR; uniform float uOpacity;
+float box(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+void main() {
+  // back along the light to the card above: how far it is (along the light), and where on it
+  vec3 n = cross(uEx, uEy);
+  float ln = dot(uL, n);
+  if (abs(ln) < 0.002) discard;
+  float tau = dot(vWorld - uPa, n) / ln;
+  if (tau <= 0.0) discard;
+  vec3 q = vWorld - uL * tau - uPa;
+  float d = box(vec2(dot(q, uEx), dot(q, uEy)), uHalf, uR);
+  // a soft edge centred on the shadow's true edge, wider the further the card above is; fainter the further, too
+  float pen = 0.06 + 0.5 * tau;
+  float a = 1.0 - smoothstep(-pen, pen, d);
+  // only on the card it falls on (its own rounded corners, in millimetres), with a hair of smoothing there
+  float inside = 1.0 - smoothstep(-0.2, 0.2, box(vLocal, uBHalf, uBR));
+  gl_FragColor = vec4(0.01, 0.012, 0.03, a * inside * uOpacity / (1.0 + 3.0 * tau));
+}`;
+// each frame: which card is over which, and each shadow's place (outside the component: three's objects, changed in place)
+type CastVecs = { pb: THREE.Vector3; nb: THREE.Vector3; pa: THREE.Vector3; ray: THREE.Vector3; tmp: THREE.Vector3; ex: THREE.Vector3; ey: THREE.Vector3; lift: THREE.Matrix4 };
+function castFrame(pool: THREE.Mesh[], v: CastVecs, reg: Map<string, Caster> | null, camera: THREE.Camera) {
+  for (const m of pool) m.visible = false;
+  if (!reg) return;
+  const cam = camera.position;
+  // the cards on the stage, nearest first
+  const cards: { c: Caster; g: THREE.Group; d: number }[] = [];
+  for (const c of reg.values()) {
+    const g = c.g(); if (!g || c.o() < 0.01) continue;
+    g.updateWorldMatrix(true, false);
+    cards.push({ c, g, d: v.tmp.setFromMatrixPosition(g.matrixWorld).distanceTo(cam) });
+  }
+  cards.sort((a, b) => a.d - b.d);
+  let k = 0;
+  for (let i = 0; i < cards.length; i++) for (let j = i + 1; j < cards.length && k < pool.length; j++) {
+    const A = cards[i], B = cards[j], gap = B.d - A.d;
+    if (gap < 0.4) continue; // side by side at one depth: neither is over the other
+    const e = B.g.matrixWorld.elements;
+    // the face of the card behind that the camera sees
+    v.pb.setFromMatrixPosition(B.g.matrixWorld); v.nb.set(e[8], e[9], e[10]).normalize();
+    const side = v.nb.dot(v.tmp.copy(cam).sub(v.pb)) < 0 ? -1 : 1;
+    v.nb.multiplyScalar(side);
+    // the card in front, set down right behind where it is seen, scaled to look the same size
+    v.ray.setFromMatrixPosition(A.g.matrixWorld).sub(cam);
+    const s = v.nb.dot(v.tmp.copy(v.pb).sub(cam)) / v.nb.dot(v.ray);
+    if (!(s > 0)) continue;
+    const a = A.g.matrixWorld.elements;
+    v.ex.set(a[0], a[1], a[2]); v.ey.set(a[4], a[5], a[6]);
+    const hw = v.ex.length() * (A.c.w / 2) * s, hh = v.ey.length() * (A.c.h / 2) * s, r = v.ex.length() * A.c.r * s;
+    v.ex.normalize(); v.ey.normalize();
+    // its lowest corner a couple of millimetres off the card behind (more over a card further back)
+    const rise = Math.abs(v.ex.dot(v.nb)) * hw + Math.abs(v.ey.dot(v.nb)) * hh;
+    v.pa.copy(cam).addScaledVector(v.ray, s).addScaledVector(v.nb, REST * s * (j - i) + rise);
+    // drawn on B's face, in its millimetres
+    const m = pool[k++], u = (m.material as THREE.ShaderMaterial).uniforms;
+    const size = `${B.c.w}x${B.c.h}`;
+    if (m.userData.size !== size) { m.geometry.dispose(); m.geometry = new THREE.PlaneGeometry(B.c.w, B.c.h); m.userData.size = size; }
+    m.matrix.copy(B.g.matrixWorld).multiply(v.lift.makeTranslation(0, 0, side * (B.c.t / 2 + 0.04))); m.matrixWorldNeedsUpdate = true;
+    u.uPa.value.copy(v.pa); u.uEx.value.copy(v.ex); u.uEy.value.copy(v.ey); u.uHalf.value.set(hw, hh); u.uR.value = r;
+    u.uBHalf.value.set(B.c.w / 2, B.c.h / 2); u.uBR.value = B.c.r;
+    u.uOpacity.value = 0.3 * Math.min(A.c.o(), B.c.o()) * THREE.MathUtils.smoothstep(gap, 0.4, 0.9);
+    m.visible = true;
+  }
 }
+function CastShadows() {
+  const reg = useContext(CastersCtx);
+  // the shadows' meshes, made once the stage is up and put in a group (changed every frame, so made outside render)
+  const root = useRef<THREE.Group>(null);
+  const vec = useRef({ pb: new THREE.Vector3(), nb: new THREE.Vector3(), pa: new THREE.Vector3(), ray: new THREE.Vector3(), tmp: new THREE.Vector3(),
+    ex: new THREE.Vector3(), ey: new THREE.Vector3(), lift: new THREE.Matrix4() });
+  useEffect(() => {
+    const group = root.current; if (!group) return;
+    const pool = Array.from({ length: 6 }, () => {
+      const mat = new THREE.ShaderMaterial({ vertexShader: castVert, fragmentShader: castFrag, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+        uniforms: { uL: { value: LIGHT.clone() }, uPa: { value: new THREE.Vector3() }, uEx: { value: new THREE.Vector3() }, uEy: { value: new THREE.Vector3() }, uHalf: { value: new THREE.Vector2() },
+          uR: { value: 0 }, uBHalf: { value: new THREE.Vector2() }, uBR: { value: 0 }, uOpacity: { value: 0 } } });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+      mesh.matrixAutoUpdate = false; mesh.frustumCulled = false; mesh.visible = false; mesh.renderOrder = 5; // after the cards
+      group.add(mesh);
+      return mesh;
+    });
+    return () => { for (const mesh of pool) { group.remove(mesh); mesh.geometry.dispose(); (mesh.material as THREE.Material).dispose(); } };
+  }, []);
+  useFrame(({ camera }) => castFrame((root.current?.children ?? []) as THREE.Mesh[], vec.current, reg, camera));
+  return <group ref={root} />;
+}
+
 // the scene: lights, the studio the foil reflects, the camera; put cards (LiveCard) inside
-// soft: the soft shadows (SoftShadows patches three's shared shadow shader, so only one stage on a page may have them)
-export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0, soft = false }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number; soft?: boolean }) {
+// shadows: the cards throw shadows on each other (CastShadows)
+export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0, shadows = false }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number; shadows?: boolean }) {
+  const [casters] = useState(() => new Map<string, Caster>());
   return (
     <div className={className} style={{ touchAction: touch, ...style }}>
-      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} shadows onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
-        <directionalLight position={[-3, 4, 4]} intensity={0.6} />
-        <ShadowLight />
-        {/* soft shadows by sampling round each point (percentage closer soft shadows): softer the further the shadow
-            falls from its card, and no thinning at the edges of the card it falls on (a blurred shadow map thinned out
-            there, mixing in the empty space past the card) */}
-        {soft && <SoftShadows size={22} samples={20} focus={0.4} />}
+      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
+        <directionalLight position={[-3, 4, 4]} intensity={1.6} />
+        <directionalLight position={[3, -1, 3]} intensity={0.35} />
         <Environment resolution={1024} frames={1}>
           <Lightformer form="rect" intensity={4} position={[0, 4, 3]} scale={[8, 2, 1]} rotation-x={Math.PI / 3} />
           <Lightformer form="rect" intensity={2.5} color="#e6e9ff" position={[-5, 1, 2]} scale={[1.2, 6, 1]} rotation-y={Math.PI / 2.5} />
@@ -713,7 +799,10 @@ export function CardStage({ children, className, style, near = false, dist = 1, 
           <Lightformer form="rect" intensity={1.2} color="#687ef5" position={[0, -4, 1]} scale={[8, 1.5, 1]} rotation-x={-Math.PI / 3} />
         </Environment>
         <Lens near={near} dist={dist} />
-        <group position={[0, offset, 0]}>{children}</group>
+        <CastersCtx.Provider value={shadows ? casters : null}>
+          <group position={[0, offset, 0]}>{children}</group>
+          {shadows && <CastShadows />}
+        </CastersCtx.Provider>
       </Canvas>
     </div>
   );
