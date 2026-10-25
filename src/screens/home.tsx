@@ -3,13 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, animate } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
-import { fabricAdvice, fitName, metresFor, metresAt, notionsFor, kindOf, FLUTTER, SEED_PATTERNS, TEMPLATES, CATEGORIES, type GarmentKey } from "@/lib/data";
-import { TplCard } from "./templates";
-import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, Segmented, cx, useDesk } from "@/components/ui";
+import { fabricAdvice, fitName, metresFor, metresAt, notionsFor, kindOf, FLUTTER, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
+import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { useInstall } from "@/components/Install";
 import { MapBoard } from "./print";
-import { ArcCarousel } from "./auth";
 import { piecesFor } from "./pattern";
 import { Icon, type IconName } from "@/components/icons";
 
@@ -79,7 +77,7 @@ const CREATE: [IconName, string, string][] = [
   ["dress", "Start from a pattern", "Pick a design, fit it to you"],
   ["body", "Add a body", "Take your measurements"],
 ];
-function useCreateActions() {
+export function useCreateActions() {
   const { go, newDraft, startBody } = useApp();
   return [() => { newDraft(); go("patSelectBody"); }, () => go("templates"), () => startBody()];
 }
@@ -487,76 +485,13 @@ export function Bodies() {
 }
 
 // What a pattern's card says: where it stands, in words that help you decide what to do next.
-const specOf = (p: Pattern): NonNullable<Pattern["spec"]> => p.spec ?? SEED_PATTERNS.find((x) => x.id === p.id)?.spec ?? { ease: 4, drape: 0.6, seam: 1.5, printer: "A4" as const, metres: metresFor(p.garment, 4) };
-const statusLine = (p: Pattern) => {
+export const specOf = (p: Pattern): NonNullable<Pattern["spec"]> => p.spec ?? SEED_PATTERNS.find((x) => x.id === p.id)?.spec ?? { ease: 4, drape: 0.6, seam: 1.5, printer: "A4" as const, metres: metresFor(p.garment, 4) };
+export const statusLine = (p: Pattern) => {
   const sp = specOf(p);
   if (p.status === "Printed") return sp.printer === "A0" ? "Printed at a print shop" : `Printed on ${sp.sheets ?? 9} A4 sheets`;
   if (p.status === "Fitting") return "Ready to print";
   return "Draft, not finished yet";
 };
-
-export function Patterns({ p }: { p?: Record<string, unknown> }) {
-  const { go, patterns, removePatterns } = useApp();
-  const [f, setF] = useState((p?.filter as string) ?? "All"); // the profile's Printed tile opens it filtered
-  // your own patterns, or every pattern the app offers to make (the same ones as on home), filtered by kind
-  const [view, setView] = useState(p?.view === "ready" ? "Patterns to make" : "Your patterns");
-  const ready = view === "Patterns to make";
-  const [cat, setCat] = useState("All");
-  const ed = useEditing<string>();
-  const list = patterns.filter((p) => f === "All" || (f === "Printed" ? p.status === "Printed" : p.status !== "Printed"));
-  const desk = useDesk();
-  const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="patterns" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="patterns" />;
-  return (
-    <Screen dock={!ed.editing} footer={footer}>
-      <LibraryHead title="Pattern library" editing={ed.editing} canEdit={!ready && patterns.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
-      {!ed.editing && <div className="mt-4 lg:max-w-[420px]"><Segmented items={["Your patterns", "Patterns to make"]} value={view} onChange={setView} /></div>}
-      {ready ? (
-        <>
-        <div className="noscroll mt-3 flex gap-5 overflow-x-auto border-b border-white/10 lg:max-w-[520px]">{["All", ...CATEGORIES].map((c) => <button key={c} onClick={() => setCat(c)} className={cx("relative shrink-0 pb-2.5 text-[15px] transition-colors", cat === c ? "text-white" : "text-white/50 hover:text-white/80")}>{c === "Pants" ? "Trousers" : c}{cat === c && <span className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-white" />}</button>)}</div>
-        <div className={cx("mt-4 grid gap-3", desk ? "grid-cols-4 gap-5" : "grid-cols-2")}>{TEMPLATES.filter((t) => cat === "All" || t.category === cat).map((t) => <TplCard key={t.key} t={t} desk={desk} onClick={() => go("template", { key: t.key })} />)}</div>
-        </>
-      ) : <>
-      {patterns.length > 0 && <div className="mt-3 flex gap-5 border-b border-white/10 lg:max-w-[420px]">{["All", "In progress", "Printed"].map((c) => <button key={c} onClick={() => setF(c)} className={cx("relative pb-2.5 text-[15px] transition-colors", f === c ? "text-white" : "text-white/50 hover:text-white/80")}>{c}{f === c && <span className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-white" />}</button>)}</div>}
-      <div className="mt-4 flex flex-col gap-3 lg:mt-7 lg:grid lg:grid-cols-2 lg:gap-4">
-        {list.map((p, i) => {
-          const sp = specOf(p);
-          const on = ed.sel.includes(p.id);
-          return (
-            <motion.button key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.4 }}
-              onClick={() => (ed.editing ? ed.toggle(p.id) : go("pattern", { id: p.id }))}
-              className={cx("card-soft tap flex w-full items-stretch gap-4 rounded-[26px] p-2.5 pr-4 text-left transition-opacity", ed.editing && !on && "opacity-70", on && "!border-white")}>
-              {/* the garment on a small Crown panel, like a swatch card */}
-              <span className="violet-panel relative grid h-[116px] w-[96px] shrink-0 place-items-center overflow-hidden rounded-[20px] lg:h-[140px] lg:w-[118px]">
-                <Flat g={p.garment as GarmentKey} size={desk ? 82 : 66} stroke="#fff" fill="rgba(255,255,255,.16)" />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col py-1.5">
-                <span className="flex items-center gap-1.5 text-[13px] text-white/70"><span className={cx("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[p.status])} />{statusLine(p)}</span>
-                <span className="mt-1.5 block truncate text-[18px] leading-tight">{p.name}</span>
-                <span className="mt-0.5 block truncate text-[14px] text-white/55">Drafted to {p.body}</span>
-                <span className="mt-auto flex flex-wrap gap-1.5 pt-2">
-                  <span className="rounded-full bg-white/[.07] px-2.5 py-1 text-[12px] text-white/75">{fitName(sp.ease)} fit</span>
-                  <span className="rounded-full bg-white/[.07] px-2.5 py-1 text-[12px] text-white/75"><span className="serif">{sp.metres}</span> m of fabric</span>
-                </span>
-              </span>
-              <span className="grid place-items-center">{ed.editing ? <Tick on={on} /> : <Icon name="chevR" size={18} className="text-white/40" />}</span>
-            </motion.button>
-          );
-        })}
-      </div>
-      {list.length === 0 && (patterns.length === 0 ? (
-        <div className="mt-8 text-center">
-          {/* the sign-up page's arc of looks: what you could make, drifting past */}
-          <ArcCarousel />
-          <p className="mt-6 text-[20px] tracking-[-.02em]">No patterns yet</p>
-          <p className="mx-auto mt-1.5 max-w-[300px] text-[15px] leading-snug text-white/60">Design your own, or start from one of the patterns to make.</p>
-          <button onClick={() => setView("Patterns to make")} className="tap mt-3 h-11 rounded-full border border-white/20 px-5 text-[15px] font-medium hover:border-white/45">See the patterns to make</button>
-        </div>
-      ) : <p className="mt-8 text-center text-[15px] text-white/55">Nothing here yet.</p>)}
-      </>}
-      <ConfirmDelete open={ed.ask} n={ed.sel.length} one="pattern" many="patterns" onNo={() => ed.setAsk(false)} onYes={() => { removePatterns(ed.sel); ed.stop(); }} />
-    </Screen>
-  );
-}
 
 // A finished (or in-progress) pattern, as a complete page you can come back to: the garment on the body,
 // where it stands, and a shopping list you can show at the fabric shop.
