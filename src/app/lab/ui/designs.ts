@@ -426,7 +426,7 @@ const nckGrid: Design = {
         el("blines", "Lines", "back", "spot", "flat", [{ t: "path", d: `M${r(up)} 0V${bh}M0 ${bh}H90M${r(dn)} ${bh}V55`, stroke: 0.16 }]),
         el("bstars", "Half stars", "back", "spot", "flat", [A(HALF_STAR, up - st / 2, bh - st / 2, st), A(HALF_STAR, dn + st / 2, bh + st / 2, st, { rot: 180 })]),
         el("name", "Name", "back", "ink", "flat", [T("Natalia", M, b1, S, { font: "serif" }), T("Chamon", M, b2, S, { font: "serif" })]),
-        el("role", "Role", "back", "ink", "flat", [T("Product, UI/UX\nand front-end", up + M, b2 - rg, rs, { font: "satoshi", weight: 500, lead: 1.36 })]),
+        el("role", "Role", "back", "ink", "flat", [T("Product\ndesigner", up + M, b2 - rg, rs, { font: "satoshi", weight: 500, lead: 1.36 })]),
         ...contact("back", rows([["phone", ME.phone], ["web", ME.web], ["pin", ME.city], ["mail", ME.email]], dn + M, row1, cs, { font: "mono", gap: 4.8 }), {}, { surface: "spot" }),
         el("tea", "Tea", "back", "spot", "flat", [A(TEA, 90 - M - tw, 55 - M - th, tw)]),
       ],
