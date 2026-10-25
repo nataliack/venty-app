@@ -318,7 +318,9 @@ function faceMaps(els: El[], masks: Mask[], H: Float32Array, stock: Stock, paper
     const hl = H[y * w + Math.max(0, x - 1)], hr = H[y * w + Math.min(w - 1, x + 1)];
     const hu = H[Math.max(0, y - 1) * w + x], hd = H[Math.min(h - 1, y + 1) * w + x];
     const nx = -(hr - hl) / MM, ny = (hd - hu) / MM, inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
-    nrm[o] = (nx * inv * 0.5 + 0.5) * 255; nrm[o + 1] = (ny * inv * 0.5 + 0.5) * 255; nrm[o + 2] = (inv * 0.5 + 0.5) * 255; nrm[o + 3] = 255;
+    // dithered by a fraction of a step: 8-bit normals in smooth slopes otherwise show as stepped, pixelated reflections
+    const dz = ((((x * 73856093) ^ (y * 19349663)) >>> 0) % 1000) / 1000 - 0.5;
+    nrm[o] = (nx * inv * 0.5 + 0.5) * 255 + dz; nrm[o + 1] = (ny * inv * 0.5 + 0.5) * 255 - dz; nrm[o + 2] = (inv * 0.5 + 0.5) * 255; nrm[o + 3] = 255;
     const ao = 1 - Math.min(0.55, Math.max(0, Hb[i] - H[i]) * 0.45);
     orm[o] = ao * 255; orm[o + 1] = Math.min(1, Math.max(0.04, rough)) * 255; orm[o + 2] = metal * 255; orm[o + 3] = 255;
     coat[j] = cc * 255; irid[j] = ir * 255;
@@ -415,9 +417,9 @@ function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
   return new THREE.MeshPhysicalMaterial({
     map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
     aoMap: m.orm, aoMapIntensity: 1, roughnessMap: m.orm, metalnessMap: m.orm, roughness: 1, metalness: 1,
-    clearcoat: 1, clearcoatMap: m.coat, clearcoatRoughness: 0.06,
+    clearcoat: 1, clearcoatMap: m.coat, clearcoatRoughness: 0.1,
     iridescence: 1, iridescenceMap: m.irid, iridescenceIOR: 1.6, iridescenceThicknessRange: [220, 880],
-    sheen: stock.coating === "soft" ? 0.55 : 0, sheenRoughness: 0.75, sheenColor: new THREE.Color("#ffffff"),
+    sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75, sheenColor: new THREE.Color("#ffffff"),
   });
 }
 
@@ -530,7 +532,7 @@ export function BusinessCard({ els, stock, relief = 1.6, flip = 0, near = false,
       <Canvas camera={{ position: [0, 0, 5.2], fov: 30 }} dpr={[1, 2]} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
         <directionalLight position={[-3, 4, 4]} intensity={1.6} />
         <directionalLight position={[3, -1, 3]} intensity={0.35} />
-        <Environment resolution={256} frames={1}>
+        <Environment resolution={1024} frames={1}>
           <Lightformer form="rect" intensity={4} position={[0, 4, 3]} scale={[8, 2, 1]} rotation-x={Math.PI / 3} />
           <Lightformer form="rect" intensity={2.5} color="#e6e9ff" position={[-5, 1, 2]} scale={[1.2, 6, 1]} rotation-y={Math.PI / 2.5} />
           <Lightformer form="rect" intensity={2} color="#c9d0ff" position={[5, 0, 2]} scale={[1.2, 6, 1]} rotation-y={-Math.PI / 2.5} />
