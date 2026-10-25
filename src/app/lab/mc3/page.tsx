@@ -1,10 +1,12 @@
 "use client";
 // Lab (MC 3): choosing the app's home-screen icon. The icons themselves are in icons.ts (their PNGs in
 // public/lab/mc3/icons, made by tools/lab-mc3-icons.mjs). Nothing here is used by the app.
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { cx, HS, Lead, NextButton, RB } from "@/components/ui";
 import { ICONS, type IconKey } from "./icons";
+import { Phone } from "./parts";
+import { InstallLab } from "./InstallLab";
 
 // the icon's PNG: 512 to look at, 180 for the iPhone's apple-touch-icon. Today is the app's own icon.
 const png = (k: IconKey, size: 180 | 512 = 512) =>
@@ -14,18 +16,6 @@ const png = (k: IconKey, size: 180 | 512 = 512) =>
 function AppIcon({ k, size, className }: { k: IconKey; size: number; className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={png(k)} alt="" width={size} height={size} style={{ width: size, height: size }} className={cx("block shrink-0 rounded-[22.37%]", className)} />;
-}
-
-// ─── a phone at the iPhone's real size (393 × 852), a touch smaller on a narrow screen so it fits ───
-function Phone({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <figure className="flex flex-col items-center gap-3 max-[424px]:[zoom:.86]">
-      <div className="relative isolate h-[852px] w-[393px] shrink-0 overflow-hidden rounded-[55px] bg-bg shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
-        {children}
-      </div>
-      <figcaption className="text-[14px] text-white/55">{label}</figcaption>
-    </figure>
-  );
 }
 
 // ─── the step in the app: the first page of "Add Venty to your home screen" ───
@@ -96,7 +86,9 @@ export default function LabMC3() {
     <div className="fixed inset-0 overflow-y-auto bg-[#05060b] text-white">
       <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-6">
         <p className="text-[14px] text-white/50">Venty lab · MC 3</p>
-        <h2 className="h1 mt-6 !text-[34px]">App icon</h2>
+        <div className="mt-6"><InstallLab /></div>
+        <div className="my-16 h-px bg-white/10" />
+        <h2 className="h1 !text-[34px]">App icon</h2>
         <div className="mt-4 max-w-[640px] space-y-3 text-[15px] leading-snug text-white/65">
           <p>A web app can offer a choice of icon, but only before it is added. On an iPhone the icon is saved when Venty is added to the home screen and stays as it is; the app has no way to swap it afterwards like a native app can. So the choice belongs in Add Venty to your home screen, and changing it later means removing Venty and adding it again.</p>
           <p>On Android, Chrome checks the app’s details about once a day and can update the icon, showing the person the change first. That needs the icon set from a server, and it is untested here.</p>

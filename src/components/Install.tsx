@@ -71,13 +71,13 @@ const AddBar = () => (
   </Mock>
 );
 
-const IOS: { t: string; d: string; art?: ReactNode }[] = [
+export const IOS: { t: string; d: string; art?: ReactNode }[] = [
   { t: "Tap the three dots", d: "Next to the web address, at the bottom of Safari.", art: <SafariBar /> },
   { t: "Tap Share", d: "It is at the top of the menu that opens.", art: <MoreMenu /> },
   { t: "Scroll down, tap Add to Home Screen", d: "It sits below the apps and contacts.", art: <ShareMenu /> },
   { t: "Tap Add", d: "Venty is now on your home screen.", art: <AddBar /> },
 ];
-const ANDROID: { t: string; d: string; art?: ReactNode }[] = [
+export const ANDROID: { t: string; d: string; art?: ReactNode }[] = [
   { t: "Open Chrome’s menu", d: "Tap ⋮ in the top right corner." },
   { t: "Tap Add to Home screen", d: "On some phones it says Install app." },
   { t: "Tap Install", d: "Venty is now on your home screen, ready to open like an app." },
