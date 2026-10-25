@@ -79,11 +79,13 @@ const SKY = new Set(["splash", "welcome", "signedin"]);
 // the tab bar's pages: from one to another they cross-fade in place (no slide), so the bar holds still and the current
 // tab's circle glides to the next tab, like a native tab bar
 const TAB_PAGES = new Set(["home", "bodies", "patterns", "you"]);
-const CROWN_TOP = new Set(["splash", "signedin", "welcome", "onboarding", "ready", "printed"]);
+const CROWN_TOP = new Set(["splash", "welcome", "onboarding", "ready", "printed"]);
+// "Welcome, Ana" is on Haze (26 Oct 2026): its colour at the top and at the bottom
+const HAZE_TOP = "#96a7f9", HAZE_BOTTOM = "#7086ec";
 function useStatusTint(id: string) {
   useEffect(() => {
     const desk = window.matchMedia("(min-width: 1024px)").matches;
-    const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (CROWN_TOP.has(id) ? "#a7b1d3" : id === "tourAsk" ? "#4a525d" : "#0b0c15");
+    const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (id === "signedin" ? HAZE_TOP : CROWN_TOP.has(id) ? "#a7b1d3" : id === "tourAsk" ? "#4a525d" : "#0b0c15");
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
@@ -93,7 +95,7 @@ function useStatusTint(id: string) {
     // Tab screens in the home-screen app: the bar is docked, so the strip continues the bar's own bottom colour.
     const TABS = new Set(["home", "bodies", "patterns", "you"]);
     const pwa = document.documentElement.classList.contains("pwa");
-    const bottom = pwa && TABS.has(id) ? "#f0f4fe" : id === "prompt" || id === "generating" ? LIGHT_TOP.prompt : PAPER.has(id) ? "#f3f1ec" : id === "tourAsk" ? "#636e7b" : SKY.has(id) ? "#262c5e" : "#0b0c15";
+    const bottom = pwa && TABS.has(id) ? "#f0f4fe" : id === "prompt" || id === "generating" ? LIGHT_TOP.prompt : PAPER.has(id) ? "#f3f1ec" : id === "tourAsk" ? "#636e7b" : id === "signedin" ? HAZE_BOTTOM : SKY.has(id) ? "#262c5e" : "#0b0c15";
     // Safari 26 (theme-color is ignored) paints its status bar from this colour, since .device has none of its own
     // (see globals.css): in Safari it is each screen's top colour, so the bar runs on from the screen as if see-through.
     // The home-screen app has a see-through status bar already, so there it keeps the bottom strip's colour.

@@ -733,6 +733,51 @@ input { font: inherit; color: inherit; }
 @media (max-width: 1023px) { .sky.sky-light.sky-live .drift { opacity: .85; } }
 @media (prefers-reduced-motion: reduce) { .sky.sky-light.sky-live { animation: none; } }
 
+/* Haze, the landing page's locked purple sky (from the lab, 26 Oct 2026, on "Welcome, Ana"): periwinkle washing in from
+   the top left over cornflower, four drifting lights. <div class="sky sky-haze"> with the four .drift spans. */
+.sky.sky-haze { background:
+  radial-gradient(60% 50% at 10% 5%, rgb(192 200 219 / .7) 0%, rgb(157 172 205 / .4) 30%, transparent 65%),
+  radial-gradient(40% 34% at 75% 65%, rgb(192 200 219 / .35) 0%, transparent 70%),
+  linear-gradient(160deg, #8c9cf8 0%, #7a8ef7 30%, #687ef5 70%, #6073e6 100%); }
+.sky.sky-haze::before { animation-duration: 14s; background: radial-gradient(40% 30% at 0% 0%, rgb(239 244 255 / .4) 0%, transparent 100%); }
+.sky.sky-haze .drift { filter: blur(70px); }
+.sky.sky-haze .d1 { width: 70%; aspect-ratio: 1; left: -25%; top: -25%; right: auto; bottom: auto; background: rgb(192 200 219 / .5); animation: v-s1 11s ease-in-out infinite alternate; }
+.sky.sky-haze .d2 { width: 50%; aspect-ratio: 1; right: -5%; top: 40%; left: auto; bottom: auto; background: rgb(192 200 219 / .3); animation: v-s3 13s ease-in-out infinite alternate; }
+.sky.sky-haze .d3 { width: 60%; aspect-ratio: 1; right: -20%; bottom: -25%; left: auto; top: auto; background: rgb(79 99 224 / .35); animation: v-s2 14s ease-in-out infinite alternate; }
+.sky.sky-haze .d4 { display: block; width: 45%; aspect-ratio: 1; left: 15%; bottom: -15%; top: auto; right: auto; background: rgb(96 115 230 / .3); animation: v-s4 12s ease-in-out infinite alternate; }
+
+/* The filament (from the landing page's loading screen, in white; "Welcome, Ana"): a fine track; the lit part runs from
+   faint to full white, a soft glow along it (strongest at the head), a sweep of light running inside the lit part. The
+   growing end is a short streak of light that tapers off, never a ball. Nothing of it (glow, head) ever shows left of
+   where the track starts: the lit part is clipped there, its glows' masks start at the line, the head is never wider
+   than the lit part. Under it, the word for what it is doing rising from its mask, and the number, in the same type. */
+.fil-bar { position: relative; height: 2px; border-radius: 999px; background: rgb(255 255 255 / .2); }
+.fil-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px 0 0 999px; clip-path: inset(-40px -40px -40px 0);
+  background: linear-gradient(90deg, rgb(255 255 255 / .3), rgb(255 255 255 / .75) 60%, #fff); }
+.fil-fill::before, .fil-fill::after { content: ""; position: absolute; top: 50%; translate: 0 -50%; box-sizing: content-box; border-radius: 999px; pointer-events: none; background-clip: content-box; }
+.fil-fill::before { inset-inline: -28px; padding: 24px 28px; height: 12px; filter: blur(8px);
+  background-image: linear-gradient(90deg, rgb(255 255 255 / .04), rgb(255 255 255 / .2) 55%, rgb(255 255 255 / .42));
+  -webkit-mask-image: linear-gradient(90deg, transparent 28px, #000 74px, #000 calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 28px, #000 74px, #000 calc(100% - 40px), transparent 100%); }
+.fil-fill::after { inset-inline: -10px; padding: 8px 10px; height: 4px; filter: blur(2px);
+  background-image: linear-gradient(90deg, rgb(255 255 255 / .1), rgb(255 255 255 / .45) 55%, rgb(255 255 255 / .85));
+  -webkit-mask-image: linear-gradient(90deg, transparent 10px, #000 26px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 10px, #000 26px, #000 calc(100% - 14px), transparent 100%); }
+.fil-sweep { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
+.fil-pulse { position: absolute; inset: 0; background: linear-gradient(90deg, transparent 60%, rgb(255 255 255 / .95) 88%, transparent); animation: fil-pulse 1.6s cubic-bezier(.55,0,1,.45) infinite; }
+.fil-head { position: absolute; right: 0; top: 0; width: min(30px, 100%); height: 100%; translate: 10% 0;
+  background: linear-gradient(90deg, transparent, #fff 72%, rgb(255 255 255 / .55));
+  box-shadow: 0 0 4px rgb(255 255 255 / .7); animation: fil-breathe 1.8s ease-in-out infinite; }
+@keyframes fil-pulse { from { translate: -100% 0; opacity: 0; } to { translate: 0 0; opacity: 1; } }
+@keyframes fil-breathe { 50% { opacity: .55; } }
+.fil-roll { display: grid; overflow: clip; padding-block: 2px; font-size: 14px; line-height: 1.5; letter-spacing: -.01em; white-space: nowrap; font-variant-numeric: tabular-nums; color: rgb(255 255 255 / .78); }
+.fil-roll > [aria-hidden] { grid-area: 1 / 1; translate: 0 110%; opacity: 0; transition: translate .8s cubic-bezier(.16,1,.3,1), opacity .5s ease; }
+.fil-roll > [data-state="in"] { translate: 0 0; opacity: 1; }
+.fil-roll > [data-state="out"] { translate: 0 -110%; opacity: 0; }
+/* the tick of light over "Welcome, Ana": one fine line with a soft glow */
+.fil-glow { filter: drop-shadow(0 0 5px rgb(255 255 255 / .75)) drop-shadow(0 0 14px rgb(255 255 255 / .35)); }
+@media (prefers-reduced-motion: reduce) { .fil-pulse, .fil-head { animation: none; } .fil-roll > [aria-hidden] { transition: none; } .sky.sky-haze::before, .sky.sky-haze .drift { animation: none !important; } }
+
 /* the 3D body's loader (BodyLoader): shows after a beat (a cached body never flashes it), the ring turning */
 .body-loader-in { opacity: 0; animation: body-loader-in .3s ease .25s forwards; }
 @keyframes body-loader-in { to { opacity: 1; } }

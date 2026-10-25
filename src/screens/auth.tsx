@@ -6,8 +6,8 @@ import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, 
 import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
-// Splash and "Welcome, Ana": the same Crown sky and logo position as Welcome, so the app opens straight into it.
-// Only a slim loader sits at the bottom, where Welcome's buttons will appear.
+// Splash and "Welcome, Ana": the same logo position as Welcome, so the app opens straight into it. The splash is on
+// Crown with a slim loader at the bottom, where Welcome's buttons will appear; "Welcome, Ana" is on Haze (below).
 let fromSplash = false;
 function Loader({ ms }: { ms: number }) {
   return (
@@ -21,11 +21,66 @@ function Loader({ ms }: { ms: number }) {
     </div>
   );
 }
-function SkyFrame({ children, onTap, logoIn = true }: { children?: ReactNode; onTap: () => void; logoIn?: boolean }) {
+// "Welcome, Ana" (from the lab, version F, 26 Oct 2026): in the spirit of the landing page's loading screen, in white on
+// Haze. Over the heading a tick of light draws itself, foot to tip; at the foot the filament fills, the word for what it
+// is doing under its start (Setting up, Saving, Ready, each rising from its mask) and the percentage under its end. The
+// line fills in FILL_MS and holds on Ready until the screen moves on (SIGNED_MS).
+const FILL_MS = 1400, SIGNED_MS = 2000;
+const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+function useFill(ms: number) {
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (t: number) => { const k = Math.min(1, (t - t0) / ms); setP(easeInOut(k)); if (k < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [ms]);
+  return p;
+}
+const FIL_WORDS = ["Setting up", "Saving", "Ready"];
+// the word, rising from its mask as it changes (the last one leaves upward)
+function FilRoll({ i }: { i: number }) {
+  const [prev, setPrev] = useState(-1);
+  const [cur, setCur] = useState(i);
+  if (i !== cur) { setPrev(cur); setCur(i); }
+  return (
+    <p className="fil-roll">{FIL_WORDS.map((t, k) => <span key={t} aria-hidden data-state={k === i ? "in" : k === prev ? "out" : "wait"}>{t}</span>)}</p>
+  );
+}
+function FilamentLoader({ p }: { p: number }) {
+  return (
+    <div className="flex w-full max-w-[380px] flex-col items-center gap-2 lg:mb-[6dvh]" aria-hidden>
+      <div className="grid h-14 w-full place-items-center">
+        <div className="flex w-[200px] flex-col gap-2.5 lg:w-[240px]">
+          <div className="fil-bar w-full">
+            <div className="fil-fill" style={{ width: `${p * 100}%`, opacity: p > 0.005 ? 1 : 0 }}>
+              <span className="fil-sweep"><span className="fil-pulse" /></span>
+              <span className="fil-head" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between"><FilRoll i={p >= 1 ? 2 : p < 0.5 ? 0 : 1} /><p className="fil-roll">{Math.round(p * 100)}%</p></div>
+        </div>
+      </div>
+      <div className="h-11" />
+    </div>
+  );
+}
+// the tick of light: one fine line that draws itself from its foot to its tip (k: 0 to 1)
+function TickOfLight({ k, size }: { k: number; size: number }) {
+  return (
+    <svg viewBox="0 0 56 56" width={size} height={size} className="fil-glow" aria-hidden>
+      <path d="M14 29.5 L24 39 L43 18" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1" strokeDashoffset={1 - k} />
+    </svg>
+  );
+}
+
+// sky: Crown (the splash) or Haze ("Welcome, Ana"); loader: what sits in the foot's slot (the splash's slim bar by default)
+function SkyFrame({ children, onTap, logoIn = true, sky = "crown", loader }: { children?: ReactNode; onTap: () => void; logoIn?: boolean; sky?: "crown" | "haze"; loader?: ReactNode }) {
   const desk = useDesk();
   return (
     <button className="absolute inset-0 overflow-hidden text-center" onClick={onTap} aria-label="Continue">
-      <Crown live />
+      {sky === "haze" ? <div className="sky sky-haze" aria-hidden><span className="drift d1" /><span className="drift d2" /><span className="drift d3" /><span className="drift d4" /></div> : <Crown live />}
       <div className="sky-floor" aria-hidden />
       <div className="relative flex h-full flex-col items-center px-6 lg:px-16" style={{ paddingTop: "var(--top)", paddingBottom: "var(--bottom)" }}>
         <motion.div initial={logoIn ? { opacity: 0, y: 14 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }} className="mt-[13dvh] lg:mt-[10dvh]">
@@ -33,7 +88,7 @@ function SkyFrame({ children, onTap, logoIn = true }: { children?: ReactNode; on
         </motion.div>
         <div className="my-auto flex max-w-[620px] flex-col items-center pt-8">{children}</div>
         {/* the slot Welcome's buttons use */}
-        <Loader ms={1900} />
+        {loader ?? <Loader ms={1900} />}
       </div>
     </button>
   );
@@ -252,14 +307,15 @@ export function EmailStep({ p }: { p?: Record<string, unknown> }) {
 export function SignedIn() {
   const replace = useApp((s) => s.replace);
   const name = useApp((s) => s.user.name);
-  useEffect(() => { const t = setTimeout(() => replace("tourAsk"), 1900); return () => clearTimeout(t); }, [replace]);
+  const desk = useDesk();
+  const p = useFill(FILL_MS);
+  useEffect(() => { const t = setTimeout(() => replace("tourAsk"), SIGNED_MS); return () => clearTimeout(t); }, [replace]);
   return (
-    <SkyFrame onTap={() => replace("tourAsk")} logoIn={false}>
-      <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.35, duration: 0.7 }} className="grid h-16 w-16 place-items-center rounded-full border border-white/50 bg-white/15 backdrop-blur-md">
-        <Icon name="check" size={30} strokeWidth={2.4} />
-      </motion.span>
+    <SkyFrame onTap={() => replace("tourAsk")} logoIn={false} sky="haze" loader={<FilamentLoader p={p} />}>
+      <TickOfLight k={Math.min(1, p * 2.6)} size={desk ? 72 : 60} />
       <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="h1 mt-6 !text-[36px] lg:!text-[56px]">Welcome, {name}.</motion.h2>
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="lead mt-2">Your account is ready. Let’s show you around.</motion.p>
+      {/* on two rows, never a widow */}
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="lead mt-2 !text-white/80">Your account is ready.<br />Let’s show you around.</motion.p>
     </SkyFrame>
   );
 }
