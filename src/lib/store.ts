@@ -1,5 +1,6 @@
 "use client";
 import { create } from "zustand";
+import type { IconKey } from "./appIcons";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import { defaultMeasures, templateBy, metresFor, nameFor, type GarmentKey, type Kind, type Sex, SEED_PATTERNS } from "./data";
 
@@ -89,8 +90,10 @@ type State = {
   experience: number | null;
   prefsDone: boolean; // units + experience chosen once, app-wide
   tourSkipped: boolean; // skipped onboarding: home offers the tour later
-  updatesSeen: boolean; // the home bell has been opened
+  updatesSeen: boolean; // the home bell has been opened (before notifications kept what was read, below)
+  updatesRead: string[]; // the notifications read (their ids); nothing is ever deleted, reminders go once done
   installDismissed: boolean; // "Add Venty to your home screen" card closed on home
+  appIcon: IconKey | null; // the home-screen icon chosen on "Add Venty to your home screen" (null: none chosen, today's)
   resumeBody: string | null; // body whose extra measures were paused ("Take a break")
   bodies: Body[];
   activeBody: string; // body being edited / selected
@@ -129,7 +132,9 @@ const initial = () => ({
   prefsDone: false,
   tourSkipped: false,
   updatesSeen: false,
+  updatesRead: [] as string[],
   installDismissed: false,
+  appIcon: null,
   resumeBody: null as string | null,
   // a new visitor (and Reset, for the next one at the exhibition) starts with nothing: no bodies or patterns they did not make
   bodies: [] as Body[],

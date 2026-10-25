@@ -750,3 +750,8 @@ input { font: inherit; color: inherit; }
 .body-loader-ring { animation: body-loader-turn .9s linear infinite; }
 @keyframes body-loader-turn { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .body-loader-ring { animation: none; } }
+
+/* Add Venty to your home screen (InstallSteps.tsx): on the step picture in view, the thing to tap sends out a soft pulse */
+.pic-live .tap-ring { animation: tap-pulse 1.8s ease-out infinite; }
+@keyframes tap-pulse { 0% { box-shadow: 0 0 0 0 rgb(140 156 248 / .65), 0 0 18px rgb(140 156 248 / .55); } 70%, 100% { box-shadow: 0 0 0 12px rgb(140 156 248 / 0), 0 0 18px rgb(140 156 248 / .55); } }
+@media (prefers-reduced-motion: reduce) { .pic-live .tap-ring { animation: none; } }

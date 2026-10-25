@@ -6,10 +6,22 @@
 import { useState, type ReactNode } from "react";
 import { Icon } from "@/components/icons";
 import { Crown, cx, HS, Lead, NextButton, Pill, RB } from "@/components/ui";
-import { IOS, ANDROID } from "@/components/Install";
 import { ICONS, type IconKey } from "./icons";
 import { AppIcon, Phone } from "./parts";
 import { Glyph, Pic, type PicKey } from "./InstallArt";
+
+// the old page's steps (Install.tsx before 26 Oct 2026), kept here for these early rounds; their drawings are in git
+const IOS: { t: string; d: string; art?: ReactNode }[] = [
+  { t: "Tap the three dots", d: "Next to the web address, at the bottom of Safari." },
+  { t: "Tap Share", d: "It is at the top of the menu that opens." },
+  { t: "Scroll down, tap Add to Home Screen", d: "It sits below the apps and contacts." },
+  { t: "Tap Add", d: "Venty is now on your home screen." },
+];
+const ANDROID: { t: string; d: string; art?: ReactNode }[] = [
+  { t: "Open Chrome’s menu", d: "Tap ⋮ in the top right corner." },
+  { t: "Tap Add to Home screen", d: "On some phones it says Install app." },
+  { t: "Tap Install", d: "Venty is now on your home screen, ready to open like an app." },
+];
 
 type OS = "ios" | "android";
 type V = "fitted" | "picture" | "first" | "result";
