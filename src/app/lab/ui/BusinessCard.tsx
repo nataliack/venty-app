@@ -671,26 +671,34 @@ export function Sweep({ on }: { on: boolean }) {
   return <pointLight ref={l} color="#e9ecff" intensity={0} distance={9} decay={1.2} />;
 }
 
-// the shadow light: low and to the right, nearly from the front, so a card's shadow falls up and to the left, on the
-// strips of the cards behind that show (the key light, up and to the left, casts none: its shadows would fall behind
-// the card that throws them). Soft: a variance shadow map, blurred. A card throws its shadow on the cards behind it and
-// nowhere else (there is nothing else there)
+// the shadow light: a spotlight riding with the camera, just below and to the right of the eye. From there a card's
+// shadow on the cards behind lines up with the card's own outline as you see it, so it hugs the card's edges (a soft,
+// dark fringe just past them, a touch up and to the left, on the strips that show) and it turns exactly as the card
+// turns. Soft: a variance shadow map, blurred. It can only land on the cards behind (nothing else is there). The key
+// light, up and to the left, casts none
 function ShadowLight() {
-  const l = useRef<THREE.DirectionalLight>(null);
+  const l = useRef<THREE.SpotLight>(null);
+  const { scene } = useThree();
   useEffect(() => {
-    const d = l.current; if (!d) return;
-    const c = d.shadow.camera as THREE.OrthographicCamera;
-    c.left = -6; c.right = 6; c.top = 6; c.bottom = -6; c.near = 1; c.far = 40; c.updateProjectionMatrix();
-    d.shadow.mapSize.set(2048, 2048); d.shadow.radius = 14; d.shadow.blurSamples = 24; d.shadow.bias = -0.0004;
-  }, []);
-  return <directionalLight ref={l} position={[2.4, -2.2, 12]} intensity={0.9} castShadow />;
+    const s = l.current; if (!s) return;
+    scene.add(s.target);
+    s.shadow.mapSize.set(2048, 2048); s.shadow.radius = 10; s.shadow.blurSamples = 25; s.shadow.bias = -0.0001;
+    s.shadow.camera.near = 4; s.shadow.camera.far = 40;
+    return () => { scene.remove(s.target); };
+  }, [scene]);
+  useFrame(({ camera }) => {
+    const s = l.current; if (!s) return;
+    s.position.set(camera.position.x + 0.8, camera.position.y - 0.7, camera.position.z);
+    s.target.position.set(camera.position.x, camera.position.y, 0); s.target.updateMatrixWorld();
+  });
+  return <spotLight ref={l} intensity={2.4} angle={0.42} penumbra={1} decay={0} distance={0} castShadow />;
 }
 // the scene: lights, the studio the foil reflects, the camera; put cards (LiveCard) inside
 export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0 }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number }) {
   return (
     <div className={className} style={{ touchAction: touch, ...style }}>
       <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} shadows="variance" onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
-        <directionalLight position={[-3, 4, 4]} intensity={1.25} />
+        <directionalLight position={[-3, 4, 4]} intensity={0.6} />
         <ShadowLight />
         <Environment resolution={1024} frames={1}>
           <Lightformer form="rect" intensity={4} position={[0, 4, 3]} scale={[8, 2, 1]} rotation-x={Math.PI / 3} />
