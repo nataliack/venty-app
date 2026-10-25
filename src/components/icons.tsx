@@ -33,6 +33,8 @@ const P: Record<string, React.ReactNode> = {
   layers: <><path d="M12 4 3.5 8.5 12 13l8.5-4.5z" /><path d="M3.5 12.5 12 17l8.5-4.5M3.5 16.5 12 21l8.5-4.5" /></>,
   mic: <><rect x="9" y="3.5" width="6" height="11" rx="3" /><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" /></>,
   rotate: <><path d="M4.5 12a7.5 7.5 0 0 1 13-5.1L19.5 9" /><path d="M19.5 4.5V9H15" /><path d="M19.5 12a7.5 7.5 0 0 1-13 5.1L4.5 15" /></>,
+  // a ticked box: choosing several (Edit, in the pattern library)
+  select: <><rect x="4" y="4" width="16" height="16" rx="4.5" /><path d="m8.5 12.3 2.4 2.4 4.6-5" /></>,
   // two tall cards side by side: the carousel of big cards (the same 16px box, gap and corners as grid)
   columns: <><rect x="4" y="4" width="6.5" height="16" rx="1" /><rect x="13.5" y="4" width="6.5" height="16" rx="1" /></>,
   grid: <><rect x="4" y="4" width="6.5" height="6.5" rx="1" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" /></>,

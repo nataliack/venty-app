@@ -59,7 +59,7 @@ const Sub = ({ t, light, className }: { t: Tpl; light?: boolean; className?: str
 );
 
 // ─── the phone's screen: a scroll area and the real tab bar (its own layout group, so the phones never share a glide) ───
-function Shell({ light, children, bare, onScroll, overlay }: { light?: boolean; children: ReactNode; bare?: boolean; onScroll?: (el: HTMLDivElement) => void; overlay?: ReactNode }) {
+function Shell({ light, children, bare, onScroll, overlay, footer }: { light?: boolean; children: ReactNode; bare?: boolean; onScroll?: (el: HTMLDivElement) => void; overlay?: ReactNode; footer?: ReactNode }) {
   const id = useId();
   return (
     <LayoutGroup id={id}>
@@ -67,7 +67,7 @@ function Shell({ light, children, bare, onScroll, overlay }: { light?: boolean; 
         {!light && <div className="dotgrid" />}
         <div onScroll={onScroll && ((e) => onScroll(e.currentTarget))} className={cx("noscroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-[124px]", !bare && "pt-[62px]")}>{children}</div>
         {overlay}
-        <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-2"><TabBar tab="patterns" /></div>
+        <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-2">{footer ?? <TabBar tab="patterns" />}</div>
       </div>
     </LayoutGroup>
   );
@@ -194,7 +194,59 @@ const StatusLine = ({ m, s, short }: { m: Mine; s: Skin; short?: boolean }) => <
 
 // ─── cards: one frame for every small card (a photo or a surface of a fixed height, then exactly two lines of a fixed
 //     height), so cards in a row or a grid always match, however long a name is ───
-function Frame({ s, w, imgH, r = 22, pic, name, line, onClick }: { s: Skin; w?: number; imgH: number; r?: number; pic: ReactNode; name: string; line: ReactNode; onClick?: () => void }) {
+// ─── choosing patterns (Edit): the photo's top-right corner is cut away, so the card's own rim rises there as a lifted
+//     corner (its inner corner rounded, curving into the photo's edges on both sides), and a box sits in it: an outline
+//     to tap, filled periwinkle with a tick once chosen. One set of numbers per card size: box is the cut's side, f the
+//     curve where it meets the photo's edges, rb its inner corner, sq the box ───
+type Pick = { on: boolean; toggle: () => void };
+const CORNER = { s: { box: 36, f: 8, rb: 15, sq: 22, sqr: 7, pad: 5 }, l: { box: 48, f: 10, rb: 19, sq: 26, sqr: 8, pad: 7 } };
+const cornerPath = (k: keyof typeof CORNER) => {
+  const { box, f, rb } = CORNER[k], S = box + f, B = box;
+  return `M${f} 0H${S}V${B}H${f + rb}A${rb} ${rb} 0 0 1 ${f} ${B - rb}Z M0 0H${f}V${f}A${f} ${f} 0 0 0 0 0Z M${S - f} ${B}H${S}V${S}A${f} ${f} 0 0 0 ${S - f} ${B}Z`;
+};
+// the lifted corner's shadow falling onto the photo, as the rim's does all round (drawn inside the photo, so the cut
+// itself takes it away and only what falls on the photo shows)
+function CornerShade({ k, s, open }: { k: keyof typeof CORNER; s: Skin; open: boolean }) {
+  const { box, f } = CORNER[k], S = box + f;
+  if (!s.tray) return null;
+  return (
+    <svg width={S} height={S} className={cx("pointer-events-none absolute right-0 top-0 overflow-visible transition-opacity duration-300", open ? "opacity-100" : "opacity-0")} aria-hidden>
+      <path d={cornerPath(k)} transform="translate(-1 2.5)" fill={s.light ? "rgb(28 36 84)" : "#000"} opacity={s.light ? 0.4 : 0.75} style={{ filter: "blur(3.5px)" }} />
+    </svg>
+  );
+}
+function cornerMask(k: keyof typeof CORNER, open: boolean): CSSProperties {
+  const { box, f } = CORNER[k], S = box + f;
+  const d = cornerPath(k);
+  const svg = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${S}' height='${S}'><path d='${d}'/></svg>`)}")`;
+  const size = open ? `${S}px ${S}px, 100% 100%` : `0px 0px, 100% 100%`;
+  return {
+    WebkitMaskImage: `${svg}, linear-gradient(#000, #000)`, maskImage: `${svg}, linear-gradient(#000, #000)`,
+    WebkitMaskComposite: "xor", maskComposite: "exclude",
+    WebkitMaskPosition: "top right, 0 0", maskPosition: "top right, 0 0",
+    WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+    WebkitMaskSize: size, maskSize: size,
+    transition: "mask-size .32s cubic-bezier(.2,.8,.2,1), -webkit-mask-size .32s cubic-bezier(.2,.8,.2,1)",
+  };
+}
+// the box, centred in the lifted corner (the cut plus the rim beside it)
+function PickBox({ k, s, pick }: { k: keyof typeof CORNER; s: Skin; pick?: Pick }) {
+  const { box, sq, sqr, pad } = CORNER[k];
+  const at = (box + pad - sq) / 2;
+  return (
+    <AnimatePresence>
+      {pick && (
+        <motion.span key="box" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.25, delay: 0.08 }}
+          className={cx("pointer-events-none absolute grid place-items-center transition-colors duration-200", pick.on ? "icon-primary text-white" : "")}
+          style={{ top: at, right: at, width: sq, height: sq, borderRadius: sqr, ...(pick.on ? {} : { boxShadow: `inset 0 0 0 1.5px ${s.light ? "rgb(19 21 35 / .35)" : "rgb(255 255 255 / .5)"}` }) }}>
+          {pick.on && <Icon name="check" size={sq * 0.55} strokeWidth={3} />}
+        </motion.span>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function Frame({ s, w, imgH, r = 22, pic, name, line, onClick, pick }: { s: Skin; w?: number; imgH: number; r?: number; pic: ReactNode; name: string; line: ReactNode; onClick?: () => void; pick?: Pick }) {
   const words = (
     <span className={cx("block", s.tray ? "px-[7px] pb-[7px] pt-[9px]" : "pt-2.5")}>
       <span className={cx("block truncate text-[15px] leading-[18px]", s.name)}>{name}</span>
@@ -202,8 +254,9 @@ function Frame({ s, w, imgH, r = 22, pic, name, line, onClick }: { s: Skin; w?: 
     </span>
   );
   return (
-    <button onClick={onClick} className={cx("tap block shrink-0 snap-start text-left", s.tray && "p-[5px]")} style={{ width: w, borderRadius: r, ...(s.tray ? s.rim : {}) }}>
-      <span className="relative block overflow-hidden" style={{ height: imgH, borderRadius: s.tray ? r - 4 : r }}>{pic}<Sunk s={s} /></span>
+    <button onClick={pick ? pick.toggle : onClick} aria-pressed={pick ? pick.on : undefined} className={cx("tap relative block shrink-0 snap-start text-left", s.tray && "p-[5px]")} style={{ width: w, borderRadius: r, ...(s.tray ? s.rim : {}) }}>
+      <span className="relative block overflow-hidden" style={{ height: imgH, borderRadius: s.tray ? r - 4 : r, ...cornerMask("s", !!pick) }}>{pic}<Sunk s={s} /><CornerShade k="s" s={s} open={!!pick} /></span>
+      <PickBox k="s" s={s} pick={pick} />
       {words}
     </button>
   );
@@ -217,12 +270,13 @@ const Photo = ({ src, made }: { src: string; made?: Mine }) => (
 const TplSmall = ({ t, has, s, w, imgH }: { t: Tpl; has: boolean; s: Skin; w?: number; imgH: number }) => (
   <Frame s={s} w={w} imgH={imgH} pic={<Photo src={PHOTO[t.key]} made={madeOf(has, t.key)} />} name={t.name} line={<Lvl t={t} s={s} />} />
 );
-const MineSmall = ({ m, s, imgH }: { m: Mine; s: Skin; imgH: number }) => <Frame s={s} imgH={imgH} pic={<Img src={m.photo} />} name={m.name} line={<StatusLine m={m} s={s} short />} />;
+const MineSmall = ({ m, s, imgH, pick }: { m: Mine; s: Skin; imgH: number; pick?: Pick }) => <Frame s={s} imgH={imgH} pic={<Img src={m.photo} />} name={m.name} line={<StatusLine m={m} s={s} short />} pick={pick} />;
 const TALL_H = 400, BAND = 72;
-function TallCard({ m, s }: { m: Mine; s: Skin }) {
+function TallCard({ m, s, pick }: { m: Mine; s: Skin; pick?: Pick }) {
   if (s.tray) return (
-    <button className="tap flex shrink-0 snap-start flex-col rounded-[30px] p-[7px] text-left" style={{ width: 284, height: TALL_H, ...s.rim }}>
-      <span className="relative block min-h-0 flex-1 overflow-hidden rounded-[25px]"><Img src={m.photo} /><Sunk s={s} /></span>
+    <button onClick={pick?.toggle} aria-pressed={pick ? pick.on : undefined} className="tap relative flex shrink-0 snap-start flex-col rounded-[30px] p-[7px] text-left" style={{ width: 284, height: TALL_H, ...s.rim }}>
+      <span className="relative block min-h-0 flex-1 overflow-hidden rounded-[25px]" style={cornerMask("l", !!pick)}><Img src={m.photo} /><Sunk s={s} /><CornerShade k="l" s={s} open={!!pick} /></span>
+      <PickBox k="l" s={s} pick={pick} />
       <span className="flex shrink-0 items-center gap-3 px-2" style={{ height: BAND - 7 }}>
         <span className="grid h-[50px] w-[42px] shrink-0 place-items-center rounded-[12px]" style={s.tile}><Flat g={m.g} size={30} stroke={s.stroke} fill="transparent" /></span>
         <span className="min-w-0">
@@ -233,8 +287,9 @@ function TallCard({ m, s }: { m: Mine; s: Skin }) {
     </button>
   );
   return (
-    <button className="tap relative shrink-0 snap-start overflow-hidden rounded-[30px] text-left" style={{ width: 284, height: TALL_H }}>
-      <Img src={m.photo} />
+    <button onClick={pick?.toggle} aria-pressed={pick ? pick.on : undefined} className="tap relative shrink-0 snap-start overflow-hidden rounded-[30px] text-left" style={{ width: 284, height: TALL_H }}>
+      <span className="absolute inset-0 rounded-[30px]" style={cornerMask("l", !!pick)}><Img src={m.photo} /></span>
+      <PickBox k="l" s={s} pick={pick} />
       <span className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-bg/55 to-transparent" />
       <span className="absolute inset-x-0 bottom-0 h-[52%] bg-gradient-to-t from-bg/90 via-bg/45 to-transparent" />
       <span className="absolute left-4 top-4 flex items-center gap-1.5 text-[13px] text-white/90"><Dot s={m.status} />{m.line}</span>
@@ -546,7 +601,14 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const [ft, setFt] = useState<string[]>([]);
   const [sort, setSort] = useState<(typeof SORTS)[number]>("Newest first");
   const [grid, setGrid] = useState(false);
-  const [sheet, setSheet] = useState<null | "filter" | "mfilter">(null);
+  const [sheet, setSheet] = useState<null | "filter" | "mfilter" | "delete">(null);
+  // Edit: choosing patterns to delete
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [gone, setGone] = useState<string[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+  const stopPicking = () => { setPicking(false); setPicked([]); };
+  const pickOf = (id: string): Pick | undefined => (picking ? { on: picked.includes(id), toggle: () => setPicked((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id])) } : undefined);
   const [searching, setSearching] = useState(false);
   const scroller = useRef<HTMLDivElement | null>(null);
   const toolRow = useRef<HTMLDivElement>(null);
@@ -559,7 +621,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
     setTabsBar(!!t && !make && grid && el.scrollTop > t.offsetTop + t.offsetHeight - 102);
   };
   // Your patterns, filtered and in order
-  const mineOf = (stx: string[], kdx: string[], ftx: string[]) => (has ? MINE : []).filter((m) =>
+  const mineOf = (stx: string[], kdx: string[], ftx: string[]) => (has ? MINE.filter((m) => !gone.includes(m.id)) : []).filter((m) =>
     (!stx.length || stx.includes(STATUS_OF[m.status])) && (!kdx.length || kdx.includes(kindOfMine(m))) && (!ftx.length || ftx.includes(m.fit)) && (!q.trim() || m.name.toLowerCase().includes(q.trim().toLowerCase())));
   let mine = mineOf(st, kd, ft);
   if (sort === "Oldest first") mine = [...mine].reverse();
@@ -572,9 +634,24 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const mOn = [...lv.map((x) => ({ k: x, off: () => setLv(lv.filter((y) => y !== x)) })), ...pc.map((x) => ({ k: `${x} pieces`, off: () => setPc(pc.filter((y) => y !== x)) }))];
   const narrowed = cat !== "All" || mOn.length > 0 || !!mq.trim();
   // Your patterns: Create beside the title, the tools in a row under the tabs. Patterns to make: the tools beside the title
-  const titleCta = has && !make;
+  // how many of your own are left (deleting them all brings back the first-pattern card)
+  const left = has ? MINE.filter((m) => !gone.includes(m.id)).length : 0;
+  const titleCta = left > 0 && !make && !picking;
   const looking = on.length > 0 || !!q.trim();
-  const goTab = (v: string) => { setView(v); setBar(false); setTabsBar(false); setSearching(false); scroller.current?.scrollTo({ top: 0 }); };
+  const goTab = (v: string) => { setView(v); setBar(false); setTabsBar(false); setSearching(false); stopPicking(); scroller.current?.scrollTo({ top: 0 }); };
+  const allPicked = mine.length > 0 && mine.every((m) => picked.includes(m.id));
+  const remove = () => {
+    const n = picked.length;
+    setGone([...gone, ...picked]); setSheet(null); stopPicking();
+    setToast(n === 1 ? "Pattern deleted" : `${n} patterns deleted`); setTimeout(() => setToast(null), 2200);
+  };
+  // while choosing, Cancel and Delete take the tab bar's place
+  const pickBar = picking ? (
+    <div className="flex items-center gap-3 pb-2">
+      <Pill variant="dark" className="flex-1" onClick={stopPicking}>Cancel</Pill>
+      <Pill className={cx("flex-1", !picked.length && "is-off")} onClick={() => picked.length && setSheet("delete")} icon={<Icon name="trash" size={18} />}>{picked.length ? `Delete ${picked.length}` : "Delete"}</Pill>
+    </div>
+  ) : undefined;
   const cancel = () => { setSearching(false); if (make) setMq(""); else setQ(""); };
   const search = <SearchOpen q={make ? mq : q} setQ={make ? setMq : setQ} placeholder={make ? "Search patterns to make" : "Search your patterns"} onCancel={cancel} />;
   const nOn = make ? mOn.length : on.length;
@@ -583,9 +660,16 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
     <ToolBtn icon="sliders" label={make ? "Filter" : "Filter and sort"} n={nOn} onClick={() => setSheet(make ? "mfilter" : "filter")} />
   </>;
   return (
-    <Shell onScroll={scrolled} overlay={<>
+    <Shell onScroll={scrolled} footer={pickBar} overlay={<>
+      <AnimatePresence>{toast && <motion.div key="toast" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute inset-x-0 bottom-[112px] z-30 flex justify-center"><span className="flex h-10 items-center gap-2 rounded-full bg-snow px-4 text-[14px] font-medium text-ink shadow-[0_10px_30px_-10px_rgb(0_0_0/.6)]"><Icon name="check" size={15} strokeWidth={2.6} />{toast}</span></motion.div>}</AnimatePresence>
+      <PhoneSheet open={sheet === "delete"} onClose={() => setSheet(null)}>
+        <SheetTitle>{picked.length === 1 ? "Delete this pattern?" : `Delete ${picked.length} patterns?`}</SheetTitle>
+        <p className="mt-2 text-[15px] text-white/60">This can’t be undone.</p>
+        <Pill className="mt-6" onClick={remove}>Delete</Pill>
+        <Pill variant="dark" className="mt-2.5" onClick={() => setSheet(null)}>{picked.length === 1 ? "Keep it" : "Keep them"}</Pill>
+      </PhoneSheet>
       <AnimatePresence>{bar && <KindBar v={opts.kinds} value={cat} onChange={setCat} onTab={goTab} />}</AnimatePresence>
-      <AnimatePresence>{tabsBar && <TabsBar onTab={goTab} />}</AnimatePresence>
+      <AnimatePresence>{tabsBar && !picking && <TabsBar onTab={goTab} />}</AnimatePresence>
       <PhoneSheet open={sheet === "filter"} onClose={() => setSheet(null)}>
         <SheetTitle>Filter and sort</SheetTitle>
         <One title="Sort by" items={SORTS} value={sort} onChange={setSort} />
@@ -614,12 +698,22 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
         <Segmented className="mt-4" items={TABS} value={view} onChange={goTab} />
         {/* Your patterns: the two ways to find one together on the left (the search opens across the row), how they
             show on the right, with room between */}
-        {!make && has && (
+        {!make && left > 0 && (
           <div ref={toolRow} className="mt-4">
-            {searching ? search : (
+            {picking ? (
+              // choosing: how many, and Select all (or Clear when everything is chosen)
+              <div className="flex h-10 items-center justify-between">
+                <span className="text-[15px] text-white/70">{picked.length ? `${picked.length} selected` : "Choose patterns to delete"}</span>
+                <button onClick={() => setPicked(allPicked ? [] : mine.map((m) => m.id))} className="h-10 px-1 text-[15px] font-medium text-peri">{allPicked ? "Clear" : "Select all"}</button>
+              </div>
+            ) : searching ? search : (
+              // finding on the left (Search, Filter and sort); the list itself on the right (Edit, then carousel or grid)
               <div className="flex h-10 items-center justify-between">
                 <span className="flex items-center gap-2">{btns}</span>
-                <ViewSlider grid={grid} setGrid={(g) => { setGrid(g); if (!g) setTabsBar(false); }} />
+                <span className="flex items-center gap-2">
+                  <ToolBtn icon="select" label="Edit" onClick={() => { setPicking(true); setSearching(false); }} />
+                  <ViewSlider grid={grid} setGrid={(g) => { setGrid(g); if (!g) setTabsBar(false); }} />
+                </span>
               </div>
             )}
           </div>
@@ -649,7 +743,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
             </div>
           )}
         </>
-      ) : has ? (
+      ) : left > 0 ? (
         <>
           <OnChips items={on} onClear={clearMine} />
           {looking && <p className="mt-4 px-6 text-[14px] text-white/55"><Count n={mine.length} /></p>}
@@ -663,14 +757,14 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
               <section key={mo} className="mt-3 px-6">
                 {mo && <h3 className="mb-3 text-[15px] text-white/55">{mo}</h3>}
                 <div className="grid grid-cols-2 items-start gap-x-3 gap-y-4 pb-3">
-                  {mine.filter((m) => !mo || m.month === mo).map((m) => <MineSmall key={m.id} m={m} s={s} imgH={GRID_H} />)}
+                  {mine.filter((m) => !mo || m.month === mo).map((m) => <MineSmall key={m.id} m={m} s={s} imgH={GRID_H} pick={pickOf(m.id)} />)}
                 </div>
               </section>
             ))
           ) : (
             <>
               <div className="noscroll -mb-6 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-9 pt-2">
-                {mine.map((m) => <TallCard key={m.id} m={m} s={s} />)}
+                {mine.map((m) => <TallCard key={m.id} m={m} s={s} pick={pickOf(m.id)} />)}
               </div>
               <section className="mt-5">
                 <SectionHead title="Make next" n={TEMPLATES.length} />
