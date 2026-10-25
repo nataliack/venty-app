@@ -658,13 +658,13 @@ function BodyCard({ b, onClick, pick }: { b: B; onClick: () => void; pick?: bool
         <span className="absolute inset-0 overflow-hidden"><Still b={b} shot="profile" className="origin-top scale-[2] object-cover object-top" /></span>
         <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS_D }} />
         {notches.map((n) => <NotchShade key={n.side} n={n} />)}
-        <span className="absolute bottom-2 right-3 text-[11px] text-white/55"><N v={b.m.height} className="text-[15px] text-white/90" /> cm</span>
+        <span className="absolute inset-x-0 bottom-2 text-center text-[11px] text-ink/60"><N v={b.m.height} className="text-[15px] text-ink" /> cm</span>
       </span>
       {/* in the raised corners: the word, and the box when choosing */}
       {b.done < 24 && <span className="pointer-events-none absolute left-0 top-0 grid place-items-center text-[11px] text-white/70" style={{ width: INC.w + 5, height: INC.h + 5 }}>Incomplete</span>}
       {pick != null && <span className="pointer-events-none absolute right-0 top-0 grid place-items-center" style={{ width: PICK.w + 5, height: PICK.h + 5 }}><PickBox on={pick} /></span>}
       <span className="block px-2 pb-1.5 pt-2.5">
-        <span className="block truncate text-[16px] leading-tight">{b.name}</span>
+        <span className="block truncate text-center text-[16px] leading-tight">{b.name}</span>
         {/* the three numbers spread evenly, each centred over its own label */}
         <span className="mt-2 flex justify-evenly">
           {KEYS.slice(1).map(([k, l]) => <span key={k} className="text-center"><span className="block text-[10px] leading-none text-white/45">{l}</span><N v={b.m[k]} className="mt-1 block text-[16px] leading-none" /></span>)}
@@ -714,10 +714,10 @@ function EmptyHero() {
   );
 }
 
-function Library5({ list: start, initial = "list", dial }: Props & { initial?: "list" | "body"; dial?: string }) {
+function Library5({ list: start, initial = "list", dial, body, group }: Props & { initial?: "list" | "body"; dial?: string; body?: string; group?: string }) {
   const [e, setE] = useState<Edits>({ m: {}, done: {}, names: {}, gone: [] });
   const [page, setPage] = useState<"list" | "body">(initial);
-  const [id, setId] = useState<string | null>(null);
+  const [id, setId] = useState<string | null>(body ?? null);
   const list = start.filter((x) => !e.gone.includes(x.id)).map((x) => ({ ...x, name: nameOf(x, e), done: doneOf(x, e).size, m: { height: valueOf(x, "height", e), bust: valueOf(x, "bust", e), waist: valueOf(x, "waist", e), hips: valueOf(x, "hips", e) } }));
   const b = list.find((x) => x.id === id) ?? list[0];
   return (
@@ -725,7 +725,7 @@ function Library5({ list: start, initial = "list", dial }: Props & { initial?: "
       <AnimatePresence initial={false} mode="popLayout">
         {page === "body" && b ? (
           <motion.div key="body" className="absolute inset-0" initial={{ x: 393 }} animate={{ x: 0 }} exit={{ x: 393 }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
-            <BodyPage5 b={start.find((x) => x.id === b.id)!} e={e} setE={setE} onBack={() => setPage("list")} startDial={dial} />
+            <BodyPage5 b={start.find((x) => x.id === b.id)!} e={e} setE={setE} onBack={() => setPage("list")} startDial={dial} startGroup={group} />
           </motion.div>
         ) : (
           <motion.div key="list" className="absolute inset-0" initial={{ x: -120, opacity: 0.6 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -120, opacity: 0.6 }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
@@ -793,9 +793,10 @@ function List5({ list, onOpen, onDelete }: { list: B[]; onOpen: (b: B) => void; 
 //     measurements as raised tiles you can tap, one group at a time (a pressed switch picks the group), so nothing
 //     needs scrolling; a measurement opens the sheet with the 3D body on that measurement and its tape; Rename and
 //     Delete under the "more" button ───
-const GROUP_TABS = [{ key: "base", short: "First 4" }, ...GROUPS.map((g) => ({ key: g.key, short: g.short }))];
-function BodyPage5({ b, e, setE, onBack, startDial }: { b: B; e: Edits; setE: (e: Edits) => void; onBack: () => void; startDial?: string }) {
-  const [group, setGroup] = useState("base");
+// the measuring flow's own names for the groups (its progress bar: Base · Around · Lengths · Widths · Seated)
+const GROUP_TABS = [{ key: "base", short: "Base" }, ...GROUPS.map((g) => ({ key: g.key, short: g.short }))];
+function BodyPage5({ b, e, setE, onBack, startDial, startGroup }: { b: B; e: Edits; setE: (e: Edits) => void; onBack: () => void; startDial?: string; startGroup?: string }) {
+  const [group, setGroup] = useState(startGroup ?? "base");
   const [dial, setDial] = useState<string | null>(startDial ?? null);
   const [v, setV] = useState(() => (startDial ? valueOf(b, startDial, e) : 0));
   const [more, setMore] = useState(false);
@@ -839,14 +840,24 @@ function BodyPage5({ b, e, setE, onBack, startDial }: { b: B; e: Edits; setE: (e
             </button>
           ))}
         </div>
-        {/* the measurements as raised tiles: the name, the number (or Measure); tap one to change it */}
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {items.map((x) => (
-            <button key={x.key} onClick={() => open(x.key)} className="pill-dark tap flex h-[66px] flex-col justify-between rounded-[18px] px-3 py-2.5 text-left">
-              <span className="block truncate text-[12px] leading-none text-white/60">{x.label}</span>
-              {done.has(x.key)
-                ? <span className="leading-none"><N v={valueOf(b, x.key, e)} className="text-[21px]" /><span className="unit ml-0.5 text-[11px] text-white/45" translate="no">cm</span></span>
-                : <span className="flex items-center gap-1 text-[13px] font-medium text-peri"><Icon name="plus" size={14} strokeWidth={2.4} />Measure</span>}
+        {/* the measurements, two to a row. Measured: a raised tile, the name over the number, a pencil to change it.
+            Missing: the tile pressed in and empty, "Not measured", the periwinkle add. Tap either for the sheet */}
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {items.map((x) => done.has(x.key) ? (
+            <button key={x.key} onClick={() => open(x.key)} aria-label={`Change ${x.label}`} className="pill-dark tap flex h-[60px] items-center justify-between gap-2 rounded-[18px] pl-3.5 pr-2.5 text-left">
+              <span className="min-w-0">
+                <span className="block truncate text-[12px] leading-none text-white/60">{x.label}</span>
+                <span className="mt-1.5 block leading-none"><N v={valueOf(b, x.key, e)} className="text-[20px]" /><span className="unit ml-0.5 text-[11px] text-white/45" translate="no">cm</span></span>
+              </span>
+              <span className="iconbadge grid h-8 w-8 shrink-0 place-items-center rounded-[10px]"><Icon name="pencil" size={15} /></span>
+            </button>
+          ) : (
+            <button key={x.key} onClick={() => open(x.key)} aria-label={`Measure ${x.label}`} className="ruler-track tap flex h-[60px] items-center justify-between gap-2 rounded-[18px] pl-3.5 pr-2.5 text-left">
+              <span className="min-w-0">
+                <span className="block truncate text-[12px] leading-none text-white/60">{x.label}</span>
+                <span className="mt-1.5 block text-[13px] leading-none text-white/35">Not measured</span>
+              </span>
+              <span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full text-white"><Icon name="plus" size={16} strokeWidth={2.4} /></span>
             </button>
           ))}
         </div>
@@ -943,7 +954,7 @@ export function BodyLab() {
           <>
             <Phone label="The library"><Library5 list={list} /></Phone>
             <Phone label="No bodies yet"><Library5 list={[]} /></Phone>
-            <Phone label="A body’s page"><Library5 list={FEW} initial="body" /></Phone>
+            <Phone label="A body’s page (Tom, Lengths: some missing)"><Library5 list={FEW} initial="body" body="tom" group="down" /></Phone>
             <Phone label="Changing a measurement"><Library5 list={FEW} initial="body" dial="bust" /></Phone>
           </>
         ) : <Phone label={c.name}><c.C list={list} /></Phone>}
