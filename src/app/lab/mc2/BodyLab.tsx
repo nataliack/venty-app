@@ -14,7 +14,7 @@ import { BodyFigure, Ruler } from "@/components/art";
 import { ALL_MEASURES, GROUPS } from "@/lib/data";
 import { BodyLoader } from "@/components/BodyLoader";
 import { TabBar } from "@/screens/home";
-import { SKINS, ToolBtn, SearchOpen, PhoneSheet, SheetTitle } from "./concepts";
+import { SKINS, ToolBtn, SearchOpen, PhoneSheet, SheetTitle, Group, One, OnChips } from "./concepts";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
@@ -38,6 +38,10 @@ const MANY: B[] = [...FEW,
   { id: "c8", name: "Jonah Reid", sex: "male", m: { height: 172, bust: 96, waist: 82, hips: 95 }, done: 24, how: "By hand" },
   { id: "c9", name: "Zara Ahmed", sex: "female", m: { height: 168, bust: 94, waist: 74, hips: 102 }, done: 4, how: "Photo scan" },
 ];
+// when each body was added (sample dates for the lab), said as "12 Oct 2026"
+const ADDED: Record<string, string> = { ana: "2026-10-12", mum: "2026-10-18", tom: "2026-09-30", c1: "2026-08-14", c2: "2026-10-02", c3: "2026-07-21", c4: "2026-09-09", c5: "2026-10-20", c6: "2026-06-30", c7: "2026-09-17", c8: "2026-08-03", c9: "2026-10-23" };
+const addedOf = (b: B) => ADDED[b.id] ?? "2026-10-25";
+const dateText = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 const KEYS: [keyof M, string][] = [["height", "Height"], ["bust", "Bust"], ["waist", "Waist"], ["hips", "Hips"]];
 type Props = { list: B[] };
 
@@ -736,14 +740,27 @@ function Library5({ list: start, initial = "list", dial, body, group }: Props & 
     </LayoutGroup>
   );
 }
+// filter and sort the bodies, as on the pattern library: one sheet, a count on its button, removable chips for what is on
+const BSORTS = ["Newest first", "Oldest first", "A to Z"] as const;
+const BSTATE = ["Fully measured", "Incomplete"] as const;
+const BFORM = ["Female", "Male"] as const;
+const Bodies = ({ n }: { n: number }) => <><span className="tabular-nums">{n}</span> {n === 1 ? "body" : "bodies"}</>;
 function List5({ list, onOpen, onDelete }: { list: B[]; onOpen: (b: B) => void; onDelete: (ids: string[]) => void }) {
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [ask, setAsk] = useState(false);
+  const [sheet, setSheet] = useState(false);
+  const [sort, setSort] = useState<(typeof BSORTS)[number]>("Newest first");
+  const [st, setSt] = useState<string[]>([]);
+  const [fm, setFm] = useState<string[]>([]);
   const { t, show } = useToastLab();
-  const shown = list.filter((x) => !q.trim() || x.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const on = [...st.map((x) => ({ k: x, off: () => setSt(st.filter((y) => y !== x)) })), ...fm.map((x) => ({ k: x, off: () => setFm(fm.filter((y) => y !== x)) }))];
+  const clear = () => { setSt([]); setFm([]); };
+  let shown = list.filter((x) => (!q.trim() || x.name.toLowerCase().includes(q.trim().toLowerCase()))
+    && (!st.length || st.includes(x.done >= 24 ? "Fully measured" : "Incomplete")) && (!fm.length || fm.includes(x.sex === "female" ? "Female" : "Male")));
+  shown = [...shown].sort((a, b) => (sort === "A to Z" ? a.name.localeCompare(b.name) : sort === "Newest first" ? addedOf(b).localeCompare(addedOf(a)) : addedOf(a).localeCompare(addedOf(b))));
   const stop = () => { setPicking(false); setPicked([]); };
   const all = shown.length > 0 && shown.every((x) => picked.includes(x.id));
   const remove = () => { const n = picked.length; onDelete(picked); setAsk(false); stop(); show(n === 1 ? "Body deleted" : `${n} bodies deleted`); };
@@ -761,6 +778,16 @@ function List5({ list, onOpen, onDelete }: { list: B[]; onOpen: (b: B) => void; 
         <Pill className="mt-6" onClick={remove}>Delete</Pill>
         <Pill variant="dark" className="mt-2.5" onClick={() => setAsk(false)}>{picked.length === 1 ? "Keep it" : "Keep them"}</Pill>
       </PhoneSheet>
+      <PhoneSheet open={sheet} onClose={() => setSheet(false)}>
+        <SheetTitle>Filter and sort</SheetTitle>
+        <One title="Sort by" items={BSORTS} value={sort} onChange={setSort} />
+        <Group title="Where it stands" items={BSTATE} value={st as (typeof BSTATE)[number][]} onChange={setSt} />
+        <Group title="Form" items={BFORM} value={fm as (typeof BFORM)[number][]} onChange={setFm} />
+        <div className="mt-8 flex items-center gap-4">
+          <button onClick={clear} disabled={!on.length} className={cx("h-14 shrink-0 px-2 text-[15px] font-medium", on.length ? "text-white/80" : "text-white/30")}>Clear all</button>
+          <Pill className="flex-1" onClick={() => setSheet(false)}>{shown.length ? <>Show <Bodies n={shown.length} /></> : "Nothing matches"}</Pill>
+        </div>
+      </PhoneSheet>
       {toastNode(t)}
     </>}>
       <div className={cx("flex h-11 items-center gap-3 px-6", list.length ? "justify-between" : "justify-center")}><h1 className="h1 !text-[34px]">Body library</h1>{list.length > 0 && !picking && <NewBody />}</div>
@@ -773,13 +800,24 @@ function List5({ list, onOpen, onDelete }: { list: B[]; onOpen: (b: B) => void; 
                 <button onClick={() => setPicked(all ? [] : shown.map((x) => x.id))} className="h-10 px-1 text-[15px] font-medium text-peri">{all ? "Clear" : "Select all"}</button>
               </div>
             ) : searching ? <SearchOpen q={q} setQ={setQ} placeholder="Search bodies" onCancel={() => { setSearching(false); setQ(""); }} /> : (
+              // finding on the left (Search, Filter and sort), the list on the right (Edit)
               <div className="flex h-10 items-center justify-between">
-                <ToolBtn icon="search" label="Search" onClick={() => setSearching(true)} />
+                <span className="flex items-center gap-2">
+                  <ToolBtn icon="search" label="Search" onClick={() => setSearching(true)} />
+                  <ToolBtn icon="sliders" label="Filter and sort" n={on.length} onClick={() => setSheet(true)} />
+                </span>
                 <ToolBtn icon="select" label="Edit" onClick={() => { setPicking(true); setSearching(false); }} />
               </div>
             )}
           </div>
-          {shown.length === 0 ? <p className="mt-8 px-6 text-center text-[15px] text-white/55">No bodies called “{q.trim()}”.</p> : (
+          <OnChips items={on} onClear={clear} />
+          {(on.length > 0 || !!q.trim()) && shown.length > 0 && <p className="mt-4 px-6 text-[14px] text-white/55"><Bodies n={shown.length} /></p>}
+          {shown.length === 0 ? (
+            <div className="mt-10 px-6 text-center">
+              <p className="text-[17px]">No bodies match</p>
+              <button onClick={() => { setQ(""); clear(); }} className="tap mt-2 h-10 text-[15px] font-medium text-peri">Clear the search and filters</button>
+            </div>
+          ) : (
             <div className="mt-4 grid grid-cols-2 gap-3 px-6">
               {shown.map((x) => <BodyCard key={x.id} b={x} pick={picking ? picked.includes(x.id) : null} onClick={() => (picking ? setPicked((p) => (p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])) : onOpen(x))} />)}
             </div>
@@ -823,9 +861,11 @@ function BodyPage5({ b, e, setE, onBack, startDial, startGroup }: { b: B; e: Edi
           <button onClick={onBack} aria-label="Back" className="rb"><Icon name="back" size={20} /></button>
           <button onClick={() => setMore(true)} aria-label="More" className="rb"><Icon name="more" size={20} /></button>
         </div>
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <h1 className="h1 !text-[34px]">{nm}</h1>
-          <span className="pb-1 text-[13px] text-white/55">{done.size >= 24 ? "Fully measured" : <><N v={done.size} className="text-[16px] text-white" /> of 24 measured</>}</span>
+        <h1 className="h1 mt-3 !text-[34px]">{nm}</h1>
+        {/* when it was added, and how complete: one quiet line, all in the body font */}
+        <div className="mt-1.5 flex items-center justify-between text-[13px] text-white/55">
+          <span>Added {dateText(addedOf(b))}</span>
+          <span>{done.size >= 24 ? "Fully measured" : `${done.size} of 24 measured`}</span>
         </div>
         {/* the body, turning; it stays like this whatever you open below */}
         <div className="stage-ink relative mt-4 h-[226px] overflow-hidden rounded-[28px] border border-white/[.08]">
