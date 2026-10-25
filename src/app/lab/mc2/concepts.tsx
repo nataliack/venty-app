@@ -347,22 +347,31 @@ function KindFilter({ v, value, onChange }: { v: LookOpts["kinds"]; value: strin
     </div>
   );
 }
+// the two tabs, slim, for the bars pinned on scroll
+function MiniTabs({ active, onTab }: { active: View; onTab: (v: string) => void }) {
+  return (
+    <div className="px-6">
+      <div className="glass relative flex h-9 rounded-full p-[3px]">
+        {TABS.map((t) => (
+          <button key={t} onClick={() => onTab(t)} className="relative z-10 flex-1 rounded-full text-[13px] font-medium">
+            {t === active && <span className="absolute inset-0 -z-10 rounded-full bg-white" />}
+            <span className={t === active ? "font-semibold text-bg" : "text-white/70"}>{t}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+const PINNED = "absolute inset-x-0 top-0 z-10 border-b border-white/8 bg-bg pb-3 pt-[54px]";
+const pinIn = { initial: { opacity: 0, y: -10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 }, transition: { duration: 0.25 } };
+// Your patterns in the grid, scrolled past the tools: the tabs alone, so the way to Patterns to make stays one tap away
+const TabsBar = ({ onTab }: { onTab: (v: string) => void }) => <motion.div {...pinIn} className={PINNED}><MiniTabs active="Your patterns" onTab={onTab} /></motion.div>;
 // pinned once you scroll past the kinds: the two tabs, slim, so you always see where you are and can go back to your own
 // patterns in one tap, then the kinds in their slim form. It starts under the status bar (the top 54px of the screen)
 function KindBar({ v, value, onChange, onTab }: { v: LookOpts["kinds"]; value: string; onChange: (k: string) => void; onTab: (v: string) => void }) {
   return (
-    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }}
-      className="absolute inset-x-0 top-0 z-10 border-b border-white/8 bg-bg pb-3 pt-[54px]">
-      <div className="mb-2.5 px-6">
-        <div className="glass relative flex h-9 rounded-full p-[3px]">
-          {TABS.map((t) => (
-            <button key={t} onClick={() => onTab(t)} className="relative z-10 flex-1 rounded-full text-[13px] font-medium">
-              {t === "Patterns to make" && <span className="absolute inset-0 -z-10 rounded-full bg-white" />}
-              <span className={t === "Patterns to make" ? "font-semibold text-bg" : "text-white/70"}>{t}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+    <motion.div {...pinIn} className={PINNED}>
+      <div className="mb-2.5"><MiniTabs active="Patterns to make" onTab={onTab} /></div>
       {v === "tiles" ? (
         <div className="noscroll flex gap-2 overflow-x-auto px-6">
           {KINDS.map((k) => (
@@ -489,7 +498,7 @@ function ViewSlider({ grid, setGrid }: { grid: boolean; setGrid: (g: boolean) =>
       {[false, true].map((g) => (
         <button key={String(g)} role="radio" aria-checked={grid === g} aria-label={g ? "Grid" : "Carousel"} onClick={() => setGrid(g)} className={cx("relative grid h-8 w-11 place-items-center rounded-full transition-colors", grid === g ? "text-white" : "text-white/45")}>
           {grid === g && <motion.span layoutId="lbview" className="knob absolute inset-0 rounded-full" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
-          <Icon name={g ? "grid" : "image"} size={16} className="relative" />
+          <Icon name={g ? "grid" : "columns"} size={16} className="relative" />
         </button>
       ))}
     </span>
@@ -540,10 +549,14 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const [sheet, setSheet] = useState<null | "filter" | "mfilter">(null);
   const [searching, setSearching] = useState(false);
   const scroller = useRef<HTMLDivElement | null>(null);
+  const toolRow = useRef<HTMLDivElement>(null);
+  const [tabsBar, setTabsBar] = useState(false);
   const scrolled = (el: HTMLDivElement) => {
     scroller.current = el;
-    const r = kinds.current;
+    const r = kinds.current, t = toolRow.current;
     setBar(!!r && make && opts.filters === "shrink" && el.scrollTop > r.offsetTop + r.offsetHeight - 96);
+    // the tabs bar is 102px tall (the status bar, then the tabs): it comes in as the tools pass under it
+    setTabsBar(!!t && !make && grid && el.scrollTop > t.offsetTop + t.offsetHeight - 102);
   };
   // Your patterns, filtered and in order
   const mineOf = (stx: string[], kdx: string[], ftx: string[]) => (has ? MINE : []).filter((m) =>
@@ -561,7 +574,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   // Your patterns: Create beside the title, the tools in a row under the tabs. Patterns to make: the tools beside the title
   const titleCta = has && !make;
   const looking = on.length > 0 || !!q.trim();
-  const goTab = (v: string) => { setView(v); setBar(false); setSearching(false); scroller.current?.scrollTo({ top: 0 }); };
+  const goTab = (v: string) => { setView(v); setBar(false); setTabsBar(false); setSearching(false); scroller.current?.scrollTo({ top: 0 }); };
   const cancel = () => { setSearching(false); if (make) setMq(""); else setQ(""); };
   const search = <SearchOpen q={make ? mq : q} setQ={make ? setMq : setQ} placeholder={make ? "Search patterns to make" : "Search your patterns"} onCancel={cancel} />;
   const nOn = make ? mOn.length : on.length;
@@ -572,6 +585,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   return (
     <Shell onScroll={scrolled} overlay={<>
       <AnimatePresence>{bar && <KindBar v={opts.kinds} value={cat} onChange={setCat} onTab={goTab} />}</AnimatePresence>
+      <AnimatePresence>{tabsBar && <TabsBar onTab={goTab} />}</AnimatePresence>
       <PhoneSheet open={sheet === "filter"} onClose={() => setSheet(null)}>
         <SheetTitle>Filter and sort</SheetTitle>
         <One title="Sort by" items={SORTS} value={sort} onChange={setSort} />
@@ -601,11 +615,11 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
         {/* Your patterns: the two ways to find one together on the left (the search opens across the row), how they
             show on the right, with room between */}
         {!make && has && (
-          <div className="mt-4">
+          <div ref={toolRow} className="mt-4">
             {searching ? search : (
               <div className="flex h-10 items-center justify-between">
                 <span className="flex items-center gap-2">{btns}</span>
-                <ViewSlider grid={grid} setGrid={setGrid} />
+                <ViewSlider grid={grid} setGrid={(g) => { setGrid(g); if (!g) setTabsBar(false); }} />
               </div>
             )}
           </div>
