@@ -376,7 +376,7 @@ const crownRuler: Design = {
   ],
   make: (w) => {
     const paper = pick(w, { deep: "#05060b", night: VC.night, ink: VC.ink });
-    const s = stock({ paper, back: paper, ink: VC.snow, coating: "soft", thickness: 1.2, edge: "accent" });
+    const s = stock({ paper, back: paper, ink: VC.snow, coating: "soft", thickness: 1.2, edge: "foil-silver" });
     const [g1, g2] = w === "ink" ? [VC.peri, "#c3cbff"] : [VC.corn, VC.peri];
     const m = 5; // the back's margin
     return {
@@ -388,7 +388,7 @@ const crownRuler: Design = {
         el("ruler", "Centimetres", "front", "ink", "flat", [{ t: "path", d: cmRuler() }, ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => T(String(n), n * 10, 6.4, 1.9, { font: "num", align: "center" })), T("cm", 2.4, 3.2, 1.6)], { color: VC.steel }),
         el("name", "Name", "back", "ink", "flat", [T("Natalia\nChamon", m, 10.6, 6.4, { lead: 1.02, track: -0.035 })]),
         el("role", "Role", "back", "ink", "flat", [T("Founder, Venty", 90 - m, 8.4, 2.6, { align: "right" })]),
-        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone], ["web", "app.venty.au"]], m, 50 - 2 * 5.4, 2.3, { gap: 5.4 })),
+        ...contact("back", rows([["web", "app.venty.au"], ["phone", ME.phone], ["mail", ME.email]], m, 50 - 2 * 5.4, 2.3, { gap: 5.4 }), {}, { surface: "spot" }),
         el("bird", "Bird", "back", "foil-cornflower", "flat", [A(MARK, 90 - m - 12, 50 - 7.2, 12)]),
       ],
     };
@@ -427,8 +427,8 @@ const nckGrid: Design = {
         el("bstars", "Half stars", "back", "spot", "flat", [A(HALF_STAR, up - st / 2, bh - st / 2, st), A(HALF_STAR, dn + st / 2, bh + st / 2, st, { rot: 180 })]),
         el("name", "Name", "back", "ink", "flat", [T("Natalia", M, b1, S, { font: "serif" }), T("Chamon", M, b2, S, { font: "serif" })]),
         el("role", "Role", "back", "ink", "flat", [T("Product, UI/UX\nand front-end", up + M, b2 - rg, rs, { font: "satoshi", weight: 500, lead: 1.36 })]),
-        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone], ["web", ME.web], ["pin", ME.city]], dn + M, row1, cs, { font: "mono", gap: 4.8 })),
-        el("tea", "Tea", "back", "ink", "flat", [A(TEA, 90 - M - tw, 55 - M - th, tw)]),
+        ...contact("back", rows([["phone", ME.phone], ["web", ME.web], ["pin", ME.city], ["mail", ME.email]], dn + M, row1, cs, { font: "mono", gap: 4.8 }), {}, { surface: "spot" }),
+        el("tea", "Tea", "back", "spot", "flat", [A(TEA, 90 - M - tw, 55 - M - th, tw)]),
       ],
     };
   },
