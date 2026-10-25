@@ -218,104 +218,144 @@ function DetailsSheet({ fam, onClose }: { fam: Family; onClose: () => void }) {
 }
 
 // ─── what is on the stage in each view ───
-type Slot = { key: string; fam: Family; way: string; pose: Pose; layer: number; interactive?: boolean; spin?: boolean; flip?: number; startBack?: boolean; show?: boolean; onTap?: () => void };
-const OUT: Pose = { y: -3.4, z: -0.6, s: 0.9 }; // where cards drop away to
+type Slot = { key: string; fam: Family; way: string; pose: Pose; layer: number; interactive?: boolean; spin?: boolean; flip?: number; startBack?: boolean; show?: boolean; onTap?: () => void; opacity?: number; lean?: number };
 // Stack: the one behind sits just behind and a little higher, at nearly full size (layers keep the two apart)
-const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, z: -0.05, rz: -0.045, s: 0.96 }, OVER: Pose = { y: 2.25, z: 0.05, s: 0.97 }, UNDER: Pose = { y: -0.32, z: -0.05, s: 0.96 };
-// Colours: a cascade, the pick in front and lowest, the others stepping up and back behind it
+const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, z: -0.05, rz: -0.045, s: 0.96 }, OVER: Pose = { y: 2.1, z: 0.05, s: 0.97 }, UNDER: Pose = { y: -0.3, z: -0.05, s: 0.96 };
+// All its colours: a cascade, the pick in front and lowest, the others stepping up and back behind it
 const CASCADE: Pose[] = [{ x: -0.34, y: 0.5, z: -0.1, rz: 0.035, s: 0.86 }, { x: -0.12, y: 0.18, z: -0.05, rz: 0.015, s: 0.9 }, { x: 0.1, y: -0.16, s: 0.94 }];
-function useLeaving(items: Slot[]) {
-  // cards taken off the stage stay a moment, dropping away, before they go
-  const [gone, setGone] = useState<Slot[]>([]);
-  const prev = useRef<Slot[]>(items);
+// how far the camera stands back in each view (the cards fill about seven eighths of the width in One card)
+const DIST: Record<View, number> = { card: 0.88, show: 0.88, stack: 0.9, colours: 0.95, sides: 0.98 };
+// what changed last, which decides how new cards come in and old ones go:
+//   reveal  the first arrival after loading (from far back, landing slowly)
+//   tab     Venty to Natalia or back: a carousel; the old card slides off to the side it is leaving by, turning a
+//           little away, as the new one slides in from the other side turned a little in; both fade
+//   view    a cross fade: the old arrangement sinks back and fades as the new one comes forward out of it
+type Change = "reveal" | "tab" | "view";
+const SLIDE = 3.6, TURN = 0.5, SINK = 0.9;
+function useLeaving(items: Slot[], change: Change, dir: number) {
+  // cards taken off the stage stay a moment, on their way out, then go. Worked out as the stage changes (in the same
+  // render), so a leaving card is never unmounted and remounted; only the last change's cards are kept, so no more than
+  // one set is ever leaving
   const keys = items.map((i) => i.key).join("|");
-  useEffect(() => {
-    const now = new Set(items.map((i) => i.key)), left = prev.current.filter((i) => !now.has(i.key));
-    prev.current = items;
-    const a = setTimeout(() => setGone((g) => [...g.filter((x) => !now.has(x.key)), ...left.map((i) => ({ ...i, pose: OUT, interactive: false, onTap: undefined, layer: 0 }))]), 0);
-    const b = setTimeout(() => setGone((g) => g.filter((x) => !left.some((l) => l.key === x.key))), 1300);
-    return () => { clearTimeout(a); clearTimeout(b); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keys]);
+  const [was, setWas] = useState({ keys, items });
+  const [gone, setGone] = useState<Slot[]>([]);
+  if (keys !== was.keys) {
+    const now = new Set(items.map((i) => i.key));
+    const out = (i: Slot): Slot => change === "tab"
+      ? { ...i, pose: { ...i.pose, x: (i.pose.x ?? 0) - dir * SLIDE }, lean: -dir * TURN, opacity: 0, interactive: false, onTap: undefined }
+      : { ...i, pose: { ...i.pose, z: (i.pose.z ?? 0) - SINK, s: (i.pose.s ?? 1) * 0.94 }, opacity: 0, interactive: false, onTap: undefined };
+    setGone(was.items.filter((i) => !now.has(i.key)).map(out));
+    setWas({ keys, items });
+  }
+  useEffect(() => { const b = setTimeout(() => setGone([]), 800); return () => clearTimeout(b); }, [keys]);
   return gone.filter((g) => !items.some((i) => i.key === g.key));
+}
+// where the cards' band sits on the screen, in scene units, so the canvas can cover the whole screen (nothing is ever
+// cut off) while the cards sit between the tabs and the views
+function useBandOffset(screen: React.RefObject<HTMLDivElement | null>, band: React.RefObject<HTMLDivElement | null>, dist: number) {
+  const [off, setOff] = useState(0);
+  useEffect(() => {
+    const a = screen.current, b = band.current; if (!a || !b) return;
+    const fit = () => {
+      const A = a.getBoundingClientRect(), B = b.getBoundingClientRect(), tan = Math.tan((15 * Math.PI) / 180);
+      const d = Math.max(5.2, 3.9 / (2 * tan * (A.width / Math.max(1, A.height)))) * dist, perPx = (2 * d * tan) / Math.max(1, A.height);
+      setOff(-((B.top + B.height / 2) - (A.top + A.height / 2)) * perPx);
+    };
+    const ro = new ResizeObserver(fit); ro.observe(a); ro.observe(b); fit(); return () => ro.disconnect();
+  }, [screen, band, dist]);
+  return off;
 }
 
 export function CardsScreen() {
   const [fam, setFam] = useState<Family>("venty");
   const [way, setWay] = useState(FIRST);
-  const [view, setView] = useState<View>("card");
+  const [view, setViewNow] = useState<View>("card");
   const [flips, setFlips] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"" | "over">("");
+  const [change, setChange] = useState<Change>("reveal");
+  const [dir, setDir] = useState(1);
   const [save, setSave] = useState(false);
   const [info, setInfo] = useState(false);
   const t = useRef<ReturnType<typeof setTimeout>>(undefined);
   const flip = (k: string) => flips[k] ?? 0;
   const turn = (...ks: string[]) => setFlips((f) => { const n = { ...f }; for (const k of ks) n[k] = (n[k] ?? 0) + 1; return n; });
-  // switching cards: in Stack they trade places over the top (the old front card stays the top layer until the new one
-  // is above it); elsewhere the old card drops away and the new one arrives
-  const pick = (f: Family) => { if (f === fam) return; setFam(f); if (view === "stack") { setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 760); } };
+  const pick = (f: Family) => {
+    if (f === fam) return;
+    setFam(f); setDir(FAMS.indexOf(f) > FAMS.indexOf(fam) ? 1 : -1); setChange("tab");
+    // Stack: they trade places over the top (the old front card stays the top layer until the new one is above it)
+    if (view === "stack") { setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 420); }
+  };
+  const setView = (v: View) => { if (v === view) return; setViewNow(v); setChange("view"); setStep(""); };
 
   // made ahead: each card's first colourway, then the rest
   useEffect(() => { for (const f of FAMS) prefetchCard(ALL[f][FIRST[f]].els, ALL[f][FIRST[f]].stock); for (const f of FAMS) for (const w of FAVOURITES[f].ways) prefetchCard(ALL[f][w.id].els, ALL[f][w.id].stock); }, []);
 
-  const main = (f: Family): Slot => ({ key: `main-${f}`, fam: f, way: way[f], pose: { y: -0.04 }, layer: 1, interactive: true, spin: true, flip: flip(`main-${f}`) });
+  // every card on the stage is keyed by its view, so a new view is a new set (they cross fade)
+  const main = (f: Family): Slot => ({ key: `${view}:main-${f}`, fam: f, way: way[f], pose: { y: 0 }, layer: 1, interactive: true, spin: true, flip: flip(`main-${f}`) });
   let slots: Slot[];
   if (view === "card") slots = [main(fam)];
-  else if (view === "show") slots = [{ ...main(fam), pose: { y: 0.02, s: 1.02 }, show: true }];
+  else if (view === "show") slots = [{ ...main(fam), pose: { y: 0.04, s: 1.02 }, show: true }];
   else if (view === "stack") slots = FAMS.map((f) => {
     const front = f === fam, top = step === "over" ? !front : front;
     return { ...main(f), pose: front ? (step === "over" ? OVER : FRONT) : step === "over" ? UNDER : BEHIND, layer: top ? 1 : 0, interactive: front, onTap: front ? undefined : () => pick(f) };
   });
   else if (view === "sides") slots = [
     { ...main(fam), pose: { x: -0.1, y: 0.66, rz: 0.03, s: 0.84 }, layer: 0 },
-    { key: `back-${fam}`, fam, way: way[fam], pose: { x: 0.1, y: -0.66, rz: -0.03, s: 0.84 }, layer: 1, interactive: false, spin: true, startBack: true, flip: flip(`back-${fam}`) },
+    { key: `${view}:back-${fam}`, fam, way: way[fam], pose: { x: 0.1, y: -0.66, rz: -0.03, s: 0.84 }, layer: 1, interactive: false, spin: true, startBack: true, flip: flip(`main-${fam}`) },
   ];
   else {
-    // Colours: the pick last (in front); the others behind it in order
+    // All its colours: the pick last (in front); the others behind it in order
     const ws = FAVOURITES[fam].ways.map((w) => w.id), order = [...ws.filter((w) => w !== way[fam]), way[fam]];
-    slots = order.map((w, r) => ({ key: `col-${fam}-${w}`, fam, way: w, pose: CASCADE[r], layer: r, interactive: r === 2, flip: r === 2 ? flip(`col-${fam}-${w}`) : 0, onTap: r === 2 ? undefined : () => setWay((x) => ({ ...x, [fam]: w })) }));
+    slots = order.map((w, r) => ({ key: `${view}:${fam}-${w}`, fam, way: w, pose: CASCADE[r], layer: r, interactive: r === 2, flip: r === 2 ? flip(`main-${fam}`) : 0, onTap: r === 2 ? undefined : () => setWay((x) => ({ ...x, [fam]: w })) }));
   }
-  const leaving = useLeaving(slots);
+  const leaving = useLeaving(slots, change, dir);
+  // where a new card comes in from, for the last change (a card already on the stage ignores it)
+  const from = (s: Slot) => change === "tab" && view !== "stack"
+    ? { ...s.pose, x: (s.pose.x ?? 0) + dir * SLIDE, o: 0, yaw: dir * TURN }
+    : { ...s.pose, z: (s.pose.z ?? 0) - SINK, s: (s.pose.s ?? 1) * 0.94, o: 0 };
 
-  // nothing half made: the loader until every card this view needs is made; then they come in
+  // nothing half made: the loader until every card this view needs is made. Then the cards are put on the stage unseen
+  // for a moment (their textures go to the GPU and their shaders are built while nothing moves), and they arrive
   const needed = slots.map((s) => ALL[s.fam][s.way]);
   const ready = useCardsReady(needed);
   const [shown, setShown] = useState(false);
   if (ready && !shown) setShown(true);
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => { if (!shown) return; const r = setTimeout(() => setRevealed(true), 700); return () => clearTimeout(r); }, [shown]);
 
-  const turnNow = () => {
-    if (view === "sides") turn(`main-${fam}`, `back-${fam}`);
-    else if (view === "colours") turn(`col-${fam}-${way[fam]}`);
-    else turn(`main-${fam}`);
-  };
+  const screen = useRef<HTMLDivElement>(null), band = useRef<HTMLDivElement>(null);
+  const offset = useBandOffset(screen, band, DIST[view]);
+  const turnNow = () => turn(`main-${fam}`);
   return (
-    <div className="relative flex h-full flex-col text-white">
+    <div ref={screen} className="relative h-full text-white">
       {/* the app's page: its dark and its dot grid */}
       <div className="dotgrid" />
-      <div className="relative flex h-full flex-col">
-        <div className="relative flex h-11 items-center justify-between px-4 pt-[52px] box-content">
+      {/* the stage covers the whole screen, under the controls, so a card is never cut off */}
+      <CardStage dist={DIST[view]} offset={offset} className="absolute inset-0">
+        <Sweep on={view === "show"} />
+        {shown && [...leaving, ...slots].map((s, i) => (
+          <LiveCard key={s.key} {...ALL[s.fam][s.way]} madeOnly pose={s.pose} layer={s.layer} interactive={!!s.interactive} spin={s.spin} flip={s.flip ?? 0} startBack={s.startBack} show={s.show} onTap={s.onTap}
+            opacity={s.opacity ?? 1} lean={s.lean ?? 0} speed={view === "stack" ? 8 : 7}
+            arrive={change === "reveal" ? 0.7 + i * 0.2 : undefined} from={change === "reveal" ? undefined : from(s)} />
+        ))}
+      </CardStage>
+      <div className="pointer-events-none absolute inset-0 flex flex-col">
+        <div className="pointer-events-auto relative flex h-11 items-center justify-between px-4 pt-[52px] box-content">
           <RB icon="back" label="Back" />
-          <RB icon="user" label="Her details" onClick={() => setInfo(true)} />
           <h2 className="pointer-events-none absolute inset-x-0 bottom-0 flex h-11 items-center justify-center text-[18px] font-normal tracking-[-.02em]">Business cards</h2>
+          <RB icon="user" label="Her details" onClick={() => setInfo(true)} />
         </div>
-        <div className="mt-6 px-5"><Tabs fam={fam} setFam={pick} /></div>
-        <div className="relative mt-2 min-h-0 flex-1">
-          <CardStage dist={view === "colours" ? 1.02 : view === "sides" ? 1.0 : 0.9} className="absolute inset-0">
-            <Sweep on={view === "show"} />
-            {shown && [...leaving, ...slots].map((s, i) => (
-              <LiveCard key={s.key} {...ALL[s.fam][s.way]} madeOnly pose={s.pose} arrive={0.12 + i * 0.22} layer={s.layer} interactive={!!s.interactive} spin={s.spin}
-                flip={s.flip ?? 0} startBack={s.startBack} show={s.show} onTap={s.onTap} />
-            ))}
-          </CardStage>
-          <BodyLoader show={!shown} />
+        <div className="pointer-events-auto mt-6 px-5"><Tabs fam={fam} setFam={pick} /></div>
+        <div ref={band} className="relative min-h-0 flex-1">
+          <BodyLoader show={!revealed} />
           {/* a colour picked before its card is made: a small ring while it is made */}
-          <div className={cx("pointer-events-none absolute right-5 top-2 transition-opacity duration-300", shown && !ready ? "opacity-100" : "opacity-0")} aria-hidden>
+          <div className={cx("absolute right-5 top-3 transition-opacity duration-300", revealed && !ready ? "opacity-100" : "opacity-0")} aria-hidden>
             <svg width="18" height="18" viewBox="0 0 28 28" className="body-loader-ring"><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(255 255 255 / .12)" strokeWidth="2.6" /><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(240 244 254 / .8)" strokeWidth="2.6" strokeLinecap="round" strokeDasharray="17 52" /></svg>
           </div>
         </div>
-        <div className="mt-2 px-5"><ViewSwitch view={view} setView={setView} /></div>
-        <div className="mt-3 px-5"><Swatches fam={fam} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} rest={view === "colours"} /></div>
-        <div className="mt-3 flex gap-2.5 px-5 pb-7">
+        <div className="pointer-events-auto px-5"><ViewSwitch view={view} setView={setView} /></div>
+        <div className="pointer-events-auto mt-3 px-5"><Swatches fam={fam} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} rest={view === "colours"} /></div>
+        <div className="pointer-events-auto mt-3 flex gap-2.5 px-5 pb-7">
           <button type="button" onClick={turnNow} className="pill pill-dark h-12 w-12 shrink-0 !px-0" aria-label="Turn it over"><Icon name="rotate" size={18} /></button>
           <button type="button" onClick={() => setSave(true)} className="pill pill-primary h-12 flex-1 text-[15px]"><Icon name="download" size={18} />Save card</button>
         </div>
@@ -335,7 +375,7 @@ export function ProfileCards() {
         <div className="max-w-[540px] space-y-4 text-[15px] leading-snug text-white/65">
           <p>One screen: the back button, a centred title and her details (the person button: a sheet where every detail can be tapped or copied); the cards by name; the cards; the views; the colourways; then turn and save.</p>
           <p>The views draw how the cards sit: one card, both stacked, all its colours cascaded (the swatches rest), front and back, and a slow showcase.</p>
-          <p>Motion is slow and quiet: cards arrive one after another from far back, lying almost flat, and land; a new colour tips in like a page; nothing turns all the way round. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready.</p>
+          <p>Motion: switching Venty and Natalia is a carousel (the old card slides off the way it is leaving, turning a little away and fading, as the new one slides in); changing the view cross fades (the old arrangement sinks back and fades as the new one comes forward); a new colour tips in like a page. Every move eases in and out (critically damped springs, no overshoot). The stage covers the whole screen under the controls, so nothing is cut off. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready; then they are put on the stage unseen for a moment (so their textures are on the GPU before anything moves) and arrive one after another from far back, landing slowly.</p>
           <p className="text-[13.5px] text-white/40">For the app: bake each card&apos;s maps at build time (a script renders them to compressed images in /public), so the screen only downloads and shows them, a few hundred KB a card, instead of making them on the phone. Preload the first colourway of each card when the profile opens, the rest after; keep only the cards on screen in memory. Saving opens the phone&apos;s share sheet (Save Image, Save to Files, Contacts); an Apple Wallet pass would need a signed pass from a server.</p>
         </div>
         <div className="relative isolate h-[760px] w-[360px] shrink-0 overflow-hidden rounded-[46px] bg-bg shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">

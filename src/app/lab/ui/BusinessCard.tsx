@@ -480,9 +480,9 @@ function cardShape(W: number, H: number, r: number) {
   return s;
 }
 function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
-  if (!m.normal) return new THREE.MeshPhysicalMaterial({ map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
+  if (!m.normal) return new THREE.MeshPhysicalMaterial({ transparent: true, map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
   return new THREE.MeshPhysicalMaterial({
-    map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
+    transparent: true, map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
     aoMap: m.orm, aoMapIntensity: 1, roughnessMap: m.orm, metalnessMap: m.orm, roughness: 1, metalness: 1,
     clearcoat: 1, clearcoatMap: m.coat, clearcoatRoughness: 0.1,
     iridescence: m.irid ? 1 : 0, iridescenceMap: m.irid ?? null, iridescenceIOR: 1.6, iridescenceThicknessRange: [220, 880],
@@ -498,16 +498,20 @@ export type Pose = { x?: number; y?: number; z?: number; rz?: number; s?: number
 // perspective, it rises and comes forward, landing slowly. show: the showcase drift (a slow sway, tilt and float).
 // spin: a new colourway is tipped in: the card tips back like a page until it is edge on, takes the new colour there,
 // and tips forward again
-type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void; layer?: number; startBack?: boolean; arrive?: number; show?: boolean };
+// opacity: how much of it shows (eased; 0 to fade it away). from: where it comes in from (a place, a fade, a lean),
+// eased to where it should be. lean: a turn it holds (as it slides off, say). speed: how quick its moves are (the
+// spring's frequency; about 7 settles in two thirds of a second, with no overshoot)
+type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void; layer?: number; startBack?: boolean; arrive?: number; show?: boolean;
+  opacity?: number; from?: Pose & { o?: number; yaw?: number }; lean?: number; speed?: number };
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 4), easeInOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
 const ARRIVE = 1.9, TIP = 1.25; // seconds
-const clearGeo = new THREE.PlaneGeometry(0.001, 0.001), clearMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false });
+const clearGeo = new THREE.PlaneGeometry(0.001, 0.001), clearMat = new THREE.MeshBasicMaterial({ transparent: true, colorWrite: false, depthWrite: false, depthTest: false });
 // drawn just before a layer: it wipes the depth of everything drawn so far, so the layer lands on top
 function DepthClear({ order }: { order: number }) {
   return <mesh geometry={clearGeo} material={clearMat} renderOrder={order} frustumCulled={false} onBeforeRender={(r) => r.clearDepth()} />;
 }
 // spin: a new colourway arrives with a full turn, swapped in while the card is edge on, so the change is never seen
-function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, layer = 0, startBack = false, arrive, show = false }: CardProps) {
+function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, layer = 0, startBack = false, arrive, show = false, opacity = 1, from, lean = 0, speed = 7 }: CardProps) {
   const [shown, setShown] = useState(maps);
   // the same card made properly (or a change without the turn): show it straight away
   if (maps !== shown && (!spin || maps.key === shown.key)) setShown(maps);
@@ -527,17 +531,20 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   useEffect(() => () => { geo.face.dispose(); geo.side.dispose(); }, [geo]);
   const mats = useMemo(() => {
     const e = stock.edge, foil = e.startsWith("foil") ? FOIL[e] : null;
-    const edge = new THREE.MeshPhysicalMaterial({ color: foil ? foil.c : e === "ink" ? stock.ink : e === "accent" ? stock.accent : stock.paper, metalness: foil ? 1 : 0, roughness: foil ? 0.25 : 0.85 });
+    const edge = new THREE.MeshPhysicalMaterial({ transparent: true, color: foil ? foil.c : e === "ink" ? stock.ink : e === "accent" ? stock.accent : stock.paper, metalness: foil ? 1 : 0, roughness: foil ? 0.25 : 0.85 });
     return { front: faceMaterial(shown.front, stock, relief), back: faceMaterial(shown.back, stock, relief), caps: new THREE.MeshBasicMaterial({ visible: false }), edge };
   }, [shown, stock, relief]);
   useEffect(() => () => { for (const m of Object.values(mats)) m.dispose(); }, [mats]);
+  const matsNow = useRef(mats);
+  useEffect(() => { matsNow.current = mats; }, [mats]);
 
   // turning it: drag sideways to spin, it settles face up or face down; double click (or tap) flips it; at rest it
   // leans toward the pointer, or sways a little
   const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null);
-  const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter };
+  const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter, ...from };
   const y0 = startBack ? Math.PI : 0;
-  const st = useRef({ yaw: y0, vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1, p: { ...p0 } });
+  const st = useRef({ yaw: y0 + (from?.yaw ?? 0), vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1,
+    p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0 });
   const { gl } = useThree();
   useEffect(() => {
     if (!interactive) return;
@@ -566,7 +573,7 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   // flip: a counter (each change turns it over)
   useEffect(() => { const s = st.current; if (flip !== s.flip) { s.flip = flip; s.ty = Math.round(s.ty / Math.PI) * Math.PI + Math.PI; } }, [flip]);
   useFrame(({ clock }, delta) => {
-    const s = st.current, T = clock.elapsedTime, L = latest.current;
+    const s = st.current, T = clock.elapsedTime, L = latest.current, leanHold = lean;
     const dt = Math.min(delta, 1 / 20);
     const want = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose };
     let lift = 0, extraPitch = 0; // offsets the arrival and the tip lay over the springs
@@ -576,7 +583,7 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
       const u = Math.max(0, (T - s.arr) / ARRIVE), e = easeOut(Math.min(1, u));
       const far = 1 - e;
       s.p = { x: want.x, y: want.y + 0.7 * far, z: want.z - 7 * far, rz: want.rz - 0.12 * far, s: want.s };
-      extraPitch = -1.25 * far; s.yaw = s.ty + 0.35 * far; s.vy = 0; s.vp = 0;
+      extraPitch = -1.25 * far; s.yaw = s.ty + 0.35 * far; s.vy = 0; s.vp = 0; s.o = Math.min(1, u * 2.2);
       if (u >= 1) s.arr = -2;
     }
     // a new colourway waiting: tip it back to edge on, swap it there, tip it forward again
@@ -589,8 +596,8 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
     }
     if (!s.drag && s.arr === -2) {
       // the showcase: a long slow sway and tilt; otherwise a breath of movement; a hovering pointer leans it
-      const lean = interactive && s.hover;
-      const ty = s.ty + (lean ? s.hx * 0.3 : show ? Math.sin(T * 0.32) * 0.5 + Math.sin(T * 0.11) * 0.15 : Math.sin(T * 0.6) * 0.09);
+      const lean = interactive && s.hover, leanTo = leanHold;
+      const ty = s.ty + leanTo + (lean ? s.hx * 0.3 : show ? Math.sin(T * 0.32) * 0.5 + Math.sin(T * 0.11) * 0.15 : Math.sin(T * 0.6) * 0.09);
       const tp = lean ? s.hy * 0.22 : show ? Math.sin(T * 0.23) * 0.16 : Math.sin(T * 0.45) * 0.05;
       let d = dt;
       while (d > 0) { // damped springs (soft, so a turn over takes its time), in small steps so a slow frame can't overshoot
@@ -598,10 +605,16 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
         s.vy += (38 * (ty - s.yaw) - 10.5 * s.vy) * h; s.yaw += s.vy * h;
         s.vp += (38 * (tp - s.pitch) - 10.5 * s.vp) * h; s.pitch += s.vp * h;
       }
-      // the place in the scene, eased slowly
-      const k = 1 - Math.exp(-dt * 3.2);
-      for (const n of ["x", "y", "z", "rz", "s"] as const) s.p[n] += (want[n] - s.p[n]) * k;
+      // the place in the scene and the fade: critically damped springs, so a move eases in and out and never overshoots
+      let d2 = dt;
+      while (d2 > 0) {
+        const h = Math.min(d2, 1 / 120); d2 -= h;
+        for (const n of ["x", "y", "z", "rz", "s"] as const) { s.v[n] += (speed * speed * (want[n] - s.p[n]) - 2 * speed * s.v[n]) * h; s.p[n] += s.v[n] * h; }
+        s.vo += (36 * (opacity - s.o) - 12 * s.vo) * h; s.o = Math.min(1, Math.max(0, s.o + s.vo * h));
+      }
     }
+    const m = matsNow.current;
+    if (m.front.opacity !== s.o) { m.front.opacity = s.o; m.back.opacity = s.o; m.edge.opacity = s.o; }
     const float = show ? Math.sin(T * 0.5) * 0.05 : 0;
     place.current?.position.set(s.p.x, s.p.y + lift + float, s.p.z); place.current?.rotation.set(0, 0, s.p.rz); place.current?.scale.setScalar(s.p.s);
     g.current?.rotation.set(s.pitch + extraPitch, s.yaw, 0);
@@ -673,7 +686,7 @@ export function Sweep({ on }: { on: boolean }) {
 }
 
 // the scene: lights, the studio the foil reflects, the camera; put cards (LiveCard) inside
-export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y" }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string }) {
+export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0 }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number }) {
   return (
     <div className={className} style={{ touchAction: touch, ...style }}>
       <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
@@ -687,7 +700,7 @@ export function CardStage({ children, className, style, near = false, dist = 1, 
           <Lightformer form="rect" intensity={1.2} color="#687ef5" position={[0, -4, 1]} scale={[8, 1.5, 1]} rotation-x={-Math.PI / 3} />
         </Environment>
         <Lens near={near} dist={dist} />
-        {children}
+        <group position={[0, offset, 0]}>{children}</group>
       </Canvas>
     </div>
   );
