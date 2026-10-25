@@ -5,9 +5,9 @@
 // so every thick line falls on a thin one (the app's 96 / 24 px grid put its thick lines half way between thin ones).
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { motion } from "motion/react";
-import { Piece } from "@/components/art";
+import { Piece, PIECES } from "@/components/art";
 import { cx } from "@/components/ui";
-import { PIECE_LABEL, type GarmentKey } from "@/lib/data";
+import { PIECE_LABEL, type GarmentKey, type PieceKey } from "@/lib/data";
 import { piecesFor } from "@/screens/pattern";
 
 // the grid: thin squares of CELL px, a thick line every five (an odd number, so centred thick and thin lines meet)
@@ -31,8 +31,85 @@ const RIM_SNOW: CSSProperties = {
 const PRESS_DARK = "inset 0 3px 8px rgb(0 0 0 / .6), inset 0 1px 2px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06)";
 const PRESS_LIGHT = "inset 0 3px 8px rgb(28 36 84 / .32), inset 0 1px 2px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .9)";
 
+// ─── 7 · the snow tray with a ruled rim (25 Oct 2026): the snow tray's colours, centimetre ticks on all four sides of
+// the rim (on its inner edge, lined up with the grid), and a taller raised band at the bottom that holds the count and
+// who it is drafted to, so the pieces have the whole surface. Grey and white grid lines, so they never compete with
+// the pieces' cornflower grainlines. The pieces are paper: solid white (no grid through them), a soft slate outline,
+// lying a little above the surface. ───
+const SNOW_RIM: CSSProperties = {
+  background: "linear-gradient(180deg, #ffffff, #e7eaf3)",
+  boxShadow: "0 18px 36px -16px rgb(0 0 0 / .7), 0 2px 4px rgb(0 0 0 / .3), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(28 36 84 / .2)",
+};
+const SNOW_SURFACE: CSSProperties = { backgroundColor: "#eceef4", boxShadow: "inset 0 3px 8px rgb(28 36 84 / .26), inset 0 1px 2px rgb(28 36 84 / .26), inset 0 -1px 0 rgb(255 255 255 / .95)", ...grid("rgb(19 21 35 / .05)", "rgb(19 21 35 / .1)") };
+const TICK = "rgb(60 75 99 / .5)";
+// ticks along a strip of the rim, hanging from the edge next to the surface: a short one every square, a long one every five
+const rule = (side: "top" | "bottom" | "left" | "right"): CSSProperties => {
+  const across = side === "top" || side === "bottom";
+  const dir = across ? "90deg" : "0deg";
+  const edge = side === "top" ? "bottom" : side === "bottom" ? "top" : side === "left" ? "right" : "left";
+  const pos = across ? `center ${edge}` : `${edge} center`;
+  return {
+    backgroundImage: `linear-gradient(${dir}, ${TICK} 1px, transparent 1px), linear-gradient(${dir}, ${TICK} 1px, transparent 1px)`,
+    backgroundSize: across ? `${CELL * 5}px 7px, ${CELL}px 4px` : `7px ${CELL * 5}px, 4px ${CELL}px`,
+    backgroundPosition: `${pos}, ${pos}`, backgroundRepeat: across ? "repeat-x" : "repeat-y",
+  };
+};
+function PaperPiece({ k, width, label }: { k: PieceKey; width: number; label: string }) {
+  const p = PIECES[k];
+  const [x1, y1, x2, y2] = p.grain;
+  const u = p.w / width; // viewBox units per screen px
+  const arrow = x1 === x2 ? `M${x1 - 3.5 * u} ${y1 + 6 * u}L${x1} ${y1}L${x1 + 3.5 * u} ${y1 + 6 * u}M${x2 - 3.5 * u} ${y2 - 6 * u}L${x2} ${y2}L${x2 + 3.5 * u} ${y2 - 6 * u}` : `M${x1 + 6 * u} ${y1 - 3.5 * u}L${x1} ${y1}L${x1 + 6 * u} ${y1 + 3.5 * u}M${x2 - 6 * u} ${y2 - 3.5 * u}L${x2} ${y2}L${x2 - 6 * u} ${y2 + 3.5 * u}`;
+  // the label beside the grainline, on the side with more of the piece; a piece too thin or too curved for two lines
+  // beside a short grainline (a band, a facing) has one line just below it
+  const thin = p.h / u < 44 || Math.hypot(x2 - x1, y2 - y1) / u < 40;
+  const left = x1 === x2 && x1 > p.w / 2;
+  const tx = thin ? p.w / 2 : x1 === x2 ? x1 + (left ? -9 : 9) * u : p.w / 2;
+  const anchor = thin || x1 !== x2 ? "middle" : left ? "end" : "start";
+  const ty = thin ? p.h + 13 * u : x1 === x2 ? (y1 + y2) / 2 : y1 - 8 * u;
+  return (
+    <svg viewBox={`0 0 ${p.w} ${p.h}`} width={width} aria-hidden style={{ overflow: "visible", filter: "drop-shadow(0 1px 1px rgb(28 36 84 / .14)) drop-shadow(0 6px 10px rgb(28 36 84 / .12))" }}>
+      <path d={p.d} fill="#fff" fillRule="evenodd" stroke="#6b7590" strokeWidth={1.3 * u} strokeLinejoin="round" />
+      <path d={`M${x1} ${y1}L${x2} ${y2}${arrow}`} fill="none" stroke="#687ef5" strokeWidth={1.4 * u} strokeLinecap="round" strokeLinejoin="round" />
+      <text x={tx} y={ty} textAnchor={anchor} fontSize={9 * u} fill="#3c4b63">
+        {thin ? <tspan x={tx}>{label}<tspan fill="#7a849c"> · {p.fold ? "Cut 1 on fold" : "Cut 2"}</tspan></tspan> : <>
+          <tspan x={tx}>{label}</tspan>
+          <tspan x={tx} dy={11 * u} fontSize={8 * u} fill="#7a849c">{p.fold ? "Cut 1 on fold" : "Cut 2"}</tspan>
+        </>}
+      </text>
+    </svg>
+  );
+}
+function RuledTray({ rim, pieces, name }: { rim: number; pieces: PieceKey[]; name: string }) {
+  const R = 30, band = 40, ins = 18; // band: the bottom rim's height; ins: the ticks stop short of the rounded corners
+  const n = pieces.length;
+  const w = n <= 2 ? 132 : n <= 4 ? 108 : 94;
+  return (
+    <div className="relative h-full" style={{ ...SNOW_RIM, borderRadius: R }}>
+      {/* the ticks: each strip spans exactly the surface's side, so its centre is the grid's and they line up */}
+      <span aria-hidden className="pointer-events-none absolute" style={{ top: 0, height: rim, left: rim + ins, right: rim + ins, ...rule("top") }} />
+      <span aria-hidden className="pointer-events-none absolute" style={{ bottom: band - rim, height: rim, left: rim + ins, right: rim + ins, ...rule("bottom") }} />
+      <span aria-hidden className="pointer-events-none absolute" style={{ left: 0, width: rim, top: rim + ins, bottom: band + ins, ...rule("left") }} />
+      <span aria-hidden className="pointer-events-none absolute" style={{ right: 0, width: rim, top: rim + ins, bottom: band + ins, ...rule("right") }} />
+      <div className="absolute overflow-hidden" style={{ ...SNOW_SURFACE, top: rim, left: rim, right: rim, bottom: band, borderRadius: R - rim * 0.6 }}>
+        <div className={cx("grid h-full place-content-center place-items-center gap-x-3 gap-y-5 px-3 py-4", n <= 2 ? "grid-cols-2" : "grid-cols-3")}>
+          {pieces.map((k, i) => (
+            <motion.div key={`${name}-${k}`} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0, rotate: (i % 3 - 1) * 3 }} transition={{ delay: 0.06 * i, duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}>
+              <PaperPiece k={k} width={w} label={PIECE_LABEL[k]} />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+      {/* the bottom band: the count and who it is drafted to, centred in the band below its ticks */}
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-6 text-[13px] text-[#3c4b63]" style={{ height: band - rim, paddingTop: 2 }}>
+        <span>{n} pieces</span><span>Drafted to Me</span>
+      </div>
+    </div>
+  );
+}
+
 type Mat = { k: string; name: string; note: string; rim: CSSProperties; surface: CSSProperties; tone: "dark" | "light"; text: string; ruler?: boolean; lit?: boolean };
 const MATS: Mat[] = [
+  { k: "snowRuled", name: "7 · Snow tray, ruled", note: "4 and 5 together: the snow tray, centimetre ticks round all four sides of the rim, and a taller band at the bottom that holds the count, so the pieces have the whole surface. Grey and white grid lines; the pieces are solid white paper with a soft slate outline.", rim: SNOW_RIM, surface: SNOW_SURFACE, tone: "light", text: "" },
   { k: "inkSnow", name: "1 · Ink rim, snow paper", note: "The switch's dark knob as the rim; inside, snow paper pressed down, the cornflower grid on it. Closest to today, with depth.", rim: RIM_INK,
     surface: { backgroundColor: "#f1f3fc", boxShadow: PRESS_LIGHT, ...grid("rgb(104 126 245 / .09)", "rgb(104 126 245 / .2)") }, tone: "light", text: "text-[#3c4b63]" },
   { k: "inkInk", name: "2 · All ink", note: "The rim and the switch's pressed-in track as the surface, snow grid lines, the pieces drawn in white. One piece with the switch and the dark screen.", rim: RIM_INK,
@@ -128,7 +205,7 @@ export function MatLab() {
                 <p className="mt-1 text-[14px] text-white/60">Drafted to Me · relaxed fit</p>
                 <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 py-2 text-white/70">On your body</span><span className="flex-1 rounded-full bg-white py-2 text-bg">Pattern</span></div>
               </div>
-              <div className="absolute inset-x-4 top-[244px] h-[408px]"><Tray mat={m} rim={rim} pieces={pieces} name={`${m.k}-${g}`} /></div>
+              <div className="absolute inset-x-4 top-[244px] h-[408px]">{m.k === "snowRuled" ? <RuledTray rim={Math.max(rim, 10)} pieces={pieces} name={`${m.k}-${g}`} /> : <Tray mat={m} rim={rim} pieces={pieces} name={`${m.k}-${g}`} />}</div>
               <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
             </Phone>
             <p className="text-[14px] leading-snug text-white/55">{m.note}</p>
