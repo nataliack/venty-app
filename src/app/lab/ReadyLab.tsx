@@ -1,8 +1,10 @@
 "use client";
-// Lab · Body ready (25 Oct 2026): "Well done! Your body is ready" refined. No divider and no dashed progress; the count
-// in one font (the app's, with even-width figures), or the number alone in Bigilla on a line of its own; the ticked
-// "Saved to your bodies" in a squarish container pressed into the paper, at the top of the paper, clear of the body's
-// card. Skeuomorphic like the look switch and the pattern tray: pressed into the paper, or raised off it, lit from above.
+// Lab · Body ready (25 Oct 2026): "Well done! Your body is ready" refined. From 1 (the pressed label), kept: the ticked
+// "Saved to your bodies" in a squarish container pressed into the paper, the heading and the line under it. New: the
+// body's name in white on the 3D body's card, its bottom as far from the card's edge as the label is from the top of the
+// paper (not a button); and under the text a ring of the measurements added, "18 of 24 / measurements added" inside it
+// in the app's font, with "Complete measurements". Five ways to fit it, centred, in the room a phone leaves.
+// Skeuomorphic like the look switch and the pattern tray: pressed into the paper, or raised off it, lit from above.
 import { useState, type CSSProperties, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@/components/icons";
@@ -18,169 +20,144 @@ const PRESSED: CSSProperties = { background: "rgb(18 19 28 / .045)", boxShadow: 
 const RAISED: CSSProperties = { background: "linear-gradient(180deg, #ffffff, #f7f6f2)", boxShadow: "inset 0 1px 0 #fff, 0 0 0 1px rgb(18 19 28 / .05), 0 1px 2px rgb(18 19 28 / .12), 0 8px 18px -10px rgb(18 19 28 / .32)" };
 // the tick on a small raised ink knob (the look switch's knob)
 const KNOB: CSSProperties = { background: "linear-gradient(180deg, #2e3040, #1a1c28)", boxShadow: "0 2px 4px rgb(0 0 0 / .28), 0 1px 1px rgb(0 0 0 / .3), inset 0 1px 0 rgb(255 255 255 / .22)" };
+const GAP = 20; // the paper's top to the label; the name's bottom to the card's edge
 
 type S = { name: string; count: number };
 const Tick = ({ size = 22 }: { size?: number }) => <span className="grid shrink-0 place-items-center rounded-full text-white" style={{ ...KNOB, width: size, height: size }}><Icon name="check" size={Math.round(size * 0.55)} strokeWidth={3} /></span>;
-const Heading = () => <h1 className="h1 !text-[32px] text-[#12131c] [text-wrap:balance]">Well done! Your body is ready</h1>;
-const Lead = ({ name, className }: { name: string; className?: string }) => <p className={cx("lead mx-auto max-w-[320px] [text-wrap:pretty]", className)}>Every pattern you make for {name} will be drafted to these measurements.</p>;
-const More = ({ left, className }: { left: number; className?: string }) => left > 0 ? <span className={cx("inline-flex items-center gap-1 text-[15px] font-medium text-primary-2", className)}>Add the other {left} for a closer fit<Icon name="chevR" size={16} /></span> : null;
-const Count = ({ count }: { count: number }) => <span className="tabular-nums">{count === 24 ? "All 24 measurements" : `${count} of 24 measurements`}</span>;
+const Saved = () => <div className="text-center"><span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75" style={PRESSED}><Tick />Saved to your bodies</span></div>;
+const Text = ({ name }: { name: string }) => (
+  <div className="mt-5 text-center">
+    <h1 className="h1 !text-[32px] text-[#12131c] [text-wrap:balance]">Well done! Your body is ready</h1>
+    <p className="lead mx-auto mt-3 max-w-[320px] [text-wrap:pretty]">Every pattern you make for {name} will be drafted to these measurements.</p>
+  </div>
+);
+const Complete = ({ className, style }: { className?: string; style?: CSSProperties }) => (
+  <span className={cx("inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-medium text-[#12131c]", className)} style={{ ...RAISED, ...style }}><Icon name="ruler" size={17} />Complete measurements</span>
+);
 
-// 1 · the pressed label, then the heading; the count a plain line in the app's font
-function V1({ name, count }: S) {
-  return (
-    <div className="text-center">
-      <span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75" style={PRESSED}><Tick />Saved to your bodies</span>
-      <div className="mt-6"><Heading /></div>
-      <Lead name={name} className="mt-3" />
-      <div className="mt-5 text-[15px] text-[#12131c]/60">{name} · <Count count={count} /></div>
-      <More left={24 - count} className="mt-2" />
-    </div>
-  );
-}
-
-// 2 · the pressed card: the tick, "Saved to your bodies" and the body's name and count in one well
-function V2({ name, count }: S) {
-  return (
-    <div>
-      <div className="flex items-center gap-3 rounded-[18px] p-3.5" style={PRESSED}>
-        <Tick size={34} />
-        <div className="min-w-0"><div className="text-[15px] font-medium text-[#12131c]">Saved to your bodies</div><div className="truncate text-[14px] text-[#12131c]/60">{name} · <Count count={count} /></div></div>
-      </div>
-      <div className="mt-6 text-center"><Heading /><Lead name={name} className="mt-3" /></div>
-      {count < 24 && <div className="mt-5 flex justify-center"><span className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-[15px] font-medium text-[#12131c]" style={RAISED}><Icon name="plus" size={16} />Add the other {24 - count}</span></div>}
-    </div>
-  );
-}
-
-// 3 · two square tiles under the text: the count pressed in (the number in Bigilla on its own, the words below it),
-// and the way to add the rest, raised
-function V3({ name, count }: S) {
-  return (
-    <div className="text-center">
-      <span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75" style={PRESSED}><Tick />Saved to your bodies</span>
-      <div className="mt-6"><Heading /></div>
-      <Lead name={name} className="mt-3" />
-      <div className={cx("mt-5 grid gap-3", count < 24 ? "grid-cols-2" : "grid-cols-1")}>
-        <div className="flex h-[78px] flex-col items-center justify-center rounded-[18px]" style={PRESSED}>
-          <span className="serif text-[28px] leading-none text-[#12131c]">{count}</span>
-          <span className="mt-1.5 text-[13px] text-[#12131c]/60">{count === 24 ? "all measurements" : "of 24 measurements"}</span>
-        </div>
-        {count < 24 && (
-          <div className="flex h-[78px] flex-col items-center justify-center rounded-[18px] px-3" style={RAISED}>
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-white"><Icon name="plus" size={16} /></span>
-            <span className="mt-2 text-[13px] font-medium leading-tight text-[#12131c]">Add the other {24 - count}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// 4 · a gauge: a round well pressed into the paper, a solid cornflower ring for the measurements taken (no dashes), the
-// number in Bigilla alone in the middle; the body's name and the way to add the rest beside it
-function Gauge({ count }: { count: number }) {
-  const r = 26, c = 2 * Math.PI * r;
-  return (
-    <span className="relative grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full" style={PRESSED}>
-      <svg viewBox="0 0 76 76" className="absolute inset-0" aria-hidden>
-        <circle cx="38" cy="38" r={r} fill="none" stroke="rgb(18 19 28 / .08)" strokeWidth="5" />
-        <circle cx="38" cy="38" r={r} fill="none" stroke="#687ef5" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${(c * count) / 24} ${c}`} transform="rotate(-90 38 38)" />
-      </svg>
-      <span className="serif relative text-[22px] leading-none text-[#12131c]">{count}</span>
-    </span>
-  );
-}
-function V4({ name, count }: S) {
-  return (
-    <div>
-      <div className="text-center"><span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75" style={PRESSED}><Tick />Saved to your bodies</span></div>
-      <div className="mt-6 text-center"><Heading /><Lead name={name} className="mt-3" /></div>
-      <div className="mt-5 flex items-center gap-4 rounded-[22px] p-3 pr-4" style={RAISED}>
-        <Gauge count={count} />
-        <div className="min-w-0">
-          <div className="truncate text-[16px] text-[#12131c]">{name}</div>
-          <div className="text-[14px] text-[#12131c]/60"><Count count={count} /></div>
-          {count < 24 && <span className="mt-1 inline-flex items-center gap-1 text-[14px] font-medium text-primary-2">Add the other {24 - count}<Icon name="chevR" size={15} /></span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 5 · the body's card raised off the paper, its count over a track pressed into it with one solid raised fill (no dashes)
-function V5({ name, count }: S) {
-  return (
-    <div>
-      <div className="text-center"><span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75" style={PRESSED}><Tick />Saved to your bodies</span></div>
-      <div className="mt-6 text-center"><Heading /><Lead name={name} className="mt-3" /></div>
-      <div className="mt-5 rounded-[22px] px-4 pb-4 pt-3.5" style={RAISED}>
-        <div className="flex items-baseline justify-between text-[15px]"><span className="text-[#12131c]">{name}</span><span className="text-[#12131c]/60"><Count count={count} /></span></div>
-        <div className="mt-3 h-2.5 rounded-full p-[2px]" style={PRESSED}>
-          <span className="block h-full rounded-full" style={{ width: `${(count / 24) * 100}%`, background: "linear-gradient(180deg, #7d90f7, #687ef5)", boxShadow: "inset 0 1px 0 rgb(255 255 255 / .45), 0 1px 1px rgb(28 36 84 / .25)" }} />
-        </div>
-        <More left={24 - count} className="mt-3" />
-      </div>
-    </div>
-  );
-}
-
-// 6 · 2 refined (25 Oct 2026): the pressed card at the top holds only the tick, "Saved to your bodies" and the body's
-// name; the count moves to a second pressed card under the text, with a solid ring (from 4) and plain words: how many
-// of the 24 are added, how many are left; inside it a raised button to add the rest
-function Ring({ count, size = 60 }: { count: number; size?: number }) {
-  const w = 5, r = size / 2 - w, c = 2 * Math.PI * r, all = count >= 24;
+// the ring: a solid cornflower arc for the measurements added (no dashes) on a faint track, "18 of 24" and
+// "measurements added" inside it in the app's font; full, with all 24
+function Ring({ count, size = 108, light, arc = 1 }: { count: number; size?: number; light?: boolean; arc?: number }) {
+  const w = 6, r = size / 2 - w, full = 2 * Math.PI * r, c = full * arc, all = count >= 24;
+  const start = arc < 1 ? 90 + (360 * (1 - arc)) / 2 : -90; // a dial (arc < 1) opens at the bottom
+  const ink = light ? "text-white" : "text-[#12131c]";
   return (
     <span className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
       <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(18 19 28 / .09)" strokeWidth={w} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#687ef5" strokeWidth={w} strokeLinecap="round" strokeDasharray={`${(c * Math.min(count, 24)) / 24} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={light ? "rgb(255 255 255 / .16)" : "rgb(18 19 28 / .09)"} strokeWidth={w} strokeLinecap="round" strokeDasharray={`${c} ${full}`} transform={`rotate(${start} ${size / 2} ${size / 2})`} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#687ef5" strokeWidth={w} strokeLinecap="round" strokeDasharray={`${(c * Math.min(count, 24)) / 24} ${full}`} transform={`rotate(${start} ${size / 2} ${size / 2})`} />
       </svg>
-      {all ? <Icon name="check" size={20} strokeWidth={2.6} className="relative text-[#687ef5]" /> : <span className="serif relative text-[20px] leading-none text-[#12131c]">{count}</span>}
+      {/* the words scale with the ring, so they always sit inside it */}
+      <span className={cx("relative text-center leading-tight", arc < 1 ? "whitespace-nowrap" : "max-w-[74%]", ink)} style={arc < 1 ? { transform: `translateY(${-Math.round(size * 0.12)}px)` } : undefined}>
+        <span className="block font-medium tabular-nums" style={{ fontSize: Math.round(size * 0.16) }}>{all ? "All 24" : `${count} of 24`}</span>
+        <span className={cx("mt-0.5 block", light ? "text-white/70" : "text-[#12131c]/60")} style={{ fontSize: arc < 1 ? 11 : Math.max(9.5, +(size * 0.104).toFixed(1)) }}>measurements added</span>
+      </span>
     </span>
   );
 }
-function V6({ name, count }: S) {
-  const left = 24 - count;
+
+// the art: the start screen's night card and the 3D body from the waist up, posed (as in the app), the body's name in
+// white at its foot (a caption, not a button); over: anything else laid on the card
+function Art({ sex, name, align = "center", over }: { sex: "female" | "male"; name: string; align?: "center" | "left"; over?: ReactNode }) {
   return (
-    <div>
-      <div className="flex items-center gap-3 rounded-[18px] p-3" style={PRESSED}>
-        <Tick size={34} />
-        <div className="min-w-0"><div className="text-[15px] font-medium text-[#12131c]">Saved to your bodies</div><div className="truncate text-[14px] text-[#12131c]/60">{name}</div></div>
-      </div>
-      <div className="mt-5 text-center"><Heading /><Lead name={name} className="mt-3" /></div>
-      <div className="mt-4 flex items-center gap-3.5 rounded-[18px] p-3" style={PRESSED}>
-        <Ring count={count} />
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-medium leading-snug text-[#12131c]"><span className="tabular-nums">{left > 0 ? `${count} of 24` : "All 24"}</span> measurements added</div>
-          <div className="mt-0.5 text-[13px] leading-snug text-[#12131c]/60">{left > 0 ? `${left} to go for a closer fit` : "Every measurement Venty uses"}</div>
-          {left > 0 && <span className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium text-[#12131c]" style={RAISED}><Icon name="plus" size={15} />Add the rest</span>}
-        </div>
-      </div>
+    <div className="relative h-[40%] shrink-0 overflow-hidden rounded-b-[32px] text-white">
+      <Crown />
+      <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      <div className="absolute inset-0 pt-10"><Body3D sex={sex} focus="portrait" autoRotate={false} className="h-full w-full" /></div>
+      {/* a soft shade under the name, so white reads on the body */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24" style={{ background: "linear-gradient(180deg, transparent, rgb(11 12 21 / .55))" }} />
+      <div className={cx("absolute inset-x-6 truncate text-[17px] font-medium tracking-[-.01em]", align === "center" ? "text-center" : "text-left")} style={{ bottom: GAP }}>{name}</div>
+      {over}
     </div>
   );
 }
 
-const VERSIONS: { k: string; name: string; note: string; C: (p: S) => ReactNode }[] = [
-  { k: "6", name: "6 · Pressed card, refined", note: "2, refined: the top card holds only the tick, \"Saved to your bodies\" and the body's name. The count moves to its own pressed card under the text: a solid cornflower ring (from 4) with the number in it, how many of the 24 are added and how many are left, and a raised button inside to add the rest. With all 24, the ring closes on a tick and the button goes.", C: V6 },
-  { k: "1", name: "1 · Pressed label", note: "The ticked label in a squarish container pressed into the paper, centred at the top of the paper. The count is one plain line in the app's font; the way to add the rest under it.", C: V1 },
-  { k: "2", name: "2 · Pressed card", note: "One well pressed into the paper holds the tick (on a raised ink knob, like the look switch's), \"Saved to your bodies\", the body's name and its count. Adding the rest is a raised button.", C: V2 },
-  { k: "3", name: "3 · Two tiles", note: "Under the text, two square tiles: the count pressed in (the number alone in Bigilla, the words under it in the app's font) and the way to add the rest, raised.", C: V3 },
-  { k: "4", name: "4 · Gauge", note: "The body's card raised off the paper, with a round well pressed into it: a solid cornflower ring for the measurements taken and the number alone in the middle.", C: V4 },
-  { k: "5", name: "5 · Track", note: "The body's card raised off the paper; under its count, a track pressed into the card with one solid raised fill (no dashes).", C: V5 },
+// 1 · today's pressed label (for comparison): the count a plain line under the text
+function V1({ name, count }: S) {
+  return (
+    <>
+      <Saved /><Text name={name} />
+      <div className="mt-5 text-center text-[15px] text-[#12131c]/60">{name} · <span className="tabular-nums">{count === 24 ? "All 24 measurements" : `${count} of 24 measurements`}</span></div>
+      {count < 24 && <div className="mt-2 text-center"><span className="inline-flex items-center gap-1 text-[15px] font-medium text-primary-2">Add the other {24 - count} for a closer fit<Icon name="chevR" size={16} /></span></div>}
+    </>
+  );
+}
+
+// 7 · the ring and the button side by side, centred under the text
+function V7({ name, count }: S) {
+  return (
+    <>
+      <Saved /><Text name={name} />
+      <div className="mt-5 flex items-center justify-center gap-4"><Ring count={count} />{count < 24 && <Complete />}</div>
+    </>
+  );
+}
+
+// 8 · the same pair in one well pressed into the paper, so the ring and its button read as one thing
+function V8({ name, count }: S) {
+  return (
+    <>
+      <Saved /><Text name={name} />
+      <div className="mx-auto mt-5 flex w-fit items-center gap-4 rounded-[30px] p-2 pr-3" style={PRESSED}>
+        <Ring count={count} size={96} />{count < 24 ? <Complete /> : <span className="pr-3 text-[14px] text-[#12131c]/60">Every measurement<br />Venty uses</span>}
+      </div>
+    </>
+  );
+}
+
+// 9 · on the card: the ring in the night card's corner, in white, level with the name (a film's caption and its dial);
+// under the text only the button, centred
+function V9({ name, count }: S) {
+  return (
+    <>
+      <Saved /><Text name={name} />
+      {count < 24 && <div className="mt-6 flex justify-center"><Complete /></div>}
+    </>
+  );
+}
+const over9 = (count: number) => <div className="absolute right-5" style={{ bottom: GAP - 8 }}><Ring count={count} size={100} light /></div>;
+
+// 10 · a dial: the ring opened at the bottom like a gauge, the words in its middle, the button sitting in the gap
+function V10({ name, count }: S) {
+  return (
+    <>
+      <Saved /><Text name={name} />
+      <div className="relative mx-auto mt-3 h-[110px] w-[150px]">
+        <div className="absolute inset-x-0 top-0 flex justify-center"><Ring count={count} size={124} arc={0.72} /></div>
+        {count < 24 && <div className="absolute inset-x-0 bottom-0 flex justify-center"><Complete className="!h-10 !px-3.5 !text-[14px]" /></div>}
+      </div>
+    </>
+  );
+}
+
+// 11 · the ring as a dial raised off the paper (a knob, like the look switch's), the button a tab tucked under its foot
+function V11({ name, count }: S) {
+  return (
+    <>
+      <Saved /><Text name={name} />
+      <div className="relative mx-auto mt-2 flex w-fit flex-col items-center">
+        <span className="grid place-items-center rounded-full p-1.5" style={RAISED}><span className="grid place-items-center rounded-full" style={PRESSED}><Ring count={count} size={90} /></span></span>
+        {count < 24 && <Complete className="-mt-5 !h-10 !px-3.5 !text-[14px]" />}
+      </div>
+    </>
+  );
+}
+
+const VERSIONS: { k: string; name: string; note: string; C: (p: S) => ReactNode; align?: "center" | "left"; over?: (count: number) => ReactNode }[] = [
+  { k: "7", name: "7 · Ring and button", note: "The ring and Complete measurements side by side, centred under the text. The name sits in white at the foot of the body's card, centred.", C: V7 },
+  { k: "8", name: "8 · In one well", note: "The same pair held in one well pressed into the paper, so the ring and its button read as one thing to tap.", C: V8 },
+  { k: "9", name: "9 · On the card", note: "The most cinematic: the ring in white in the night card's corner, level with the name on the left, like a film's caption and its dial. Under the text, only the button.", C: V9, align: "left", over: over9 },
+  { k: "10", name: "10 · Dial", note: "The ring opened at the bottom like a gauge, the words in its middle and the button sitting in the opening.", C: V10 },
+  { k: "11", name: "11 · Raised dial", note: "The ring set in a dial raised off the paper (a knob, like the look switch's), with the button tucked under its foot like a tab.", C: V11 },
+  { k: "1", name: "1 · Pressed label (before)", note: "Version 1 as it was, to compare: the count as a plain line under the text.", C: V1 },
 ];
 
-function Phone({ label, sex, children }: { label: string; sex: "female" | "male"; children: ReactNode }) {
+function Phone({ label, sex, name, count, v }: { label: string; sex: "female" | "male"; name: string; count: number; v: (typeof VERSIONS)[number] }) {
   return (
     <figure className="flex flex-col items-center gap-3">
       <div className="paper relative isolate flex h-[852px] w-[393px] shrink-0 flex-col overflow-hidden rounded-[46px] shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
-        {/* the art: the start screen's night card and the 3D body from the waist up, posed (as in the app) */}
-        <div className="relative h-[40%] shrink-0 overflow-hidden rounded-b-[32px] text-white">
-          <Crown />
-          <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
-          <div className="absolute inset-0 pt-10"><Body3D sex={sex} focus="portrait" autoRotate={false} className="h-full w-full" /></div>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-5 noscroll">{children}</div>
+        <Art sex={sex} name={name} align={v.align} over={v.over?.(count)} />
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 noscroll" style={{ paddingTop: GAP }}><v.C name={name} count={count} /></div>
         <div className="flex shrink-0 flex-col items-center gap-1 px-6 pb-6 pt-3">
           <span className="pill pill-primary w-full text-[16px] text-white">Choose what to make</span>
           <span className="h-11 px-4 pt-3 text-[16px] font-medium text-[#12131c]/65">Go to home</span>
@@ -206,7 +183,7 @@ export function ReadyLab() {
   return (
     <section>
       <h2 className="h1 !text-[34px]">Body ready</h2>
-      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">&quot;Well done! Your body is ready&quot;, refined: no divider, no dashed progress, the count in one font (the app&apos;s, with even-width figures) or the number alone in Bigilla on a line of its own, and the ticked label in a squarish container pressed into the paper, at the top of the paper, clear of the body&apos;s card. Five versions, on a phone at its real size (393 × 852); see each with some measurements still to add, or all 24.</p>
+      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">From 1 (the pressed label): the same Saved to your bodies label, heading and line under it. The body&apos;s name now sits in white at the foot of the 3D body&apos;s card (as far from its edge as the label is from the top of the paper; a caption, not a button). Under the text, a ring of the measurements added with &quot;18 of 24 / measurements added&quot; inside it in the app&apos;s font, and Complete measurements. Five ways to fit it, centred, on a phone at its real size (393 × 852), with 1 as it was to compare.</p>
       <div className="mt-5 space-y-3">
         <div><div className="mb-2 text-[14px] text-white/50">Measurements</div><Pick items={[{ k: "18" as const, name: "18 of 24" }, { k: "24" as const, name: "All 24" }]} value={count} onChange={setCount} /></div>
         <div><div className="mb-2 text-[14px] text-white/50">Body&apos;s name</div><Pick items={[{ k: "Me", name: "Me" }, { k: "Ana", name: "Ana" }, { k: "Mum, wedding guest dress", name: "A long name" }]} value={name} onChange={setName} /></div>
@@ -215,7 +192,7 @@ export function ReadyLab() {
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {VERSIONS.map((v) => (
           <div key={v.k} className="flex w-[393px] flex-col gap-4">
-            <Phone label={v.name} sex={sex}><v.C name={name} count={Number(count)} /></Phone>
+            <Phone label={v.name} sex={sex} name={name} count={Number(count)} v={v} />
             <p className="text-[14px] leading-snug text-white/55">{v.note}</p>
           </div>
         ))}
