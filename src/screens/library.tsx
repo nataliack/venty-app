@@ -27,25 +27,25 @@ const P = {
   green: "/auth/look-street-green.webp", mauve: "/auth/look-limo-mauve.webp", rust: "/auth/look-cliff-rust.webp", burgundy: "/auth/look-street-burgundy.webp",
   zip: "/auth/detail-zip.webp", corset: "/auth/detail-corset.webp", hems: "/auth/detail-hems.webp", bows: "/auth/detail-bows.webp", meadow: "/tour/meadow-640.webp",
 };
-const LOOK: Record<GarmentKey, string> = {
+export const LOOK: Record<GarmentKey, string> = {
   slip: P.mauve, wrap: P.green, aline: P.rust, flutter: P.green, cami: P.corset, tee: P.burgundy, shirt: P.bows,
   wideleg: P.hems, straight: P.zip, biasskirt: P.rust, mini: P.burgundy,
 };
-const KIND_PIC: Record<string, string> = { All: P.meadow, Dresses: P.green, Tops: P.corset, Trousers: P.hems, Skirts: P.rust };
+export const KIND_PIC: Record<string, string> = { All: P.meadow, Dresses: P.green, Tops: P.corset, Trousers: P.hems, Skirts: P.rust };
 const FAN = [P.rust, P.green, P.mauve];
-const CAT: Record<Category, string> = { Dresses: "Dresses", Tops: "Tops", Pants: "Trousers", Skirts: "Skirts" };
-const KINDS = ["All", ...CATEGORIES.map((c) => CAT[c])];
+export const CAT: Record<Category, string> = { Dresses: "Dresses", Tops: "Tops", Pants: "Trousers", Skirts: "Skirts" };
+export const KINDS = ["All", ...CATEGORIES.map((c) => CAT[c])];
 const kindOfG = (g: GarmentKey) => CAT[TEMPLATES.find((t) => t.key === g)?.category ?? "Dresses"];
-const byKind = (k: string) => TEMPLATES.filter((t) => k === "All" || CAT[t.category] === k);
+export const byKind = (k: string) => TEMPLATES.filter((t) => k === "All" || CAT[t.category] === k);
 const LEVEL_N: Record<string, number> = { Easy: 1, Intermediate: 2, Hard: 3 };
 const STATUS_DOT: Record<Pattern["status"], string> = { Printed: "bg-primary", Fitting: "bg-peri", Draft: "bg-white/40" };
 const STATUSES = ["Draft", "Ready to print", "Printed"] as const;
 const STATUS_OF: Record<Pattern["status"], (typeof STATUSES)[number]> = { Draft: "Draft", Fitting: "Ready to print", Printed: "Printed" };
 const FITS = ["Tight", "Relaxed", "Loose", "Oversized"] as const;
 const KIND_LIST = ["Dresses", "Tops", "Trousers", "Skirts"] as const;
-const LEVELS_ = ["Easy", "Intermediate", "Hard"] as const;
-const PIECES_ = ["Up to 3", "4 to 6", "7 or more"] as const;
-const piecesIn = (n: number, p: string) => (p === "Up to 3" ? n <= 3 : p === "4 to 6" ? n >= 4 && n <= 6 : n >= 7);
+export const LEVELS_ = ["Easy", "Intermediate", "Hard"] as const;
+export const PIECES_ = ["Up to 3", "4 to 6", "7 or more"] as const;
+export const piecesIn = (n: number, p: string) => (p === "Up to 3" ? n <= 3 : p === "4 to 6" ? n >= 4 && n <= 6 : n >= 7);
 const SORTS = ["Newest first", "Oldest first", "A to Z"] as const;
 // when a pattern was made: new ids are "n" + the time in base 36; older ones (seeds) have none
 const madeAt = (p: Pattern) => (p.id.startsWith("n") ? parseInt(p.id.slice(1), 36) : NaN);
@@ -65,11 +65,11 @@ const TILE: CSSProperties = { background: "rgb(0 0 0 / .26)", boxShadow: "inset 
 const PRESS_LIGHT = "inset 0 3px 8px rgb(28 36 84 / .34), inset 0 1px 2px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .7)";
 const RIM_LIGHT: CSSProperties = { background: "linear-gradient(180deg, #ffffff, #e7eaf3)", boxShadow: "0 18px 36px -16px rgb(0 0 0 / .7), 0 2px 4px rgb(0 0 0 / .3), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(28 36 84 / .2)" };
 
-const Img = ({ src, className }: { src: string; className?: string }) => <img src={src} alt="" draggable={false} className={cx("absolute inset-0 h-full w-full object-cover", className)} />;
+export const Img = ({ src, className }: { src: string; className?: string }) => <img src={src} alt="" draggable={false} className={cx("absolute inset-0 h-full w-full object-cover", className)} />;
 const Sunk = () => <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS }} />;
 const Dot = ({ s }: { s: Pattern["status"] }) => <span className={cx("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[s])} />;
 // difficulty as three small bars (as on a pattern envelope), then the word; one line that never wraps
-const Lvl = ({ t }: { t: Tpl }) => (
+export const Lvl = ({ t }: { t: Tpl }) => (
   <span className="flex items-center gap-2 text-[13px] text-white/55">
     <span className="flex items-end gap-[2px]" aria-hidden>{[1, 2, 3].map((k) => <span key={k} className={cx("w-[3px] rounded-full", k <= LEVEL_N[t.level] ? "bg-peri" : "bg-white/20")} style={{ height: 4 + k * 3 }} />)}</span>
     {t.level}
@@ -79,7 +79,7 @@ const Lvl = ({ t }: { t: Tpl }) => (
 const StatusLine = ({ p, short }: { p: Pattern; short?: boolean }) => (
   <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-white/55"><Dot s={p.status} /><span className="truncate">{short ? STATUS_OF[p.status] : statusLine(p)}</span></span>
 );
-const Count = ({ n }: { n: number }) => <><span className="tabular-nums">{n}</span> {n === 1 ? "pattern" : "patterns"}</>;
+export const Count = ({ n }: { n: number }) => <><span className="tabular-nums">{n}</span> {n === 1 ? "pattern" : "patterns"}</>;
 // a section title with how many, which shows them all
 const SectionHead = ({ title, n, onAll }: { title: string; n: number; onAll: () => void }) => (
   <div className="flex items-baseline justify-between px-6 lg:px-0">
@@ -136,7 +136,7 @@ function PickBox({ k, pick }: { k: keyof typeof CORNER; pick?: Pick }) {
 
 // ─── cards: one frame for every small card (a photo of a fixed height, then exactly two lines of a fixed height) ───
 const ROW_W = 150, ROW_H = 188, GRID_H = 206, TALL_H = 400, BAND = 72;
-function Frame({ w, imgH, pic, name, line, onClick, pick }: { w?: number; imgH: number; pic: ReactNode; name: string; line: ReactNode; onClick?: () => void; pick?: Pick }) {
+export function Frame({ w, imgH, pic, name, line, onClick, pick }: { w?: number; imgH: number; pic: ReactNode; name: string; line: ReactNode; onClick?: () => void; pick?: Pick }) {
   return (
     <button onClick={pick ? pick.toggle : onClick} aria-pressed={pick ? pick.on : undefined} className="tap relative block shrink-0 snap-start rounded-[22px] p-[5px] text-left" style={{ width: w, ...RIM }}>
       <span className="relative block overflow-hidden rounded-[18px]" style={{ height: imgH, ...cornerMask("s", !!pick) }}>{pic}<Sunk /><CornerShade k="s" open={!!pick} /></span>
@@ -148,7 +148,7 @@ function Frame({ w, imgH, pic, name, line, onClick, pick }: { w?: number; imgH: 
     </button>
   );
 }
-const MadeMark = ({ made }: { made?: Pattern }) => made ? (
+export const MadeMark = ({ made }: { made?: Pattern }) => made ? (
   <><span className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-bg/80 to-transparent" /><span className="absolute bottom-2.5 left-3 flex items-center gap-1.5 text-[12px] text-white/90"><Dot s={made.status} />You made this</span></>
 ) : null;
 function TallCard({ p, onClick, pick }: { p: Pattern; onClick: () => void; pick?: Pick }) {
@@ -192,12 +192,12 @@ function FirstCard({ onCreate }: { onCreate: () => void }) {
 }
 
 // ─── the kinds: square photos pressed into the page (the app's icon tiles), the chosen one on a snow card ───
-const PressedPhoto = ({ k, size, r, light }: { k: string; size: number; r: number; light?: boolean }) => (
+export const PressedPhoto = ({ k, size, r, light }: { k: string; size: number; r: number; light?: boolean }) => (
   <span className="relative block shrink-0 overflow-hidden" style={{ width: size, height: size, borderRadius: r }}>
     <Img src={KIND_PIC[k]} /><span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: light ? PRESS_LIGHT : PRESS }} />
   </span>
 );
-function KindTiles({ value, onChange }: { value: string; onChange: (k: string) => void }) {
+export function KindTiles({ value, onChange }: { value: string; onChange: (k: string) => void }) {
   return (
     <div className="noscroll flex gap-1.5 overflow-x-auto px-5 lg:px-0">
       {KINDS.map((k) => {
@@ -226,11 +226,11 @@ function MiniTabs({ active, onTab }: { active: string; onTab: (v: string) => voi
     </div>
   );
 }
-const PINNED = "absolute inset-x-0 top-0 z-30 border-b border-white/8 bg-bg pb-3";
-const pinIn = { initial: { opacity: 0, y: -10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 }, transition: { duration: 0.25 } };
+export const PINNED = "absolute inset-x-0 top-0 z-30 border-b border-white/8 bg-bg pb-3";
+export const pinIn = { initial: { opacity: 0, y: -10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 }, transition: { duration: 0.25 } };
 
 // ─── the tools ───
-function ToolBtn({ icon, label, n, onClick }: { icon: IconName; label: string; n?: number; onClick: () => void }) {
+export function ToolBtn({ icon, label, n, onClick }: { icon: IconName; label: string; n?: number; onClick: () => void }) {
   return (
     <span className="relative shrink-0">
       <button onClick={onClick} aria-label={n ? `${label}, ${n} on` : label} className="rb !h-10 !w-10"><Icon name={icon} size={18} /></button>
@@ -239,7 +239,7 @@ function ToolBtn({ icon, label, n, onClick }: { icon: IconName; label: string; n
   );
 }
 // search, once its button is tapped: the field takes the row, with Cancel to put it away
-function SearchOpen({ q, setQ, placeholder, onCancel }: { q: string; setQ: (q: string) => void; placeholder: string; onCancel: () => void }) {
+export function SearchOpen({ q, setQ, placeholder, onCancel }: { q: string; setQ: (q: string) => void; placeholder: string; onCancel: () => void }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="flex h-11 items-center gap-3">
       <label className="ruler-track flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full px-4 text-white/45">
@@ -266,7 +266,7 @@ function ViewSlider({ grid, setGrid }: { grid: boolean; setGrid: (g: boolean) =>
   );
 }
 // what is on, each removable (only shown when something is on)
-const OnChips = ({ items, onClear }: { items: { k: string; off: () => void }[]; onClear: () => void }) => items.length ? (
+export const OnChips = ({ items, onClear }: { items: { k: string; off: () => void }[]; onClear: () => void }) => items.length ? (
   <div className="noscroll mt-3 flex items-center gap-2 overflow-x-auto px-6 lg:px-0">
     {items.map((x) => <button key={x.k} onClick={x.off} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-snow pl-3 pr-2 text-[13px] font-medium text-ink">{x.k}<Icon name="close" size={13} /></button>)}
     <button onClick={onClear} className="h-8 shrink-0 px-2 text-[13px] font-medium text-white/60">Clear all</button>
@@ -276,7 +276,7 @@ const OnChips = ({ items, onClear }: { items: { k: string; off: () => void }[]; 
 const Choice = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) => (
   <button onClick={onClick} aria-pressed={on} className={cx("h-10 shrink-0 rounded-full px-4 text-[15px] transition-colors", on ? "bg-snow font-medium text-ink" : "pill-dark text-white/80")}>{children}</button>
 );
-function Group({ title, items, value, onChange }: { title: string; items: readonly string[]; value: string[]; onChange: (v: string[]) => void }) {
+export function Group({ title, items, value, onChange }: { title: string; items: readonly string[]; value: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="mt-6">
       <div className="text-[15px] text-white/60">{title}</div>
@@ -284,7 +284,7 @@ function Group({ title, items, value, onChange }: { title: string; items: readon
     </div>
   );
 }
-const SheetFooter = ({ n, onClear, onShow, canClear }: { n: number; onClear: () => void; onShow: () => void; canClear: boolean }) => (
+export const SheetFooter = ({ n, onClear, onShow, canClear }: { n: number; onClear: () => void; onShow: () => void; canClear: boolean }) => (
   <div className="mt-8 flex items-center gap-4">
     <button onClick={onClear} disabled={!canClear} className={cx("h-14 shrink-0 px-2 text-[15px] font-medium transition-opacity", canClear ? "text-white/80" : "text-white/30")}>Clear all</button>
     <Pill className="flex-1" onClick={onShow}>{n === 0 ? "Nothing matches" : <>Show <Count n={n} /></>}</Pill>

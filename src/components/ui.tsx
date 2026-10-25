@@ -327,14 +327,15 @@ function SheetSurface({ w, h, on, tone }: { w: number; h: number; on: boolean; t
   );
 }
 
-export function Sheet({ open, onClose, children, className, tone = "dark" }: { open: boolean; onClose: () => void; children: ReactNode; className?: string; tone?: "dark" | "snow" }) {
+// lift: how far the sheet rises off the bottom (the iPhone keyboard covers the bottom of the screen; see useKeyboard)
+export function Sheet({ open, onClose, children, className, tone = "dark", lift = 0 }: { open: boolean; onClose: () => void; children: ReactNode; className?: string; tone?: "dark" | "snow"; lift?: number }) {
   return (
     <Layer><AnimatePresence>
       {open && (
         <>
           <motion.div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-          <div className="pointer-events-none absolute inset-0 z-50 flex items-end justify-center lg:items-center">
-            <SheetBody onClose={onClose} className={className} tone={tone}>{children}</SheetBody>
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-end justify-center transition-[bottom] duration-200 lg:items-center" style={lift ? { bottom: lift } : undefined}>
+            <SheetBody onClose={onClose} className={className} tone={tone} lifted={lift > 0}>{children}</SheetBody>
           </div>
         </>
       )}
@@ -343,14 +344,14 @@ export function Sheet({ open, onClose, children, className, tone = "dark" }: { o
 }
 // On a phone the surface (outline, cut, handle) is drawn under the content; on a computer it is the plain rounded
 // dialog, as before (no handle). The top 44px, across the sheet, is where a finger reaches for the handle.
-function SheetBody({ onClose, className, tone, children }: { onClose: () => void; className?: string; tone: "dark" | "snow"; children: ReactNode }) {
+function SheetBody({ onClose, className, tone, lifted, children }: { onClose: () => void; className?: string; tone: "dark" | "snow"; lifted?: boolean; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [[w, h], setSize] = useState([0, 0]);
   const [press, setPress] = useState(false);
   const [drag, setDrag] = useState(false);
   useEffect(() => { const el = ref.current; if (!el) return; const fit = () => setSize([el.offsetWidth, el.offsetHeight]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
   return (
-    <motion.div ref={ref} className={cx("sheet-body pointer-events-auto relative isolate w-full px-6 pt-[34px] lg:w-[480px] lg:rounded-[30px] lg:border lg:px-8 lg:pb-8 lg:pt-6", tone === "snow" ? "sheet-snow" : "sheet-dark", className)} style={{ paddingBottom: "var(--bottom)" }}
+    <motion.div ref={ref} className={cx("sheet-body pointer-events-auto relative isolate w-full px-6 pt-[34px] lg:w-[480px] lg:rounded-[30px] lg:border lg:px-8 lg:pb-8 lg:pt-6", tone === "snow" ? "sheet-snow" : "sheet-dark", className)} style={{ paddingBottom: lifted ? 16 : "var(--bottom)" }}
       initial={{ y: "100%", opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}
       drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.5 }} onDragStart={() => setDrag(true)} onDragEnd={(_, i) => { setDrag(false); if (i.offset.y > 90) onClose(); }}>
       {w > 0 && <SheetSurface w={w} h={h} on={press || drag} tone={tone} />}

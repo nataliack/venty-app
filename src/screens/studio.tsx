@@ -287,7 +287,7 @@ export function Prompt() {
 /* The on-screen keyboard on phones. iOS lays it over the page and shrinks only the visual viewport (Android usually
    resizes the page itself, so there this stays closed and the layout simply fits). While a text field is focused and
    the keyboard is up, this reports the part of the screen you can still see. */
-function useKeyboard(on: boolean) {
+export function useKeyboard(on: boolean) {
   const [kb, setKb] = useState({ open: false, top: 0, height: 0 });
   useEffect(() => {
     const vv = window.visualViewport;
