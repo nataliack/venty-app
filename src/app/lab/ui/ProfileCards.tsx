@@ -317,10 +317,10 @@ export function CardsScreen() {
     return { ...main(f), pose: front ? (step === "part" ? deep(PART_UP, -GAP / 2) : FRONT) : step === "part" ? deep(PART_DOWN, -GAP / 2) : deep(BEHIND, -GAP), layer: top ? 1 : 0, interactive: front, onTap: front ? undefined : () => pick(f) };
   });
   else if (view === "sides") slots = [
-    // the front above and a little to the left, set back; the back below, in front; they overlap at a corner (they turn
-    // together and stay parallel, so they never meet)
+    // the front above and a little to the left, set back; the back below, in front; they overlap at a corner. Both take
+    // the drag, so either turns them together (they stay parallel, so they never meet)
     { ...main(fam), pose: deep({ x: -0.12, y: 0.62, rz: 0.03, s: 0.84 }, -GAP), layer: 0 },
-    { key: `${view}:back-${fam}`, fam, way: way[fam], pose: { x: 0.12, y: -0.64, rz: -0.03, s: 0.84 }, layer: 1, interactive: false, spin: true, startBack: true, flip: flip(`main-${fam}`) },
+    { key: `${view}:back-${fam}`, fam, way: way[fam], pose: { x: 0.12, y: -0.64, rz: -0.03, s: 0.84 }, layer: 1, interactive: true, spin: true, startBack: true, flip: flip(`main-${fam}`) },
   ];
   else {
     // All its colours: the pick last (in front); the others behind it in order
