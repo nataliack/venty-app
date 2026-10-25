@@ -69,7 +69,7 @@ export function loadFonts(): Promise<Fonts> {
   const body = getComputedStyle(document.body);
   const v = (n: string, f: string) => body.getPropertyValue(n).trim() || f;
   const faces: [string, string, string, string][] = [
-    ["LabSatoshi", "/lab/ui/fonts/satoshi-400.woff2", "400", "normal"], ["LabSatoshi", "/lab/ui/fonts/satoshi-500.woff2", "500", "normal"],
+    ["LabSatoshi", "/lab/ui/fonts/satoshi-300.woff2", "300", "normal"], ["LabSatoshi", "/lab/ui/fonts/satoshi-400.woff2", "400", "normal"], ["LabSatoshi", "/lab/ui/fonts/satoshi-500.woff2", "500", "normal"],
     ["LabSatoshi", "/lab/ui/fonts/satoshi-700.woff2", "700", "normal"], ["LabPlayfair", "/lab/ui/fonts/playfair-italic.woff2", "400", "italic"],
     ["LabPlexMono", "/lab/ui/fonts/plex-mono-400.woff2", "400", "normal"],
   ];
