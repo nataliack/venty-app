@@ -111,7 +111,7 @@ function Still({ b, shot = "whole", className }: { b: B; shot?: Shot; className?
 }
 // the one body live in 3D: only while its phone is on screen, so the page never holds more 3D views than it shows
 // room: a share of the view kept clear at the bottom (for words laid over it), the body framed above it
-function Live({ b, chart, stage = "grid", focus = "height", room, className }: { b?: B; chart?: boolean; stage?: "grid" | "shadow" | "none"; focus?: string; room?: number; className?: string }) {
+function Live({ b, chart, stage = "grid", focus = "height", room, className }: { b?: B; chart?: boolean; stage?: "grid" | "shadow" | "glow" | "none"; focus?: string; room?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {
@@ -121,14 +121,13 @@ function Live({ b, chart, stage = "grid", focus = "height", room, className }: {
   }, []);
   return (
     <div ref={ref} className={className ?? "relative"}>
-      {seen && <Body3D key={b?.id ?? "base"} sex={b?.sex ?? "female"} measures={b?.m ?? {}} focus={focus} whole turn stage={stage} chart={chart} room={room} lines="white" className="absolute inset-0" />}
+      {seen && <Body3D key={b?.id ?? "base"} sex={b?.sex ?? "female"} measures={b?.m ?? {}} focus={focus} whole={focus === "height"} turn stage={stage} chart={chart} room={room} lines="white" className="absolute inset-0" />}
     </div>
   );
 }
 
 // ─── shared bits ───
 const N = ({ v, className }: { v: number; className?: string }) => <span className={cx("serif", className)}>{v}</span>;
-const Unit = () => <span className="unit ml-0.5 text-[12px] text-white/45" translate="no">cm</span>;
 // how complete: 24 ticks like the marks on a tape, the measured ones lit
 function Ticks({ n, className, tall = 10 }: { n: number; className?: string; tall?: number }) {
   return (
@@ -146,7 +145,6 @@ function Head({ right }: { right?: ReactNode }) {
     </div>
   );
 }
-const NewBody = () => <Pill className="!h-10 !w-auto shrink-0 gap-1.5 px-4 !text-[15px]" icon={<Icon name="plus" size={18} strokeWidth={2.2} />}>New body</Pill>;
 // personal or compact, once there are many: a pressed track with the raised knob
 function ViewSwitch({ compact, set }: { compact: boolean; set: (c: boolean) => void }) {
   return (
@@ -160,13 +158,6 @@ function ViewSwitch({ compact, set }: { compact: boolean; set: (c: boolean) => v
     </span>
   );
 }
-// with many: how many, and personal or compact, on a row of their own under the title (beside it, the title wrapped)
-const Many = ({ n, compact, set }: { n: number; compact: boolean; set: (c: boolean) => void }) => (
-  <div className="mt-4 flex h-10 items-center justify-between px-6">
-    <span className="text-[14px] text-white/55"><span className="tabular-nums">{n}</span> bodies</span>
-    <ViewSwitch compact={compact} set={set} />
-  </div>
-);
 // the phone's screen: a scroll area and the real tab bar, on Bodies
 function Screen({ children, overlay, onScroll }: { children: ReactNode; overlay?: ReactNode; onScroll?: (el: HTMLDivElement) => void }) {
   return (
@@ -180,20 +171,6 @@ function Screen({ children, overlay, onScroll }: { children: ReactNode; overlay?
     </LayoutGroup>
   );
 }
-// a compact row, for the many: the body's face (a portrait still) pressed into a tile, the name, how complete, height
-function CompactRow({ b, on, onClick }: { b: B; on?: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className={cx("tap flex w-full items-center gap-3 rounded-[20px] px-2 py-2 text-left transition-colors", on && "bg-white/[.05]")}>
-      <span className="iconbadge relative h-[52px] w-[44px] shrink-0 overflow-hidden rounded-[13px]"><Still b={b} shot="portrait" className="object-cover object-top" /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[16px] leading-tight">{b.name}</span>
-        <span className="mt-1.5 flex items-center gap-2"><Ticks n={b.done} tall={8} /></span>
-      </span>
-      <span className="shrink-0 text-right text-[13px] text-white/55"><N v={b.m.height} className="text-[17px] text-white" /><Unit /></span>
-    </button>
-  );
-}
-
 // ═══ Today ═══
 function Today({ list }: Props) {
   return (
@@ -219,230 +196,278 @@ function Today({ list }: Props) {
   );
 }
 
-// ═══ A · Line-up: the chosen body large and live before a height wall; everyone else stands on one floor beneath,
-//     at their real heights, to tap ═══
-function Readout({ b }: { b: B }) {
+// ═══ Round 2 (25 Oct 2026): "more cinematic". Full-bleed and dark, no cards: the body is the picture, the words are
+//     titles and credits laid over it, and moving between bodies is a cut or a camera move ═══
+
+// the full-bleed screen: the stage behind everything, the title and New body over its top, the tab bar over its foot
+function Cine({ children, top, overlay, scroll, onScroll }: { children: ReactNode; top?: ReactNode; overlay?: ReactNode; scroll?: boolean; onScroll?: (el: HTMLDivElement) => void }) {
   return (
-    <div className="ruler-track mx-6 mt-3 grid grid-cols-4 rounded-[20px] py-3">
-      {KEYS.map(([k, l], i) => (
-        <div key={k} className={cx("text-center", i > 0 && "border-l border-white/8")}>
-          <div className="text-[12px] text-white/50">{l}</div>
-          <div className="mt-0.5"><N v={b.m[k]} className="text-[22px]" /><Unit /></div>
+    <LayoutGroup id={useId()}>
+      <div data-screen className="absolute inset-0 overflow-hidden bg-bg text-white">
+        {scroll ? <div onScroll={onScroll && ((e) => onScroll(e.currentTarget))} className="noscroll absolute inset-0 overflow-y-auto overflow-x-hidden">{children}</div> : children}
+        {/* a soft shade under the status bar and the title, and over the tab bar, so the words read on any frame */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[150px] bg-gradient-to-b from-bg via-bg/70 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[150px] bg-gradient-to-t from-bg via-bg/60 to-transparent" />
+        <div className="absolute inset-x-6 top-[58px] z-20 flex h-10 items-center justify-between gap-3">
+          <span className="text-[20px] tracking-[-.02em]">Body library</span>
+          {top}
+        </div>
+        {overlay}
+        <div className="absolute inset-x-0 bottom-0 z-30 px-6 pb-2"><TabBar tab="bodies" /></div>
+      </div>
+    </LayoutGroup>
+  );
+}
+const NewBodyRound = () => <button aria-label="New body" className="tap grid h-10 w-10 place-items-center rounded-full pill-primary"><Icon name="plus" size={20} strokeWidth={2.2} /></button>;
+// the many: personal or compact, beside New body
+const TopTools = ({ many, compact, set }: { many: boolean; compact: boolean; set: (c: boolean) => void }) => (
+  <span className="flex items-center gap-2">{many && <ViewSwitch compact={compact} set={set} />}<NewBodyRound /></span>
+);
+// the numbers as credits: four short columns, the label small over the number
+function Credits({ b, className }: { b: B; className?: string }) {
+  return (
+    <div className={cx("flex justify-center gap-6", className)}>
+      {KEYS.map(([k, l]) => (
+        <div key={k} className="text-center">
+          <div className="text-[11px] text-white/45">{l}</div>
+          <div className="mt-0.5 leading-none"><N v={b.m[k]} className="text-[20px]" /></div>
         </div>
       ))}
     </div>
   );
 }
-function LineUp({ list }: Props) {
-  const [sel, setSel] = useState(0);
-  const [compact, setCompact] = useState(false);
-  const b = list[Math.min(sel, list.length - 1)];
-  const many = list.length > 6;
-  const tallest = Math.max(...list.map((x) => x.m.height), 180);
-  if (!b) return (
-    <Screen>
-      <Head />
-      <div className="stage-ink relative mx-6 mt-5 h-[420px] overflow-hidden rounded-[32px] border border-white/[.08]">
-        <Live chart room={0.4} className="absolute inset-0 opacity-60" />
-        <div className="absolute inset-x-5 bottom-5 text-center">
-          <p className="text-[24px] leading-[1.12] tracking-[-.025em]">Your body,<br />to your measurements</p>
-          <Pill className="mt-4">Set up a body</Pill>
-        </div>
-      </div>
-      <p className="mt-5 px-6 text-center text-[15px] text-white/50">Everyone you measure stands here, side by side.</p>
-    </Screen>
-  );
+// compact, for the many: end credits. Names centred one under the other, each with its height and how complete it is,
+// and a small still beside; tap one to see them on the stage
+function CastList({ list, onPick }: { list: B[]; onPick: (i: number) => void }) {
   return (
-    <Screen>
-      <Head right={<NewBody />} />
-      {many && <Many n={list.length} compact={compact} set={setCompact} />}
-      {compact ? (
-        <div className="mt-4 px-4">{list.map((x, i) => <CompactRow key={x.id} b={x} on={i === sel} onClick={() => { setSel(i); setCompact(false); }} />)}</div>
-      ) : (
-        <>
-          {/* the chosen one, live: turning on the pattern floor, height lines on the wall behind */}
-          <div className="stage-ink relative mx-6 mt-5 h-[340px] overflow-hidden rounded-[32px] border border-white/[.08]">
-            <Live b={b} chart className="absolute inset-0" />
-            <div className="pointer-events-none absolute inset-x-5 top-4 flex items-start justify-between">
-              <div>
-                <p className="text-[26px] leading-none tracking-[-.025em]">{b.name}</p>
-                <p className="mt-1.5 text-[13px] text-white/55">{b.how}</p>
-              </div>
-            </div>
-            <div className="absolute inset-x-5 bottom-4 flex items-center justify-between gap-3">
-              <Ticks n={b.done} />
-              <span className="text-[13px] text-white/60">{b.done >= 24 ? "Fully measured" : <button className="pointer-events-auto font-medium text-peri">Finish measuring</button>}</span>
-            </div>
-          </div>
-          <Readout b={b} />
-          {/* everyone, standing on one floor at their real heights; the chosen one under a snow name */}
-          <div className="noscroll mt-6 flex items-end gap-1 overflow-x-auto px-6 pb-1">
-            {list.map((x, i) => (
-              <button key={x.id} onClick={() => setSel(i)} className="flex w-[64px] shrink-0 flex-col items-center">
-                <span className={cx("block w-full transition-opacity", i === sel ? "opacity-100" : "opacity-55")} style={{ height: 120 * (x.m.height / tallest) }}><Still b={x} /></span>
-                <span className={cx("mt-2 max-w-full truncate rounded-full px-2 py-0.5 text-[12px]", i === sel ? "bg-snow font-medium text-ink" : "text-white/55")}>{x.name.split(" ")[0]}</span>
-              </button>
-            ))}
-          </div>
-          <div className="mx-6 -mt-[26px] h-px bg-white/15" />
-          <div className="h-[26px]" />
-        </>
-      )}
-    </Screen>
-  );
-}
-
-// ═══ B · Pages: one body to a page, scrolled up and down; the body tall in the middle, live on the page you are on,
-//     tapes at bust, waist and hips carrying their numbers out to the side, and a tape of 24 ticks up the left edge ═══
-const PAGE_H = 560;
-function Page({ b, live }: { b: B; live: boolean }) {
-  // where the tapes cross the body, as a share of its height from the top (the body framed head to toe)
-  const at: [keyof M, string, number][] = [["bust", "Bust", 0.29], ["waist", "Waist", 0.39], ["hips", "Hips", 0.5]];
-  return (
-    <section className="relative shrink-0 snap-start" style={{ height: PAGE_H }}>
-      <div className="absolute inset-x-6 top-0">
-        <p className="text-[30px] leading-none tracking-[-.03em]">{b.name}</p>
-        <p className="mt-2 text-[14px] text-white/55"><N v={b.m.height} className="text-[16px] text-white" /><Unit /> tall · {b.how}</p>
-      </div>
-      {/* a tape up the left edge: 24 marks, the measured ones lit, the count at its foot */}
-      <div className="absolute bottom-[36px] left-6 top-[88px] flex flex-col items-start justify-between" aria-label={doneLine(b)}>
-        {Array.from({ length: 24 }, (_, i) => 23 - i).map((i) => <span key={i} className={cx("h-[2px] rounded-full", i < b.done ? "bg-peri" : "bg-white/15")} style={{ width: i % 4 === 3 ? 14 : 8 }} />)}
-      </div>
-      <p className="absolute bottom-2 left-6 text-[12px] text-white/55"><N v={b.done} className="text-[15px] text-white" /> of 24</p>
-      <div className="absolute bottom-[36px] left-[70px] right-[110px] top-[88px]">
-        {live ? <Live b={b} stage="shadow" className="absolute inset-0" /> : <Still b={b} />}
-        {at.map(([k, l, y]) => (
-          <div key={k} className="pointer-events-none absolute left-[38%] right-[-104px] flex items-center" style={{ top: `${y * 100}%` }}>
-            <span className="h-px flex-1 border-t border-dashed border-peri/70" />
-            <span className="ml-2 w-[72px] text-[12px] leading-tight text-white/55">{l}<br /><N v={b.m[k]} className="text-[18px] text-white" /><Unit /></span>
-          </div>
+    <div className="noscroll absolute inset-0 overflow-y-auto px-6 pb-[140px] pt-[124px]">
+      <p className="text-center text-[13px] text-white/40">The cast</p>
+      <div className="mt-4 flex flex-col">
+        {list.map((b, i) => (
+          <button key={b.id} onClick={() => onPick(i)} className="tap grid grid-cols-[36px_1fr_36px] items-center gap-3 border-b border-white/[.06] py-3 text-left">
+            <span className="h-[52px]"><Still b={b} className="object-contain opacity-80" /></span>
+            <span className="text-center">
+              <span className="block text-[19px] leading-tight tracking-[-.02em]">{b.name}</span>
+              <span className="mt-1 block text-[12px] text-white/45"><N v={b.m.height} className="text-[13px] text-white/70" /> cm · {doneLine(b)}</span>
+            </span>
+            <span />
+          </button>
         ))}
       </div>
-    </section>
-  );
-}
-function Pages({ list }: Props) {
-  const [at, setAt] = useState(0);
-  const [compact, setCompact] = useState(false);
-  const scroller = useRef<HTMLDivElement | null>(null);
-  const many = list.length > 6;
-  const go = (i: number) => { setCompact(false); setAt(i); requestAnimationFrame(() => scroller.current?.scrollTo({ top: i * PAGE_H, behavior: "smooth" })); };
-  if (!list.length) return (
-    <Screen>
-      <Head />
-      <div className="relative mx-6 mt-6 h-[560px]">
-        <Live className="absolute inset-x-10 bottom-[150px] top-0 opacity-60" stage="shadow" />
-        <div className="absolute inset-x-0 bottom-0 text-center">
-          <p className="text-[24px] leading-[1.12] tracking-[-.025em]">Measure your first body</p>
-          <p className="mt-2 text-[15px] text-white/55">Four measurements to start, the other<br />twenty when you have time.</p>
-          <Pill className="mt-4">Set up a body</Pill>
-        </div>
-      </div>
-    </Screen>
-  );
-  return (
-    <Screen>
-      <Head right={<NewBody />} />
-      {many && <Many n={list.length} compact={compact} set={setCompact} />}
-      {compact ? (
-        // the many: a grid of the bodies standing, three to a row, their names and marks under them
-        <div className="mt-5 grid grid-cols-3 gap-x-3 gap-y-5 px-6">
-          {list.map((b, i) => (
-            <button key={b.id} onClick={() => go(i)} className="tap flex flex-col items-center">
-              <span className="stage-ink block h-[150px] w-full overflow-hidden rounded-[20px] border border-white/[.08] px-3 pt-3"><Still b={b} /></span>
-              <span className="mt-2 block max-w-full truncate text-[14px]">{b.name}</span>
-              <Ticks n={b.done} tall={7} className="mt-1 !gap-[2px]" />
-            </button>
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* who is here: their names in a row, the one you are on in snow; tap one to go to their page */}
-          <div className="noscroll mt-4 flex gap-2 overflow-x-auto px-6">
-            {list.map((b, i) => <button key={b.id} onClick={() => go(i)} className={cx("h-9 shrink-0 rounded-full px-4 text-[14px] transition-colors", i === at ? "bg-snow font-medium text-ink" : "pill-dark text-white/75")}>{b.name}</button>)}
-          </div>
-          <div ref={scroller} onScroll={(e) => setAt(Math.round(e.currentTarget.scrollTop / PAGE_H))} className="noscroll mt-5 flex snap-y snap-mandatory flex-col overflow-y-auto" style={{ height: PAGE_H }}>
-            {list.map((b, i) => <Page key={b.id} b={b} live={i === at} />)}
-          </div>
-        </>
-      )}
-    </Screen>
+    </div>
   );
 }
 
-// ═══ C · Ledger: a measurement chart, like a tailor's book: the bodies in rows, their numbers in columns that line
-//     up; the open row shows its body live, with what to do next ═══
-function Ledger({ list }: Props) {
-  const [open, setOpen] = useState<number | null>(0);
-  const [compact, setCompact] = useState(list.length > 6);
+// ═══ A · Spotlight: a dark stage and one light from above; the body stands in it, live, its name huge behind it; the
+//     numbers as credits; the others wait at the foot as silhouettes. Choosing another dims the light, cuts, and
+//     brings it up on them ═══
+function Spotlight({ list }: Props) {
+  const [i, setI] = useState(0);
+  const [dark, setDark] = useState(false);
+  const [compact, setCompact] = useState(false);
   const many = list.length > 6;
-  if (!list.length) return (
-    <Screen>
-      <Head />
-      <div className="mx-6 mt-5 grid grid-cols-[1fr_repeat(4,44px)] gap-x-1 border-b border-white/10 pb-2 text-[12px] text-white/45">
-        <span>Body</span>{KEYS.map(([, l]) => <span key={l} className="text-right">{l}</span>)}
+  const b = list[Math.min(i, list.length - 1)];
+  const cut = (n: number) => { setCompact(false); if (n === i) return; setDark(true); setTimeout(() => { setI(n); setDark(false); }, 280); };
+  const light = (
+    <>
+      {/* the light: a cone from the top, brightest where it lands */}
+      <div className={cx("pointer-events-none absolute left-1/2 top-0 h-[640px] w-[420px] -translate-x-1/2 transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}
+        style={{ background: "radial-gradient(ellipse 34% 100% at 50% 0%, rgb(240 244 254 / .13), rgb(240 244 254 / .04) 55%, transparent 75%)" }} />
+      <div className={cx("pointer-events-none absolute left-1/2 top-[548px] h-[70px] w-[260px] -translate-x-1/2 rounded-[50%] transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}
+        style={{ background: "radial-gradient(closest-side, rgb(240 244 254 / .2), rgb(104 126 245 / .08) 60%, transparent)" }} />
+    </>
+  );
+  if (!b) return (
+    <Cine top={<NewBodyRound />}>
+      {light}
+      <div className="absolute inset-x-6 top-[300px] text-center">
+        <p className="text-[30px] leading-[1.08] tracking-[-.03em]">The stage is set</p>
+        <p className="mt-2 text-[15px] text-white/55">Measure someone and they stand here,<br />in their own shape.</p>
       </div>
-      <div className="stage-ink relative mx-6 mt-4 h-[430px] overflow-hidden rounded-[28px] border border-white/[.08]">
-        <Live chart room={0.4} className="absolute inset-0 opacity-60" />
-        <div className="absolute inset-x-5 bottom-5 text-center">
-          <p className="text-[22px] leading-tight tracking-[-.02em]">No bodies yet</p>
-          <p className="mt-1.5 text-[15px] text-white/55">Every body you measure gets a line here.</p>
-          <Pill className="mt-4">Set up a body</Pill>
-        </div>
+      <div className="absolute inset-x-6 bottom-[120px] z-20"><Pill>Set up a body</Pill></div>
+    </Cine>
+  );
+  const size = Math.min(150, 620 / Math.max(3, b.name.split(" ")[0].length));
+  return (
+    <Cine top={<TopTools many={many} compact={compact} set={setCompact} />}>
+      {compact ? <CastList list={list} onPick={cut} /> : (
+        <>
+          {light}
+          {/* the name behind the body, huge and faint */}
+          <AnimatePresence mode="wait">
+            <motion.p key={b.id} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.35 }}
+              className="pointer-events-none absolute inset-x-0 top-[150px] text-center leading-none tracking-[-.06em] text-snow/[.09]" style={{ fontSize: size }}>
+              {b.name.split(" ")[0]}
+            </motion.p>
+          </AnimatePresence>
+          <Live b={b} stage="none" className={cx("absolute inset-x-0 bottom-[240px] top-[110px] transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")} />
+          {/* the credits */}
+          <div className={cx("absolute inset-x-6 bottom-[176px] z-20 text-center transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}>
+            <p className="text-[24px] leading-none tracking-[-.02em]">{b.name}</p>
+            <p className="mt-1.5 text-[12px] text-white/45">{b.how} · {doneLine(b)}{b.done < 24 && <> · <span className="text-peri">Finish</span></>}</p>
+            <Credits b={b} className="mt-3" />
+          </div>
+          {/* the others, waiting at the foot as silhouettes; the one on stage lit */}
+          {/* centred while they fit; a row that runs past the edges scrolls from its start (a centred overflow would hide it) */}
+          <div className="noscroll absolute inset-x-0 bottom-[100px] z-20 overflow-x-auto px-6">
+            <div className="mx-auto flex w-max gap-3">
+            {list.map((x, n) => (
+              <button key={x.id} onClick={() => cut(n)} aria-label={x.name} className="flex w-[30px] shrink-0 flex-col items-center gap-1">
+                <span className={cx("block h-[58px] w-full transition-[filter,opacity] duration-300", n === i ? "" : "opacity-70 [filter:brightness(.18)]")}><Still b={x} /></span>
+                <span className={cx("h-[2px] w-4 rounded-full", n === i ? "bg-peri" : "bg-transparent")} />
+              </button>
+            ))}
+            </div>
+          </div>
+        </>
+      )}
+    </Cine>
+  );
+}
+
+// ═══ B · Orbit: everyone stands on a turntable, the one at the front live and lit, the rest round the ring, smaller,
+//     darker and softer the further back; tap one and the ring swings round to it ═══
+function Orbit({ list }: Props) {
+  const [rot, setRot] = useState(0);
+  const [moving, setMoving] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const many = list.length > 6;
+  const n = list.length;
+  const front = n ? (((Math.round(rot) % n) + n) % n) : 0;
+  const b = list[front];
+  const raf = useRef(0);
+  // swing round the short way, easing in and out
+  const spin = (k: number) => {
+    setCompact(false);
+    let d = k - (((rot % n) + n) % n); if (d > n / 2) d -= n; if (d < -n / 2) d += n;
+    if (!d) return;
+    const from = rot, to = rot + d, T = 700 + Math.abs(d) * 120;
+    let t0 = -1;
+    setMoving(true);
+    cancelAnimationFrame(raf.current);
+    const step = (t: number) => { if (t0 < 0) t0 = t; const p = Math.min(1, (t - t0) / T); const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; setRot(from + (to - from) * e); if (p < 1) raf.current = requestAnimationFrame(step); else setMoving(false); };
+    raf.current = requestAnimationFrame(step);
+  };
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
+  const disc = (
+    // the turntable: an ellipse of light on the floor with fine marks round its rim
+    <div className="pointer-events-none absolute left-1/2 top-[470px] h-[110px] w-[350px] -translate-x-1/2">
+      <div className="absolute inset-0 rounded-[50%] border border-white/10" style={{ background: "radial-gradient(closest-side, rgb(104 126 245 / .16), rgb(104 126 245 / .04) 70%, transparent)" }} />
+      <svg viewBox="0 0 350 110" className="absolute inset-0" aria-hidden>
+        {Array.from({ length: 72 }, (_, k) => { const a = (k / 72) * Math.PI * 2 + rot * (Math.PI * 2 / Math.max(n, 1)); const x = 175 + Math.sin(a) * 171, y = 55 + Math.cos(a) * 53; return <circle key={k} cx={x} cy={y} r={k % 6 ? 0.8 : 1.4} fill="rgb(240 244 254)" opacity={0.15 + 0.35 * ((Math.cos(a) + 1) / 2)} />; })}
+      </svg>
+    </div>
+  );
+  if (!b) return (
+    <Cine top={<NewBodyRound />}>
+      {disc}
+      <div className="absolute inset-x-6 top-[250px] text-center">
+        <p className="text-[30px] leading-[1.08] tracking-[-.03em]">Nobody on the turntable yet</p>
+        <p className="mt-2 text-[15px] text-white/55">Everyone you measure takes a place here.</p>
       </div>
-    </Screen>
+      <div className="absolute inset-x-6 bottom-[120px] z-20"><Pill>Set up a body</Pill></div>
+    </Cine>
   );
   return (
-    <Screen>
-      <Head right={<NewBody />} />
-      {many && <Many n={list.length} compact={compact} set={(c) => { setCompact(c); setOpen(c ? null : 0); }} />}
-      <div className="mx-6 mt-5 grid grid-cols-[1fr_repeat(4,44px)] items-end gap-x-1 border-b border-white/10 pb-2 text-[12px] text-white/45">
-        <span>Body</span>{KEYS.map(([, l]) => <span key={l} className="text-right">{l}</span>)}
-      </div>
-      <div className="mx-6">
-        {list.map((b, i) => {
-          const isOpen = open === i;
-          return (
-            <div key={b.id} className="border-b border-white/8">
-              <button onClick={() => setOpen(isOpen ? null : i)} aria-expanded={isOpen} className="grid w-full grid-cols-[1fr_repeat(4,44px)] items-center gap-x-1 py-2.5 text-left">
-                <span className="flex min-w-0 items-center gap-2.5">
-                  {!compact && <span className="iconbadge relative h-[48px] w-[40px] shrink-0 overflow-hidden rounded-[12px]"><Still b={b} shot="portrait" className="object-cover object-top" /></span>}
-                  <span className="min-w-0">
-                    <span className="block truncate text-[15px] leading-tight">{b.name}</span>
-                    <Ticks n={b.done} tall={7} className="mt-1.5 !gap-[2px]" />
-                  </span>
-                </span>
-                {KEYS.map(([k]) => <span key={k} className={cx("text-right", b.done < 4 && k !== "height" ? "text-white/30" : "")}><N v={b.m[k]} className="text-[16px]" /></span>)}
+    <Cine top={<TopTools many={many} compact={compact} set={setCompact} />}>
+      {compact ? <CastList list={list} onPick={spin} /> : (
+        <>
+          {disc}
+          {list.map((x, k) => {
+            const a = ((k - rot) / n) * Math.PI * 2;
+            const z = Math.cos(a), depth = (z + 1) / 2; // 1 at the front, 0 at the back
+            const isFront = k === front && !moving;
+            const h = 330 * (0.42 + 0.58 * depth ** 1.6) * (x.m.height / 180);
+            return (
+              <button key={x.id} onClick={() => spin(k)} aria-label={x.name} className="absolute left-1/2 top-[525px] -translate-x-1/2"
+                style={{ transform: `translate(calc(-50% + ${Math.sin(a) * 150}px), ${-h - (1 - depth) * 40}px)`, zIndex: Math.round(depth * 100), width: h * 0.42, height: h }}>
+                <span className="block h-full w-full transition-opacity" style={{ opacity: isFront ? 0 : 0.25 + 0.75 * depth, filter: `brightness(${0.35 + 0.65 * depth}) blur(${(1 - depth) * 1.5}px)` }}><Still b={x} /></span>
               </button>
-              <AnimatePresence initial={false}>
-                {isOpen && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }} className="overflow-hidden">
-                    <div className="stage-ink relative mb-3 h-[330px] overflow-hidden rounded-[24px] border border-white/[.08]">
-                      <Live b={b} chart className="absolute inset-0" />
-                      <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-3">
-                        <span className="text-[13px] text-white/60">{b.how}<br />{doneLine(b)}</span>
-                        <span className="flex flex-col items-end gap-2">
-                          {b.done < 24 && <button className="text-[14px] font-medium text-peri">Finish measuring</button>}
-                          <Pill variant="white" className="!h-10 !w-auto px-4 !text-[14px]">Make a pattern</Pill>
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+            );
+          })}
+          {/* the one at the front, live, once the ring has stopped */}
+          {!moving && <Live key={b.id} b={b} stage="none" className="pointer-events-auto absolute inset-x-0 top-[150px] z-[101] h-[385px]" />}
+          <div className="absolute inset-x-6 bottom-[112px] z-20 text-center">
+            <AnimatePresence mode="wait">
+              <motion.div key={b.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
+                <p className="text-[30px] leading-none tracking-[-.03em]">{b.name}</p>
+                <p className="mt-2 text-[12px] text-white/45">{b.how} · {doneLine(b)}</p>
+                <Credits b={b} className="mt-3" />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </>
+      )}
+    </Cine>
+  );
+}
+
+// ═══ C · Scenes: scroll and the camera moves, like a title sequence. Each body opens close on the face with its name
+//     as a title card; scroll and the camera pulls back to the whole body and its height, then glides to bust, waist
+//     and hips, each with its tape round the body and its number; then a cut to the next one ═══
+const SCENE_H = 560;
+const SCENES: { focus: string; k?: keyof M; label?: string }[] = [{ focus: "portrait" }, { focus: "height", k: "height", label: "Height" }, { focus: "bust", k: "bust", label: "Bust" }, { focus: "waist", k: "waist", label: "Waist" }, { focus: "hips", k: "hips", label: "Hips" }];
+function Scenes({ list }: Props) {
+  const [at, setAt] = useState(0);
+  const [compact, setCompact] = useState(false);
+  const box = useRef<HTMLDivElement | null>(null);
+  const many = list.length > 6;
+  const total = list.length * SCENES.length;
+  const bi = Math.min(Math.floor(at / SCENES.length), Math.max(0, list.length - 1));
+  const sc = SCENES[at % SCENES.length];
+  const b = list[bi];
+  const onScroll = (el: HTMLDivElement) => { box.current = el; setAt(Math.max(0, Math.min(total - 1, Math.round(el.scrollTop / SCENE_H)))); };
+  const pick = (i: number) => { setCompact(false); requestAnimationFrame(() => box.current?.scrollTo({ top: i * SCENES.length * SCENE_H })); };
+  if (!b) return (
+    <Cine top={<NewBodyRound />}>
+      <Live stage="none" focus="portrait" className="absolute inset-x-0 bottom-[260px] top-[110px] opacity-50" />
+      <div className="absolute inset-x-6 bottom-[150px] z-20">
+        <p className="text-[30px] leading-[1.08] tracking-[-.03em]">Every body has a story</p>
+        <p className="mt-2 text-[15px] text-white/55">Measure the first one and it starts here.</p>
+        <Pill className="mt-5">Set up a body</Pill>
       </div>
-      <p className="mt-4 px-6 text-[13px] text-white/40">All in cm. Faded numbers are the starting body, not yet measured.</p>
-    </Screen>
+    </Cine>
+  );
+  if (compact) return <Cine top={<TopTools many={many} compact={compact} set={setCompact} />}><CastList list={list} onPick={pick} /></Cine>;
+  return (
+    <Cine scroll onScroll={onScroll} top={<TopTools many={many} compact={compact} set={setCompact} />}
+      overlay={
+        // where you are: a thin line down the right edge, one notch per body, the one you are in lit
+        <div className="pointer-events-none absolute bottom-[150px] right-3 top-[150px] z-20 flex flex-col justify-center gap-1.5">
+          {list.map((x, k) => <span key={x.id} className={cx("w-[2px] rounded-full transition-all", k === bi ? "h-8 bg-peri" : "h-3 bg-white/20")} />)}
+        </div>
+      }>
+      {/* the stage stays put while the scenes scroll past it; the camera follows the scene */}
+      <div className="sticky top-0 z-0 h-[852px]" style={{ marginBottom: -852 }}>
+        <Live key={b.id} b={b} stage="none" focus={sc.focus} className="absolute inset-x-0 bottom-[150px] top-[100px]" />
+      </div>
+      <div className="relative z-10 snap-y">
+        {list.map((x) => SCENES.map((s, k) => (
+          <section key={x.id + k} className="relative" style={{ height: SCENE_H }}>
+            {k === 0 ? (
+              <div className="absolute inset-x-6 bottom-[160px]">
+                <p className="text-[64px] leading-[.92] tracking-[-.05em]">{x.name.split(" ")[0]}</p>
+                <p className="mt-3 text-[14px] text-white/55">{x.how} · {doneLine(x)}</p>
+                <Ticks n={x.done} className="mt-3" />
+              </div>
+            ) : (
+              <div className="absolute bottom-[160px] right-6 text-right">
+                <p className="text-[14px] text-white/55">{s.label}</p>
+                <p className="leading-none"><N v={x.m[s.k!]} className="text-[72px]" /><span className="unit ml-1 text-[18px] text-white/55" translate="no">cm</span></p>
+              </div>
+            )}
+          </section>
+        )))}
+        <div style={{ height: 852 - SCENE_H }} />
+      </div>
+    </Cine>
   );
 }
 
 const DIRS: { k: string; name: string; note: string; C: (p: Props) => ReactNode }[] = [
-  { k: "lineup", name: "A · Line-up", note: "The chosen body large and live before a wall of height lines, its key numbers in a pressed readout under it; everyone else standing on one floor beneath, at their real heights, to tap. With many: a compact list (face, name, the 24 marks, height).", C: LineUp },
-  { k: "pages", name: "B · Pages", note: "One body to a page, scrolled up and down: the body tall in the middle (live on the page you are on), dashed tapes at bust, waist and hips carrying their numbers out to the side, and a tape of 24 marks up the left edge for how complete it is. Names in a row above to jump. With many: a grid of them standing.", C: Pages },
-  { k: "ledger", name: "C · Ledger", note: "A tailor’s measurement chart: a row per body, the key numbers in columns that line up, the 24 marks under each name; the open row shows the body live with what to do next. With many it starts compact (no faces), one tap from the personal view.", C: Ledger },
+  { k: "spotlight", name: "A · Spotlight", note: "A dark stage and one light from above. The body stands in it, live, its name huge and faint behind it; the numbers as credits; the others wait at the foot as silhouettes. Choosing another dims the light, cuts, and brings it up on them.", C: Spotlight },
+  { k: "orbit", name: "B · Orbit", note: "Everyone on a turntable in perspective: the one at the front live and lit, the rest round the ring, smaller, darker and softer the further back. Tap one and the ring swings round to it.", C: Orbit },
+  { k: "scenes", name: "C · Scenes", note: "Scroll and the camera moves, like a title sequence: close on the face with the name as a title card, then back to the whole body and its height, then round to bust, waist and hips, each with its tape and number; then a cut to the next person.", C: Scenes },
 ];
 
 function Phone({ label, children }: { label: string; children: ReactNode }) {
@@ -455,14 +480,14 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function BodyLab() {
-  const [d, setD] = useState("lineup");
+  const [d, setD] = useState("spotlight");
   const [n, setN] = useState<"none" | "few" | "many">("few");
   const c = DIRS.find((x) => x.k === d)!;
   const list = n === "none" ? [] : n === "few" ? FEW : MANY;
   return (
     <section className="mx-auto max-w-[1000px]">
       <h1 className="h1 !text-[34px]">Body library</h1>
-      <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Around the 3D bodies: one live at a time, the others stills taken from their own 3D body (they appear as they are made; the drawn mannequin holds their place until then). Three directions beside Today.</p>
+      <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Round 2, more cinematic: full-bleed and dark, the body as the picture, the words as titles and credits over it, a cut or a camera move between bodies. One body live at a time; the others are stills taken from their own 3D body (they appear as they are made). Three directions beside Today.</p>
       <div className="noscroll mt-6 flex gap-2 overflow-x-auto">
         {DIRS.map((x) => <button key={x.k} onClick={() => setD(x.k)} className={cx("h-11 shrink-0 rounded-full px-5 text-[15px] font-medium transition-colors", x.k === d ? "bg-snow text-ink" : "bg-card text-white/75 hover:text-white")}>{x.name}</button>)}
       </div>
