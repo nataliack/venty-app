@@ -125,7 +125,44 @@ function V5({ name, count }: S) {
   );
 }
 
+// 6 · 2 refined (25 Oct 2026): the pressed card at the top holds only the tick, "Saved to your bodies" and the body's
+// name; the count moves to a second pressed card under the text, with a solid ring (from 4) and plain words: how many
+// of the 24 are added, how many are left; inside it a raised button to add the rest
+function Ring({ count, size = 60 }: { count: number; size?: number }) {
+  const w = 5, r = size / 2 - w, c = 2 * Math.PI * r, all = count >= 24;
+  return (
+    <span className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0" aria-hidden>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(18 19 28 / .09)" strokeWidth={w} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#687ef5" strokeWidth={w} strokeLinecap="round" strokeDasharray={`${(c * Math.min(count, 24)) / 24} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+      </svg>
+      {all ? <Icon name="check" size={20} strokeWidth={2.6} className="relative text-[#687ef5]" /> : <span className="serif relative text-[20px] leading-none text-[#12131c]">{count}</span>}
+    </span>
+  );
+}
+function V6({ name, count }: S) {
+  const left = 24 - count;
+  return (
+    <div>
+      <div className="flex items-center gap-3 rounded-[18px] p-3" style={PRESSED}>
+        <Tick size={34} />
+        <div className="min-w-0"><div className="text-[15px] font-medium text-[#12131c]">Saved to your bodies</div><div className="truncate text-[14px] text-[#12131c]/60">{name}</div></div>
+      </div>
+      <div className="mt-5 text-center"><Heading /><Lead name={name} className="mt-3" /></div>
+      <div className="mt-4 flex items-center gap-3.5 rounded-[18px] p-3" style={PRESSED}>
+        <Ring count={count} />
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-medium leading-snug text-[#12131c]"><span className="tabular-nums">{left > 0 ? `${count} of 24` : "All 24"}</span> measurements added</div>
+          <div className="mt-0.5 text-[13px] leading-snug text-[#12131c]/60">{left > 0 ? `${left} to go for a closer fit` : "Every measurement Venty uses"}</div>
+          {left > 0 && <span className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium text-[#12131c]" style={RAISED}><Icon name="plus" size={15} />Add the rest</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const VERSIONS: { k: string; name: string; note: string; C: (p: S) => ReactNode }[] = [
+  { k: "6", name: "6 · Pressed card, refined", note: "2, refined: the top card holds only the tick, \"Saved to your bodies\" and the body's name. The count moves to its own pressed card under the text: a solid cornflower ring (from 4) with the number in it, how many of the 24 are added and how many are left, and a raised button inside to add the rest. With all 24, the ring closes on a tick and the button goes.", C: V6 },
   { k: "1", name: "1 · Pressed label", note: "The ticked label in a squarish container pressed into the paper, centred at the top of the paper. The count is one plain line in the app's font; the way to add the rest under it.", C: V1 },
   { k: "2", name: "2 · Pressed card", note: "One well pressed into the paper holds the tick (on a raised ink knob, like the look switch's), \"Saved to your bodies\", the body's name and its count. Adding the rest is a raised button.", C: V2 },
   { k: "3", name: "3 · Two tiles", note: "Under the text, two square tiles: the count pressed in (the number alone in Bigilla, the words under it in the app's font) and the way to add the rest, raised.", C: V3 },
@@ -164,13 +201,15 @@ function Pick<T extends string>({ items, value, onChange }: { items: { k: T; nam
 export function ReadyLab() {
   const [count, setCount] = useState<"18" | "24">("18");
   const [sex, setSex] = useState<"female" | "male">("female");
-  const name = "Me, Spring 26";
+  // the body's name is whatever the person called it ("Me, Spring 26" was only a made-up name); a long one shows how it fits
+  const [name, setName] = useState("Me");
   return (
     <section>
       <h2 className="h1 !text-[34px]">Body ready</h2>
       <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">&quot;Well done! Your body is ready&quot;, refined: no divider, no dashed progress, the count in one font (the app&apos;s, with even-width figures) or the number alone in Bigilla on a line of its own, and the ticked label in a squarish container pressed into the paper, at the top of the paper, clear of the body&apos;s card. Five versions, on a phone at its real size (393 × 852); see each with some measurements still to add, or all 24.</p>
       <div className="mt-5 space-y-3">
         <div><div className="mb-2 text-[14px] text-white/50">Measurements</div><Pick items={[{ k: "18" as const, name: "18 of 24" }, { k: "24" as const, name: "All 24" }]} value={count} onChange={setCount} /></div>
+        <div><div className="mb-2 text-[14px] text-white/50">Body&apos;s name</div><Pick items={[{ k: "Me", name: "Me" }, { k: "Ana", name: "Ana" }, { k: "Mum, wedding guest dress", name: "A long name" }]} value={name} onChange={setName} /></div>
         <div><div className="mb-2 text-[14px] text-white/50">Body</div><Pick items={[{ k: "female" as const, name: "Female" }, { k: "male" as const, name: "Male" }]} value={sex} onChange={setSex} /></div>
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
