@@ -51,7 +51,9 @@ export const Crown = ({ className, live }: { className?: string; live?: boolean 
 
 // A "moment" screen in the onboarding style: a violet picture panel and warm paper below (side by side on desktop).
 // Used where something starts or finishes, so those screens stand apart from the dark working screens.
-export function PaperScreen({ art, children, footer, top, artH = "h-[54%]" }: { art: ReactNode; children: ReactNode; footer: ReactNode; top?: ReactNode; artH?: string }) {
+// artStyle: the picture panel's height as a style, on a phone (Body ready's: a share of the screen that shrinks on a short
+// one); fill: on a phone the content takes the whole column (a flex column, from the top) instead of sitting centred in it
+export function PaperScreen({ art, children, footer, top, artH = "h-[54%]", artStyle, fill }: { art: ReactNode; children: ReactNode; footer: ReactNode; top?: ReactNode; artH?: string; artStyle?: CSSProperties; fill?: boolean }) {
   const desk = useDesk();
   if (desk) return (
     <div className="paper absolute inset-0 grid grid-cols-[1.05fr_0.95fr]">
@@ -61,8 +63,8 @@ export function PaperScreen({ art, children, footer, top, artH = "h-[54%]" }: { 
   );
   return (
     <div className="paper absolute inset-0 flex flex-col">
-      <div className={cx("relative shrink-0 overflow-hidden rounded-b-[32px] text-white", artH)}><Crown />{art}{top && <div className="absolute inset-x-0 top-0 px-5" style={{ paddingTop: "var(--top)" }}>{top}</div>}</div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-5 noscroll"><div className="my-auto py-2">{children}</div></div>
+      <div className={cx("relative shrink-0 overflow-hidden rounded-b-[32px] text-white", !artStyle && artH)} style={artStyle}><Crown />{art}{top && <div className="absolute inset-x-0 top-0 px-5" style={{ paddingTop: "var(--top)" }}>{top}</div>}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-5 noscroll"><div className={fill ? "flex min-h-full flex-col" : "my-auto py-2"}>{children}</div></div>
       <div className="shrink-0 px-6 pt-3" style={{ paddingBottom: "var(--bottom)" }}>{footer}</div>
     </div>
   );

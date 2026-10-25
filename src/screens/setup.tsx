@@ -10,6 +10,7 @@ import { FlowHeader, bodySteps } from "./measure";
 import { useInstall } from "@/components/Install";
 import dynamic from "next/dynamic";
 import { BodyLoader } from "@/components/BodyLoader";
+import { BodyDialArea } from "@/components/BodyDial";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
@@ -471,35 +472,55 @@ export function EditMeasures({ p }: { p?: Record<string, unknown> }) {
   );
 }
 
+// a short phone (an iPhone SE: under 720 px of screen): Body ready's smaller heading and tighter gaps
+function useShort() {
+  const [short, setShort] = useState(false);
+  useEffect(() => { const q = window.matchMedia("(max-height: 719px)"); const f = () => setShort(q.matches); f(); q.addEventListener("change", f); return () => q.removeEventListener("change", f); }, []);
+  return short;
+}
+
+// Body ready (from the lab, 25 Oct 2026): a moment, so the onboarding's paper below, and above it the start screen's
+// night card with the 3D body from the waist up, posed, drawn big so its thighs run off the card, and the body's name on
+// a small white tag at the card's foot (a caption, not a button), as far from its edge as the saved label is from the
+// top of the paper. Under the text, the dial of the measurements added (BodyDial), sized to the room left above the
+// buttons and centred in it; Complete measurements in its opening while some are still to add.
 export function Ready() {
   const { go, home, set, activeBody } = useApp();
   const body = useApp((s) => s.body());
   const count = body.done.length;
   const left = 24 - count;
+  const desk = useDesk();
+  const short = useShort();
   useEffect(() => { set({ resumeBody: left > 0 ? activeBody : null }); }, [left, activeBody, set]);
-  // a moment, so the onboarding's paper below, and above it a cinematic shot: the start screen's night card, the 3D body
-  // from the waist up, three-quarter, posed
   const art = (
     <>
       <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="absolute inset-0 pt-[var(--top)]">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className={cx("absolute inset-x-0 top-0 pt-[var(--top)]", desk ? "h-full" : "h-[128%]")}>
         <Body3D sex={body.sex} measures={body.measures} focus="portrait" autoRotate={false} className="h-full w-full" />
       </motion.div>
+      {body.name && (
+        <div className="absolute inset-x-6 flex justify-center" style={{ bottom: desk ? 28 : 20 }}>
+          <span className="max-w-full truncate rounded-[12px] bg-white px-3.5 py-2 text-[14px] font-medium text-[#12131c]">{body.name}</span>
+        </div>
+      )}
     </>
   );
   return (
-    <PaperScreen art={art} artH="h-[40%]" footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
+    <PaperScreen art={art} fill
+      // 31% of the screen, down to 26% on a short phone, so the text and the dial fit under it
+      artStyle={{ height: "max(26%, min(31%, calc(100% - 560px)))" }}
+      footer={<div className="flex flex-col items-center gap-1"><Pill onClick={() => { useApp.getState().newDraft({ bodyId: activeBody }); go("prompt", { picked: true }); }}>Choose what to make</Pill><button onClick={home} className="h-12 px-4 text-[16px] font-medium text-[#12131c]/65 hover:text-[#12131c]">Go to home</button></div>}>
       <div className="text-center lg:text-left">
-        <div className="flex items-center justify-center gap-2 text-[15px] text-[#12131c]/70 lg:justify-start"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#12131c] text-white"><Icon name="check" size={12} strokeWidth={3} /></span>Saved to your bodies</div>
-        {/* the heading and its text are one group (12px apart); the saved line above sits further off (24px) */}
-        <h1 className="h1 mt-6 !text-[34px] text-[#12131c] [text-wrap:balance] lg:!text-[52px]">Well done! Your body is ready</h1>
-        <p className="lead mx-auto mt-3 max-w-[360px] [text-wrap:pretty] lg:mx-0">Every pattern you make for {body.name || "this body"} will be drafted to these measurements.</p>
+        {/* saved: a squarish label pressed into the paper, the tick on a small raised knob */}
+        <span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75"
+          style={{ background: "rgb(18 19 28 / .045)", boxShadow: "inset 0 2px 5px rgb(18 19 28 / .16), inset 0 1px 1.5px rgb(18 19 28 / .18), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9)" }}>
+          <span className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-white" style={{ background: "linear-gradient(180deg, #2e3040, #1a1c28)", boxShadow: "0 2px 4px rgb(0 0 0 / .28), 0 1px 1px rgb(0 0 0 / .3), inset 0 1px 0 rgb(255 255 255 / .22)" }}><Icon name="check" size={12} strokeWidth={3} /></span>
+          Saved to your bodies
+        </span>
+        <h1 className={cx("h1 text-[#12131c] [text-wrap:balance] lg:!text-[52px]", short ? "mt-4 !text-[28px]" : "mt-5 !text-[32px]")}>Well done! Your body is ready</h1>
+        <p className={cx("lead mx-auto max-w-[360px] [text-wrap:pretty] lg:mx-0", short ? "mt-2" : "mt-3")}>Every pattern you make for {body.name || "this body"} will be drafted to these measurements.</p>
       </div>
-      <div className="mt-5 border-t border-[#12131c]/10 pt-4">
-        <div className="flex items-baseline justify-between"><span className="text-[17px]">{body.name}</span><span className="text-[15px] text-[#12131c]/60"><span className="serif text-[20px] text-[#12131c]">{count}</span> of 24 measurements</span></div>
-        <div className="mt-2.5 flex gap-[3px]">{Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i < count ? "bg-primary" : "bg-[#12131c]/12")} />)}</div>
-        {left > 0 && <button onClick={() => go("wizard")} className="mt-3 flex items-center gap-1 text-[15px] font-medium text-primary-2">Add the other {left} for a closer fit<Icon name="chevR" size={16} /></button>}
-      </div>
+      {desk ? <BodyDialArea count={count} size={200} onComplete={() => go("wizard")} className="mt-8" /> : <BodyDialArea count={count} onComplete={() => go("wizard")} />}
     </PaperScreen>
   );
 }
