@@ -1,37 +1,33 @@
 "use client";
-// Lab · Natalia's cards on her profile (25 Oct 2026, round 2 from Jose's notes). Her two approved cards (Venty's, and
-// her own) on the About page, three ways:
-//   Deck    the two cards stacked, the one behind peeking over the top at full size; tap it (or switch) and they trade
-//           places, the one behind lifting over the top and coming down in front
-//   Fan     the three colourways of one card in a ring, the pick in the middle; tap a side one to bring it forward;
-//           switching cards drops one ring and raises the other
-//   Sleeve  the card tucked in a pocket; pull it up to take it out; put it back, or switch, and it slides home
-// Cards are drawn in layers (see Card's layer), so the one in front never cuts into the one behind as it turns.
-// Under each, the same controls, in the app's raised and pressed style: the card switch (the Venty wordmark and her
-// nck, no labels), the colourways as swatches, turn it over, and save it (a picture of both faces, or her details as a
-// contact). A new colourway comes in with one full turn of the card, swapped while it is edge on.
+// Lab · Natalia's business cards on her profile (25 Oct 2026, round 3 from Jose's notes). One screen, top to bottom:
+// the app's back button and a centred title; the two cards by name (Venty, Natalia); the cards; their colourways as
+// swatches; the actions (turn it over, save it). Over the foot of the cards, a view picker (like a camera's modes):
+//   Card        the card on its own, to turn in your hand
+//   Stack       both cards, the other peeking over the top; pick one and they trade places
+//   Colours     the card's three colourways at once, cascaded; tap one to bring it forward (the swatches rest here)
+//   Both sides  the front and the back together
+//   Showcase    the card drifts and tilts on its own, turns right round now and then, and a light sweeps across it
+// Cards move between views (the one you are holding goes to its new place); new ones arrive from below with a turn,
+// old ones drop away. The background is the landing page's night sky (its slow glows along the bottom).
+// Loading: nothing is shown half made. The 3D body's loader ring shows until every card the view needs is made (they
+// are made in slices in the background, the first colourway of each card first, then the rest); then the cards come
+// in. A colour picked before its card is made: the card waits, a small ring shows, and it turns to the new colour as
+// soon as it is ready. (For the app, see the note in the lab: bake the maps at build time.)
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { LOGO } from "@/components/art";
-import { cx } from "@/components/ui";
+import { useEffect, useRef, useState } from "react";
+import { cx, RB } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { CardStage, FlatFace, LiveCard, drawFlat, loadFonts, prefetchCard, SIZES, type El, type Pose, type Stock } from "./BusinessCard";
+import { BodyLoader } from "@/components/BodyLoader";
+import { CardStage, FlatFace, LiveCard, Sweep, drawFlat, loadFonts, prefetchCard, useCardsReady, SIZES, type El, type Pose, type Stock } from "./BusinessCard";
 import { FAVOURITES, type Family } from "./designs";
-import { NCK } from "./brand";
 
 const FAMS: Family[] = ["venty", "natalia"];
+const NAME: Record<Family, string> = { venty: "Venty", natalia: "Natalia" };
 type Card = { els: El[]; stock: Stock };
 // every approved card, made once; and its flat version (for pictures)
 const ALL = Object.fromEntries(FAMS.map((f) => [f, Object.fromEntries(FAVOURITES[f].ways.map((w) => [w.id, FAVOURITES[f].make(w.id)]))])) as Record<Family, Record<string, Card>>;
 const FLAT = (f: Family, w: string): Card => FAVOURITES[f].make(w, true);
 const FIRST: Record<Family, string> = { venty: FAVOURITES.venty.ways[0].id, natalia: FAVOURITES.natalia.ways[0].id };
-// make the first colourway of each card ahead, then the rest, so a pick is ready when it is made
-function usePrefetch() {
-  useEffect(() => {
-    for (const f of FAMS) prefetchCard(ALL[f][FIRST[f]].els, ALL[f][FIRST[f]].stock);
-    for (const f of FAMS) for (const w of FAVOURITES[f].ways) prefetchCard(ALL[f][w.id].els, ALL[f][w.id].stock);
-  }, []);
-}
 
 // ─── saving ───
 const VCARD: Record<Family, { title: string; org?: string; url: string; file: string }> = {
@@ -64,7 +60,6 @@ async function hand(file: File): Promise<string> {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return "Saved to your downloads";
 }
-
 function SaveSheet({ fam, way, onClose }: { fam: Family; way: string; onClose: () => void }) {
   const [card] = useState(() => FLAT(fam, way));
   const [pic, setPic] = useState<File | null>(null);
@@ -81,7 +76,7 @@ function SaveSheet({ fam, way, onClose }: { fam: Family; way: string; onClose: (
       <motion.div className="absolute inset-x-0 bottom-0 z-50 rounded-t-[34px] bg-[#1b1c26] px-5 pb-8 pt-3 text-white shadow-[inset_0_1px_0_rgb(255_255_255/.12)]"
         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}>
         <div className="mx-auto h-[5px] w-12 rounded-full bg-white/15" />
-        <h3 className="mt-5 text-[22px] font-normal tracking-[-.02em]">Save her card</h3>
+        <h3 className="mt-5 text-[22px] font-normal tracking-[-.02em]">Save the card</h3>
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <FlatFace els={card.els} stock={card.stock} face="front" px={3.4} className="w-full rounded-[3px] shadow-[0_0_0_1px_rgb(255_255_255/.1),0_10px_24px_-12px_rgb(0_0_0/.9)]" />
           <FlatFace els={card.els} stock={card.stock} face="back" px={3.4} className="w-full rounded-[3px] shadow-[0_0_0_1px_rgb(255_255_255/.1),0_10px_24px_-12px_rgb(0_0_0/.9)]" />
@@ -100,27 +95,24 @@ function SaveSheet({ fam, way, onClose }: { fam: Family; way: string; onClose: (
   );
 }
 
-// ─── the controls under every version ───
-// the switch: an inset track (the app's pressed-in tiles) with a raised snow thumb (the app's white secondary); the
-// two cards are told apart by their marks, the Venty wordmark and her nck
-const WordVenty = ({ h }: { h: number }) => <svg viewBox="0 666 2133 1120" height={h} fill="currentColor" aria-hidden>{LOGO.slice(0, 4).map((d, i) => <path key={i} d={d} />)}</svg>;
-const WordNck = ({ h }: { h: number }) => <svg viewBox="0 0 247 129" height={h} fill="currentColor" aria-hidden><path d={NCK[0]} fillRule="evenodd" /></svg>;
+// ─── the controls ───
+// the two cards by name: an inset track (the app's pressed-in tiles) with a raised snow thumb (the white secondary)
 const inset = "inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06), 0 1px 0 rgb(255 255 255 / .07)";
 const raisedSnow = "inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .1), inset 0 0 12px 1px rgb(255 255 255 / .75), 0 1px 2px rgb(0 0 0 / .35), 0 6px 14px -6px rgb(0 0 0 / .6)";
-function CardSwitch({ fam, setFam }: { fam: Family; setFam: (f: Family) => void }) {
+function Tabs({ fam, setFam }: { fam: Family; setFam: (f: Family) => void }) {
   return (
-    <div className="flex h-12 rounded-full p-1" style={{ background: "rgb(0 0 0 / .26)", boxShadow: inset }}>
+    <div className="flex h-11 rounded-full p-1" style={{ background: "rgb(0 0 0 / .26)", boxShadow: inset }}>
       {FAMS.map((f) => (
-        <button key={f} type="button" onClick={() => setFam(f)} aria-pressed={fam === f} aria-label={f === "venty" ? "Venty card" : "Her own card"} className="relative grid flex-1 place-items-center rounded-full">
-          {fam === f && <motion.span layoutId="card-switch" className="absolute inset-0 rounded-full bg-snow" style={{ boxShadow: raisedSnow }} transition={{ type: "spring", bounce: 0.18, duration: 0.45 }} />}
-          <span className={cx("relative transition-colors duration-300", fam === f ? "text-ink" : "text-white/50")}>{f === "venty" ? <WordVenty h={15} /> : <WordNck h={17} />}</span>
+        <button key={f} type="button" onClick={() => setFam(f)} aria-pressed={fam === f} className="relative flex-1 rounded-full text-[15px] font-medium">
+          {fam === f && <motion.span layoutId="card-tabs" className="absolute inset-0 rounded-full bg-snow" style={{ boxShadow: raisedSnow }} transition={{ type: "spring", bounce: 0.18, duration: 0.45 }} />}
+          <span className={cx("relative transition-colors duration-300", fam === f ? "text-ink" : "text-white/55")}>{NAME[f]}</span>
         </button>
       ))}
     </div>
   );
 }
 // a swatch per colourway: its paper as the eye sees it on the 3D card (Venty's with a hint of the glow), raised like the
-// app's buttons; the pick is pressed in and ringed
+// app's buttons; the pick is pressed in and ringed. In Colours they rest (every colourway is on screen already)
 const SWATCH: Record<Family, Record<string, string>> = {
   venty: {
     dark: "radial-gradient(130% 80% at 65% 115%, rgb(104 126 245 / .95), rgb(104 126 245 / .25) 45%, transparent 75%), #15161f",
@@ -129,13 +121,13 @@ const SWATCH: Record<Family, Record<string, string>> = {
   },
   natalia: { green: "#202a22", brown: "#17130e", cream: "#fff7e2" },
 };
-function Swatches({ fam, way, setWay }: { fam: Family; way: string; setWay: (w: string) => void }) {
+function Swatches({ fam, way, setWay, rest }: { fam: Family; way: string; setWay: (w: string) => void; rest: boolean }) {
   return (
-    <div className="flex justify-center gap-6">
+    <div className={cx("flex justify-center gap-6 transition-opacity duration-300", rest && "pointer-events-none opacity-30")} aria-disabled={rest}>
       {FAVOURITES[fam].ways.map((w) => {
-        const on = way === w.id;
+        const on = way === w.id && !rest;
         return (
-          <button key={w.id} type="button" onClick={() => setWay(w.id)} aria-pressed={on} aria-label={`${w.name} colourway`} className="flex flex-col items-center gap-2">
+          <button key={w.id} type="button" onClick={() => setWay(w.id)} aria-pressed={on} aria-label={`${w.name} colourway`} tabIndex={rest ? -1 : 0} className="flex flex-col items-center gap-2">
             <motion.span animate={{ scale: on ? 0.94 : 1 }} transition={{ type: "spring", bounce: 0.3, duration: 0.35 }} className="block h-11 w-11 rounded-full"
               style={{ background: SWATCH[fam][w.id], boxShadow: on
                 ? "inset 0 2px 5px rgb(0 0 0 / .45), inset 0 0 0 1px rgb(255 255 255 / .14), 0 0 0 3px #0b0c15, 0 0 0 4.5px rgb(255 255 255 / .92)"
@@ -147,178 +139,148 @@ function Swatches({ fam, way, setWay }: { fam: Family; way: string; setWay: (w: 
     </div>
   );
 }
-function Controls({ fam, setFam, way, setWay, extra, onSave }: { fam: Family; setFam: (f: Family) => void; way: string; setWay: (w: string) => void; extra: ReactNode; onSave: () => void }) {
+type View = "card" | "stack" | "colours" | "sides" | "show";
+const VIEWS: { k: View; name: string }[] = [{ k: "card", name: "Card" }, { k: "stack", name: "Stack" }, { k: "colours", name: "Colours" }, { k: "sides", name: "Both sides" }, { k: "show", name: "Showcase" }];
+// the view picker, like a camera's modes: words in a row over the foot of the cards, the one in use bright with a dot
+function Views({ view, setView }: { view: View; setView: (v: View) => void }) {
   return (
-    <div className="px-5 pb-7">
-      <CardSwitch fam={fam} setFam={setFam} />
-      <div className="mt-5"><Swatches fam={fam} way={way} setWay={setWay} /></div>
-      <div className="mt-5 flex gap-2.5">
-        {extra}
-        <button type="button" onClick={onSave} className="pill pill-primary h-12 flex-1 text-[15px]"><Icon name="download" size={18} />Save card</button>
-      </div>
-    </div>
-  );
-}
-const sec = "pill pill-dark h-12 px-4 text-[15px]";
-const turnBtn = (on: () => void) => <button type="button" onClick={on} className={cx(sec, "w-12 !px-0")} aria-label="Turn it over"><Icon name="rotate" size={18} /></button>;
-
-// the screen: the About page's section on her
-function Screen({ children, title }: { children: ReactNode; title: string }) {
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-10 items-center gap-1.5 px-4 pt-[52px] text-white/60"><Icon name="back" size={20} /><span className="text-[15px]">About Venty</span></div>
-      <h2 className="h1 mt-8 px-5 !text-[30px] text-white">{title}</h2>
-      {children}
+    <div className="flex justify-center gap-[18px]">
+      {VIEWS.map((v) => (
+        <button key={v.k} type="button" onClick={() => setView(v.k)} aria-pressed={view === v.k} className="relative pb-2.5 text-[13px] font-medium">
+          <span className={cx("transition-colors duration-300", view === v.k ? "text-white" : "text-white/40 hover:text-white/70")}>{v.name}</span>
+          {view === v.k && <motion.span layoutId="view-dot" className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-peri" transition={{ type: "spring", bounce: 0.25, duration: 0.4 }} />}
+        </button>
+      ))}
     </div>
   );
 }
 
-// ─── Deck ───
-// the one behind sits just behind and a little higher, at nearly full size (layers keep the two apart)
+// ─── what is on the stage in each view ───
+type Slot = { key: string; fam: Family; way: string; pose: Pose; layer: number; interactive?: boolean; spin?: boolean; flip?: number; startBack?: boolean; show?: boolean; onTap?: () => void };
+const OUT: Pose = { y: -3.6, s: 0.85 }; // where cards arrive from and drop away to
+// Stack: the one behind sits just behind and a little higher, at nearly full size (layers keep the two apart)
 const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, z: -0.05, rz: -0.045, s: 0.96 }, OVER: Pose = { y: 2.25, z: 0.05, s: 0.97 }, UNDER: Pose = { y: -0.32, z: -0.05, s: 0.96 };
-function Deck() {
-  usePrefetch();
+// Colours: a cascade, the pick in front and lowest, the others stepping up and back behind it
+const CASCADE: Pose[] = [{ x: -0.34, y: 0.5, z: -0.1, rz: 0.035, s: 0.86 }, { x: -0.12, y: 0.18, z: -0.05, rz: 0.015, s: 0.9 }, { x: 0.1, y: -0.16, s: 0.94 }];
+function useLeaving(items: Slot[]) {
+  // cards taken off the stage stay a moment, dropping away, before they go
+  const [gone, setGone] = useState<Slot[]>([]);
+  const prev = useRef<Slot[]>(items);
+  const keys = items.map((i) => i.key).join("|");
+  useEffect(() => {
+    const now = new Set(items.map((i) => i.key)), left = prev.current.filter((i) => !now.has(i.key));
+    prev.current = items;
+    const a = setTimeout(() => setGone((g) => [...g.filter((x) => !now.has(x.key)), ...left.map((i) => ({ ...i, pose: OUT, interactive: false, onTap: undefined, layer: 0 }))]), 0);
+    const b = setTimeout(() => setGone((g) => g.filter((x) => !left.some((l) => l.key === x.key))), 650);
+    return () => { clearTimeout(a); clearTimeout(b); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keys]);
+  return gone.filter((g) => !items.some((i) => i.key === g.key));
+}
+
+export function CardsScreen() {
   const [fam, setFam] = useState<Family>("venty");
   const [way, setWay] = useState(FIRST);
-  const [flip, setFlip] = useState({ venty: 0, natalia: 0 });
+  const [view, setView] = useState<View>("card");
+  const [flips, setFlips] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"" | "over">("");
   const [save, setSave] = useState(false);
   const t = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // trading places: the one behind lifts over the top while the front one sinks back, then it comes down in front
-  // (the old front card stays the top layer until the new one is above it)
-  const swap = (f: Family) => { if (f === fam) return; setFam(f); setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 340); };
-  const pose = (f: Family): Pose => (f === fam ? (step === "over" ? OVER : FRONT) : step === "over" ? UNDER : BEHIND);
-  const top = (f: Family) => (step === "over" ? f !== fam : f === fam);
-  return (
-    <Screen title="Her cards">
-      <CardStage dist={0.9} className="relative mt-2 min-h-0 flex-1">
-        {FAMS.map((f) => <LiveCard key={f} {...ALL[f][way[f]]} pose={pose(f)} layer={top(f) ? 1 : 0} spin interactive={f === fam} flip={flip[f]} onTap={f !== fam ? () => swap(f) : undefined} />)}
-      </CardStage>
-      <Controls fam={fam} setFam={swap} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} onSave={() => setSave(true)}
-        extra={turnBtn(() => setFlip((x) => ({ ...x, [fam]: x[fam] + 1 })))} />
-      <AnimatePresence>{save && <SaveSheet fam={fam} way={way[fam]} onClose={() => setSave(false)} />}</AnimatePresence>
-    </Screen>
-  );
-}
+  const flip = (k: string) => flips[k] ?? 0;
+  const turn = (...ks: string[]) => setFlips((f) => { const n = { ...f }; for (const k of ks) n[k] = (n[k] ?? 0) + 1; return n; });
+  // switching cards: in Stack they trade places over the top (the old front card stays the top layer until the new one
+  // is above it); elsewhere the old card drops away and the new one arrives
+  const pick = (f: Family) => { if (f === fam) return; setFam(f); if (view === "stack") { setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 340); } };
 
-// ─── Fan ───
-function Fan() {
-  usePrefetch();
-  const [fam, setFam] = useState<Family>("venty");
-  const [leaving, setLeaving] = useState<Family | null>(null);
-  const [way, setWay] = useState(FIRST);
-  const [flip, setFlip] = useState(0);
-  const [save, setSave] = useState(false);
-  const t = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // switching: this ring drops away and the other rises
-  const go = (f: Family) => { if (f === fam) return; setLeaving(fam); setFam(f); clearTimeout(t.current); t.current = setTimeout(() => setLeaving(null), 700); };
-  const hands = leaving ? [leaving, fam] : [fam];
-  return (
-    <Screen title="Her cards">
-      <CardStage dist={0.95} className="relative mt-2 min-h-0 flex-1">
-        {hands.map((f) => {
-          const ways = FAVOURITES[f].ways, sel = ways.findIndex((w) => w.id === way[f]);
-          return ways.map((w, i) => {
-            const n = ways.length, off = ((i - sel + 1 + n) % n) - 1, gone = f === leaving; // a ring: the pick in the middle, one either side
-            const pose: Pose = gone ? { x: off * 0.8, y: -4.2, rz: -off * 0.2, s: 0.8 } : { x: off * 1.02, y: off === 0 ? 0.08 : -0.12, z: off === 0 ? 0 : -0.05, rz: -off * 0.11, s: off === 0 ? 1 : 0.88 };
-            return <LiveCard key={`${f}-${w.id}`} {...ALL[f][w.id]} pose={pose} enter={{ y: -4.2, x: off * 0.8 }} layer={!gone && off === 0 ? 1 : 0} interactive={!gone && off === 0} flip={off === 0 ? flip : 0} onTap={!gone && off !== 0 ? () => setWay((x) => ({ ...x, [f]: w.id })) : undefined} />;
-          });
-        })}
-      </CardStage>
-      <Controls fam={fam} setFam={go} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} onSave={() => setSave(true)} extra={turnBtn(() => setFlip((x) => x + 1))} />
-      <AnimatePresence>{save && <SaveSheet fam={fam} way={way[fam]} onClose={() => setSave(false)} />}</AnimatePresence>
-    </Screen>
-  );
-}
+  // made ahead: each card's first colourway, then the rest
+  useEffect(() => { for (const f of FAMS) prefetchCard(ALL[f][FIRST[f]].els, ALL[f][FIRST[f]].stock); for (const f of FAMS) for (const w of FAVOURITES[f].ways) prefetchCard(ALL[f][w.id].els, ALL[f][w.id].stock); }, []);
 
-// ─── Sleeve ───
-// the stage's height in scene units, worked out the way the camera frames it (CardStage's Lens), so the card can be
-// placed against the sleeve, which is HTML laid over the stage
-const SLEEVE = 0.5, DIST = 0.9;
-function useWorldHeight(ref: React.RefObject<HTMLDivElement | null>) {
-  const [hw, setHw] = useState(4.6);
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const fit = () => { const a = el.clientWidth / Math.max(1, el.clientHeight), tan = Math.tan((15 * Math.PI) / 180); const d = Math.max(5.2, 3.9 / (2 * tan * a)) * DIST; setHw(2 * d * tan); };
-    const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect();
-  }, [ref]);
-  return hw;
-}
-function Sleeve() {
-  usePrefetch();
-  const [fam, setFam] = useState<Family>("venty");
-  const [way, setWay] = useState(FIRST);
-  const [out, setOut] = useState(false);
-  const [pull, setPull] = useState(0); // how far it is being pulled, 0–1
-  const [flip, setFlip] = useState(0);
-  const [save, setSave] = useState(false);
-  const drag = useRef<{ y: number; h: number } | null>(null);
-  const t = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const later = (ms: number, f: () => void) => { t.current.push(setTimeout(f, ms)); };
-  // switching: the card slides home, the other comes up out of the same sleeve
-  const go = (f: Family) => {
-    if (f === fam) return;
-    t.current.forEach(clearTimeout); t.current = [];
-    const was = out; setOut(false);
-    later(was ? 380 : 0, () => setFam(f));
-    if (was) later(820, () => setOut(true));
+  const main = (f: Family): Slot => ({ key: `main-${f}`, fam: f, way: way[f], pose: { y: -0.04 }, layer: 1, interactive: true, spin: true, flip: flip(`main-${f}`) });
+  let slots: Slot[];
+  if (view === "card") slots = [main(fam)];
+  else if (view === "show") slots = [{ ...main(fam), pose: { y: 0.02, s: 1.02 }, show: true }];
+  else if (view === "stack") slots = FAMS.map((f) => {
+    const front = f === fam, top = step === "over" ? !front : front;
+    return { ...main(f), pose: front ? (step === "over" ? OVER : FRONT) : step === "over" ? UNDER : BEHIND, layer: top ? 1 : 0, interactive: front, onTap: front ? undefined : () => pick(f) };
+  });
+  else if (view === "sides") slots = [
+    { ...main(fam), pose: { x: -0.1, y: 0.66, rz: 0.03, s: 0.84 }, layer: 0 },
+    { key: `back-${fam}`, fam, way: way[fam], pose: { x: 0.1, y: -0.66, rz: -0.03, s: 0.84 }, layer: 1, interactive: false, spin: true, startBack: true, flip: flip(`back-${fam}`) },
+  ];
+  else {
+    // Colours: the pick last (in front); the others behind it in order
+    const ws = FAVOURITES[fam].ways.map((w) => w.id), order = [...ws.filter((w) => w !== way[fam]), way[fam]];
+    slots = order.map((w, r) => ({ key: `col-${fam}-${w}`, fam, way: w, pose: CASCADE[r], layer: r, interactive: r === 2, flip: r === 2 ? flip(`col-${fam}-${w}`) : 0, onTap: r === 2 ? undefined : () => setWay((x) => ({ ...x, [fam]: w })) }));
+  }
+  const leaving = useLeaving(slots);
+
+  // nothing half made: the loader until every card this view needs is made; then they come in
+  const needed = slots.map((s) => ALL[s.fam][s.way]);
+  const ready = useCardsReady(needed);
+  const [shown, setShown] = useState(false);
+  if (ready && !shown) setShown(true);
+
+  const turnNow = () => {
+    if (view === "sides") turn(`main-${fam}`, `back-${fam}`);
+    else if (view === "colours") turn(`col-${fam}-${way[fam]}`);
+    else turn(`main-${fam}`);
   };
-  const box = useRef<HTMLDivElement>(null), hw = useWorldHeight(box);
-  const cardH = (55 / 30) * 0.96, lip = -hw / 2 + SLEEVE * hw; // the sleeve's top edge
-  const tucked = lip + 0.42 * cardH - cardH / 2; // two fifths of the card above it
-  const y = out ? 0.1 : tucked + pull * cardH * 0.6;
   return (
-    <Screen title="Her cards">
-      <div ref={box} className="relative mt-2 min-h-0 flex-1"
-        onPointerDown={(e) => { if (out) return; drag.current = { y: e.clientY, h: e.currentTarget.clientHeight }; e.currentTarget.setPointerCapture(e.pointerId); }}
-        onPointerMove={(e) => { const d = drag.current; if (d) setPull(Math.max(0, Math.min(1, (d.y - e.clientY) / (d.h * 0.45)))); }}
-        onPointerUp={() => { if (!drag.current) return; drag.current = null; if (pull > 0.3) setOut(true); setPull(0); }}
-        onPointerCancel={() => { drag.current = null; setPull(0); }}>
-        <CardStage dist={DIST} touch={out ? "pan-y" : "none"} className="absolute inset-0">
-          <LiveCard key={fam} {...ALL[fam][way[fam]]} pose={{ y, s: out ? 1 : 0.96 }} enter={{ y: -2.6, s: 0.96 }} spin interactive={out} flip={flip} />
-        </CardStage>
-        {/* the sleeve: a soft pocket over the lower half, raised like the app's dark secondary (a light rim along its
-            top, an inner glow); it slips away once the card is out */}
-        <motion.div className="pointer-events-none absolute inset-x-2 bottom-0 rounded-t-[30px]" animate={{ y: out ? "105%" : "0%", opacity: out ? 0 : 1 }} transition={{ type: "spring", bounce: 0.1, duration: 0.6 }}
-          style={{ height: `${SLEEVE * 100}%`, background: "linear-gradient(180deg, rgb(255 255 255 / .07), rgb(255 255 255 / 0) 45%) #1b1c26", boxShadow: "inset 0 0 0 1px rgb(255 255 255 / .1), inset 0 1px 0 rgb(255 255 255 / .22), inset 0 0 18px 1px rgb(255 255 255 / .04), 0 -18px 40px -14px rgb(0 0 0 / .95)" }}>
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-white/45">
-            <span className="h-[5px] w-12 rounded-full" style={{ background: "rgb(0 0 0 / .3)", boxShadow: "inset 0 1px 2px rgb(0 0 0 / .6), 0 1px 0 rgb(255 255 255 / .08)" }} />
-            <span className="text-[14px]">Pull her card out</span>
+    <div className="relative flex h-full flex-col text-white">
+      {/* the landing page's night sky: the slow glows gather along the bottom */}
+      <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      <div className="relative flex h-full flex-col">
+        <div className="relative flex h-11 items-center px-4 pt-[52px] box-content">
+          <RB icon="back" label="Back" />
+          <h2 className="pointer-events-none absolute inset-x-0 bottom-0 flex h-11 items-center justify-center text-[18px] font-normal tracking-[-.02em]">Business cards</h2>
+        </div>
+        <div className="mt-6 px-5"><Tabs fam={fam} setFam={pick} /></div>
+        <div className="relative mt-2 min-h-0 flex-1">
+          <CardStage dist={view === "colours" ? 1.02 : view === "sides" ? 1.0 : 0.9} className="absolute inset-0">
+            <Sweep on={view === "show"} />
+            {shown && [...leaving, ...slots].map((s) => (
+              <LiveCard key={s.key} {...ALL[s.fam][s.way]} madeOnly pose={s.pose} enter={OUT} turnIn layer={s.layer} interactive={!!s.interactive} spin={s.spin}
+                flip={s.flip ?? 0} startBack={s.startBack} show={s.show} onTap={s.onTap} />
+            ))}
+          </CardStage>
+          <BodyLoader show={!shown} />
+          {/* a colour picked before its card is made: a small ring while it is made */}
+          <div className={cx("pointer-events-none absolute right-5 top-2 transition-opacity duration-300", shown && !ready ? "opacity-100" : "opacity-0")} aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 28 28" className="body-loader-ring"><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(255 255 255 / .12)" strokeWidth="2.6" /><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(240 244 254 / .8)" strokeWidth="2.6" strokeLinecap="round" strokeDasharray="17 52" /></svg>
           </div>
-        </motion.div>
+          <div className="absolute inset-x-0 bottom-1"><Views view={view} setView={setView} /></div>
+        </div>
+        <div className="mt-4 px-5"><Swatches fam={fam} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} rest={view === "colours"} /></div>
+        <div className="mt-5 flex gap-2.5 px-5 pb-7">
+          <button type="button" onClick={turnNow} className="pill pill-dark h-12 w-12 shrink-0 !px-0" aria-label="Turn it over"><Icon name="rotate" size={18} /></button>
+          <button type="button" onClick={() => setSave(true)} className="pill pill-primary h-12 flex-1 text-[15px]"><Icon name="download" size={18} />Save card</button>
+        </div>
       </div>
-      <Controls fam={fam} setFam={go} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} onSave={() => setSave(true)}
-        extra={out
-          ? <>{turnBtn(() => setFlip((x) => x + 1))}<button type="button" onClick={() => setOut(false)} className={sec}>Put away</button></>
-          : <button type="button" onClick={() => setOut(true)} className={sec}>Take it out</button>} />
       <AnimatePresence>{save && <SaveSheet fam={fam} way={way[fam]} onClose={() => setSave(false)} />}</AnimatePresence>
-    </Screen>
+    </div>
   );
 }
 
 // ─── the lab section ───
-const WAYS = [
-  { k: "deck", name: "Deck", note: "Both cards stacked, the one behind peeking over the top at full size. Tap it, or switch, and they trade places: it lifts over the top and comes down in front. Drag the front card to turn it; it never cuts into the one behind." },
-  { k: "fan", name: "Fan", note: "The three colourways of a card in a ring, the pick in the middle. Tap a side one to bring it forward; switching drops this ring and raises the other. Drag the middle card to turn it." },
-  { k: "sleeve", name: "Sleeve", note: "The card tucked in a soft pocket. Pull it up (or tap Take it out) and the pocket slips away; switching slides it home and brings the other up." },
-] as const;
 export function ProfileCards() {
-  const [k, setK] = useState<(typeof WAYS)[number]["k"]>("deck");
-  const w = WAYS.find((x) => x.k === k)!;
   return (
     <section>
       <h2 className="h1 !text-[34px]">On her profile</h2>
-      <p className="mt-2 max-w-[640px] text-[15px] leading-snug text-white/55">Her two cards on the About page, three ways. Under each: the card switch, its colourways as swatches, turn it over, and save it (a picture of both faces to Photos or Files, or her details to Contacts). A new colourway comes in with a full turn of the card, swapped while it is edge on.</p>
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="max-w-[520px]">
-          <div className="flex flex-wrap gap-2">{WAYS.map((x) => (
-            <button key={x.k} type="button" onClick={() => setK(x.k)} aria-pressed={k === x.k} className={cx("h-10 rounded-full px-4 text-[14px] font-medium transition-colors", k === x.k ? "bg-white text-bg" : "border border-white/15 text-white/75 hover:text-white")}>{x.name}</button>
-          ))}</div>
-          <p className="mt-4 text-[15px] leading-snug text-white/65">{w.note}</p>
-          <p className="mt-6 text-[13.5px] leading-snug text-white/40">Saving opens the phone&apos;s share sheet (Save Image, Save to Files, Contacts); on a computer it downloads. The picture is the flat card, with Venty&apos;s dark paper in the app&apos;s card colour so it reads as it does in 3D. An Apple Wallet pass would need a signed pass from a server, so it is left for when Venty has one.</p>
+        <div className="max-w-[540px] space-y-4 text-[15px] leading-snug text-white/65">
+          <p>One screen: the back button and a centred title, the two cards by name, the cards, their colourways, then turn and save. The words over the foot of the cards change the view:</p>
+          <ul className="space-y-1.5 text-white/55">
+            <li><span className="text-white/85">Card</span>: the card on its own, to turn in your hand.</li>
+            <li><span className="text-white/85">Stack</span>: both cards, the other peeking over the top; pick one and they trade places.</li>
+            <li><span className="text-white/85">Colours</span>: all three colourways at once; tap one to bring it forward (the swatches rest).</li>
+            <li><span className="text-white/85">Both sides</span>: the front and the back together.</li>
+            <li><span className="text-white/85">Showcase</span>: it drifts and tilts on its own, turns right round now and then, and a light sweeps across it.</li>
+          </ul>
+          <p>Cards move between views; new ones arrive from below with a turn. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready, and a colour picked early turns in as soon as it is made.</p>
+          <p className="text-[13.5px] text-white/40">For the app: bake each card&apos;s maps at build time (a script renders them to compressed images in /public), so the screen only downloads and shows them, a few hundred KB a card, instead of making them on the phone. Preload the first colourway of each card when the profile opens, the rest after; keep only the cards on screen in memory. Saving opens the phone&apos;s share sheet (Save Image, Save to Files, Contacts); an Apple Wallet pass would need a signed pass from a server.</p>
         </div>
         <div className="relative isolate h-[760px] w-[360px] shrink-0 overflow-hidden rounded-[46px] bg-bg shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
-          {k === "deck" ? <Deck /> : k === "fan" ? <Fan /> : <Sleeve />}
+          <CardsScreen />
         </div>
       </div>
     </section>
