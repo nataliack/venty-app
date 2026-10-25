@@ -508,7 +508,7 @@ export function Group<T extends string>({ title, items, value, onChange, label }
     </div>
   );
 }
-function One<T extends string>({ title, items, value, onChange }: { title: string; items: readonly T[]; value: T; onChange: (v: T) => void }) {
+export function One<T extends string>({ title, items, value, onChange }: { title: string; items: readonly T[]; value: T; onChange: (v: T) => void }) {
   return (
     <div className="mt-6">
       <div className="text-[15px] text-white/60">{title}</div>
