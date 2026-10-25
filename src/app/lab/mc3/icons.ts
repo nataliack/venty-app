@@ -55,12 +55,11 @@ export function iconSvg(k: Exclude<IconKey, "today">, bird: string): string {
   const mark = (fill: string, extra = "") => `<path d="${bird}" fill="${fill}" transform="${T}"${extra}/>`;
   switch (k) {
     case "night":
-      // the night, lifted very faintly from below: one light centred under the icon, so only its soft tail shows (no bright
-      // spot), wider than the icon (no edge), fading on a bell curve; at the bottom it lifts the night by about a third of
-      // the earlier glow and is all but gone three quarters of the way up. The PNGs carry a touch of grain (GRAIN in
-      // tools/lab-mc3-icons.mjs) so the fade never bands
+      // the night, lifted very faintly from below: one light whose centre sits far under the icon (about 480 units below its
+      // bottom edge), so only the outer part of its fade reaches in, rising very gradually, never a spot or an edge. The PNGs
+      // carry a touch of grain (GRAIN in tools/lab-mc3-icons.mjs) so the fade never bands
       return wrap(
-        `<defs>${bell("n1", 512, 1150, 1000, 0.75, "#687ef5", 0.14)}</defs>` +
+        `<defs>${bell("n1", 512, 1500, 1200, 0.75, "#687ef5", 0.3)}</defs>` +
         rect("#0b0c15") + rect("url(#n1)") + mark("#f0f4fe"),
       );
     case "primary":
