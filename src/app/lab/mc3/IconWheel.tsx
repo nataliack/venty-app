@@ -9,16 +9,13 @@ import { animate, useMotionValue, useMotionValueEvent, useReducedMotion, type An
 import { ICONS, type IconKey } from "./icons";
 import { AppIcon } from "./parts";
 
-const N = ICONS.length;
-const mod = (a: number, n: number) => ((a % n) + n) % n;
+export const N = ICONS.length;
+export const mod = (a: number, n: number) => ((a % n) + n) % n;
 
-export function IconWheel({ k, setK, size = 88, step = 88, side = 0.64, className }: {
-  k: IconKey | null; setK: (k: IconKey) => void;
-  size?: number;  // the centre icon
-  step?: number;  // from one icon's centre to the next
-  side?: number;  // how big the icons beside the centre are, against the centre one
-  className?: string;
-}) {
+// the loop's motion, shared by every icon selector: where it is (p, in icons; …, -1, 0, 1, …), and the finger, flick, tap
+// and arrow-key handlers that move it and settle it on an icon, which becomes the choice. `touched`: moved by hand at least
+// once (until then nothing is chosen).
+export function useIconLoop(k: IconKey | null, setK: (k: IconKey) => void, step: number) {
   const start = Math.max(0, ICONS.findIndex((x) => x.k === k));
   const pos = useMotionValue(start); // where the wheel is, in icons
   const [p, setP] = useState(start);
@@ -26,6 +23,7 @@ export function IconWheel({ k, setK, size = 88, step = 88, side = 0.64, classNam
   const still = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const run = useRef<AnimationPlaybackControls | null>(null);
+  const [touched, setTouched] = useState(k !== null);
   const drag = useRef<{ x0: number; p0: number; moved: boolean; trail: { x: number; t: number }[] } | null>(null);
   useEffect(() => () => run.current?.stop(), []);
 
@@ -41,6 +39,7 @@ export function IconWheel({ k, setK, size = 88, step = 88, side = 0.64, classNam
 
   const onDown = (e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
+    setTouched(true);
     run.current?.stop();
     drag.current = { x0: e.clientX, p0: pos.get(), moved: false, trail: [{ x: e.clientX, t: e.timeStamp }] };
   };
@@ -71,18 +70,29 @@ export function IconWheel({ k, setK, size = 88, step = 88, side = 0.64, classNam
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     e.preventDefault();
+    setTouched(true);
     settle(Math.round(pos.get()) + (e.key === "ArrowRight" ? 1 : -1));
   };
 
   const near = Math.round(p);
-  const here = ICONS[mod(near, N)];
+  return { p, near, here: ICONS[mod(near, N)], touched, ref, handlers: { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp, onKeyDown: onKey } };
+}
+
+export function IconWheel({ k, setK, size = 88, step = 88, side = 0.64, className }: {
+  k: IconKey | null; setK: (k: IconKey) => void;
+  size?: number;  // the centre icon
+  step?: number;  // from one icon's centre to the next
+  side?: number;  // how big the icons beside the centre are, against the centre one
+  className?: string;
+}) {
+  const { p, near, here, ref, handlers } = useIconLoop(k, setK, step);
   const r = size * 0.2237; // the icon's corner (iOS's)
   const slots = Array.from({ length: 9 }, (_, i) => near - 4 + i);
   return (
     <div className={className}>
       <div ref={ref} role="slider" tabIndex={0} aria-label="Icon" aria-valuemin={0} aria-valuemax={N - 1} aria-valuenow={mod(near, N)} aria-valuetext={here.name}
         data-need={k ? undefined : "1"}
-        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onKeyDown={onKey}
+        {...handlers}
         className="relative cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing [mask-image:linear-gradient(90deg,transparent,#000_16%,#000_84%,transparent)]"
         style={{ height: size + 24 }}>
         {/* the well the chosen icon sits in: the icon plus the app's 5px channel all round, its corner the icon's plus 5 */}

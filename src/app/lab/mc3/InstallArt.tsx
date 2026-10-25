@@ -12,17 +12,18 @@ const W = 300, H = 170;
 export type PicKey = "bar" | "menu" | "share" | "add" | "chromeMenu" | "chromeInstall";
 
 // the frame, scaled to `w` wide
-export function Pic({ k, w, icon, className }: { k: PicKey; w: number; icon: IconKey; className?: string }) {
+// `live`: the thing to tap sends out a soft pulse (the card in view)
+export function Pic({ k, w, icon, className, live }: { k: PicKey; w: number; icon: IconKey; className?: string; live?: boolean }) {
   const s = w / W;
   return (
-    <div className={cx("relative shrink-0 overflow-hidden rounded-[18px] border border-white/10 bg-ink", className)} style={{ width: w, height: H * s }} aria-hidden>
+    <div className={cx("relative shrink-0 overflow-hidden rounded-[18px] border border-white/10 bg-ink", live && "pic-live", className)} style={{ width: w, height: H * s }} aria-hidden>
       <div className="absolute left-0 top-0 origin-top-left text-white" style={{ width: W, height: H, transform: `scale(${s})` }}>{ART[k](icon)}</div>
     </div>
   );
 }
 
 // the thing to tap: a periwinkle ring just outside it, with a soft glow
-const tap = "outline outline-2 outline-offset-[3px] outline-peri shadow-[0_0_18px_rgb(140_156_248/.55)]";
+const tap = "tap-ring outline outline-2 outline-offset-[3px] outline-peri shadow-[0_0_18px_rgb(140_156_248/.55)]";
 // the page behind, as faint lines, so the menus read as sitting over something
 const Page = () => (
   <div className="absolute inset-x-5 top-5 flex flex-col gap-2.5 opacity-60">
