@@ -60,7 +60,7 @@ function MapTray({ garment, at, className, rim = 7, radius = 20 }: { garment: Ga
 }
 
 // "All 9 sheets are printed": a squarish label pressed into the paper, the tick on a small raised knob (Body ready's build)
-function Printed({ n }: { n: number }) {
+export function Printed({ n }: { n: number }) {
   return (
     <span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75"
       style={{ background: `rgb(${INK} / .045)`, boxShadow: `inset 0 2px 5px rgb(${INK} / .16), inset 0 1px 1.5px rgb(${INK} / .18), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9)` }}>
