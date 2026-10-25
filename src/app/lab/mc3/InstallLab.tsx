@@ -27,7 +27,7 @@ function PhoneScreen({ children, footer }: { children: ReactNode; footer: ReactN
 }
 
 // ─── Today: the steps on one page, numbered tiles joined by a thread, a drawing under each iPhone step ───
-function Today({ os }: { os: OS }) {
+export function Today({ os }: { os: OS }) {
   const steps = os === "ios" ? IOS : ANDROID;
   return (
     <PhoneScreen footer={<div className="flex items-center gap-3 pb-1"><NextButton ready label="Done" className="flex-1" /></div>}>
@@ -235,7 +235,7 @@ export function InstallLab() {
   const props = { os, k, setK };
   return (
     <section>
-      <h2 className="h1 !text-[34px]">Add Venty to your home screen</h2>
+      <h2 className="h1 !text-[34px]">Add Venty to your home screen, round 1</h2>
       <p className="mt-3 max-w-[640px] text-[15px] leading-snug text-white/65">Reached from Before we begin (Yes, show me), the card on home and You, Settings; only in a phone browser. Each version works: choose an icon, tap the steps.</p>
       <div className="mt-6 flex max-w-[720px] flex-col gap-3">
         {pick(VERSIONS, v, setV)}

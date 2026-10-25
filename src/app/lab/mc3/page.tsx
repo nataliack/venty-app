@@ -7,6 +7,7 @@ import { cx, HS, Lead, NextButton, RB } from "@/components/ui";
 import { ICONS, type IconKey } from "./icons";
 import { Phone, AppIcon, png } from "./parts";
 import { InstallLab } from "./InstallLab";
+import { InstallLab2 } from "./InstallLab2";
 
 // ─── the step in the app: the first page of "Add Venty to your home screen" ───
 function ChooseStep({ k, setK }: { k: IconKey | null; setK: (k: IconKey) => void }) {
@@ -76,7 +77,9 @@ export default function LabMC3() {
     <div className="fixed inset-0 overflow-y-auto bg-[#05060b] text-white">
       <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-6">
         <p className="text-[14px] text-white/50">Venty lab · MC 3</p>
-        <div className="mt-6"><InstallLab /></div>
+        <div className="mt-6"><InstallLab2 /></div>
+        <div className="my-16 h-px bg-white/10" />
+        <div><InstallLab /></div>
         <div className="my-16 h-px bg-white/10" />
         <h2 className="h1 !text-[34px]">App icon</h2>
         <div className="mt-4 max-w-[640px] space-y-3 text-[15px] leading-snug text-white/65">
