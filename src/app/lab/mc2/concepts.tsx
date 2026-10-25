@@ -189,7 +189,8 @@ const SKINS: Record<LookOpts["card"], Skin> = {
 const Sunk = ({ s }: { s: Skin }) => (s.tray ? <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: s.press }} /> : null);
 // difficulty: the bars and the word, one line that never wraps
 const Lvl = ({ t, s }: { t: Tpl; s: Skin }) => <span className={cx("flex items-center gap-2 text-[13px]", s.sub)}><Level n={LEVEL_N[t.level]} light={s.light} />{t.level}</span>;
-const StatusLine = ({ m, s }: { m: Mine; s: Skin }) => <span className={cx("flex min-w-0 items-center gap-1.5 text-[13px]", s.sub)}><Dot s={m.status} light={s.light} /><span className="truncate">{m.line}</span></span>;
+// short: where it stands in two or three words, for the small cards (the full line needs the tall card's width)
+const StatusLine = ({ m, s, short }: { m: Mine; s: Skin; short?: boolean }) => <span className={cx("flex min-w-0 items-center gap-1.5 text-[13px]", s.sub)}><Dot s={m.status} light={s.light} /><span className="truncate">{short ? STATUS_OF[m.status] : m.line}</span></span>;
 
 // ─── cards: one frame for every small card (a photo or a surface of a fixed height, then exactly two lines of a fixed
 //     height), so cards in a row or a grid always match, however long a name is ───
@@ -216,7 +217,7 @@ const Photo = ({ src, made }: { src: string; made?: Mine }) => (
 const TplSmall = ({ t, has, s, w, imgH }: { t: Tpl; has: boolean; s: Skin; w?: number; imgH: number }) => (
   <Frame s={s} w={w} imgH={imgH} pic={<Photo src={PHOTO[t.key]} made={madeOf(has, t.key)} />} name={t.name} line={<Lvl t={t} s={s} />} />
 );
-const MineSmall = ({ m, s, imgH }: { m: Mine; s: Skin; imgH: number }) => <Frame s={s} imgH={imgH} pic={<Img src={m.photo} />} name={m.name} line={<StatusLine m={m} s={s} />} />;
+const MineSmall = ({ m, s, imgH }: { m: Mine; s: Skin; imgH: number }) => <Frame s={s} imgH={imgH} pic={<Img src={m.photo} />} name={m.name} line={<StatusLine m={m} s={s} short />} />;
 // Create a pattern as a card among your own: the same frame, an empty pattern surface where the photo would be
 const PlusOnSurface = ({ s }: { s: Skin }) => (
   <span className="absolute inset-0 grid place-items-center" style={s.surface}>
@@ -255,21 +256,18 @@ function TallCard({ m, s }: { m: Mine; s: Skin }) {
     </button>
   );
 }
+// a slim column at the start of the row (104 wide), so most of your newest pattern still shows beside it
+const NEW_W = 104;
 function NewTall({ s }: { s: Skin }) {
-  const words = (
-    <span className="min-w-0">
-      <span className={cx("block text-[18px] leading-tight tracking-[-.01em]", s.name)}>Create a pattern</span>
-      <span className={cx("mt-1 block text-[13px]", s.sub)}>From a photo, sketch or words</span>
-    </span>
-  );
+  const words = <span className={cx("block text-center text-[15px] leading-[1.2]", s.name)}>Create a<br />pattern</span>;
   if (s.tray) return (
-    <button className="tap flex shrink-0 snap-start flex-col rounded-[30px] p-[7px] text-left" style={{ width: 210, height: TALL_H, ...s.rim }}>
+    <button className="tap flex shrink-0 snap-start flex-col rounded-[30px] p-[7px]" style={{ width: NEW_W, height: TALL_H, ...s.rim }}>
       <span className="relative block min-h-0 flex-1 overflow-hidden rounded-[25px]"><PlusOnSurface s={s} /></span>
-      <span className="flex shrink-0 items-center px-2" style={{ height: BAND - 7 }}>{words}</span>
+      <span className="flex shrink-0 items-center justify-center" style={{ height: BAND - 7 }}>{words}</span>
     </button>
   );
   return (
-    <button className="card-soft tap flex shrink-0 snap-start flex-col items-center justify-center gap-4 rounded-[30px] px-5 text-center" style={{ width: 210, height: TALL_H }}>
+    <button className="card-soft tap flex shrink-0 snap-start flex-col items-center justify-center gap-4 rounded-[30px]" style={{ width: NEW_W, height: TALL_H }}>
       <span className="icon-primary grid h-14 w-14 place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></span>{words}
     </button>
   );
@@ -561,6 +559,8 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const cta = byTitle ? "row" : opts.cta;
   const titleCta = cta === "title" && has && !make;
   const tools = make || has;
+  // while searching or filtering, only what matches shows (no Create card among the results)
+  const looking = on.length > 0 || !!q.trim();
   const cancel = () => { setSearching(false); if (make) setMq(""); else setQ(""); };
   const search = <SearchOpen q={make ? mq : q} setQ={make ? setMq : setQ} placeholder={make ? "Search patterns to make" : "Search your patterns"} onCancel={cancel} />;
   const nOn = make ? mOn.length : on.length;
@@ -649,7 +649,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
               <section key={mo} className="mt-3 px-6">
                 {mo && <h3 className="mb-3 text-[15px] text-white/55">{mo}</h3>}
                 <div className="grid grid-cols-2 items-start gap-x-3 gap-y-4 pb-3">
-                  {opts.cta === "row" && mo === months[0] && <NewSmall s={s} imgH={GRID_H} />}
+                  {cta === "row" && !looking && mo === months[0] && <NewSmall s={s} imgH={GRID_H} />}
                   {mine.filter((m) => !mo || m.month === mo).map((m) => <MineSmall key={m.id} m={m} s={s} imgH={GRID_H} />)}
                 </div>
               </section>
@@ -657,7 +657,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
           ) : (
             <>
               <div className="noscroll -mb-6 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-9 pt-2">
-                {opts.cta === "row" && <NewTall s={s} />}
+                {cta === "row" && !looking && <NewTall s={s} />}
                 {mine.map((m) => <TallCard key={m.id} m={m} s={s} />)}
               </div>
               <section className="mt-5">
@@ -946,7 +946,7 @@ export const BRIEFS: Record<string, string[]> = {
   lookbook: [
     "Your patterns: the picture each pattern started from (the person's own photo, screenshot or sketch from the studio), so nothing to make. A pattern made from words alone falls back to the drawn garment on Crown.",
     "Patterns to make: one portrait photo per pattern (10), 3:4, about 900 × 1200, the garment worn, all shot the same way (same light, same distance) so the rows read as one set.",
-    "Filters: five round photos (all, dresses, tops, trousers, skirts), square, about 300 × 300, the garment or a detail filling the circle.",
+    "Kind filters: five square photos (all, dresses, tops, trousers, skirts), about 300 × 300, the garment or a detail filling the square, so they still read when shown small.",
     "Empty state: three looks to fan out (any three of the ten).",
   ],
   runway: [

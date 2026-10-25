@@ -64,7 +64,7 @@ export default function LabMC2() {
     <main className="fixed inset-0 overflow-y-auto bg-bg px-5 pb-24 pt-10 text-white lg:px-14">
       <div className="mx-auto max-w-[1000px]">
         <h1 className="h1 !text-[34px]">Pattern library</h1>
-        <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Both tabs, for a new visitor and for someone who has made three patterns. The photos are stand-ins from the sign-up page and the tour until yours are made; what each concept needs is listed under the phones.</p>
+        <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Both tabs, for a new visitor and for someone who has made eight. The photos are stand-ins from the sign-up page and the tour until yours are made; what each concept needs is listed under the phones.</p>
         <div className="noscroll mt-6 flex gap-2 overflow-x-auto">
           {CONCEPTS.map((x) => (
             <button key={x.k} onClick={() => setK(x.k)} className={cx("h-11 shrink-0 rounded-full px-5 text-[15px] font-medium transition-colors", x.k === k ? "bg-snow text-ink" : "bg-card text-white/75 hover:text-white")}>{x.name}</button>
