@@ -346,7 +346,7 @@ export function CardsScreen() {
       {/* the app's page: its dark and its dot grid */}
       <div className="dotgrid" />
       {/* the stage covers the whole screen, under the controls, so a card is never cut off */}
-      <CardStage dist={DIST[view]} offset={offset} className="absolute inset-0">
+      <CardStage dist={DIST[view]} offset={offset} soft className="absolute inset-0">
         <Sweep on={view === "card"} />
         {shown && [...leaving, ...slots].map((s, i) => (
           <LiveCard key={s.key} {...ALL[s.fam][s.way]} madeOnly pose={s.pose} layer={s.layer} interactive={!!s.interactive} spin={s.spin} flip={s.flip ?? 0} startBack={s.startBack} show={s.show} onTap={s.onTap}

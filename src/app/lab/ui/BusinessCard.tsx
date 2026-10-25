@@ -16,7 +16,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { Environment, Lightformer, SoftShadows } from "@react-three/drei";
 
 export const PX = 16; // texture pixels per mm (406 dpi)
 
@@ -671,35 +671,40 @@ export function Sweep({ on }: { on: boolean }) {
   return <pointLight ref={l} color="#e9ecff" intensity={0} distance={9} decay={1.2} />;
 }
 
-// the shadow light: a spotlight riding with the camera, just below and to the right of the eye. From there a card's
+// the shadow light: a spotlight riding with the camera, a hair below and to the right of the eye. From there a card's
 // shadow on the cards behind lines up with the card's own outline as you see it, so it hugs the card's edges (a soft,
-// dark fringe just past them, a touch up and to the left, on the strips that show) and it turns exactly as the card
-// turns. Soft: a variance shadow map, blurred. It can only land on the cards behind (nothing else is there). The key
-// light, up and to the left, casts none
+// dark fringe just past them, the slightest bit up and to the left) and it turns exactly as the card turns. Softened
+// by SoftShadows (below). It can only land on the cards behind (nothing else is there). The key light, up and to the
+// left, casts none
 function ShadowLight() {
   const l = useRef<THREE.SpotLight>(null);
   const { scene } = useThree();
   useEffect(() => {
     const s = l.current; if (!s) return;
     scene.add(s.target);
-    s.shadow.mapSize.set(2048, 2048); s.shadow.radius = 10; s.shadow.blurSamples = 25; s.shadow.bias = -0.0001;
+    s.shadow.mapSize.set(2048, 2048); s.shadow.bias = -0.0002;
     s.shadow.camera.near = 4; s.shadow.camera.far = 40;
     return () => { scene.remove(s.target); };
   }, [scene]);
   useFrame(({ camera }) => {
     const s = l.current; if (!s) return;
-    s.position.set(camera.position.x + 0.8, camera.position.y - 0.7, camera.position.z);
+    s.position.set(camera.position.x + 0.32, camera.position.y - 0.28, camera.position.z);
     s.target.position.set(camera.position.x, camera.position.y, 0); s.target.updateMatrixWorld();
   });
   return <spotLight ref={l} intensity={2.4} angle={0.42} penumbra={1} decay={0} distance={0} castShadow />;
 }
 // the scene: lights, the studio the foil reflects, the camera; put cards (LiveCard) inside
-export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0 }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number }) {
+// soft: the soft shadows (SoftShadows patches three's shared shadow shader, so only one stage on a page may have them)
+export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0, soft = false }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number; soft?: boolean }) {
   return (
     <div className={className} style={{ touchAction: touch, ...style }}>
-      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} shadows="variance" onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
+      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} shadows onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
         <directionalLight position={[-3, 4, 4]} intensity={0.6} />
         <ShadowLight />
+        {/* soft shadows by sampling round each point (percentage closer soft shadows): softer the further the shadow
+            falls from its card, and no thinning at the edges of the card it falls on (a blurred shadow map thinned out
+            there, mixing in the empty space past the card) */}
+        {soft && <SoftShadows size={22} samples={20} focus={0.4} />}
         <Environment resolution={1024} frames={1}>
           <Lightformer form="rect" intensity={4} position={[0, 4, 3]} scale={[8, 2, 1]} rotation-x={Math.PI / 3} />
           <Lightformer form="rect" intensity={2.5} color="#e6e9ff" position={[-5, 1, 2]} scale={[1.2, 6, 1]} rotation-y={Math.PI / 2.5} />
