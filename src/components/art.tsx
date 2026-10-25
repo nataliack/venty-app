@@ -277,7 +277,7 @@ export function GarmentOn({ garment, spec, style = "fabric", sex = "female" }: {
 }
 
 // ─── Pattern pieces ───────────────────────────────────────────────────
-const PIECES: Record<PieceKey, { w: number; h: number; d: string; grain: [number, number, number, number]; fold?: boolean }> = {
+export const PIECES: Record<PieceKey, { w: number; h: number; d: string; grain: [number, number, number, number]; fold?: boolean }> = {
   bodiceFront: { w: 120, h: 170, d: "M10 30 L46 14 L58 22 Q70 40 92 34 L104 44 Q98 90 106 150 L10 160 Z", grain: [40, 60, 40, 140], fold: true },
   bodiceBack: { w: 120, h: 170, d: "M10 20 L50 12 L60 20 Q72 36 94 30 L104 40 Q98 90 106 150 L10 158 Z", grain: [40, 55, 40, 140], fold: true },
   skirtFront: { w: 150, h: 250, d: "M20 10 L100 10 L136 236 L8 240 Z", grain: [60, 40, 60, 210] },
