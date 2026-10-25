@@ -16,9 +16,14 @@ const CARD = 300, GAP = 12, BEZEL = 6, AUTO = 4500, RESUME = 4000;
 // the pager: segments 34 wide; the knob is a segment less the 5px channel each side, the track its height plus 5 each side
 const SEG = 34, CH = 5, KH = 12;
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
+// the picture's bezel: dark on paper, white with a soft shadow for light pictures, the card on the night
+export const bezel = (paper: boolean, light: boolean) => light
+  ? "bg-white shadow-[0_16px_30px_-18px_rgb(28_34_82/.45),0_2px_4px_rgb(18_19_28/.08),inset_0_0_0_1px_rgb(18_19_28/.05)]"
+  : paper ? "bg-[#12131c] shadow-[0_16px_30px_-18px_rgb(28_34_82/.7),0_2px_4px_rgb(18_19_28/.12)]" : "card-soft";
 const ease = (t: number) => t * t * (3 - 2 * t);
 
-export function StepRow({ steps, icon, tone, auto = false }: { steps: Step3[]; icon: IconKey; tone: Tone; auto?: boolean }) {
+// `light`: the pictures drawn light (snow, white menus) in a white bezel, instead of dark in a dark one
+export function StepRow({ steps, icon, tone, auto = false, light = false }: { steps: Step3[]; icon: IconKey; tone: Tone; auto?: boolean; light?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [f, setF] = useState(0); // where the row is, in cards
   const still = useReducedMotion();
@@ -54,8 +59,8 @@ export function StepRow({ steps, icon, tone, auto = false }: { steps: Step3[]; i
         {steps.map((s, n) => (
           <figure key={s.t} className="shrink-0 snap-start" style={{ width: CARD }}>
             {/* the picture in a bezel, like a screenshot laid on the page */}
-            <div className={cx("rounded-[22px]", paper ? "bg-[#12131c] shadow-[0_16px_30px_-18px_rgb(28_34_82/.7),0_2px_4px_rgb(18_19_28/.12)]" : "card-soft")} style={{ padding: BEZEL }}>
-              <Pic k={s.pic} w={CARD - 2 * BEZEL - (paper ? 0 : 2)} icon={icon} live={n === at && !still} className="!rounded-[16px] !border-white/[.06]" />
+            <div className={cx("rounded-[22px]", bezel(paper, light))} style={{ padding: BEZEL }}>
+              <Pic k={s.pic} w={CARD - 2 * BEZEL - (paper ? 0 : 2)} icon={icon} light={light} live={n === at && !still} className="!rounded-[16px]" />
             </div>
             <figcaption className="mt-3 flex items-start gap-3 pr-2">
               <span className={cx("grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-[15px] font-medium leading-none tabular-nums", paper ? "bg-[#12131c]/[.06] text-[#12131c]/75 shadow-[inset_0_1px_2px_rgb(18_19_28/.12)]" : "iconbadge")} aria-hidden>{n + 1}</span>
