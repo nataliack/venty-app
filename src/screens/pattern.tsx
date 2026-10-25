@@ -1,6 +1,6 @@
 "use client";
 import { haptic } from "@/lib/haptics";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { FLUTTER, TEMPLATE_DETAILS, FITS, PIECE_LABEL, KIND_DETAILS, LENGTH_DIAL, NECK_CM, nameFor, lengthCmFor, lengthLabelFor, fitName, fabricAdvice, templateBy, kindOf, kindLabel, detailOpts, describe, type GarmentKey, type Kind, type PieceKey } from "@/lib/data";
@@ -12,6 +12,7 @@ import { Ico, SI } from "@/components/studio-icons";
 import dynamic from "next/dynamic";
 import { BodyLoader } from "@/components/BodyLoader";
 import { garment3dFor } from "@/lib/garment3d";
+import { LookSwitch } from "@/components/LookSwitch";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
@@ -326,36 +327,6 @@ export function Generating({ p }: { p?: Record<string, unknown> }) {
 }
 
 // P09 / P10 · the garment on your body, and its pattern pieces
-// The look switch's two icons: the garment's own kind (a dress, a top, a skirt, trousers), once in its own fabric (a
-// sample of the 3D garment's texture) and once as its pattern (cornflower, its cutting line, the dashed seam allowance
-// inside it and a grainline, in snow, as drawn on the garment)
-const GLYPH: Record<Kind, string> = {
-  dress: "M13.5 5h2q2.5 3 5 0h2l1 7q-2 2.5-2 5l6 13H8.5l6-13q0-2.5-2-5z",
-  top: "M13 6q5 3 10 0l7.5 4-2.5 5.5-3-1.5V30H11V14l-3 1.5L5.5 10z",
-  skirt: "M12.5 7h11l5.5 22H7z",
-  trousers: "M11 6h14l2 24h-6.5L18 14.5 15.5 30H9z",
-};
-function GarmentGlyph({ kind, look, swatch }: { kind: Kind; look: "fabric" | "pattern"; swatch?: string | null }) {
-  const id = useId();
-  const d = GLYPH[kind];
-  return (
-    <svg viewBox="0 0 36 36" className="h-9 w-9" aria-hidden>
-      {look === "fabric" ? (
-        <>
-          {swatch && <defs><pattern id={id} patternUnits="userSpaceOnUse" width="36" height="36"><image href={swatch} width="36" height="36" preserveAspectRatio="xMidYMid slice" /></pattern></defs>}
-          <path d={d} fill={swatch ? `url(#${id})` : "rgb(255 255 255 / .2)"} stroke="rgb(255 255 255 / .55)" strokeWidth="1" strokeLinejoin="round" />
-        </>
-      ) : (
-        <>
-          <path d={d} fill="#687ef5" stroke="#f0f4fe" strokeWidth="1.3" strokeLinejoin="round" />
-          <path d={d} fill="none" stroke="#f0f4fe" strokeWidth=".9" strokeDasharray="1.6 1.4" transform="translate(18 18) scale(.74) translate(-18 -18.5)" />
-          <path d="M18 15.5v9M16.3 17.2l1.7-1.7 1.7 1.7M16.3 22.8l1.7 1.7 1.7-1.7" fill="none" stroke="#f0f4fe" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-        </>
-      )}
-    </svg>
-  );
-}
-
 export function Garment({ p }: { p?: Record<string, unknown> }) {
   const { go, draft, body, savePattern } = useApp();
   const b = body();
@@ -380,21 +351,9 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   const wear = [garment3dFor(kind, draft.details ?? TEMPLATE_DETAILS[draft.garment] ?? (draft.garment === "flutter" ? FLUTTER.read : undefined), b.sex, draft.garment)];
   const [paused, setPaused] = useState(false);
   const [look, setLook] = useState<"fabric" | "pattern">("fabric");
-  // the look switch, one above the other on the left edge: the garment in its own fabric, or as its pattern (GarmentGlyph)
-  const [swatch, setSwatch] = useState<string | null>(null);
-  const lookSwitch = (
-    <div role="radiogroup" aria-label="How the garment looks" className="pointer-events-auto flex flex-col gap-2 rounded-full bg-card p-1.5">
-      {([["fabric", "Fabric"], ["pattern", "Pattern"]] as const).map(([k, t]) => (
-        <button key={k} role="radio" aria-checked={look === k} aria-label={t} title={t} onClick={() => setLook(k)}
-          className={cx("grid h-11 w-11 place-items-center rounded-full transition-shadow", look === k ? "shadow-[0_0_0_2px_#fff]" : "shadow-[0_0_0_1px_rgb(255_255_255/.12)]")}>
-          <GarmentGlyph kind={kind} look={k} swatch={swatch} />
-        </button>
-      ))}
-    </div>
-  );
   const pause = <RB icon={paused ? "play" : "pause"} size={40} onClick={() => setPaused((p) => !p)} label={paused ? "Turn the body" : "Stop turning"} className="pointer-events-auto" />;
   const body3d = (cls: string, room = 0) => (
-    <Body3D sex={b.sex} measures={b.measures} focus="height" stage="grid" lines="white" turn paused={paused} room={room} garments={wear} garmentLook={look} onSwatch={setSwatch} className={cls} />
+    <Body3D sex={b.sex} measures={b.measures} focus="height" stage="grid" lines="white" turn paused={paused} room={room} garments={wear} garmentLook={look} className={cls} />
   );
   const stage = (
     <div className={cx("relative mt-3", h, !desk && onBody && "pointer-events-none")}>
@@ -403,8 +362,8 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
           desk ? (
             <motion.div key="r" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="stage-ink absolute inset-0 overflow-hidden rounded-[36px] border border-white/[.08]">
               {body3d("absolute inset-0")}
-              <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2">{lookSwitch}</div>
-              <div className="pointer-events-none absolute bottom-5 right-5">{pause}</div>
+              <LookSwitch value={look} onChange={setLook} className="!absolute left-5 top-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2">{pause}</div>
             </motion.div>
           ) : <div key="r" />
         ) : (
@@ -426,8 +385,9 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   const phoneStage = !desk && onBody && (
     <div className="stage-ink absolute inset-0">
       {body3d("absolute inset-x-0 bottom-0 top-[calc(var(--top)+150px)]", 0.2)}
-      <div className="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2">{lookSwitch}</div>
-      <div className="pointer-events-none absolute right-6" style={{ bottom: "calc(var(--bottom) + 76px)" }}>{pause}</div>
+      {/* the look switch on the left edge, centred top to bottom; the pause centred, on the floor, clear of the buttons */}
+      <LookSwitch value={look} onChange={setLook} className="!absolute left-5 top-1/2 -translate-y-1/2" />
+      <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: "calc(var(--bottom) + 104px)" }}>{pause}</div>
     </div>
   );
   return (
