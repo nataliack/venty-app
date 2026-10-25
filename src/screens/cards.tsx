@@ -18,10 +18,10 @@
 // colour picked before its card is made waits, with a small ring, and slides in as soon as it is ready. Loaded only
 // when it is opened (next/dynamic in App.tsx), so the 3D and the card maker never weigh on the rest of the app. (Later:
 // bake the maps at build time, so the phone only downloads them.)
-import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { cx, RB } from "@/components/ui";
-import { Icon } from "@/components/icons";
+import { motion } from "motion/react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { cx, RB, Sheet } from "@/components/ui";
+import { Icon, type IconName } from "@/components/icons";
 import { BodyLoader } from "@/components/BodyLoader";
 import { useApp } from "@/lib/store";
 import { CardStage, FlatFace, LiveCard, Sweep, drawFlat, loadFonts, prefetchCard, useCardsReady, SIZES, type El, type Pose, type Stock } from "@/components/cards/BusinessCard";
@@ -66,37 +66,48 @@ async function hand(file: File): Promise<string> {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return "Saved to your downloads";
 }
-function SaveSheet({ fam, way, onClose }: { fam: Family; way: string; onClose: () => void }) {
+// a row in a sheet, as in Notifications: an inset icon tile, the words, and what it does on the right
+function SheetRow({ icon, title, line, right, href, onClick }: { icon: IconName; title: string; line: string; right: ReactNode; href?: string; onClick?: () => void }) {
+  const inner = (
+    <>
+      <span aria-hidden className="absolute inset-x-0 inset-y-1 rounded-[14px] transition-colors group-hover:bg-white/[.04]" />
+      <span className="iconbadge relative grid h-9 w-9 shrink-0 place-items-center rounded-[11px]"><Icon name={icon} size={17} strokeWidth={1.9} /></span>
+      <span className="relative min-w-0 flex-1"><span className="block text-[16px] leading-snug [overflow-wrap:anywhere]">{title}</span><span className="mt-0.5 block text-[14px] leading-snug text-white/55">{line}</span></span>
+      <span className="relative shrink-0">{right}</span>
+    </>
+  );
+  const cls = "group relative flex w-full items-center gap-3.5 px-2 py-2.5 text-left";
+  if (href) return <a href={href} className={cls} {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{inner}</a>;
+  return <button type="button" onClick={onClick} className={cls}>{inner}</button>;
+}
+const Hairline = () => <span aria-hidden className="mx-2 block h-px bg-white/[.07]" />;
+// saving, in the app's sheet: both faces, then the picture or her contact card
+function SaveBody({ fam, way }: { fam: Family; way: string }) {
   const [card] = useState(() => FLAT(fam, way));
   const [pic, setPic] = useState<File | null>(null);
   const [note, setNote] = useState("");
   // the picture is made as the sheet opens, so the share sheet can open the moment it is tapped
   useEffect(() => { let live = true; cardPicture(card).then((b) => { if (live) setPic(new File([b], `${VCARD[fam].file}.png`, { type: "image/png" })); }); return () => { live = false; }; }, [card, fam]);
-  const rows: { icon: "image" | "user"; title: string; line: string; go: () => Promise<string> }[] = [
+  const rows: { icon: IconName; title: string; line: string; go: () => Promise<string> }[] = [
     { icon: "image", title: "Save the picture", line: "Both faces, to Photos or Files", go: async () => (pic ? hand(pic) : "") },
     { icon: "user", title: "Add to contacts", line: "Name, phone, email, website and city", go: () => hand(new File([vcard(fam)], "Natalia Chamon.vcf", { type: "text/vcard" })) },
   ];
   return (
     <>
-      <motion.div className="absolute inset-0 z-40 bg-black/55 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
-      <motion.div className="absolute inset-x-0 bottom-0 z-50 rounded-t-[34px] bg-[#1b1c26] px-5 pb-8 pt-3 text-white shadow-[inset_0_1px_0_rgb(255_255_255/.12)]"
-        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}>
-        <div className="mx-auto h-[5px] w-12 rounded-full bg-white/15" />
-        <h3 className="mt-5 text-[22px] font-normal tracking-[-.02em]">Save the card</h3>
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
-          <FlatFace els={card.els} stock={card.stock} face="front" px={3.4} className="w-full rounded-[3px] shadow-[0_0_0_1px_rgb(255_255_255/.1),0_10px_24px_-12px_rgb(0_0_0/.9)]" />
-          <FlatFace els={card.els} stock={card.stock} face="back" px={3.4} className="w-full rounded-[3px] shadow-[0_0_0_1px_rgb(255_255_255/.1),0_10px_24px_-12px_rgb(0_0_0/.9)]" />
-        </div>
-        <div className="mt-5 space-y-2.5">
-          {rows.map((r) => (
-            <button key={r.title} type="button" onClick={async () => setNote(await r.go())} className="pill-dark flex w-full items-center gap-3.5 rounded-[20px] px-4 py-3.5 text-left">
-              <span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-[12px]"><Icon name={r.icon} size={19} /></span>
-              <span className="min-w-0 flex-1"><span className="block text-[15px]">{r.title}</span><span className="block text-[13px] text-white/50">{r.line}</span></span>
-            </button>
-          ))}
-        </div>
-        <p className="mt-3 h-5 text-center text-[13px] text-white/50" aria-live="polite">{note}</p>
-      </motion.div>
+      <h3 className="text-[20px] font-normal tracking-[-.02em]">Save the card</h3>
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <FlatFace els={card.els} stock={card.stock} face="front" px={3.4} className="w-full rounded-[3px] shadow-[0_0_0_1px_rgb(255_255_255/.1),0_10px_24px_-12px_rgb(0_0_0/.9)]" />
+        <FlatFace els={card.els} stock={card.stock} face="back" px={3.4} className="w-full rounded-[3px] shadow-[0_0_0_1px_rgb(255_255_255/.1),0_10px_24px_-12px_rgb(0_0_0/.9)]" />
+      </div>
+      <div className="-mx-2 mt-3">
+        {rows.map((r, i) => (
+          <Fragment key={r.title}>
+            {i > 0 && <Hairline />}
+            <SheetRow icon={r.icon} title={r.title} line={r.line} onClick={async () => setNote(await r.go())} right={<Icon name="chevR" size={16} className="text-white/30" />} />
+          </Fragment>
+        ))}
+      </div>
+      <p className="mt-1 h-5 text-center text-[13px] text-white/50" aria-live="polite">{note}</p>
     </>
   );
 }
@@ -166,55 +177,45 @@ function ViewSwitch({ view, setView }: { view: View; setView: (v: View) => void 
   );
 }
 
-// ─── her details: everything on the cards, to tap (call, write, open) or copy ───
-const COPY = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.4" /><path d="M15.5 8.5V6.4A2.4 2.4 0 0 0 13.1 4H6.4A2.4 2.4 0 0 0 4 6.4v6.7a2.4 2.4 0 0 0 2.4 2.4h2.1" /></svg>;
-const TICK = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
-type Detail = { icon: "phone" | "mail" | "link" | "user" | "map"; label: string; value: string; href: string };
-function details(f: Family): Detail[] {
-  return [
-    { icon: "phone", label: "Phone", value: "0420 991 942", href: "tel:+61420991942" },
-    { icon: "mail", label: "Email", value: "natalia.chamom@gmail.com", href: "mailto:natalia.chamom@gmail.com" },
-    ...(f === "venty" ? [{ icon: "link" as const, label: "Venty", value: "app.venty.au", href: "https://app.venty.au" }] : []),
-    { icon: "link", label: "Website", value: "nataliachamon.com", href: "https://nataliachamon.com" },
-    { icon: "user", label: "LinkedIn", value: "linkedin.com/in/natalia-c", href: "https://www.linkedin.com/in/natalia-c-8201a8226/" },
-    { icon: "map", label: "Based in", value: "Brisbane, Australia", href: "https://maps.apple.com/?q=Brisbane%20QLD" },
-  ];
-}
-function DetailsSheet({ fam, onClose }: { fam: Family; onClose: () => void }) {
-  const [copied, setCopied] = useState("");
-  const t = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const copy = (v: string) => { navigator.clipboard?.writeText(v).then(() => { setCopied(v); clearTimeout(t.current); t.current = setTimeout(() => setCopied(""), 1600); }).catch(() => {}); };
+// ─── her details: everything on the cards in two groups (her, and Venty), each row opening it (a call, an email, a
+// page, the map); the round cornflower button on the right says it opens somewhere else ───
+type Detail = { icon: IconName; label: string; value: string; href: string };
+const ABOUT_HER: Detail[] = [
+  { icon: "phone", label: "Phone", value: "0420 991 942", href: "tel:+61420991942" },
+  { icon: "mail", label: "Email", value: "natalia.chamom@gmail.com", href: "mailto:natalia.chamom@gmail.com" },
+  { icon: "globe", label: "Portfolio", value: "nataliachamon.com", href: "https://nataliachamon.com" },
+  { icon: "linkedin", label: "LinkedIn", value: "linkedin.com/in/natalia-c", href: "https://www.linkedin.com/in/natalia-c-8201a8226/" },
+  { icon: "map", label: "Based in", value: "Brisbane, Australia", href: "https://maps.apple.com/?q=Brisbane%20QLD" },
+];
+const ABOUT_VENTY: Detail[] = [
+  { icon: "sparkle", label: "The app", value: "app.venty.au", href: "https://app.venty.au" },
+  { icon: "globe", label: "The website", value: "venty.au", href: "https://venty.au" },
+];
+function DetailsBody({ fam }: { fam: Family }) {
+  const group = (title: string, list: Detail[]) => (
+    <section className="mt-2 first:mt-0">
+      <h4 className="px-2 pb-1 pt-2 text-[13px] font-normal text-white/45">{title}</h4>
+      {list.map((d, i) => (
+        <Fragment key={d.value}>
+          {i > 0 && <Hairline />}
+          <SheetRow icon={d.icon} title={d.value} line={d.label} href={d.href}
+            right={<span className="icon-primary grid h-9 w-9 place-items-center rounded-full"><Icon name="external" size={16} strokeWidth={2} /></span>} />
+        </Fragment>
+      ))}
+    </section>
+  );
   return (
     <>
-      <motion.div className="absolute inset-0 z-40 bg-black/55 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} onClick={onClose} />
-      <motion.div className="absolute inset-x-0 bottom-0 z-50 max-h-[88%] overflow-y-auto rounded-t-[34px] bg-[#1b1c26] px-5 pb-8 pt-3 text-white shadow-[inset_0_1px_0_rgb(255_255_255/.12)]"
-        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0.1, duration: 0.7 }}>
-        <div className="mx-auto h-[5px] w-12 rounded-full bg-white/15" />
-        <div className="mt-5 flex items-center gap-3.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/people/natalia-face.webp" srcSet="/people/natalia-face.webp 1x, /people/natalia-face@2x.webp 2x" width={56} height={56} alt="" className="h-14 w-14 rounded-full object-cover shadow-[0_0_0_1px_rgb(255_255_255/.12)]" />
-          <div className="min-w-0"><h3 className="text-[22px] font-normal leading-tight tracking-[-.02em]">Natalia Chamon</h3><p className="text-[14px] text-white/55">{fam === "venty" ? "Founder, Venty" : "UI/UX design and front-end"}</p></div>
-        </div>
-        <div className="mt-5 space-y-2">
-          {details(fam).map((d) => (
-            <div key={d.label} className="pill-dark flex items-center rounded-[20px] pr-2">
-              <a href={d.href} target={d.href.startsWith("http") ? "_blank" : undefined} rel="noopener" className="flex min-w-0 flex-1 items-center gap-3.5 px-3.5 py-3">
-                <span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-[12px]"><Icon name={d.icon} size={18} /></span>
-                <span className="min-w-0"><span className="block text-[12.5px] text-white/45">{d.label}</span><span className="block text-[15px] leading-snug [overflow-wrap:anywhere]">{d.value}</span></span>
-              </a>
-              <button type="button" onClick={() => copy(d.value)} aria-label={`Copy ${d.label.toLowerCase()}`} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/60 transition-colors hover:text-white">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span key={copied === d.value ? "tick" : "copy"} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.25 }} className={copied === d.value ? "text-peri" : ""}>
-                    {copied === d.value ? TICK : COPY}
-                  </motion.span>
-                </AnimatePresence>
-              </button>
-            </div>
-          ))}
-        </div>
-        <button type="button" onClick={() => hand(new File([vcard(fam)], "Natalia Chamon.vcf", { type: "text/vcard" }))} className="pill pill-primary mt-5 h-12 w-full text-[15px]"><Icon name="user" size={18} />Add to contacts</button>
-        <p className="mt-3 h-4 text-center text-[13px] text-white/50" aria-live="polite">{copied ? "Copied" : ""}</p>
-      </motion.div>
+      <div className="flex items-center gap-3.5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/people/natalia-face.webp" srcSet="/people/natalia-face.webp 1x, /people/natalia-face@2x.webp 2x" width={56} height={56} alt="" className="h-14 w-14 rounded-full object-cover shadow-[0_0_0_1px_rgb(255_255_255/.12)]" />
+        <div className="min-w-0"><h3 className="text-[22px] font-normal leading-tight tracking-[-.02em]">Natalia Chamon</h3><p className="text-[14px] text-white/55">{fam === "venty" ? "Founder, Venty" : "UI/UX design and front-end"}</p></div>
+      </div>
+      <div className="-mx-2 mt-2 max-h-[62dvh] overflow-y-auto noscroll">
+        {group("Natalia", ABOUT_HER)}
+        {group("Venty", ABOUT_VENTY)}
+      </div>
+      <button type="button" onClick={() => hand(new File([vcard(fam)], "Natalia Chamon.vcf", { type: "text/vcard" }))} className="pill pill-primary mt-4 h-12 w-full text-[15px]"><Icon name="user" size={18} />Add to contacts</button>
     </>
   );
 }
@@ -385,15 +386,16 @@ export function Cards() {
             <svg width="18" height="18" viewBox="0 0 28 28" className="body-loader-ring"><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(255 255 255 / .12)" strokeWidth="2.6" /><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(240 244 254 / .8)" strokeWidth="2.6" strokeLinecap="round" strokeDasharray="17 52" /></svg>
           </div>
         </div>
+        {/* the views and the colours are one group (20px apart); Turn and Save stand apart from it (40px) */}
         <div className="pointer-events-auto mx-auto w-full max-w-[520px] px-5"><ViewSwitch view={view} setView={setView} /></div>
-        <div className="pointer-events-auto mx-auto mt-3 w-full max-w-[520px] px-5"><Swatches fam={fam} way={way[fam]} setWay={pickWay} rest={view === "colours"} /></div>
-        <div className="pointer-events-auto mx-auto mt-3 flex w-full max-w-[520px] gap-2.5 px-5" style={{ paddingBottom: "calc(var(--bottom) + 6px)" }}>
+        <div className="pointer-events-auto mx-auto mt-5 w-full max-w-[520px] px-5"><Swatches fam={fam} way={way[fam]} setWay={pickWay} rest={view === "colours"} /></div>
+        <div className="pointer-events-auto mx-auto mt-10 flex w-full max-w-[520px] gap-2.5 px-5" style={{ paddingBottom: "calc(var(--bottom) + 6px)" }}>
           <button type="button" onClick={turnNow} className="pill pill-dark h-12 w-12 shrink-0 !px-0" aria-label="Turn it over"><Icon name="turn" size={19} /></button>
           <button type="button" onClick={() => setSave(true)} className="pill pill-primary h-12 flex-1 text-[15px]"><Icon name="download" size={18} />Save card</button>
         </div>
       </div>
-      <AnimatePresence>{save && <SaveSheet fam={fam} way={way[fam]} onClose={() => setSave(false)} />}</AnimatePresence>
-      <AnimatePresence>{info && <DetailsSheet fam={fam} onClose={() => setInfo(false)} />}</AnimatePresence>
+      <Sheet open={save} onClose={() => setSave(false)}><SaveBody fam={fam} way={way[fam]} /></Sheet>
+      <Sheet open={info} onClose={() => setInfo(false)}><DetailsBody fam={fam} /></Sheet>
     </div>
   );
 }

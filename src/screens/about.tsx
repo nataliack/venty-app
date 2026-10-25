@@ -12,10 +12,10 @@ import { BODY_CREDIT, GARMENT_CREDITS, LICENCE_URL } from "@/lib/credits";
 
 const NATALIA = { first: "Natalia", last: "Chamon", role: "Founder of Venty", place: "Brisbane, Australia" };
 const CONTACTS: { icon: IconName; label: string; value: string; href: string }[] = [
-  { icon: "link", label: "Portfolio", value: "nataliachamon.com", href: "https://nataliachamon.com" },
+  { icon: "globe", label: "Portfolio", value: "nataliachamon.com", href: "https://nataliachamon.com" },
   { icon: "mail", label: "Email", value: "natalia.chamom@gmail.com", href: "mailto:natalia.chamom@gmail.com" },
   { icon: "phone", label: "Phone", value: "0420 991 942", href: "tel:+61420991942" },
-  { icon: "user", label: "LinkedIn", value: "linkedin.com/in/natalia-c", href: "https://www.linkedin.com/in/natalia-c-8201a8226/" },
+  { icon: "linkedin", label: "LinkedIn", value: "linkedin.com/in/natalia-c", href: "https://www.linkedin.com/in/natalia-c-8201a8226/" },
 ];
 const VENTY = "Venty drafts sewing patterns to your own measurements. This is the demo made for the QUT Design Festival 2026.";
 

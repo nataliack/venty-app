@@ -48,6 +48,10 @@ const P: Record<string, React.ReactNode> = {
   link: <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>,
   help: <><circle cx="12" cy="12" r="8" /><path d="M9.8 9.6a2.3 2.3 0 1 1 3.2 2.1c-.7.3-1 .8-1 1.5v.3M12 16.4v.2" /></>,
   map: <><path d="M4 6.5 9 4.5l6 2 5-2v13l-5 2-6-2-5 2z" /><path d="M9 4.5v13M15 6.5v13" /></>,
+  globe: <><circle cx="12" cy="12" r="8" /><path d="M4 12h16M12 4c2.2 2.3 3.3 5 3.3 8s-1.1 5.7-3.3 8c-2.2-2.3-3.3-5-3.3-8S9.8 6.3 12 4z" /></>,
+  linkedin: <><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><path d="M8.2 10.5V16M8.2 7.8v.1M11.8 16v-5.5M11.8 13.1q0-2.6 2.3-2.6 2.1 0 2.1 2.5V16" /></>,
+  // opens somewhere else (another page or app): a chevron pointing up and right, and its line
+  external: <><path d="M8 16 16 8" /><path d="M9.5 8H16v6.5" /></>,
   body: <><circle cx="12" cy="5" r="2.2" /><path d="M8 20l1.2-7.5L7 9.5l5-1.5 5 1.5-2.2 3L16 20" /></>,
   dress: <path d="M9.5 3.5 9 7.5l-3.5 13h13L15 7.5l-.5-4M9 7.5h6" />,
   flash: <path d="M13 3 6 13.5h5L10 21l7-10.5h-5z" />,
