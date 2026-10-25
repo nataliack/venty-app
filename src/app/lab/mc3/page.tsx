@@ -5,18 +5,8 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { cx, HS, Lead, NextButton, RB } from "@/components/ui";
 import { ICONS, type IconKey } from "./icons";
-import { Phone } from "./parts";
+import { Phone, AppIcon, png } from "./parts";
 import { InstallLab } from "./InstallLab";
-
-// the icon's PNG: 512 to look at, 180 for the iPhone's apple-touch-icon. Today is the app's own icon.
-const png = (k: IconKey, size: 180 | 512 = 512) =>
-  k === "today" ? (size === 180 ? "/apple-touch-icon.png" : "/icon-512.png") : `/lab/mc3/icons/${k}-${size}.png`;
-
-// rounded like a home screen (iOS and Android round the square themselves; 22.37% is iOS's corner)
-function AppIcon({ k, size, className }: { k: IconKey; size: number; className?: string }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={png(k)} alt="" width={size} height={size} style={{ width: size, height: size }} className={cx("block shrink-0 rounded-[22.37%]", className)} />;
-}
 
 // ─── the step in the app: the first page of "Add Venty to your home screen" ───
 function ChooseStep({ k, setK }: { k: IconKey | null; setK: (k: IconKey) => void }) {
