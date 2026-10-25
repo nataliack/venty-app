@@ -494,16 +494,20 @@ function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
 export type Pose = { x?: number; y?: number; z?: number; rz?: number; s?: number };
 // layer: cards in a scene of several are drawn in layers; each layer is drawn over the ones below it whatever their depth,
 // so a card turning in front can never cut into the one behind it (and the one behind can sit close, at full size)
-// startBack: it starts face down. turnIn: it arrives with a full turn. show: the showcase drift (a slow sway and tilt,
-// and a full turn every few seconds)
-type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void; layer?: number; startBack?: boolean; turnIn?: boolean; show?: boolean };
+// startBack: it starts face down. arrive: it arrives (after this many seconds): from far back, lying almost flat in deep
+// perspective, it rises and comes forward, landing slowly. show: the showcase drift (a slow sway, tilt and float).
+// spin: a new colourway is tipped in: the card tips back like a page until it is edge on, takes the new colour there,
+// and tips forward again
+type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void; layer?: number; startBack?: boolean; arrive?: number; show?: boolean };
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 4), easeInOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
+const ARRIVE = 1.9, TIP = 1.25; // seconds
 const clearGeo = new THREE.PlaneGeometry(0.001, 0.001), clearMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false });
 // drawn just before a layer: it wipes the depth of everything drawn so far, so the layer lands on top
 function DepthClear({ order }: { order: number }) {
   return <mesh geometry={clearGeo} material={clearMat} renderOrder={order} frustumCulled={false} onBeforeRender={(r) => r.clearDepth()} />;
 }
 // spin: a new colourway arrives with a full turn, swapped in while the card is edge on, so the change is never seen
-function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, layer = 0, startBack = false, turnIn = false, show = false }: CardProps) {
+function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, layer = 0, startBack = false, arrive, show = false }: CardProps) {
   const [shown, setShown] = useState(maps);
   // the same card made properly (or a change without the turn): show it straight away
   if (maps !== shown && (!spin || maps.key === shown.key)) setShown(maps);
@@ -533,7 +537,7 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null);
   const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter };
   const y0 = startBack ? Math.PI : 0;
-  const st = useRef({ yaw: y0 - (turnIn ? 2 * Math.PI : 0), vy: 0, ty: y0, pitch: turnIn ? 0.5 : 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, spinning: false, swapped: false, base: 0, after: 0, shown: 0, p: { ...p0 } });
+  const st = useRef({ yaw: y0, vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1, p: { ...p0 } });
   const { gl } = useThree();
   useEffect(() => {
     if (!interactive) return;
@@ -564,28 +568,43 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   useFrame(({ clock }, delta) => {
     const s = st.current, T = clock.elapsedTime, L = latest.current;
     const dt = Math.min(delta, 1 / 20);
-    // a new colourway waiting: turn once round, swap it in edge on, then settle on the face that was showing
-    if (spin && L.maps !== L.shown && !s.spinning && !s.drag) { s.spinning = true; s.swapped = false; s.base = (((Math.round(s.ty / Math.PI) % 2) + 2) % 2) * Math.PI; }
-    if (s.spinning) {
-      s.vy += (11 - s.vy) * Math.min(1, dt * 8); s.yaw += s.vy * dt;
-      if (!s.swapped && Math.abs(Math.cos(s.yaw)) < 0.3) { if (L.maps !== L.shown) setShown(L.maps); s.swapped = true; s.after = s.yaw; }
-      if (s.swapped && s.yaw - s.after > 0.5) { s.spinning = false; s.ty = s.base + Math.ceil((s.yaw - s.base) / (2 * Math.PI)) * 2 * Math.PI; }
-    } else if (!s.drag) {
-      if (show && T - s.shown > 9) { s.shown = T; s.ty += 2 * Math.PI; } // the showcase: a full turn now and then
-      const lean = interactive && s.hover, sway = show ? 0.55 : 0.09, tilt = show ? 0.16 : 0.05;
-      const ty = s.ty + (lean ? s.hx * 0.3 : Math.sin(T * 0.6) * sway), tp = lean ? s.hy * 0.22 : Math.sin(T * 0.45) * tilt;
-      let d = dt;
-      while (d > 0) { // damped springs, in small steps so a slow frame can't overshoot
-        const h = Math.min(d, 1 / 120); d -= h;
-        s.vy += (90 * (ty - s.yaw) - 13 * s.vy) * h; s.yaw += s.vy * h;
-        s.vp += (90 * (tp - s.pitch) - 13 * s.vp) * h; s.pitch += s.vp * h;
-      }
+    const want = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose };
+    let lift = 0, extraPitch = 0; // offsets the arrival and the tip lay over the springs
+    // arriving: from far back and above, lying back almost flat, it rises and comes forward and lands
+    if (s.arr === -1) s.arr = T + (arrive ?? 0);
+    if (s.arr >= 0) {
+      const u = Math.max(0, (T - s.arr) / ARRIVE), e = easeOut(Math.min(1, u));
+      const far = 1 - e;
+      s.p = { x: want.x, y: want.y + 0.7 * far, z: want.z - 7 * far, rz: want.rz - 0.12 * far, s: want.s };
+      extraPitch = -1.25 * far; s.yaw = s.ty + 0.35 * far; s.vy = 0; s.vp = 0;
+      if (u >= 1) s.arr = -2;
     }
-    // the place in the scene, eased
-    const k = 1 - Math.exp(-dt * 7), want = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose };
-    for (const n of ["x", "y", "z", "rz", "s"] as const) s.p[n] += (want[n] - s.p[n]) * k;
-    place.current?.position.set(s.p.x, s.p.y, s.p.z); place.current?.rotation.set(0, 0, s.p.rz); place.current?.scale.setScalar(s.p.s);
-    g.current?.rotation.set(s.pitch, s.yaw, 0);
+    // a new colourway waiting: tip it back to edge on, swap it there, tip it forward again
+    if (spin && L.maps !== L.shown && s.tip < 0 && !s.drag && s.arr === -2) { s.tip = T; s.swapped = false; }
+    if (s.tip >= 0) {
+      const u = Math.min(1, (T - s.tip) / TIP), e = easeInOut(u), a = Math.sin(Math.PI * e);
+      extraPitch = -(Math.PI / 2) * a; lift = -0.22 * a;
+      if (!s.swapped && e >= 0.5) { if (L.maps !== L.shown) setShown(L.maps); s.swapped = true; }
+      if (u >= 1) s.tip = -1;
+    }
+    if (!s.drag && s.arr === -2) {
+      // the showcase: a long slow sway and tilt; otherwise a breath of movement; a hovering pointer leans it
+      const lean = interactive && s.hover;
+      const ty = s.ty + (lean ? s.hx * 0.3 : show ? Math.sin(T * 0.32) * 0.5 + Math.sin(T * 0.11) * 0.15 : Math.sin(T * 0.6) * 0.09);
+      const tp = lean ? s.hy * 0.22 : show ? Math.sin(T * 0.23) * 0.16 : Math.sin(T * 0.45) * 0.05;
+      let d = dt;
+      while (d > 0) { // damped springs (soft, so a turn over takes its time), in small steps so a slow frame can't overshoot
+        const h = Math.min(d, 1 / 120); d -= h;
+        s.vy += (38 * (ty - s.yaw) - 10.5 * s.vy) * h; s.yaw += s.vy * h;
+        s.vp += (38 * (tp - s.pitch) - 10.5 * s.vp) * h; s.pitch += s.vp * h;
+      }
+      // the place in the scene, eased slowly
+      const k = 1 - Math.exp(-dt * 3.2);
+      for (const n of ["x", "y", "z", "rz", "s"] as const) s.p[n] += (want[n] - s.p[n]) * k;
+    }
+    const float = show ? Math.sin(T * 0.5) * 0.05 : 0;
+    place.current?.position.set(s.p.x, s.p.y + lift + float, s.p.z); place.current?.rotation.set(0, 0, s.p.rz); place.current?.scale.setScalar(s.p.s);
+    g.current?.rotation.set(s.pitch + extraPitch, s.yaw, 0);
   });
 
   return (

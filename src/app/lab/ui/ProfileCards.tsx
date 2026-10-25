@@ -1,20 +1,23 @@
 "use client";
-// Lab · Natalia's business cards on her profile (25 Oct 2026, round 3 from Jose's notes). One screen, top to bottom:
-// the app's back button and a centred title; the two cards by name (Venty, Natalia); the cards; their colourways as
-// swatches; the actions (turn it over, save it). Over the foot of the cards, a view picker (like a camera's modes):
-//   Card        the card on its own, to turn in your hand
-//   Stack       both cards, the other peeking over the top; pick one and they trade places
-//   Colours     the card's three colourways at once, cascaded; tap one to bring it forward (the swatches rest here)
-//   Both sides  the front and the back together
-//   Showcase    the card drifts and tilts on its own, turns right round now and then, and a light sweeps across it
-// Cards move between views (the one you are holding goes to its new place); new ones arrive from below with a turn,
-// old ones drop away. The background is the landing page's night sky (its slow glows along the bottom).
+// Lab · Natalia's business cards on her profile (25 Oct 2026, round 4 from Jose's notes). One screen, top to bottom:
+// the app's back button, a centred title and her details (a sheet with everything on the cards, each to tap or copy,
+// and Add to contacts); the two cards by name (Venty, Natalia); the cards; the views; the colourways (swatches only);
+// then turn and Save card. The app's page behind: its dark and its dot grid.
+// The views, as icons that draw how the cards sit, in an inset track with a raised thumb:
+//   One card       the card on its own, to turn in your hand
+//   Stacked        both cards, the other peeking over the top; pick one and they trade places
+//   All its colours  the three colourways cascaded; tap one to bring it forward (the swatches rest)
+//   Front and back the two faces together
+//   Showcase       a long slow drift and tilt, a gentle float, and a light that sweeps across now and then
+// Motion is slow and quiet: cards arrive one after another from far back, lying almost flat in deep perspective, and
+// land slowly; a new colourway is tipped in like a page (back to edge on, swapped there, forward again); cards glide
+// between views and drop away when they leave. No full turns.
 // Loading: nothing is shown half made. The 3D body's loader ring shows until every card the view needs is made (they
-// are made in slices in the background, the first colourway of each card first, then the rest); then the cards come
-// in. A colour picked before its card is made: the card waits, a small ring shows, and it turns to the new colour as
-// soon as it is ready. (For the app, see the note in the lab: bake the maps at build time.)
+// are made in slices in the background, the first colourway of each card first, then the rest); then they arrive. A
+// colour picked before its card is made waits, with a small ring, and tips in as soon as it is ready. (For the app:
+// bake the maps at build time; see the lab's note.)
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cx, RB } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { BodyLoader } from "@/components/BodyLoader";
@@ -123,16 +126,15 @@ const SWATCH: Record<Family, Record<string, string>> = {
 };
 function Swatches({ fam, way, setWay, rest }: { fam: Family; way: string; setWay: (w: string) => void; rest: boolean }) {
   return (
-    <div className={cx("flex justify-center gap-6 transition-opacity duration-300", rest && "pointer-events-none opacity-30")} aria-disabled={rest}>
+    <div className={cx("flex justify-center gap-5 transition-opacity duration-500", rest && "pointer-events-none opacity-30")} aria-disabled={rest}>
       {FAVOURITES[fam].ways.map((w) => {
         const on = way === w.id && !rest;
         return (
-          <button key={w.id} type="button" onClick={() => setWay(w.id)} aria-pressed={on} aria-label={`${w.name} colourway`} tabIndex={rest ? -1 : 0} className="flex flex-col items-center gap-2">
-            <motion.span animate={{ scale: on ? 0.94 : 1 }} transition={{ type: "spring", bounce: 0.3, duration: 0.35 }} className="block h-11 w-11 rounded-full"
+          <button key={w.id} type="button" onClick={() => setWay(w.id)} aria-pressed={on} aria-label={`${w.name} colourway`} tabIndex={rest ? -1 : 0} className="grid h-12 w-12 place-items-center">
+            <motion.span animate={{ scale: on ? 0.92 : 1 }} transition={{ type: "spring", bounce: 0.25, duration: 0.6 }} className="block h-10 w-10 rounded-full"
               style={{ background: SWATCH[fam][w.id], boxShadow: on
                 ? "inset 0 2px 5px rgb(0 0 0 / .45), inset 0 0 0 1px rgb(255 255 255 / .14), 0 0 0 3px #0b0c15, 0 0 0 4.5px rgb(255 255 255 / .92)"
                 : "inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .35), inset 0 -1px 0 rgb(0 0 0 / .3), 0 2px 4px rgb(0 0 0 / .45), 0 8px 16px -8px rgb(0 0 0 / .7)" }} />
-            <span className={cx("text-[12.5px] transition-colors", on ? "text-white" : "text-white/45")}>{w.name}</span>
           </button>
         );
       })}
@@ -140,24 +142,84 @@ function Swatches({ fam, way, setWay, rest }: { fam: Family; way: string; setWay
   );
 }
 type View = "card" | "stack" | "colours" | "sides" | "show";
-const VIEWS: { k: View; name: string }[] = [{ k: "card", name: "Card" }, { k: "stack", name: "Stack" }, { k: "colours", name: "Colours" }, { k: "sides", name: "Both sides" }, { k: "show", name: "Showcase" }];
-// the view picker, like a camera's modes: words in a row over the foot of the cards, the one in use bright with a dot
-function Views({ view, setView }: { view: View; setView: (v: View) => void }) {
+// each view's icon draws how its cards sit (24 grid, 1.6 strokes, the cards in the back drawn only where they show)
+const VIEWS: { k: View; name: string; icon: ReactNode }[] = [
+  { k: "card", name: "One card", icon: <rect x="3" y="6.5" width="18" height="11" rx="2.2" /> },
+  { k: "stack", name: "Both cards, stacked", icon: <><path d="M6 9.5V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-.5" /><rect x="3" y="9.5" width="15.5" height="10" rx="2" /></> },
+  { k: "colours", name: "All its colours", icon: <><path d="M8.2 7.9V7.3a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-.6" /><path d="M5.6 10.5V9.9a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H16" /><rect x="3" y="10.5" width="13" height="9" rx="2" /></> },
+  { k: "sides", name: "Front and back", icon: <><rect x="4" y="3.5" width="16" height="7.5" rx="1.8" /><rect x="4" y="13" width="16" height="7.5" rx="1.8" /><path d="M7 16.2h5.5M7 18h3.5" /></> },
+  { k: "show", name: "Showcase", icon: <><path d="M5.3 8.6 16.9 6.4a1.6 1.6 0 0 1 1.9 1.4l.9 8.4a1.6 1.6 0 0 1-1.5 1.8L6.4 18.6a1.6 1.6 0 0 1-1.7-1.5l-.7-6.8a1.6 1.6 0 0 1 1.3-1.7Z" /><path d="M20.4 2.1l.45 1.35 1.35.45-1.35.45-.45 1.35-.45-1.35-1.35-.45 1.35-.45Z" fill="currentColor" stroke="none" /></> },
+];
+function ViewSwitch({ view, setView }: { view: View; setView: (v: View) => void }) {
   return (
-    <div className="flex justify-center gap-[18px]">
+    <div className="flex h-12 rounded-full p-1" style={{ background: "rgb(0 0 0 / .26)", boxShadow: inset }} role="group" aria-label="View">
       {VIEWS.map((v) => (
-        <button key={v.k} type="button" onClick={() => setView(v.k)} aria-pressed={view === v.k} className="relative pb-2.5 text-[13px] font-medium">
-          <span className={cx("transition-colors duration-300", view === v.k ? "text-white" : "text-white/40 hover:text-white/70")}>{v.name}</span>
-          {view === v.k && <motion.span layoutId="view-dot" className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-peri" transition={{ type: "spring", bounce: 0.25, duration: 0.4 }} />}
+        <button key={v.k} type="button" onClick={() => setView(v.k)} aria-pressed={view === v.k} aria-label={v.name} title={v.name} className="relative grid flex-1 place-items-center rounded-full">
+          {view === v.k && <motion.span layoutId="view-thumb" className="absolute inset-0 rounded-full bg-snow" style={{ boxShadow: raisedSnow }} transition={{ type: "spring", bounce: 0.16, duration: 0.6 }} />}
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+            className={cx("relative transition-colors duration-500", view === v.k ? "text-ink" : "text-white/55")}>{v.icon}</svg>
         </button>
       ))}
     </div>
   );
 }
 
+// ─── her details: everything on the cards, to tap (call, write, open) or copy ───
+const COPY = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.4" /><path d="M15.5 8.5V6.4A2.4 2.4 0 0 0 13.1 4H6.4A2.4 2.4 0 0 0 4 6.4v6.7a2.4 2.4 0 0 0 2.4 2.4h2.1" /></svg>;
+const TICK = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
+type Detail = { icon: "phone" | "mail" | "link" | "user" | "map"; label: string; value: string; href: string };
+function details(f: Family): Detail[] {
+  return [
+    { icon: "phone", label: "Phone", value: "0420 991 942", href: "tel:+61420991942" },
+    { icon: "mail", label: "Email", value: "natalia.chamom@gmail.com", href: "mailto:natalia.chamom@gmail.com" },
+    ...(f === "venty" ? [{ icon: "link" as const, label: "Venty", value: "app.venty.au", href: "https://app.venty.au" }] : []),
+    { icon: "link", label: "Website", value: "nataliachamon.com", href: "https://nataliachamon.com" },
+    { icon: "user", label: "LinkedIn", value: "linkedin.com/in/natalia-c", href: "https://www.linkedin.com/in/natalia-c-8201a8226/" },
+    { icon: "map", label: "Based in", value: "Brisbane, Australia", href: "https://maps.apple.com/?q=Brisbane%20QLD" },
+  ];
+}
+function DetailsSheet({ fam, onClose }: { fam: Family; onClose: () => void }) {
+  const [copied, setCopied] = useState("");
+  const t = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const copy = (v: string) => { navigator.clipboard?.writeText(v).then(() => { setCopied(v); clearTimeout(t.current); t.current = setTimeout(() => setCopied(""), 1600); }).catch(() => {}); };
+  return (
+    <>
+      <motion.div className="absolute inset-0 z-40 bg-black/55 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} onClick={onClose} />
+      <motion.div className="absolute inset-x-0 bottom-0 z-50 max-h-[88%] overflow-y-auto rounded-t-[34px] bg-[#1b1c26] px-5 pb-8 pt-3 text-white shadow-[inset_0_1px_0_rgb(255_255_255/.12)]"
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0.1, duration: 0.7 }}>
+        <div className="mx-auto h-[5px] w-12 rounded-full bg-white/15" />
+        <div className="mt-5 flex items-center gap-3.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/lab/natalia.webp" alt="" className="h-14 w-14 rounded-full object-cover shadow-[0_0_0_1px_rgb(255_255_255/.12)]" />
+          <div className="min-w-0"><h3 className="text-[22px] font-normal leading-tight tracking-[-.02em]">Natalia Chamon</h3><p className="text-[14px] text-white/55">{fam === "venty" ? "Founder, Venty" : "UI/UX design and front-end"}</p></div>
+        </div>
+        <div className="mt-5 space-y-2">
+          {details(fam).map((d) => (
+            <div key={d.label} className="pill-dark flex items-center rounded-[20px] pr-2">
+              <a href={d.href} target={d.href.startsWith("http") ? "_blank" : undefined} rel="noopener" className="flex min-w-0 flex-1 items-center gap-3.5 px-3.5 py-3">
+                <span className="iconbadge grid h-10 w-10 shrink-0 place-items-center rounded-[12px]"><Icon name={d.icon} size={18} /></span>
+                <span className="min-w-0"><span className="block text-[12.5px] text-white/45">{d.label}</span><span className="block text-[15px] leading-snug [overflow-wrap:anywhere]">{d.value}</span></span>
+              </a>
+              <button type="button" onClick={() => copy(d.value)} aria-label={`Copy ${d.label.toLowerCase()}`} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/60 transition-colors hover:text-white">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span key={copied === d.value ? "tick" : "copy"} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.25 }} className={copied === d.value ? "text-peri" : ""}>
+                    {copied === d.value ? TICK : COPY}
+                  </motion.span>
+                </AnimatePresence>
+              </button>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => hand(new File([vcard(fam)], "Natalia Chamon.vcf", { type: "text/vcard" }))} className="pill pill-primary mt-5 h-12 w-full text-[15px]"><Icon name="user" size={18} />Add to contacts</button>
+        <p className="mt-3 h-4 text-center text-[13px] text-white/50" aria-live="polite">{copied ? "Copied" : ""}</p>
+      </motion.div>
+    </>
+  );
+}
+
 // ─── what is on the stage in each view ───
 type Slot = { key: string; fam: Family; way: string; pose: Pose; layer: number; interactive?: boolean; spin?: boolean; flip?: number; startBack?: boolean; show?: boolean; onTap?: () => void };
-const OUT: Pose = { y: -3.6, s: 0.85 }; // where cards arrive from and drop away to
+const OUT: Pose = { y: -3.4, z: -0.6, s: 0.9 }; // where cards drop away to
 // Stack: the one behind sits just behind and a little higher, at nearly full size (layers keep the two apart)
 const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, z: -0.05, rz: -0.045, s: 0.96 }, OVER: Pose = { y: 2.25, z: 0.05, s: 0.97 }, UNDER: Pose = { y: -0.32, z: -0.05, s: 0.96 };
 // Colours: a cascade, the pick in front and lowest, the others stepping up and back behind it
@@ -171,7 +233,7 @@ function useLeaving(items: Slot[]) {
     const now = new Set(items.map((i) => i.key)), left = prev.current.filter((i) => !now.has(i.key));
     prev.current = items;
     const a = setTimeout(() => setGone((g) => [...g.filter((x) => !now.has(x.key)), ...left.map((i) => ({ ...i, pose: OUT, interactive: false, onTap: undefined, layer: 0 }))]), 0);
-    const b = setTimeout(() => setGone((g) => g.filter((x) => !left.some((l) => l.key === x.key))), 650);
+    const b = setTimeout(() => setGone((g) => g.filter((x) => !left.some((l) => l.key === x.key))), 1300);
     return () => { clearTimeout(a); clearTimeout(b); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keys]);
@@ -185,12 +247,13 @@ export function CardsScreen() {
   const [flips, setFlips] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"" | "over">("");
   const [save, setSave] = useState(false);
+  const [info, setInfo] = useState(false);
   const t = useRef<ReturnType<typeof setTimeout>>(undefined);
   const flip = (k: string) => flips[k] ?? 0;
   const turn = (...ks: string[]) => setFlips((f) => { const n = { ...f }; for (const k of ks) n[k] = (n[k] ?? 0) + 1; return n; });
   // switching cards: in Stack they trade places over the top (the old front card stays the top layer until the new one
   // is above it); elsewhere the old card drops away and the new one arrives
-  const pick = (f: Family) => { if (f === fam) return; setFam(f); if (view === "stack") { setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 340); } };
+  const pick = (f: Family) => { if (f === fam) return; setFam(f); if (view === "stack") { setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 760); } };
 
   // made ahead: each card's first colourway, then the rest
   useEffect(() => { for (const f of FAMS) prefetchCard(ALL[f][FIRST[f]].els, ALL[f][FIRST[f]].stock); for (const f of FAMS) for (const w of FAVOURITES[f].ways) prefetchCard(ALL[f][w.id].els, ALL[f][w.id].stock); }, []);
@@ -227,19 +290,20 @@ export function CardsScreen() {
   };
   return (
     <div className="relative flex h-full flex-col text-white">
-      {/* the landing page's night sky: the slow glows gather along the bottom */}
-      <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      {/* the app's page: its dark and its dot grid */}
+      <div className="dotgrid" />
       <div className="relative flex h-full flex-col">
-        <div className="relative flex h-11 items-center px-4 pt-[52px] box-content">
+        <div className="relative flex h-11 items-center justify-between px-4 pt-[52px] box-content">
           <RB icon="back" label="Back" />
+          <RB icon="user" label="Her details" onClick={() => setInfo(true)} />
           <h2 className="pointer-events-none absolute inset-x-0 bottom-0 flex h-11 items-center justify-center text-[18px] font-normal tracking-[-.02em]">Business cards</h2>
         </div>
         <div className="mt-6 px-5"><Tabs fam={fam} setFam={pick} /></div>
         <div className="relative mt-2 min-h-0 flex-1">
           <CardStage dist={view === "colours" ? 1.02 : view === "sides" ? 1.0 : 0.9} className="absolute inset-0">
             <Sweep on={view === "show"} />
-            {shown && [...leaving, ...slots].map((s) => (
-              <LiveCard key={s.key} {...ALL[s.fam][s.way]} madeOnly pose={s.pose} enter={OUT} turnIn layer={s.layer} interactive={!!s.interactive} spin={s.spin}
+            {shown && [...leaving, ...slots].map((s, i) => (
+              <LiveCard key={s.key} {...ALL[s.fam][s.way]} madeOnly pose={s.pose} arrive={0.12 + i * 0.22} layer={s.layer} interactive={!!s.interactive} spin={s.spin}
                 flip={s.flip ?? 0} startBack={s.startBack} show={s.show} onTap={s.onTap} />
             ))}
           </CardStage>
@@ -248,15 +312,16 @@ export function CardsScreen() {
           <div className={cx("pointer-events-none absolute right-5 top-2 transition-opacity duration-300", shown && !ready ? "opacity-100" : "opacity-0")} aria-hidden>
             <svg width="18" height="18" viewBox="0 0 28 28" className="body-loader-ring"><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(255 255 255 / .12)" strokeWidth="2.6" /><circle cx="14" cy="14" r="11" fill="none" stroke="rgb(240 244 254 / .8)" strokeWidth="2.6" strokeLinecap="round" strokeDasharray="17 52" /></svg>
           </div>
-          <div className="absolute inset-x-0 bottom-1"><Views view={view} setView={setView} /></div>
         </div>
-        <div className="mt-4 px-5"><Swatches fam={fam} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} rest={view === "colours"} /></div>
-        <div className="mt-5 flex gap-2.5 px-5 pb-7">
+        <div className="mt-2 px-5"><ViewSwitch view={view} setView={setView} /></div>
+        <div className="mt-3 px-5"><Swatches fam={fam} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} rest={view === "colours"} /></div>
+        <div className="mt-3 flex gap-2.5 px-5 pb-7">
           <button type="button" onClick={turnNow} className="pill pill-dark h-12 w-12 shrink-0 !px-0" aria-label="Turn it over"><Icon name="rotate" size={18} /></button>
           <button type="button" onClick={() => setSave(true)} className="pill pill-primary h-12 flex-1 text-[15px]"><Icon name="download" size={18} />Save card</button>
         </div>
       </div>
       <AnimatePresence>{save && <SaveSheet fam={fam} way={way[fam]} onClose={() => setSave(false)} />}</AnimatePresence>
+      <AnimatePresence>{info && <DetailsSheet fam={fam} onClose={() => setInfo(false)} />}</AnimatePresence>
     </div>
   );
 }
@@ -268,15 +333,9 @@ export function ProfileCards() {
       <h2 className="h1 !text-[34px]">On her profile</h2>
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="max-w-[540px] space-y-4 text-[15px] leading-snug text-white/65">
-          <p>One screen: the back button and a centred title, the two cards by name, the cards, their colourways, then turn and save. The words over the foot of the cards change the view:</p>
-          <ul className="space-y-1.5 text-white/55">
-            <li><span className="text-white/85">Card</span>: the card on its own, to turn in your hand.</li>
-            <li><span className="text-white/85">Stack</span>: both cards, the other peeking over the top; pick one and they trade places.</li>
-            <li><span className="text-white/85">Colours</span>: all three colourways at once; tap one to bring it forward (the swatches rest).</li>
-            <li><span className="text-white/85">Both sides</span>: the front and the back together.</li>
-            <li><span className="text-white/85">Showcase</span>: it drifts and tilts on its own, turns right round now and then, and a light sweeps across it.</li>
-          </ul>
-          <p>Cards move between views; new ones arrive from below with a turn. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready, and a colour picked early turns in as soon as it is made.</p>
+          <p>One screen: the back button, a centred title and her details (the person button: a sheet where every detail can be tapped or copied); the cards by name; the cards; the views; the colourways; then turn and save.</p>
+          <p>The views draw how the cards sit: one card, both stacked, all its colours cascaded (the swatches rest), front and back, and a slow showcase.</p>
+          <p>Motion is slow and quiet: cards arrive one after another from far back, lying almost flat, and land; a new colour tips in like a page; nothing turns all the way round. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready.</p>
           <p className="text-[13.5px] text-white/40">For the app: bake each card&apos;s maps at build time (a script renders them to compressed images in /public), so the screen only downloads and shows them, a few hundred KB a card, instead of making them on the phone. Preload the first colourway of each card when the profile opens, the rest after; keep only the cards on screen in memory. Saving opens the phone&apos;s share sheet (Save Image, Save to Files, Contacts); an Apple Wallet pass would need a signed pass from a server.</p>
         </div>
         <div className="relative isolate h-[760px] w-[360px] shrink-0 overflow-hidden rounded-[46px] bg-bg shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
