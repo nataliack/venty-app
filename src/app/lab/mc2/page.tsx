@@ -28,8 +28,8 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 // the lookbook's own choices, each with what it does
 const SWITCHES: { k: keyof LookOpts; name: string; opts: { v: string; name: string; note: string }[] }[] = [
   { k: "card", name: "Cards", opts: [
+    { v: "dark", name: "Dark tray", note: "The tray in the dark secondary buttons’ build: a card-colour rim softly lit from the top, the photo pressed in like the inset tiles. The first-pattern card stays the light tray." },
     { v: "light", name: "Light tray", note: "The pattern tray’s build: a raised snow rim, the photo pressed into it, the words on the rim below." },
-    { v: "dark", name: "Dark tray", note: "The same tray in the dark secondary buttons’ build: a card-colour rim lit from the top, the photo pressed in like the inset tiles." },
     { v: "flat", name: "Flat", note: "Photos edge to edge, the words on the photo or under it." },
   ] },
   { k: "empty", name: "First pattern card", opts: [
@@ -45,6 +45,10 @@ const SWITCHES: { k: keyof LookOpts; name: string; opts: { v: string; name: stri
     { v: "shrink", name: "Shrink", note: "Scroll past them and their slim form is pinned to the top." },
     { v: "away", name: "Scroll away", note: "They scroll off with the page." },
   ] },
+  { k: "tools", name: "Search and filters", opts: [
+    { v: "row", name: "One row", note: "Under the tabs: how many, then three round buttons: Search (the field opens across the row, with Cancel), Filter and sort (one sheet), and carousel or grid." },
+    { v: "title", name: "By the title", note: "Search and Filter and sort as two round buttons beside the title, nothing under the tabs; carousel or grid moves into the sheet. Create a pattern is then always the first card." },
+  ] },
   { k: "cta", name: "Create a pattern", opts: [
     { v: "row", name: "First card", note: "Once you have patterns, the first card of your own is Create a pattern (in the grid too)." },
     { v: "title", name: "By the title", note: "Once you have patterns, a Create button sits beside the title." },
@@ -53,7 +57,7 @@ const SWITCHES: { k: keyof LookOpts; name: string; opts: { v: string; name: stri
 
 export default function LabMC2() {
   const [k, setK] = useState("lookbook");
-  const [opts, setOpts] = useState<LookOpts>({ card: "light", empty: "contain", kinds: "tiles", filters: "shrink", cta: "row" });
+  const [opts, setOpts] = useState<LookOpts>({ card: "dark", empty: "contain", kinds: "tiles", filters: "shrink", tools: "row", cta: "row" });
   const c = CONCEPTS.find((x) => x.k === k)!;
   return (
     // the app pins html and body (position: fixed, overflow hidden), so the lab scrolls in its own layer
