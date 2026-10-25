@@ -1,9 +1,9 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 // The pattern library, redrawn four ways from Jose's references (25 Oct 2026). Each concept draws both tabs, Your patterns
-// and Patterns to make, for a new visitor (no patterns yet) and for someone who has made three. The photos are stand-ins
+// and Patterns to make, for a new visitor (no patterns yet) and for someone who has made eight. The photos are stand-ins
 // (the sign-up looks and details, the tour's meadow) until Jose's own are made; see BRIEFS for what each one needs.
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { motion, LayoutGroup, AnimatePresence } from "motion/react";
 import { TEMPLATES, CATEGORIES, type Category, type GarmentKey } from "@/lib/data";
 import { BodyFigure, Flat } from "@/components/art";
@@ -14,7 +14,7 @@ import { TplCard } from "@/screens/templates";
 import { ArcCarousel } from "@/screens/auth";
 
 export type View = "Your patterns" | "Patterns to make";
-export type Props = { has: boolean; tab: View };
+export type Props = { has: boolean; tab: View; opts?: LookOpts };
 type Tpl = (typeof TEMPLATES)[number];
 
 // ─── stand-in pictures ───
@@ -30,18 +30,24 @@ const KIND: Record<Category, string> = { Dresses: "Dress", Tops: "Top", Pants: "
 const CAT: Record<Category, string> = { Dresses: "Dresses", Tops: "Tops", Pants: "Trousers", Skirts: "Skirts" };
 const LEVEL_N = { Easy: 1, Intermediate: 2, Hard: 3 } as Record<string, number>;
 
-// ─── three patterns Ana has made ───
-type Mine = { id: string; name: string; g: GarmentKey; status: "Printed" | "Fitting" | "Draft"; line: string; photo: string; fit: string; metres: number };
+// ─── eight patterns Ana has made, newest first ───
+type Mine = { id: string; name: string; g: GarmentKey; status: "Printed" | "Fitting" | "Draft"; line: string; photo: string; fit: string; metres: number; month: string };
 const MINE: Mine[] = [
-  { id: "a", name: "Wrap midi dress", g: "wrap", status: "Printed", line: "Printed on 12 A4 sheets", photo: P.green, fit: "Relaxed", metres: 2.6 },
-  { id: "b", name: "Bias slip dress", g: "slip", status: "Fitting", line: "Ready to print", photo: P.mauve, fit: "Tight", metres: 2.1 },
-  { id: "c", name: "Wide-leg trousers", g: "wideleg", status: "Draft", line: "Draft, not finished yet", photo: P.hems, fit: "Loose", metres: 2.4 },
+  { id: "a", name: "Wrap midi dress", g: "wrap", status: "Printed", line: "Printed on 12 A4 sheets", photo: P.green, fit: "Relaxed", metres: 2.6, month: "October" },
+  { id: "b", name: "Bias slip dress", g: "slip", status: "Fitting", line: "Ready to print", photo: P.mauve, fit: "Tight", metres: 2.1, month: "October" },
+  { id: "c", name: "Wide-leg trousers", g: "wideleg", status: "Draft", line: "Draft, not finished yet", photo: P.hems, fit: "Loose", metres: 2.4, month: "October" },
+  { id: "d", name: "Cropped boxy tee", g: "tee", status: "Printed", line: "Printed at a print shop", photo: P.burgundy, fit: "Relaxed", metres: 1.4, month: "October" },
+  { id: "e", name: "A-line midi dress", g: "aline", status: "Printed", line: "Printed on 10 A4 sheets", photo: P.rust, fit: "Relaxed", metres: 2.8, month: "September" },
+  { id: "f", name: "Bias cami", g: "cami", status: "Fitting", line: "Ready to print", photo: P.corset, fit: "Tight", metres: 1.1, month: "September" },
+  { id: "g", name: "Straight trousers", g: "straight", status: "Printed", line: "Printed on 9 A4 sheets", photo: P.zip, fit: "Relaxed", metres: 2.3, month: "September" },
+  { id: "h", name: "Bow-cuff shirt", g: "shirt", status: "Draft", line: "Draft, not finished yet", photo: P.bows, fit: "Loose", metres: 2.2, month: "August" },
 ];
 const madeOf = (has: boolean, g: GarmentKey) => (has ? MINE.find((m) => m.g === g) : undefined);
+const kindOfMine = (m: Mine) => CAT[TEMPLATES.find((t) => t.key === m.g)?.category ?? "Dresses"];
 const DOT = { Printed: "bg-primary", Fitting: "bg-peri", Draft: "bg-white/40" };
 
 const Img = ({ src, className }: { src: string; className?: string }) => <img src={src} alt="" draggable={false} className={cx("absolute inset-0 h-full w-full object-cover", className)} />;
-const Dot = ({ s }: { s: Mine["status"] }) => <span className={cx("h-2 w-2 shrink-0 rounded-full", DOT[s])} />;
+const Dot = ({ s, light }: { s: Mine["status"]; light?: boolean }) => <span className={cx("h-2 w-2 shrink-0 rounded-full", light && s === "Draft" ? "bg-ink/25" : DOT[s])} />;
 // difficulty as three small bars, as on a pattern envelope (the app's own Level)
 const Level = ({ n, light }: { n: number; light?: boolean }) => (
   <span className="flex items-end gap-[2px]" aria-hidden>
@@ -53,13 +59,14 @@ const Sub = ({ t, light, className }: { t: Tpl; light?: boolean; className?: str
 );
 
 // ─── the phone's screen: a scroll area and the real tab bar (its own layout group, so the phones never share a glide) ───
-function Shell({ light, children, bare }: { light?: boolean; children: ReactNode; bare?: boolean }) {
+function Shell({ light, children, bare, onScroll, overlay }: { light?: boolean; children: ReactNode; bare?: boolean; onScroll?: (el: HTMLDivElement) => void; overlay?: ReactNode }) {
   const id = useId();
   return (
     <LayoutGroup id={id}>
       <div data-screen className={cx("absolute inset-0 flex flex-col", light ? "bg-snow text-ink" : "text-white")}>
         {!light && <div className="dotgrid" />}
-        <div className={cx("noscroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-[124px]", !bare && "pt-[62px]")}>{children}</div>
+        <div onScroll={onScroll && ((e) => onScroll(e.currentTarget))} className={cx("noscroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-[124px]", !bare && "pt-[62px]")}>{children}</div>
+        {overlay}
         <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-2"><TabBar tab="patterns" /></div>
       </div>
     </LayoutGroup>
@@ -146,7 +153,41 @@ export function Today({ has, tab }: Props) {
 }
 
 // ═══ 1. Lookbook: tall photo cards you swipe through, like a photo app's albums ═══
-function TallCard({ m }: { m: Mine }) {
+// Refined 25 Oct 2026 (Jose): photo filters on Patterns to make (shrinking into a bar as you scroll), search, filters,
+// sort and a grid on Your patterns, a way to create a pattern once you have some, and the looks on the empty card
+// spilling over its edges. Two card styles: flat photos, or the pattern tray's build (a raised snow rim, the photo
+// pressed into it, a raised band for the words).
+export type LookOpts = { card: "flat" | "tray"; filters: "shrink" | "away"; cta: "row" | "title" };
+const LOOK_DEFAULT: LookOpts = { card: "tray", filters: "shrink", cta: "row" };
+// the tray's build (PatternTray): the rim lit from above, and what sits in it pressed down
+const RIM: CSSProperties = {
+  background: "linear-gradient(180deg, #ffffff, #e7eaf3)",
+  boxShadow: "0 18px 36px -16px rgb(0 0 0 / .7), 0 2px 4px rgb(0 0 0 / .3), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(28 36 84 / .2)",
+};
+const PRESSED = "inset 0 3px 8px rgb(28 36 84 / .34), inset 0 1px 2px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .7)";
+const SURFACE: CSSProperties = {
+  backgroundColor: "#eceef4", boxShadow: PRESSED, backgroundPosition: "center",
+  backgroundImage: "linear-gradient(rgb(19 21 35 / .1) 1px, transparent 1px), linear-gradient(90deg, rgb(19 21 35 / .1) 1px, transparent 1px), linear-gradient(rgb(19 21 35 / .05) 1px, transparent 1px), linear-gradient(90deg, rgb(19 21 35 / .05) 1px, transparent 1px)",
+  backgroundSize: "100px 100px, 100px 100px, 20px 20px, 20px 20px",
+};
+// the shadow of the rim falling into the photo
+const Sunk = () => <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESSED }} />;
+// a pressed tile on snow (the inset tiles on a chosen card)
+const SNOW_TILE: CSSProperties = { background: "rgb(52 62 110 / .07)", boxShadow: "inset 0 3px 7px rgb(28 36 84 / .3), inset 0 1px 1.5px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9)" };
+
+function TallCard({ m, tray }: { m: Mine; tray: boolean }) {
+  if (tray) return (
+    <button className="tap relative flex h-[400px] w-[284px] shrink-0 snap-start flex-col rounded-[30px] p-[7px] text-left" style={RIM}>
+      <span className="relative block min-h-0 flex-1 overflow-hidden rounded-[26px]"><Img src={m.photo} /><Sunk /></span>
+      <span className="flex h-[70px] shrink-0 items-center gap-3 px-2">
+        <span className="grid h-[50px] w-[42px] shrink-0 place-items-center rounded-[12px]" style={SNOW_TILE}><Flat g={m.g} size={30} stroke="#3c4b63" fill="rgba(60,75,99,.06)" /></span>
+        <span className="min-w-0">
+          <span className="block truncate text-[18px] leading-tight tracking-[-.01em] text-ink">{m.name}</span>
+          <span className="mt-1 flex items-center gap-1.5 text-[13px] text-slate"><Dot s={m.status} light />{m.line}</span>
+        </span>
+      </span>
+    </button>
+  );
   return (
     <button className="tap relative h-[400px] w-[284px] shrink-0 snap-start overflow-hidden rounded-[30px] text-left">
       <Img src={m.photo} />
@@ -164,62 +205,210 @@ function TallCard({ m }: { m: Mine }) {
     </button>
   );
 }
-function SmallCard({ t, has, w = 156 }: { t: Tpl; has: boolean; w?: number }) {
-  const made = madeOf(has, t.key);
+// a photo card for the rows and grids: a pattern to make, or one of yours
+function SmallCard({ photo, name, line, tray, w, made }: { photo: string; name: string; line: ReactNode; tray: boolean; w?: number; made?: Mine }) {
+  const style = w ? { width: w } : undefined;
+  const mark = made && <span className={cx("absolute bottom-2.5 left-3 flex items-center gap-1.5 text-[12px]", "text-white/90")}><Dot s={made.status} />You made this</span>;
+  if (tray) return (
+    <button className="tap shrink-0 snap-start rounded-[22px] p-[5px] text-left" style={{ ...RIM, ...style }}>
+      <span className="relative block aspect-[3/4] overflow-hidden rounded-[18px]"><Img src={photo} />{made && <span className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-bg/75 to-transparent" />}{mark}<Sunk /></span>
+      <span className="block px-1.5 pb-1.5 pt-2"><span className="block truncate text-[14px] leading-tight text-ink">{name}</span><span className="mt-1 block">{line}</span></span>
+    </button>
+  );
   return (
-    <button className="tap shrink-0 snap-start text-left" style={{ width: w }}>
-      <span className="relative block overflow-hidden rounded-[22px]" style={{ height: w * 1.32 }}>
-        <Img src={PHOTO[t.key]} />
-        {made && <><span className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-bg/80 to-transparent" /><span className="absolute bottom-2.5 left-3 flex items-center gap-1.5 text-[12px] text-white/90"><Dot s={made.status} />You made this</span></>}
-      </span>
-      <span className="mt-2 block text-[15px] leading-tight">{t.name}</span>
-      <Sub t={t} className="mt-1" />
+    <button className="tap shrink-0 snap-start text-left" style={style}>
+      <span className="relative block aspect-[3/4] overflow-hidden rounded-[22px]"><Img src={photo} />{made && <span className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-bg/80 to-transparent" />}{mark}</span>
+      <span className="mt-2 block truncate text-[15px] leading-tight">{name}</span>
+      <span className="mt-1 block">{line}</span>
     </button>
   );
 }
-const Row = ({ children }: { children: ReactNode }) => <div className="noscroll mt-3 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6">{children}</div>;
-export function Lookbook({ has, tab }: Props) {
-  const [view, setView] = useState<string>(tab);
+const TplSmall = ({ t, has, tray, w }: { t: Tpl; has: boolean; tray: boolean; w?: number }) => (
+  <SmallCard photo={PHOTO[t.key]} name={t.name} line={<Sub t={t} light={tray} />} tray={tray} w={w} made={madeOf(has, t.key)} />
+);
+const MineSmall = ({ m, tray }: { m: Mine; tray: boolean }) => (
+  <SmallCard photo={m.photo} name={m.name} tray={tray} line={<span className={cx("flex items-center gap-1.5 text-[13px]", tray ? "text-slate" : "text-white/55")}><Dot s={m.status} light={tray} /><span className="truncate">{m.line}</span></span>} />
+);
+// create a pattern, as the first card of your own: an empty pattern tray (or an empty card) with the Create button in it
+function NewCard({ tray, tall }: { tray: boolean; tall?: boolean }) {
+  const inner = (
+    <span className="flex flex-col items-center gap-3 px-4 text-center">
+      <span className="icon-primary grid h-14 w-14 place-items-center rounded-full"><Icon name="plus" size={26} strokeWidth={2.2} /></span>
+      <span>
+        <span className={cx("block text-[17px] leading-tight", tray ? "text-ink" : "text-white")}>Create a pattern</span>
+        <span className={cx("mt-1 block text-[13px] leading-snug", tray ? "text-slate" : "text-white/55")}>From a photo, sketch or words</span>
+      </span>
+    </span>
+  );
+  if (tray) return (
+    <button className={cx("tap flex shrink-0 snap-start flex-col p-[7px] text-left", tall ? "h-[400px] w-[200px] rounded-[30px]" : "rounded-[22px] !p-[5px]")} style={RIM}>
+      <span className={cx("grid flex-1 place-items-center", tall ? "rounded-[26px]" : "aspect-[3/4] rounded-[18px]")} style={SURFACE}>{inner}</span>
+      {!tall && <span className="block h-[46px]" />}
+    </button>
+  );
+  return <button className={cx("card-soft tap grid shrink-0 snap-start place-items-center", tall ? "h-[400px] w-[200px] rounded-[30px]" : "aspect-[3/4] rounded-[22px]")}>{inner}</button>;
+}
+
+// the kinds as round photos (the editorial's), and the same as a slim bar once you scroll past them
+const KIND_PIC: Record<string, string> = { All: P.meadow, Dresses: P.green, Tops: P.corset, Trousers: P.hems, Skirts: P.rust };
+function KindPhotos({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <Shell>
-      <div className="px-6"><Title /><Segmented className="mt-4" items={TABS} value={view} onChange={setView} /></div>
-      {view === "Patterns to make" ? (
-        // a row per kind, like albums: no filter needed, everything is one swipe away
-        CATEGORIES.map((c) => (
-          <section key={c} className="mt-6">
-            <SectionHead title={CAT[c]} n={byKind(CAT[c]).length} />
-            <Row>{byKind(CAT[c]).map((t) => <SmallCard key={t.key} t={t} has={has} />)}</Row>
-          </section>
-        ))
+    <div className="noscroll flex gap-3 overflow-x-auto px-6 py-1">
+      {KINDS.map((k) => (
+        <button key={k} onClick={() => onChange(k)} className="flex shrink-0 flex-col items-center gap-1.5">
+          {/* chosen: a snow ring with the app's 5px channel round the photo */}
+          <span className={cx("grid h-[66px] w-[66px] place-items-center rounded-full transition-shadow", k === value && "shadow-[inset_0_0_0_2px_var(--color-snow)]")}>
+            <span className="relative block h-[52px] w-[52px] overflow-hidden rounded-full"><Img src={KIND_PIC[k]} /></span>
+          </span>
+          <span className={cx("text-[13px]", k === value ? "font-medium text-white" : "text-white/55")}>{k}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+function KindBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }}
+      className="absolute inset-x-0 top-0 z-10 border-b border-white/8 bg-bg pb-3 pt-[54px]">
+      <div className="noscroll flex gap-2 overflow-x-auto px-6">
+        {KINDS.map((k) => (
+          <button key={k} onClick={() => onChange(k)} className={cx("flex h-9 shrink-0 items-center gap-2 rounded-full pl-1 pr-3.5 text-[14px] transition-colors", k === value ? "bg-snow font-medium text-ink" : "bg-card text-white/75")}>
+            <span className="relative block h-7 w-7 overflow-hidden rounded-full"><Img src={KIND_PIC[k]} /></span>{k}
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+const Chip = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) => (
+  <button onClick={onClick} className={cx("h-9 shrink-0 rounded-full px-3.5 text-[14px] transition-colors", on ? "bg-snow font-medium text-ink" : "bg-card text-white/70")}>{children}</button>
+);
+const SORTS = ["Newest", "Oldest", "A to Z"];
+const Row = ({ children }: { children: ReactNode }) => <div className="noscroll mt-3 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-2">{children}</div>;
+
+export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
+  const tray = opts.card === "tray";
+  const [view, setView] = useState<string>(tab);
+  const [cat, setCat] = useState("All");
+  const [bar, setBar] = useState(false);
+  const kinds = useRef<HTMLDivElement>(null);
+  // Your patterns: search, status, kind, sort, and carousel or grid
+  const [q, setQ] = useState("");
+  const [st, setSt] = useState("All");
+  const [kind, setKind] = useState<string | null>(null);
+  const [sort, setSort] = useState(0);
+  const [grid, setGrid] = useState(false);
+  const make = view === "Patterns to make";
+  const scrolled = (el: HTMLDivElement) => {
+    const r = kinds.current;
+    setBar(!!r && make && opts.filters === "shrink" && el.scrollTop > r.offsetTop + r.offsetHeight - 96);
+  };
+  let mine = (has ? MINE : []).filter((m) => (st === "All" || (st === "Printed" ? m.status === "Printed" : m.status !== "Printed")) && (!kind || kindOfMine(m) === kind) && (!q.trim() || m.name.toLowerCase().includes(q.trim().toLowerCase())));
+  if (sort === 1) mine = [...mine].reverse();
+  if (sort === 2) mine = [...mine].sort((a, b) => a.name.localeCompare(b.name));
+  const months = sort === 2 ? [""] : [...new Set(mine.map((m) => m.month))];
+  const titleCta = opts.cta === "title" && has && !make;
+  return (
+    <Shell onScroll={scrolled} overlay={<AnimatePresence>{bar && <KindBar value={cat} onChange={setCat} />}</AnimatePresence>}>
+      <div className="px-6">
+        <div className="flex h-11 items-center justify-between gap-3">
+          <Title />
+          {titleCta && <Pill className="!h-10 !w-auto shrink-0 gap-1.5 px-4 !text-[15px]" icon={<Icon name="plus" size={18} strokeWidth={2.2} />}>Create</Pill>}
+        </div>
+        <Segmented className="mt-4" items={TABS} value={view} onChange={(v) => { setView(v); setBar(false); }} />
+      </div>
+      {make ? (
+        <>
+          <div ref={kinds} className="mt-5"><KindPhotos value={cat} onChange={setCat} /></div>
+          {cat === "All" ? (
+            // a row per kind, like albums
+            CATEGORIES.map((c) => (
+              <section key={c} className="mt-6">
+                <SectionHead title={CAT[c]} n={byKind(CAT[c]).length} />
+                <Row>{byKind(CAT[c]).map((t) => <TplSmall key={t.key} t={t} has={has} tray={tray} w={156} />)}</Row>
+              </section>
+            ))
+          ) : (
+            <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 px-6">{byKind(cat).map((t) => <TplSmall key={t.key} t={t} has={has} tray={tray} />)}</div>
+          )}
+        </>
       ) : has ? (
         <>
-          <div className="noscroll mt-5 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6">{MINE.map((m) => <TallCard key={m.id} m={m} />)}</div>
-          <section className="mt-7">
-            <SectionHead title="Make next" n={TEMPLATES.length} />
-            <Row>{TEMPLATES.filter((t) => !madeOf(has, t.key)).slice(0, 5).map((t) => <SmallCard key={t.key} t={t} has={has} w={132} />)}</Row>
-          </section>
+          {/* find one fast: search, then status and kind, then the order; carousel or grid */}
+          <div className="mt-4 flex gap-2.5 px-6">
+            <label className="ruler-track flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full px-4 text-white/45">
+              <Icon name="search" size={17} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your patterns" className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40" />
+            </label>
+            <div className="ruler-track flex h-11 shrink-0 items-center rounded-full p-1" role="radiogroup" aria-label="View">
+              {[false, true].map((g) => (
+                <button key={String(g)} role="radio" aria-checked={grid === g} aria-label={g ? "Grid" : "Carousel"} onClick={() => setGrid(g)} className={cx("relative grid h-9 w-10 place-items-center rounded-full transition-colors", grid === g ? "text-white" : "text-white/45")}>
+                  {grid === g && <motion.span layoutId="lbview" className="knob absolute inset-0 rounded-full" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
+                  <Icon name={g ? "grid" : "image"} size={17} className="relative" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="noscroll mt-3 flex items-center gap-2 overflow-x-auto px-6">
+            {["All", "In progress", "Printed"].map((s) => <Chip key={s} on={st === s} onClick={() => setSt(s)}>{s}</Chip>)}
+            <span className="mx-1 h-5 w-px shrink-0 bg-white/12" />
+            {KINDS.slice(1).map((k) => <Chip key={k} on={kind === k} onClick={() => setKind(kind === k ? null : k)}>{k}</Chip>)}
+          </div>
+          <div className="mt-4 flex items-center justify-between px-6 text-[14px] text-white/55">
+            <span><span className="tabular-nums">{mine.length}</span> {mine.length === 1 ? "pattern" : "patterns"}</span>
+            <button onClick={() => setSort((sort + 1) % SORTS.length)} className="flex h-8 items-center gap-1 text-white/80">{SORTS[sort]}<Icon name="chevD" size={15} /></button>
+          </div>
+          {mine.length === 0 ? (
+            <div className="mt-10 text-center">
+              <p className="text-[17px]">No patterns match</p>
+              <button onClick={() => { setQ(""); setSt("All"); setKind(null); }} className="tap mt-2 h-10 text-[15px] font-medium text-peri">Clear the search and filters</button>
+            </div>
+          ) : grid ? (
+            months.map((mo) => (
+              <section key={mo} className="mt-3 px-6">
+                {mo && <h3 className="mb-3 text-[15px] text-white/55">{mo}</h3>}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-4 pb-3">
+                  {opts.cta === "row" && mo === months[0] && <NewCard tray={tray} />}
+                  {mine.filter((m) => !mo || m.month === mo).map((m) => <MineSmall key={m.id} m={m} tray={tray} />)}
+                </div>
+              </section>
+            ))
+          ) : (
+            <>
+              <div className="noscroll mt-1 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-2">
+                {opts.cta === "row" && <NewCard tray={tray} tall />}
+                {mine.map((m) => <TallCard key={m.id} m={m} tray={tray} />)}
+              </div>
+              <section className="mt-6">
+                <SectionHead title="Make next" n={TEMPLATES.length} />
+                <Row>{TEMPLATES.filter((t) => !madeOf(has, t.key)).slice(0, 5).map((t) => <TplSmall key={t.key} t={t} has={has} tray={tray} w={132} />)}</Row>
+              </section>
+            </>
+          )}
         </>
       ) : (
         <>
-          {/* one tall card where your first pattern will be: three looks fanned out like photos in your hand */}
-          <div className="card-soft relative mx-6 mt-5 h-[400px] overflow-hidden rounded-[30px]">
-            <div className="absolute inset-x-0 top-7 h-[210px]">
+          {/* one tall card where your first pattern will be: three looks fanned out like photos in your hand, spilling
+              over its top and sides (the tabs keep clear: the card starts low enough) */}
+          <div className={cx("relative mx-6 mt-[58px] h-[420px] rounded-[30px]", !tray && "card-soft")} style={tray ? RIM : undefined}>
+            {tray && <div className="absolute inset-[7px] bottom-[196px] rounded-[26px]" style={SURFACE} />}
+            <div className="absolute inset-x-0 top-[-34px] h-[230px]">
               {[P.rust, P.green, P.mauve].map((src, i) => (
-                <span key={src} className="absolute left-1/2 top-0 h-[190px] w-[142px] overflow-hidden rounded-[18px] shadow-[0_14px_30px_-10px_rgb(0_0_0/.7)]"
-                  style={{ transform: `translateX(calc(-50% + ${(i - 1) * 74}px)) translateY(${i === 1 ? 0 : 16}px) rotate(${(i - 1) * 8}deg)`, zIndex: i === 1 ? 2 : 1 }}>
+                <span key={src} className="absolute left-1/2 top-0 h-[200px] w-[150px] overflow-hidden rounded-[18px] shadow-[0_18px_34px_-12px_rgb(0_0_0/.75)]"
+                  style={{ transform: `translateX(calc(-50% + ${(i - 1) * 104}px)) translateY(${i === 1 ? 0 : 22}px) rotate(${(i - 1) * 10}deg)`, zIndex: i === 1 ? 2 : 1 }}>
                   <Img src={src} />
                 </span>
               ))}
             </div>
             <div className="absolute inset-x-5 bottom-5 text-center">
-              <p className="text-[22px] leading-tight tracking-[-.02em]">Your first pattern starts with a picture</p>
-              <p className="mx-auto mt-1.5 max-w-[270px] text-[15px] leading-snug text-white/60">A photo, a sketch or a few words, drafted to your measurements.</p>
+              <p className={cx("text-[22px] leading-tight tracking-[-.02em]", tray && "text-ink")}>Your first pattern starts with a picture</p>
+              <p className={cx("mx-auto mt-1.5 max-w-[270px] text-[15px] leading-snug", tray ? "text-slate" : "text-white/60")}>A photo, a sketch or a few words, drafted to your measurements.</p>
               <Pill className="mt-4">Create a pattern</Pill>
             </div>
           </div>
           <section className="mt-7">
             <SectionHead title="Or start from a pattern" n={TEMPLATES.length} />
-            <Row>{TEMPLATES.slice(0, 5).map((t) => <SmallCard key={t.key} t={t} has={false} w={132} />)}</Row>
+            <Row>{TEMPLATES.slice(0, 5).map((t) => <TplSmall key={t.key} t={t} has={false} tray={tray} w={132} />)}</Row>
           </section>
         </>
       )}
@@ -493,6 +682,7 @@ export const BRIEFS: Record<string, string[]> = {
   lookbook: [
     "Your patterns: the picture each pattern started from (the person's own photo, screenshot or sketch from the studio), so nothing to make. A pattern made from words alone falls back to the drawn garment on Crown.",
     "Patterns to make: one portrait photo per pattern (10), 3:4, about 900 × 1200, the garment worn, all shot the same way (same light, same distance) so the rows read as one set.",
+    "Filters: five round photos (all, dresses, tops, trousers, skirts), square, about 300 × 300, the garment or a detail filling the circle.",
     "Empty state: three looks to fan out (any three of the ten).",
   ],
   runway: [
