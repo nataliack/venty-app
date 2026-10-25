@@ -690,7 +690,7 @@ export function Sweep({ on }: { on: boolean }) {
 type Caster = { g: () => THREE.Group | null; w: number; h: number; t: number; r: number; o: () => number };
 const CastersCtx = createContext<Map<string, Caster> | null>(null);
 const LIGHT = new THREE.Vector3(0.24, -0.22, -1).normalize(); // the way the light travels: from a broad light in front, a little up and to the left
-const REST = 0.075; // how far the lowest corner rests above the card below, in scene units (about 2 mm on a card)
+const REST = 0.1; // how far the lowest corner rests above the card below, in scene units (about 2 mm on a card)
 const castVert = `varying vec2 vLocal; varying vec3 vWorld;
 void main() { vLocal = position.xy; vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const castFrag = `varying vec2 vLocal; varying vec3 vWorld;
@@ -707,7 +707,7 @@ void main() {
   vec3 q = vWorld - uL * tau - uPa;
   float d = box(vec2(dot(q, uEx), dot(q, uEy)), uHalf, uR);
   // a soft edge centred on the shadow's true edge, wider the further the card above is; fainter the further, too
-  float pen = 0.06 + 0.5 * tau;
+  float pen = 0.08 + 0.5 * tau;
   float a = 1.0 - smoothstep(-pen, pen, d);
   // only on the card it falls on (its own rounded corners, in millimetres), with a hair of smoothing there
   float inside = 1.0 - smoothstep(-0.2, 0.2, box(vLocal, uBHalf, uBR));
@@ -754,7 +754,7 @@ function castFrame(pool: THREE.Mesh[], v: CastVecs, reg: Map<string, Caster> | n
     m.matrix.copy(B.g.matrixWorld).multiply(v.lift.makeTranslation(0, 0, side * (B.c.t / 2 + 0.04))); m.matrixWorldNeedsUpdate = true;
     u.uPa.value.copy(v.pa); u.uEx.value.copy(v.ex); u.uEy.value.copy(v.ey); u.uHalf.value.set(hw, hh); u.uR.value = r;
     u.uBHalf.value.set(B.c.w / 2, B.c.h / 2); u.uBR.value = B.c.r;
-    u.uOpacity.value = 0.3 * Math.min(A.c.o(), B.c.o()) * THREE.MathUtils.smoothstep(gap, 0.4, 0.9);
+    u.uOpacity.value = 0.62 * Math.min(A.c.o(), B.c.o()) * THREE.MathUtils.smoothstep(gap, 0.4, 0.9);
     m.visible = true;
   }
 }
