@@ -1,13 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
-import { TEMPLATES, CATEGORIES, LEVELS, templateBy, templateDetails, kindOf, lengthCmFor, type Category, type GarmentKey } from "@/lib/data";
-import { Screen, TopBar, TopAction, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, Option, Sheet, cx, useToast } from "@/components/ui";
+import { TEMPLATES, LEVELS, templateBy, templateDetails, kindOf, lengthCmFor, type Category, type GarmentKey } from "@/lib/data";
+import { Screen, TopBar, TopAction, Eyebrow, H1, HS, Lead, Pill, Glow, Glass, Chip, Check, Segmented, Sheet, SheetHead, cx, useToast } from "@/components/ui";
 import { Split, useDesk } from "@/components/ui";
 import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { draftSpec } from "./pattern";
+import { useKeyboard } from "./studio";
+import { LOOK, CAT, KINDS, byKind, LEVELS_, PIECES_, piecesIn, Img, Lvl, Frame, MadeMark, KindTiles, PressedPhoto, PINNED, pinIn, ToolBtn, SearchOpen, OnChips, Group, SheetFooter } from "./library";
 
 // Card: the flat drawing, the name, and one quiet line (level · pieces). Hover only lifts the edge.
 export function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; desk: boolean; onClick: () => void }) {
@@ -24,68 +26,131 @@ export function TplCard({ t, desk, onClick }: { t: (typeof TEMPLATES)[number]; d
 // difficulty as three small bars, like the bars on a pattern envelope
 const Level = ({ n }: { n: number }) => <span className="flex items-end gap-[2px]" aria-hidden>{[1, 2, 3].map((k) => <span key={k} className={cx("w-[3px] rounded-full", k <= n ? "bg-peri" : "bg-white/20")} style={{ height: 4 + k * 3 }} />)}</span>;
 
-const CAT_LABEL: Record<Category, string> = { Dresses: "Dresses", Tops: "Tops", Pants: "Trousers", Skirts: "Skirts" };
 
+// Patterns to make (25 Oct 2026, "Shelf", chosen in the lab /lab/mc2): the page "Start from a pattern" opens, in the
+// pattern library's build. Back, then the title with Search and Filter (level, pieces) beside it; the kinds as pressed
+// photo tiles; one grid of dark trays. Scrolled past the kinds (phones), they are pinned to the top as pills. Request a
+// pattern is not a pattern, so it is never a card: one quiet line under the grid (and under "No patterns match"),
+// opening a sheet with one box to type in. That sheet rises above the iPhone keyboard (useKeyboard), so the box and
+// Send stay in view while typing.
 export function Templates({ p }: { p?: Record<string, unknown> }) {
-  const { go } = useApp();
-  const [cat, setCat] = useState<Category>((p?.cat as Category) ?? "Dresses");
-  const [q, setQ] = useState<string | null>(null);
-  const [level, setLevel] = useState<string>("Any level");
-  const [pickLevel, setPickLevel] = useState(false);
-  const picked = !!p?.picked; // came with a body already chosen
-  const list = TEMPLATES.filter((t) => t.category === cat && (level === "Any level" || t.level === level) && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
-  const open = (key: GarmentKey) => go("template", { key, picked });
-  const { toast, node } = useToast();
+  const { go, patterns } = useApp();
   const desk = useDesk();
-  // one row of text tabs with a sliding underline: no stacked pills
-  const tabs = (
-    <div className="noscroll -mx-6 flex gap-6 overflow-x-auto border-b border-white/10 px-6 lg:mx-0 lg:gap-8 lg:px-0">
-      {CATEGORIES.map((c) => (
-        <button key={c} onClick={() => setCat(c)} className={cx("relative shrink-0 pb-3 text-[17px] transition-colors lg:text-[19px]", c === cat ? "text-white" : "text-white/45 hover:text-white/75")}>
-          {CAT_LABEL[c]}
-          {c === cat && <motion.span layoutId="cat-line" className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-white" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
-        </button>
-      ))}
-    </div>
+  const picked = !!p?.picked; // came with a body already chosen
+  const [cat, setCat] = useState(p?.cat ? CAT[p.cat as Category] : "All");
+  const [q, setQ] = useState("");
+  const [lv, setLv] = useState<string[]>([]);
+  const [pc, setPc] = useState<string[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [sheet, setSheet] = useState<null | "filter" | "request">(null);
+  const { toast, node } = useToast();
+  const list = TEMPLATES.filter((t) => byKind(cat).includes(t) && (!lv.length || lv.includes(t.level)) && (!pc.length || pc.some((x) => piecesIn(t.pieces, x))) && (!q.trim() || t.name.toLowerCase().includes(q.trim().toLowerCase())));
+  const on = [...lv.map((x) => ({ k: x, off: () => setLv(lv.filter((y) => y !== x)) })), ...pc.map((x) => ({ k: `${x} pieces`, off: () => setPc(pc.filter((y) => y !== x)) }))];
+  const clear = () => { setLv([]); setPc([]); };
+  const open = (key: GarmentKey) => go("template", { key, picked });
+  const madeOf = (g: GarmentKey) => patterns.find((x) => x.garment === g);
+
+  // the kinds pinned once scrolled past (phones), found from the screen's own scroller
+  const anchor = useRef<HTMLDivElement>(null);
+  const kinds = useRef<HTMLDivElement>(null);
+  const [bar, setBar] = useState(false);
+  useEffect(() => {
+    const sc = anchor.current?.closest(".scroller");
+    if (!sc || desk) { setBar(false); return; }
+    const check = () => { const k = kinds.current?.getBoundingClientRect(); setBar(!!k && k.bottom - sc.getBoundingClientRect().top < 60); };
+    check();
+    sc.addEventListener("scroll", check, { passive: true });
+    return () => sc.removeEventListener("scroll", check);
+  }, [desk]);
+  const pinned = (
+    <AnimatePresence>
+      {bar && (
+        <motion.div key="kinds" {...pinIn} className={PINNED} style={{ paddingTop: "var(--top)" }}>
+          <div className="noscroll flex gap-2 overflow-x-auto px-6">
+            {KINDS.map((x) => (
+              <button key={x} onClick={() => setCat(x)} className={cx("flex h-10 shrink-0 items-center gap-2 rounded-full pl-[5px] pr-4 text-[14px] transition-colors", x === cat ? "bg-snow font-medium text-ink" : "bg-card text-white/75")}>
+                <PressedPhoto k={x} size={30} r={15} light={x === cat} />{x}
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-  const bar = (
-    <div className="mt-4 flex items-center justify-between">
-      <span className="text-[15px] text-white/60">{list.length} {list.length === 1 ? "pattern" : "patterns"}</span>
-      <button onClick={() => setPickLevel(true)} className="tap flex h-10 items-center gap-1.5 rounded-full border border-white/15 px-4 text-[15px] font-medium">{level}<Icon name="chevD" size={16} /></button>
-    </div>
-  );
-  const request = (
-    <button onClick={() => toast("Thanks, we’ll add more soon")} className={cx("tap flex w-full flex-col items-center justify-center border border-dashed border-white/25 transition-colors hover:border-white/45", desk ? "h-[min(420px,52dvh)] rounded-[30px]" : "h-[236px] rounded-[24px]")}>
-      <Icon name="plus" size={desk ? 28 : 24} className="text-white/70" /><span className="mt-3 text-[15px] font-medium text-white/75">Request a pattern</span>
-    </button>
-  );
-  const grid = (
-    <motion.div key={cat + level} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={cx("grid", desk ? "mt-6 grid-cols-4 gap-5" : "mt-4 grid-cols-2 gap-3")}>
-      {list.map((t) => <TplCard key={t.key} t={t} desk={desk} onClick={() => open(t.key)} />)}
-      {!list.length && <p className="col-span-full py-6 text-[16px] text-white/60">No {level === "Any level" ? "" : level.toLowerCase() + " "}{CAT_LABEL[cat].toLowerCase()} yet.</p>}
-      {(desk ? list.length < 4 : list.length % 2 === 1) && request}
-    </motion.div>
+  const requestLine = (cls?: string) => (
+    <p className={cx("text-center text-[15px] text-white/50", cls)}>Can’t find what you’re after? <button onClick={() => setSheet("request")} className="font-medium text-peri">Request a pattern</button></p>
   );
   return (
-    <Screen wide={desk}>
-      <TopBar left="back" right="search" onRight={() => setQ(q === null ? "" : null)} />
-      {q !== null && <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patterns" className="glass mt-3 h-12 w-full rounded-full px-5 text-[16px] outline-none lg:max-w-[420px]" />}
-      <H1 className="mt-4">Patterns to make</H1>
-      <Lead className="mt-2">Choose a style, fit it to your body and get the pattern.</Lead>
-      <div className="mt-6">{tabs}</div>
-      {bar}
-      {grid}
+    <Screen noPad wide={desk} bg={pinned}>
+      <div ref={anchor} className="px-6 lg:px-0">
+        <TopBar left="back" />
+        <div className="mt-3">
+          {searching ? <SearchOpen q={q} setQ={setQ} placeholder="Search patterns" onCancel={() => { setSearching(false); setQ(""); }} /> : (
+            <div className="flex min-h-11 items-center justify-between gap-3">
+              <H1 className="min-w-0">Patterns to make</H1>
+              <span className="flex shrink-0 items-center gap-2">
+                <ToolBtn icon="search" label="Search" onClick={() => setSearching(true)} />
+                <ToolBtn icon="sliders" label="Filter" n={on.length} onClick={() => setSheet("filter")} />
+              </span>
+            </div>
+          )}
+        </div>
+        <Lead className="mt-2">Choose a style, then fit it to your body.</Lead>
+      </div>
+      <div ref={kinds} className="mt-5"><KindTiles value={cat} onChange={setCat} /></div>
+      <OnChips items={on} onClear={clear} />
+      {list.length ? (
+        <>
+          <div className="mt-5 grid grid-cols-2 items-start gap-x-3 gap-y-4 px-6 sm:grid-cols-3 lg:grid-cols-5 lg:px-0">
+            {list.map((t) => <Frame key={t.key} imgH={206} pic={<><Img src={LOOK[t.key]} /><MadeMark made={madeOf(t.key)} /></>} name={t.name} line={<Lvl t={t} />} onClick={() => open(t.key)} />)}
+          </div>
+          {requestLine("mt-8 px-6")}
+        </>
+      ) : (
+        <div className="mt-10 px-6 text-center">
+          <p className="text-[17px]">No patterns match</p>
+          <button onClick={() => { setQ(""); clear(); setCat("All"); }} className="tap mt-2 h-10 text-[15px] font-medium text-peri">Clear the search and filters</button>
+          {requestLine("mt-6")}
+        </div>
+      )}
       <div className="h-6" />
-      <Sheet open={pickLevel} onClose={() => setPickLevel(false)}>
-        <h3 className="text-[22px] font-normal tracking-[-.02em]">Sewing level</h3>
-        <div className="mt-4 flex flex-col gap-2">{["Any level", ...LEVELS].map((l) => (
-          <Option key={l} on={level === l} onClick={() => { setLevel(l); setPickLevel(false); }} className="flex h-[60px] items-center gap-3 rounded-[18px] px-4">
-            {l !== "Any level" && <Level n={LEVELS.indexOf(l as (typeof LEVELS)[number]) + 1} />}<span className="text-[17px]">{l}</span>
-          </Option>
-        ))}</div>
+      <Sheet open={sheet === "filter"} onClose={() => setSheet(null)}>
+        <SheetHead title="Filter" />
+        <Group title="Level" items={LEVELS_} value={lv} onChange={setLv} />
+        <Group title="Pieces" items={PIECES_} value={pc} onChange={setPc} />
+        <SheetFooter n={list.length} canClear={on.length > 0} onClear={clear} onShow={() => setSheet(null)} />
       </Sheet>
+      <RequestSheet open={sheet === "request"} onClose={() => setSheet(null)} onSent={() => { setSheet(null); toast("Thanks, your request is in"); }} />
       {node}
     </Screen>
+  );
+}
+
+// Request a pattern: one box to type in and Send, faded until something is typed (tapping it empty puts you in the
+// box). On an iPhone the keyboard lies over the page, so the sheet rises by what it covers and the box and Send stay
+// above it (Android resizes the page itself, so there the sheet simply stays at the bottom). The box can be scrolled
+// and selected in without dragging the sheet down.
+function RequestSheet({ open, onClose, onSent }: { open: boolean; onClose: () => void; onSent: () => void }) {
+  const [text, setText] = useState("");
+  const box = useRef<HTMLTextAreaElement>(null);
+  const kb = useKeyboard(open);
+  const lift = kb.open ? Math.max(0, window.innerHeight - kb.top - kb.height) : 0;
+  useEffect(() => {
+    const el = box.current; if (!el) return;
+    const stop = (e: PointerEvent) => e.stopPropagation();
+    el.addEventListener("pointerdown", stop);
+    return () => el.removeEventListener("pointerdown", stop);
+  }, [open]);
+  const ready = text.trim().length > 0;
+  const send = () => { if (!ready) { box.current?.focus(); return; } box.current?.blur(); setText(""); onSent(); };
+  return (
+    <Sheet open={open} onClose={() => { box.current?.blur(); onClose(); }} lift={lift}>
+      <SheetHead title="Request a pattern">Tell us what you’d like to make.</SheetHead>
+      {/* pressed into the sheet like the search field; empty, with a hint of what to write. 16px, so iOS never zooms */}
+      <textarea ref={box} value={text} onChange={(e) => setText(e.target.value)} rows={4} enterKeyHint="send" aria-label="Your request" placeholder="A wrap top with puff sleeves, for a beginner"
+        className="ruler-track mt-5 block w-full resize-none rounded-[20px] px-4 py-3.5 text-[16px] leading-snug text-white outline-none placeholder:text-white/35" />
+      <Pill className={cx("mt-5", !ready && "is-off")} onClick={send}>Send request</Pill>
+    </Sheet>
   );
 }
 
