@@ -1,12 +1,13 @@
 "use client";
 // The home-screen icon selector on "Add Venty to your home screen" (chosen in the lab, /lab/mc3, 26 Oct 2026). The icons
-// slide in a track pressed into the page, the measuring dial's own (.ruler-track, its ruler white): drag or flick it, tap
+// slide in a track pressed into the paper (like the measuring dial's, in the paper's light build): drag or flick it, tap
 // an icon, or use the arrow keys. It loops without end and never jumps: each icon is placed by its running position (…, -1,
 // 0, 1, …) and only the nine nearest the centre are drawn, each named by its position, so nothing is cloned or reset as it
-// wraps round. It settles on the nearest icon, which is the choice. Until it is touched every icon sits pressed in at one
-// size and nothing is chosen; then the centre one rises out of the track, casting a short shadow. The gaps between icons
+// wraps round. It settles on the nearest icon, which is the choice. On arrival the centre icon (today's, the one the phone
+// gets if none is chosen) is already raised, casting a short shadow, a little bigger than the others; once the track is
+// touched it rises the rest of the way. The gaps between icons
 // stay equal while one grows (each is placed from its neighbour's edge). Under the icons a ruler moves with them in the
-// measuring ruler's geometry (Ruler in art.tsx), its ticks stopping 1px above the track's floor; the icons fade out towards
+// measuring ruler's geometry (Ruler in art.tsx, light), its ticks stopping 1px above the track's floor; the icons fade out towards
 // the track's ends.
 import { useEffect, useRef, useState } from "react";
 import { animate, useMotionValue, useMotionValueEvent, useReducedMotion, type AnimationPlaybackControls } from "motion/react";
@@ -20,6 +21,8 @@ const BIG = 64, SMALL = 46, GAP = 16, TOP = 13, RULER = 24, FLOOR = 1, H = TOP +
 const PX = 9, TICK = { major: [0.42, 0.42, 1.5], mid: [0.26, 0.24, 1], minor: [0.15, 0.14, 1] } as const;
 const STEP = (BIG + SMALL) / 2 + GAP; // a finger's travel for one icon
 const R = TOP + BIG * 0.2237; // the track's corner: the raised icon's corner plus the room above it, so they run parallel
+const REST = 0.4; // how far the centre icon has grown before the track is touched
+const INK = "18 19 28"; // the paper's ink, for the shades
 
 // the loop's motion: where it is (p, in icons), and the finger, flick, tap and arrow-key handlers that move it and settle
 // it on an icon. `touched`: moved by hand at least once (until then nothing is chosen)
@@ -84,10 +87,10 @@ function useIconLoop(k: IconKey | null, setK: (k: IconKey) => void, step: number
 
 export function IconTrack({ k, setK }: { k: IconKey | null; setK: (k: IconKey) => void }) {
   const { p, near, here, touched, ref, handlers } = useIconLoop(k, setK, STEP);
-  // the centre icon rises once the track is first touched, over a moment, never with a jump
+  // the centre icon grows the rest of the way once the track is first touched, over a moment, never with a jump
   const still = useReducedMotion();
-  const lift = useMotionValue(touched ? 1 : 0);
-  const [up, setUp] = useState(touched ? 1 : 0);
+  const lift = useMotionValue(touched ? 1 : REST);
+  const [up, setUp] = useState(touched ? 1 : REST);
   useMotionValueEvent(lift, "change", setUp);
   useEffect(() => { if (touched) { if (still) lift.set(1); else animate(lift, 1, { duration: 0.35, ease: [0.2, 0.9, 0.3, 1.2] }); } }, [touched, still, lift]);
 
@@ -106,20 +109,21 @@ export function IconTrack({ k, setK }: { k: IconKey | null; setK: (k: IconKey) =
   return (
     <div ref={ref} role="slider" tabIndex={0} aria-label="Icon" aria-valuemin={0} aria-valuemax={N - 1} aria-valuenow={mod(near, N)} aria-valuetext={touched ? here.name : "None chosen"}
       data-need={k ? undefined : "1"} {...handlers}
-      className="ruler-track relative cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing"
+      className="relative cursor-grab touch-pan-y select-none bg-[#12131c]/[.07] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85),0_1px_0_rgb(255_255_255/.6)] outline-none active:cursor-grabbing"
       style={{ height: H, borderRadius: R, overflow: "hidden", clipPath: `inset(0 round ${R}px)` /* Safari leaks moving layers past a rounded overflow */ }}>
       {/* the icons, fading out towards the track's ends */}
       <div className="absolute inset-0 [mask-image:linear-gradient(90deg,transparent,#000_24%,#000_76%,transparent)]">
         {slots.map((j, i) => {
-          const s = size(j) / BIG, f = Math.max(0, 1 - Math.abs(j - p)) * up;
+          // g: how near the centre (its light, shadow and place on top, from the first moment); its size grows with `up`
+          const s = size(j) / BIG, g = Math.max(0, 1 - Math.abs(j - p));
           return (
             <span key={j} className="pointer-events-none absolute left-1/2" aria-hidden
               style={{ width: BIG, height: BIG, top: TOP, marginLeft: -BIG / 2, transform: `translateX(${xs[i] - shift}px) scale(${s})`,
-                filter: `brightness(${0.9 + 0.1 * f}) saturate(${0.82 + 0.18 * f})`, zIndex: f > 0.5 ? 30 : 10 - Math.abs(j - near) }}>
+                filter: `brightness(${0.9 + 0.1 * g}) saturate(${0.82 + 0.18 * g})`, zIndex: g > 0.5 ? 30 : 10 - Math.abs(j - near) }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={iconSrc(ICONS[mod(j, N)].k, 192)} alt="" width={BIG} height={BIG} draggable={false} className="block h-full w-full rounded-[22.37%]" />
               {/* raised: a short shadow on the floor and a lit top edge; pressed: a faint shade inside its top */}
-              <span className="absolute inset-0 rounded-[22.37%]" style={{ boxShadow: f > 0.5 ? "0 5px 9px -3px rgb(0 0 0 / .42), 0 1px 2px rgb(0 0 0 / .22), inset 0 1px 0 rgb(255 255 255 / .35)" : "inset 0 1px 2px rgb(0 0 0 / .22)" }} />
+              <span className="absolute inset-0 rounded-[22.37%]" style={{ boxShadow: g > 0.5 ? `0 5px 9px -3px rgb(${INK} / .42), 0 1px 2px rgb(${INK} / .22), inset 0 1px 0 rgb(255 255 255 / .35)` : `inset 0 1px 2px rgb(${INK} / .22)` }} />
             </span>
           );
         })}
@@ -129,12 +133,12 @@ export function IconTrack({ k, setK }: { k: IconKey | null; setK: (k: IconKey) =
         {Array.from({ length: last - first + 1 }, (_, m) => {
           const i = first + m, kind = mod(i, 10) === 0 ? TICK.major : mod(i, 2) === 0 ? TICK.mid : TICK.minor;
           const x = w / 2 + i * PX - off;
-          return <line key={i} x1={x} x2={x} y1={RULER - RULER * kind[0]} y2={RULER} stroke="#fff" strokeOpacity={kind[1]} strokeWidth={kind[2]} />;
+          return <line key={i} x1={x} x2={x} y1={RULER - RULER * kind[0]} y2={RULER} stroke="#0b0c15" strokeOpacity={kind[1]} strokeWidth={kind[2]} />;
         })}
       </svg>
-      <span className="pointer-events-none absolute left-1/2 z-40 w-[2px] -translate-x-1/2 rounded-t-full bg-white" style={{ bottom: FLOOR, height: RULER * 0.62 }} aria-hidden />
+      <span className="pointer-events-none absolute left-1/2 z-40 w-[2px] -translate-x-1/2 rounded-t-full bg-primary-2" style={{ bottom: FLOOR, height: RULER * 0.62 }} aria-hidden />
       {/* the walls' shade, over the icons at the track's ends so they sit down in it */}
-      <span className="pointer-events-none absolute inset-0 z-20" style={{ borderRadius: R, boxShadow: "inset 0 3px 6px rgb(0 0 0 / .5), inset 14px 0 12px -12px rgb(0 0 0 / .7), inset -14px 0 12px -12px rgb(0 0 0 / .7)" }} aria-hidden />
+      <span className="pointer-events-none absolute inset-0 z-20" style={{ borderRadius: R, boxShadow: `inset 0 3px 6px rgb(${INK} / .16), inset 14px 0 12px -12px rgb(${INK} / .3), inset -14px 0 12px -12px rgb(${INK} / .3)` }} aria-hidden />
     </div>
   );
 }

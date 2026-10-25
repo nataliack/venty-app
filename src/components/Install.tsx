@@ -11,7 +11,7 @@ import { useApp } from "@/lib/store";
 import { iconSrc, type IconKey } from "@/lib/appIcons";
 import { NextButton, RB, TextButton, useDesk } from "./ui";
 import { IconTrack } from "./IconTrack";
-import { Bezel, Pic, StepRow, type Step } from "./InstallSteps";
+import { Pic, StepRow, type Step } from "./InstallSteps";
 
 type BIP = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 let deferred: BIP | null = null;
@@ -94,7 +94,7 @@ export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
           ) : (
             <>
               <Label>{prompt ? "Then confirm it in Chrome" : "Then add it from Chrome’s menu"}</Label>
-              <Bezel className="mt-3"><Pic k={prompt ? "chromeInstall" : "chromeMenu"} icon={icon} live /></Bezel>
+              <Pic k={prompt ? "chromeInstall" : "chromeMenu"} icon={icon} live className="mt-3" />
               <p className="mt-3 text-center text-[15px] leading-snug text-[#12131c]/60">
                 {prompt ? <>Chrome asks you to confirm,<br />then Venty is on your home screen.</> : <>Tap ⋮ at the top of Chrome,<br />then Add to Home screen.</>}
               </p>
@@ -105,7 +105,7 @@ export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
         <div className="shrink-0 px-6" style={{ paddingBottom: "var(--bottom)" }}>
           {/* on Android, Chrome installs for real, so that is the primary; on an iPhone a page cannot open Safari's Add to
               Home Screen, so a Done would only repeat Continue in my browser, and there is none */}
-          {os === "android" && prompt && <div className="mb-1 flex"><NextButton ready={!!appIcon} onClick={install} label="Add to home screen" className="flex-1" /></div>}
+          {os === "android" && prompt && <div className="mb-1 flex"><NextButton ready onClick={install} label="Add to home screen" className="flex-1" /></div>}
           <TextButton tone="paper" onClick={done}>Continue in my browser</TextButton>
         </div>
       </div>
