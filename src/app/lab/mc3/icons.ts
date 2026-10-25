@@ -8,7 +8,7 @@ export type IconKey = "today" | "night" | "primary" | "snow" | "pattern" | "pres
 
 export const ICONS: { k: IconKey; name: string; note: string }[] = [
   { k: "today", name: "Today", note: "The icon on the home screen now: the bird in white on Crown's navy." },
-  { k: "night", name: "Night", note: "The landing page's loading-screen night, the cornflower glow low and soft, the bird in snow." },
+  { k: "night", name: "Night", note: "The landing page's loading-screen night, lifted very faintly with cornflower from below, the bird in snow." },
   { k: "primary", name: "Primary", note: "The landing page's favicon gradient (Haze): periwinkle washing in from the top left over cornflower." },
   { k: "snow", name: "Snow", note: "Snow like the tab bar and the light tops, the bird in primary." },
   { k: "pattern", name: "Pattern", note: "Pattern paper with its periwinkle grid, the bird in steel, lit from the top." },
@@ -55,11 +55,13 @@ export function iconSvg(k: Exclude<IconKey, "today">, bird: string): string {
   const mark = (fill: string, extra = "") => `<path d="${bird}" fill="${fill}" transform="${T}"${extra}/>`;
   switch (k) {
     case "night":
-      // the night with a glow rising from below, very soft: the lights wider than the tile (so no edge of them shows), each
-      // fading on a bell curve, low. The PNGs carry a touch of grain (GRAIN in tools/lab-mc3-icons.mjs) so the fade never bands
+      // the night, lifted very faintly from below: one light centred under the icon, so only its soft tail shows (no bright
+      // spot), wider than the icon (no edge), fading on a bell curve; at the bottom it lifts the night by about a third of
+      // the earlier glow and is all but gone three quarters of the way up. The PNGs carry a touch of grain (GRAIN in
+      // tools/lab-mc3-icons.mjs) so the fade never bands
       return wrap(
-        `<defs>${bell("n1", 512, 960, 950, 0.7, "#687ef5", 0.25)}${bell("n2", 512, 1020, 650, 0.62, "#4f63e0", 0.17)}${bell("n3", 512, 1060, 440, 0.55, "#8c9cf8", 0.07)}</defs>` +
-        rect("#0b0c15") + rect("url(#n1)") + rect("url(#n2)") + rect("url(#n3)") + mark("#f0f4fe"),
+        `<defs>${bell("n1", 512, 1150, 1000, 0.75, "#687ef5", 0.14)}</defs>` +
+        rect("#0b0c15") + rect("url(#n1)") + mark("#f0f4fe"),
       );
     case "primary":
       // Haze, the landing page's favicon (its purple sky, rendered with its lights spread wide): matched to the favicon's
