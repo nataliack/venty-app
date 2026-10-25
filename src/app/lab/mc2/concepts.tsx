@@ -18,16 +18,16 @@ export type Props = { has: boolean; tab: View; opts?: LookOpts };
 type Tpl = (typeof TEMPLATES)[number];
 
 // ─── stand-in pictures ───
-const P = {
+export const P = {
   green: "/auth/look-street-green.webp", mauve: "/auth/look-limo-mauve.webp", rust: "/auth/look-cliff-rust.webp", burgundy: "/auth/look-street-burgundy.webp",
   zip: "/auth/detail-zip.webp", corset: "/auth/detail-corset.webp", hems: "/auth/detail-hems.webp", bows: "/auth/detail-bows.webp", meadow: "/tour/meadow-640.webp",
 };
-const PHOTO: Record<GarmentKey, string> = {
+export const PHOTO: Record<GarmentKey, string> = {
   slip: P.mauve, wrap: P.green, aline: P.rust, flutter: P.green, cami: P.corset, tee: P.burgundy, shirt: P.bows,
   wideleg: P.hems, straight: P.zip, biasskirt: P.rust, mini: P.burgundy,
 };
 const KIND: Record<Category, string> = { Dresses: "Dress", Tops: "Top", Pants: "Trousers", Skirts: "Skirt" };
-const CAT: Record<Category, string> = { Dresses: "Dresses", Tops: "Tops", Pants: "Trousers", Skirts: "Skirts" };
+export const CAT: Record<Category, string> = { Dresses: "Dresses", Tops: "Tops", Pants: "Trousers", Skirts: "Skirts" };
 const LEVEL_N = { Easy: 1, Intermediate: 2, Hard: 3 } as Record<string, number>;
 
 // ─── eight patterns Ana has made, newest first ───
@@ -46,7 +46,7 @@ const madeOf = (has: boolean, g: GarmentKey) => (has ? MINE.find((m) => m.g === 
 const kindOfMine = (m: Mine) => CAT[TEMPLATES.find((t) => t.key === m.g)?.category ?? "Dresses"];
 const DOT = { Printed: "bg-primary", Fitting: "bg-peri", Draft: "bg-white/40" };
 
-const Img = ({ src, className }: { src: string; className?: string }) => <img src={src} alt="" draggable={false} className={cx("absolute inset-0 h-full w-full object-cover", className)} />;
+export const Img = ({ src, className }: { src: string; className?: string }) => <img src={src} alt="" draggable={false} className={cx("absolute inset-0 h-full w-full object-cover", className)} />;
 const Dot = ({ s, light }: { s: Mine["status"]; light?: boolean }) => <span className={cx("h-2 w-2 shrink-0 rounded-full", light && s === "Draft" ? "bg-ink/25" : DOT[s])} />;
 // difficulty as three small bars, as on a pattern envelope (the app's own Level)
 const Level = ({ n, light }: { n: number; light?: boolean }) => (
@@ -59,7 +59,7 @@ const Sub = ({ t, light, className }: { t: Tpl; light?: boolean; className?: str
 );
 
 // ─── the phone's screen: a scroll area and the real tab bar (its own layout group, so the phones never share a glide) ───
-function Shell({ light, children, bare, onScroll, overlay, footer }: { light?: boolean; children: ReactNode; bare?: boolean; onScroll?: (el: HTMLDivElement) => void; overlay?: ReactNode; footer?: ReactNode }) {
+export function Shell({ light, children, bare, onScroll, overlay, footer }: { light?: boolean; children: ReactNode; bare?: boolean; onScroll?: (el: HTMLDivElement) => void; overlay?: ReactNode; footer?: ReactNode }) {
   const id = useId();
   return (
     <LayoutGroup id={id}>
@@ -72,7 +72,7 @@ function Shell({ light, children, bare, onScroll, overlay, footer }: { light?: b
     </LayoutGroup>
   );
 }
-const Title = ({ light, className }: { light?: boolean; className?: string }) => <h1 className={cx("h1 !text-[34px]", light ? "text-ink" : "text-white", className)}>Pattern library</h1>;
+export const Title = ({ light, className }: { light?: boolean; className?: string }) => <h1 className={cx("h1 !text-[34px]", light ? "text-ink" : "text-white", className)}>Pattern library</h1>;
 const TABS: View[] = ["Your patterns", "Patterns to make"];
 // on a light page: solid, white thumb on a pressed snow track (nothing in the app is see-through)
 function LightSeg({ value, onChange, className }: { value: View; onChange: (v: View) => void; className?: string }) {
@@ -96,8 +96,8 @@ const Tabs = ({ items, value, onChange, light, className }: { items: string[]; v
     ))}
   </div>
 );
-const KINDS = ["All", ...CATEGORIES.map((c) => CAT[c])];
-const byKind = (k: string) => TEMPLATES.filter((t) => k === "All" || CAT[t.category] === k);
+export const KINDS = ["All", ...CATEGORIES.map((c) => CAT[c])];
+export const byKind = (k: string) => TEMPLATES.filter((t) => k === "All" || CAT[t.category] === k);
 const SectionHead = ({ title, n, light }: { title: string; n?: number; light?: boolean }) => (
   <div className="flex items-baseline justify-between px-6">
     <h2 className="text-[20px] tracking-[-.02em]">{title}</h2>
@@ -170,7 +170,7 @@ type Skin = { tray: boolean; rim: CSSProperties; press: string; surface: CSSProp
 const PRESS_LIGHT = "inset 0 3px 8px rgb(28 36 84 / .34), inset 0 1px 2px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .7)";
 // dark: the dark secondary's build (.rb, .pill-dark) for the rim, the inset tiles' (.iconbadge) for what is pressed in
 const PRESS_DARK = "inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .07)";
-const SKINS: Record<LookOpts["card"], Skin> = {
+export const SKINS: Record<LookOpts["card"], Skin> = {
   light: {
     tray: true, light: true, press: PRESS_LIGHT, name: "text-ink", sub: "text-slate", stroke: "#3c4b63",
     rim: { background: "linear-gradient(180deg, #ffffff, #e7eaf3)", boxShadow: "0 18px 36px -16px rgb(0 0 0 / .7), 0 2px 4px rgb(0 0 0 / .3), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(28 36 84 / .2)" },
@@ -186,9 +186,9 @@ const SKINS: Record<LookOpts["card"], Skin> = {
   flat: { tray: false, light: false, press: "", name: "text-white", sub: "text-white/55", stroke: "#fff", rim: {}, tile: {}, surface: { backgroundColor: "#141520", boxShadow: PRESS_DARK } },
 };
 // the rim's shadow falling into what sits in it
-const Sunk = ({ s }: { s: Skin }) => (s.tray ? <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: s.press }} /> : null);
+export const Sunk = ({ s }: { s: Skin }) => (s.tray ? <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: s.press }} /> : null);
 // difficulty: the bars and the word, one line that never wraps
-const Lvl = ({ t, s }: { t: Tpl; s: Skin }) => <span className={cx("flex items-center gap-2 text-[13px]", s.sub)}><Level n={LEVEL_N[t.level]} light={s.light} />{t.level}</span>;
+export const Lvl = ({ t, s }: { t: Tpl; s: Skin }) => <span className={cx("flex items-center gap-2 text-[13px]", s.sub)}><Level n={LEVEL_N[t.level]} light={s.light} />{t.level}</span>;
 // short: where it stands in two or three words, for the small cards (the full line needs the tall card's width)
 const StatusLine = ({ m, s, short }: { m: Mine; s: Skin; short?: boolean }) => <span className={cx("flex min-w-0 items-center gap-1.5 text-[13px]", s.sub)}><Dot s={m.status} light={s.light} /><span className="truncate">{short ? STATUS_OF[m.status] : m.line}</span></span>;
 
@@ -246,7 +246,7 @@ function PickBox({ k, s, pick }: { k: keyof typeof CORNER; s: Skin; pick?: Pick 
   );
 }
 
-function Frame({ s, w, imgH, r = 22, pic, name, line, onClick, pick }: { s: Skin; w?: number; imgH: number; r?: number; pic: ReactNode; name: string; line: ReactNode; onClick?: () => void; pick?: Pick }) {
+export function Frame({ s, w, imgH, r = 22, pic, name, line, onClick, pick }: { s: Skin; w?: number; imgH: number; r?: number; pic: ReactNode; name: string; line: ReactNode; onClick?: () => void; pick?: Pick }) {
   const words = (
     <span className={cx("block", s.tray ? "px-[7px] pb-[7px] pt-[9px]" : "pt-2.5")}>
       <span className={cx("block truncate text-[15px] leading-[18px]", s.name)}>{name}</span>
@@ -346,14 +346,14 @@ function FirstCard({ contain }: { contain: boolean }) {
 }
 
 // ─── kind filters: three builds, each with a slim form pinned to the top once you scroll past it ───
-const KIND_PIC: Record<string, string> = { All: P.meadow, Dresses: P.green, Tops: P.corset, Trousers: P.hems, Skirts: P.rust };
+export const KIND_PIC: Record<string, string> = { All: P.meadow, Dresses: P.green, Tops: P.corset, Trousers: P.hems, Skirts: P.rust };
 // a photo pressed in like the inset tiles
-const PressedPhoto = ({ k, size, r, light }: { k: string; size: number; r: number; light?: boolean }) => (
+export const PressedPhoto = ({ k, size, r, light }: { k: string; size: number; r: number; light?: boolean }) => (
   <span className="relative block shrink-0 overflow-hidden" style={{ width: size, height: size, borderRadius: r }}>
     <Img src={KIND_PIC[k]} /><span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: light ? PRESS_LIGHT : PRESS_DARK }} />
   </span>
 );
-function KindFilter({ v, value, onChange }: { v: LookOpts["kinds"]; value: string; onChange: (k: string) => void }) {
+export function KindFilter({ v, value, onChange }: { v: LookOpts["kinds"]; value: string; onChange: (k: string) => void }) {
   if (v === "tiles") return (
     // A · Tiles: square photos pressed into the page (the app's icon tiles, never circles); the chosen one on a snow card
     <div className="noscroll flex gap-1.5 overflow-x-auto px-5">
@@ -462,7 +462,7 @@ function sheetTopPath(w: number, h: number) {
   return [`M ${r} 0`, `H ${L - dx}`, `A ${f} ${f} 0 0 1 ${tl[0]} ${tl[1]}`, `A ${rn} ${rn} 0 0 0 ${L} ${cy + rn}`, `H ${R}`,
     `A ${rn} ${rn} 0 0 0 ${tr[0]} ${tr[1]}`, `A ${f} ${f} 0 0 1 ${R + dx} 0`, `H ${w - r}`, `A ${r} ${r} 0 0 1 ${w} ${r}`, `V ${h}`, `H 0`, `V ${r}`, `A ${r} ${r} 0 0 1 ${r} 0`, "Z"].join(" ");
 }
-function PhoneSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
+export function PhoneSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [h, setH] = useState(0);
   const id = useId().replace(/:/g, "");
@@ -493,12 +493,12 @@ function PhoneSheet({ open, onClose, children }: { open: boolean; onClose: () =>
     </AnimatePresence>
   );
 }
-const SheetTitle = ({ children }: { children: ReactNode }) => <h3 className="text-[24px] leading-tight tracking-[-.03em]">{children}</h3>;
+export const SheetTitle = ({ children }: { children: ReactNode }) => <h3 className="text-[24px] leading-tight tracking-[-.03em]">{children}</h3>;
 // a choice that can be on with others (filters): snow when on, like a chosen card
 const Choice = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) => (
   <button onClick={onClick} aria-pressed={on} className={cx("h-10 shrink-0 rounded-full px-4 text-[15px] transition-colors", on ? "bg-snow font-medium text-ink" : "pill-dark text-white/80")}>{children}</button>
 );
-function Group<T extends string>({ title, items, value, onChange, label }: { title: string; items: readonly T[]; value: T[]; onChange: (v: T[]) => void; label?: (t: T) => string }) {
+export function Group<T extends string>({ title, items, value, onChange, label }: { title: string; items: readonly T[]; value: T[]; onChange: (v: T[]) => void; label?: (t: T) => string }) {
   return (
     <div className="mt-6">
       <div className="text-[15px] text-white/60">{title}</div>
@@ -516,7 +516,7 @@ function One<T extends string>({ title, items, value, onChange }: { title: strin
     </div>
   );
 }
-const SheetFooter = ({ n, onClear, onShow, canClear }: { n: number; onClear: () => void; onShow: () => void; canClear: boolean }) => (
+export const SheetFooter = ({ n, onClear, onShow, canClear }: { n: number; onClear: () => void; onShow: () => void; canClear: boolean }) => (
   <div className="mt-8 flex items-center gap-4">
     <button onClick={onClear} disabled={!canClear} className={cx("h-14 shrink-0 px-2 text-[15px] font-medium transition-opacity", canClear ? "text-white/80" : "text-white/30")}>Clear all</button>
     <Pill className="flex-1" onClick={onShow}>{n === 0 ? "Nothing matches" : `Show ${n} ${n === 1 ? "pattern" : "patterns"}`}</Pill>
@@ -525,7 +525,7 @@ const SheetFooter = ({ n, onClear, onShow, canClear }: { n: number; onClear: () 
 
 // ─── the tools (round 3): no search field until you ask for one. Round buttons in the dark secondary's build: Search,
 //     Filter and sort (one sheet, with how many filters are on beside it), and on your own patterns carousel or grid ───
-function ToolBtn({ icon, label, n, onClick }: { icon: IconName; label: string; n?: number; onClick: () => void }) {
+export function ToolBtn({ icon, label, n, onClick }: { icon: IconName; label: string; n?: number; onClick: () => void }) {
   return (
     <span className="relative shrink-0">
       <button onClick={onClick} aria-label={n ? `${label}, ${n} on` : label} className="rb !h-10 !w-10"><Icon name={icon} size={18} /></button>
@@ -534,7 +534,7 @@ function ToolBtn({ icon, label, n, onClick }: { icon: IconName; label: string; n
   );
 }
 // search, once its button is tapped: the field takes the whole row, with Cancel to put it away
-function SearchOpen({ q, setQ, placeholder, onCancel }: { q: string; setQ: (q: string) => void; placeholder: string; onCancel: () => void }) {
+export function SearchOpen({ q, setQ, placeholder, onCancel }: { q: string; setQ: (q: string) => void; placeholder: string; onCancel: () => void }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="flex h-11 items-center gap-3">
       <label className="ruler-track flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full px-4 text-white/45">
@@ -559,9 +559,9 @@ function ViewSlider({ grid, setGrid }: { grid: boolean; setGrid: (g: boolean) =>
     </span>
   );
 }
-const Count = ({ n }: { n: number }) => <><span className="tabular-nums">{n}</span> {n === 1 ? "pattern" : "patterns"}</>;
+export const Count = ({ n }: { n: number }) => <><span className="tabular-nums">{n}</span> {n === 1 ? "pattern" : "patterns"}</>;
 // what is on, each removable (only shown when something is on)
-const OnChips = ({ items, onClear }: { items: { k: string; off: () => void }[]; onClear: () => void }) =>
+export const OnChips = ({ items, onClear }: { items: { k: string; off: () => void }[]; onClear: () => void }) =>
   items.length ? (
     <div className="noscroll mt-3 flex items-center gap-2 overflow-x-auto px-6">
       {items.map((x) => (
@@ -575,9 +575,9 @@ const STATUSES = ["Draft", "Ready to print", "Printed"] as const;
 const STATUS_OF: Record<Mine["status"], (typeof STATUSES)[number]> = { Draft: "Draft", Fitting: "Ready to print", Printed: "Printed" };
 const FITS = ["Tight", "Relaxed", "Loose"] as const;
 const KIND_LIST = ["Dresses", "Tops", "Trousers", "Skirts"] as const;
-const LEVELS_ = ["Easy", "Intermediate", "Hard"] as const;
-const PIECES_ = ["Up to 3", "4 to 6", "7 or more"] as const;
-const piecesIn = (n: number, p: string) => (p === "Up to 3" ? n <= 3 : p === "4 to 6" ? n >= 4 && n <= 6 : n >= 7);
+export const LEVELS_ = ["Easy", "Intermediate", "Hard"] as const;
+export const PIECES_ = ["Up to 3", "4 to 6", "7 or more"] as const;
+export const piecesIn = (n: number, p: string) => (p === "Up to 3" ? n <= 3 : p === "4 to 6" ? n >= 4 && n <= 6 : n >= 7);
 const SORTS = ["Newest first", "Oldest first", "A to Z"] as const;
 // a horizontal scroller clips whatever spills out of it, so it has room below for the cards' shadows (taken back after)
 const Row = ({ children }: { children: ReactNode }) => <div className="noscroll -mb-5 mt-1 flex snap-x snap-mandatory scroll-px-6 items-start gap-3 overflow-x-auto px-6 pb-8 pt-2">{children}</div>;
