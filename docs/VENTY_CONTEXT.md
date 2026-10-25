@@ -223,6 +223,7 @@ The whole app is **one page**, `src/app/page.tsx`, which renders `src/components
 1. **`name`:** "Who are you measuring?" / "Give this body a name, so you can find it later."
    - An empty name field (placeholder "Enter a name").
    - "Start the body with a" **Female form** or **Male form**, neither pre-selected, no sub-text and no note underneath.
+   - **The cards (live 25 Oct 2026, from the lab's version 6):** `FormCard` in `setup.tsx`, an `Option` without its own ring. At the foot of each card a row pressed into it holds the name on two lines and the choice circle on its right. Above it, a still of the real 3D mannequin (`public/forms/<sex>.webp`, rendered from `Body3D`: head to the top of the stomach, turned to the right) rises out of the row, in a box exactly as wide as the row, so nothing shows past the row's sides, and fades out just above the row so it never touches it. Chosen, the card turns snow, the row its snow version, the circle the primary's tick. 232 px tall on a phone, 300 px on a computer. The flat `BodyFigure` is gone from this step.
 2. **`method`:** "Choose how to measure" (no body text). **Scan with my camera** ("Take 3 photos. AI estimates your measurements, then you check each one.") or **Measure by hand** ("Use a soft measuring tape. We guide you through 4 measurements.").
 3. **By hand:** `measure`, one measure at a time: height → bust → waist → hips.
    - Each starts **empty** ("—"), and Next stays disabled until a value is set.

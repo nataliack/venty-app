@@ -72,6 +72,29 @@ export function Prefs() {
   );
 }
 
+// A starting form's card (from the lab, 25 Oct 2026): at its foot a row pressed into the card holds the name on two
+// lines and the choice circle on its right. The body (the real 3D mannequin, a still: head to the top of the stomach,
+// turned to the right) rises out of that row, in a box exactly as wide as the row and ending at its top, so nothing of it
+// shows past the row's sides; it fades out just above the row, so it never touches it. Chosen, the card turns snow
+// (Option's .on), the row its snow version, the circle the primary's tick.
+const FORM_FADE: React.CSSProperties = { maskImage: "linear-gradient(180deg, #000 58%, transparent calc(100% - 6px))", WebkitMaskImage: "linear-gradient(180deg, #000 58%, transparent calc(100% - 6px))" };
+const FORM_ROW: React.CSSProperties = { background: "rgb(0 0 0 / .26)", boxShadow: "inset 0 2px 5px rgb(0 0 0 / .55), inset 0 1px 1.5px rgb(0 0 0 / .5), inset 0 -1px 0 rgb(255 255 255 / .06)" };
+const FORM_ROW_ON: React.CSSProperties = { background: "rgb(52 62 110 / .07)", boxShadow: "inset 0 3px 7px rgb(28 36 84 / .22), inset 0 1px 1.5px rgb(28 36 84 / .22), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9)" };
+function FormCard({ sex, on, onClick }: { sex: "female" | "male"; on: boolean; onClick: () => void }) {
+  const INSET = 8, ROW_H = 62;
+  return (
+    <Option on={on} onClick={onClick} radio={false} className="h-[232px] rounded-[22px] lg:h-[300px]">
+      <span aria-hidden className="absolute overflow-hidden" style={{ left: INSET, right: INSET, top: 0, bottom: INSET + ROW_H, ...FORM_FADE }}>
+        <img src={`/forms/${sex}.webp`} alt="" className="absolute left-1/2 top-[12px] h-[150px] w-auto max-w-none -translate-x-1/2 lg:top-[18px] lg:h-[212px]" />
+      </span>
+      <span className="absolute flex items-center justify-between rounded-[16px] px-3 transition-[background,box-shadow] duration-300" style={{ left: INSET, right: INSET, bottom: INSET, height: ROW_H, ...(on ? FORM_ROW_ON : FORM_ROW) }}>
+        <span className={cx("text-[15px] font-medium leading-[1.2] transition-colors", on ? "text-ink" : "text-white")}>{sex === "female" ? "Female" : "Male"}<br />form</span>
+        <span className={cx("radio relative", on && "icon-primary")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>
+      </span>
+    </Option>
+  );
+}
+
 // ─── Step 1 · Body: a name and a starting form, on one screen. Nothing pre-filled. ───────────────────
 export function NameBody() {
   const { go } = useApp();
@@ -96,12 +119,7 @@ export function NameBody() {
         </label>
         <Label className="mt-6">Start the body with a</Label>
         <div className="mt-2.5 grid grid-cols-2 gap-3" data-need={sex ? "0" : "1"}>
-          {(["female", "male"] as const).map((s) => (
-            <Option key={s} on={sex === s} onClick={() => setSex(s)} className="flex h-[150px] items-end rounded-[22px] p-4 lg:h-[220px]">
-              <div className="absolute left-4 top-3 h-[86px] lg:h-[150px]"><BodyFigure sex={s} width={36} glow={false} className="h-full w-auto" /></div>
-              <div className="text-[17px] font-medium">{s === "female" ? "Female form" : "Male form"}</div>
-            </Option>
-          ))}
+          {(["female", "male"] as const).map((s) => <FormCard key={s} sex={s} on={sex === s} onClick={() => setSex(s)} />)}
         </div>
       </>} />
     </Screen>
