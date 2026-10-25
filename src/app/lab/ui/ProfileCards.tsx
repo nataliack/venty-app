@@ -224,10 +224,13 @@ type Slot = { key: string; fam: Family; way: string; pose: Pose; layer: number; 
 // while the one behind rises a little and to the left, both easing back a touch, until they no longer overlap; there
 // they swap layers (so the swap is never seen); then they come together, the new one settling in front and the old
 // one tucking in behind it
-const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, z: -0.05, rz: -0.045, s: 0.96 };
+const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, rz: -0.045, s: 0.96 }, GAP = 1.9;
 const PART_DOWN: Pose = { x: 0.32, y: -1.02, rz: -0.07, s: 0.9 }, PART_UP: Pose = { x: -0.3, y: 1.0, rz: 0.06, s: 0.9 };
 // All its colours: a cascade, the pick in front and lowest, the others stepping up and back behind it
-const CASCADE: Pose[] = [{ x: -0.34, y: 0.5, z: -0.1, rz: 0.035, s: 0.86 }, { x: -0.12, y: 0.18, z: -0.05, rz: 0.015, s: 0.9 }, { x: 0.1, y: -0.16, s: 0.94 }];
+const CASCADE: Pose[] = [{ x: -0.34, y: 0.5, rz: 0.035, s: 0.86 }, { x: -0.12, y: 0.18, rz: 0.015, s: 0.9 }, { x: 0.1, y: -0.16, s: 0.94 }];
+// picking a colour behind: the card first slips out below and to the right, clear of the others, while they move up;
+// then it comes in at the front (it never crosses another card at the same depth)
+const SLIP: Pose = { x: 1.0, y: -1.88, rz: -0.06, s: 0.86 };
 // how far the camera stands back in each view (the cards fill about seven eighths of the width in One card)
 const DIST: Record<View, number> = { card: 0.88, stack: 0.9, colours: 0.95, sides: 0.98 };
 // what changed last, which decides how new cards come in and old ones go:
@@ -258,13 +261,13 @@ function useLeaving(items: Slot[], change: Change, dir: number) {
 // where the cards' band sits on the screen, in scene units, so the canvas can cover the whole screen (nothing is ever
 // cut off) while the cards sit between the tabs and the views
 function useBandOffset(screen: React.RefObject<HTMLDivElement | null>, band: React.RefObject<HTMLDivElement | null>, dist: number) {
-  const [off, setOff] = useState(0);
+  const [off, setOff] = useState({ off: 0, d: 14 });
   useEffect(() => {
     const a = screen.current, b = band.current; if (!a || !b) return;
     const fit = () => {
       const A = a.getBoundingClientRect(), B = b.getBoundingClientRect(), tan = Math.tan((15 * Math.PI) / 180);
       const d = Math.max(5.2, 3.9 / (2 * tan * (A.width / Math.max(1, A.height)))) * dist, perPx = (2 * d * tan) / Math.max(1, A.height);
-      setOff(-((B.top + B.height / 2) - (A.top + A.height / 2)) * perPx);
+      setOff({ off: -((B.top + B.height / 2) - (A.top + A.height / 2)) * perPx, d });
     };
     const ro = new ResizeObserver(fit); ro.observe(a); ro.observe(b); fit(); return () => ro.disconnect();
   }, [screen, band, dist]);
@@ -291,28 +294,36 @@ export function CardsScreen() {
     if (view === "stack") { setStep("part"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 460); }
   };
   const order = VIEWS.map((x) => x.k);
+  // All its colours: a card picked from behind slips out first, then comes to the front
+  const [slip, setSlip] = useState<string | null>(null);
+  useEffect(() => { if (!slip) return; const t = setTimeout(() => setSlip(null), 480); return () => clearTimeout(t); }, [slip]);
+  const bring = (w: string) => { setSlip(w); setWay((x) => ({ ...x, [fam]: w })); };
   const setView = (v: View) => { if (v === view) return; setDir(order.indexOf(v) > order.indexOf(view) ? 1 : -1); setViewNow(v); setChange("view"); setStep(""); };
 
   // made ahead: each card's first colourway, then the rest
   useEffect(() => { for (const f of FAMS) prefetchCard(ALL[f][FIRST[f]].els, ALL[f][FIRST[f]].stock); for (const f of FAMS) for (const w of FAVOURITES[f].ways) prefetchCard(ALL[f][w.id].els, ALL[f][w.id].stock); }, []);
 
-  // every card on the stage is keyed by its view, so a new view is a new set (they cross fade)
+  const screen = useRef<HTMLDivElement>(null), band = useRef<HTMLDivElement>(null);
+  const { off: offset, d: camD } = useBandOffset(screen, band, DIST[view]);
+  // a pose set back by z, scaled and moved out to look as it would at the front
+  const deep = (p: Pose, z: number): Pose => { const k = (camD - z) / camD; return { x: (p.x ?? 0) * k, y: ((p.y ?? 0) + offset) * k - offset, z, rz: p.rz ?? 0, s: (p.s ?? 1) * k }; };
+  // every card on the stage is keyed by its view, so a new view is a new set
   const main = (f: Family): Slot => ({ key: `${view}:main-${f}`, fam: f, way: way[f], pose: { y: 0 }, layer: 1, interactive: true, spin: true, flip: flip(`main-${f}`) });
   let slots: Slot[];
   if (view === "card") slots = [{ ...main(fam), show: true }]; // the card drifts, tilts and floats on its own
   else if (view === "stack") slots = FAMS.map((f) => {
-    // while they part, the old front card is still the top layer; they swap once apart
+    // they part at the same depth (apart, so they cannot meet), then pass each other in depth as they come together
     const front = f === fam, top = step === "part" ? !front : front;
-    return { ...main(f), pose: front ? (step === "part" ? PART_UP : FRONT) : step === "part" ? PART_DOWN : BEHIND, layer: top ? 1 : 0, interactive: front, onTap: front ? undefined : () => pick(f) };
+    return { ...main(f), pose: front ? (step === "part" ? deep(PART_UP, -GAP / 2) : FRONT) : step === "part" ? deep(PART_DOWN, -GAP / 2) : deep(BEHIND, -GAP), layer: top ? 1 : 0, interactive: front, onTap: front ? undefined : () => pick(f) };
   });
   else if (view === "sides") slots = [
-    { ...main(fam), pose: { x: -0.1, y: 0.66, rz: 0.03, s: 0.84 }, layer: 0 },
-    { key: `${view}:back-${fam}`, fam, way: way[fam], pose: { x: 0.1, y: -0.66, rz: -0.03, s: 0.84 }, layer: 1, interactive: false, spin: true, startBack: true, flip: flip(`main-${fam}`) },
+    { ...main(fam), pose: { x: -0.08, y: 0.86, rz: 0.03, s: 0.8 }, layer: 0 },
+    { key: `${view}:back-${fam}`, fam, way: way[fam], pose: { x: 0.08, y: -0.86, rz: -0.03, s: 0.8 }, layer: 1, interactive: false, spin: true, startBack: true, flip: flip(`main-${fam}`) },
   ];
   else {
     // All its colours: the pick last (in front); the others behind it in order
     const ws = FAVOURITES[fam].ways.map((w) => w.id), order = [...ws.filter((w) => w !== way[fam]), way[fam]];
-    slots = order.map((w, r) => ({ key: `${view}:${fam}-${w}`, fam, way: w, pose: CASCADE[r], layer: r, interactive: r === 2, flip: r === 2 ? flip(`main-${fam}`) : 0, onTap: r === 2 ? undefined : () => setWay((x) => ({ ...x, [fam]: w })) }));
+    slots = order.map((w, r) => ({ key: `${view}:${fam}-${w}`, fam, way: w, pose: slip === w ? deep(SLIP, -GAP / 2) : deep(CASCADE[r], -(2 - r) * GAP), layer: r, interactive: r === 2, flip: r === 2 ? flip(`main-${fam}`) : 0, onTap: r === 2 ? undefined : () => bring(w) }));
   }
   const leaving = useLeaving(slots, change, dir);
   // where a new card comes in from, for the last change (a card already on the stage ignores it)
@@ -327,8 +338,6 @@ export function CardsScreen() {
   const [revealed, setRevealed] = useState(false);
   useEffect(() => { if (!shown) return; const r = setTimeout(() => setRevealed(true), 700); return () => clearTimeout(r); }, [shown]);
 
-  const screen = useRef<HTMLDivElement>(null), band = useRef<HTMLDivElement>(null);
-  const offset = useBandOffset(screen, band, DIST[view]);
   const turnNow = () => turn(`main-${fam}`);
   return (
     <div ref={screen} className="relative h-full text-white">

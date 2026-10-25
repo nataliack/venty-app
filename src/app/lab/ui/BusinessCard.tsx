@@ -479,30 +479,10 @@ function cardShape(W: number, H: number, r: number) {
   s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5, false);
   return s;
 }
-// cards mark the stencil buffer where their faces are drawn, so the shadow of a card above can be drawn on the cards
-// below and nowhere else (never on the background)
-const MARK_STENCIL = { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp };
-// the shadow a card throws on the ones below it. It lives in the card's own plane (a child of the card, turning, tilting
-// and foreshortening exactly as the card does), a little larger than the card and nudged down and to the right (the
-// light is up and to the left), with a soft edge; drawn only where a card below has marked the stencil, so never on the
-// background, never on the card itself. A real shadow cannot be cast here: the layers draw each card over the ones below
-// whatever their depth, so the shadow has to be the card's own silhouette, offset
-const SH_PAD = 16, SH_PX = 4; // mm of soft edge round the card; texture pixels per mm
-const shadowTexs = new Map<string, THREE.CanvasTexture>();
-function softShadow(w: number, h: number) {
-  const key = `${w}x${h}`; const hit = shadowTexs.get(key); if (hit) return hit;
-  const c = document.createElement("canvas"); c.width = Math.round((w + 2 * SH_PAD) * SH_PX); c.height = Math.round((h + 2 * SH_PAD) * SH_PX);
-  const x = c.getContext("2d")!;
-  // white, used as the alpha (the shape); the colour comes from the material. Inset 3 mm with a 9 mm blur, so its dark
-  // core stays well under the card and only a long soft fall-off shows past it
-  x.shadowColor = "#fff"; x.shadowBlur = 9 * SH_PX; x.shadowOffsetX = 10000; x.fillStyle = "#fff";
-  x.beginPath(); x.roundRect(-10000 + (SH_PAD + 3) * SH_PX, (SH_PAD + 3) * SH_PX, (w - 6) * SH_PX, (h - 6) * SH_PX, 4 * SH_PX); x.fill();
-  const t = new THREE.CanvasTexture(c); shadowTexs.set(key, t); return t;
-}
 function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
-  if (!m.normal) return new THREE.MeshPhysicalMaterial({ ...MARK_STENCIL, transparent: true, map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
+  if (!m.normal) return new THREE.MeshPhysicalMaterial({ transparent: true, map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
   return new THREE.MeshPhysicalMaterial({
-    ...MARK_STENCIL, transparent: true, map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
+    transparent: true, map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
     aoMap: m.orm, aoMapIntensity: 1, roughnessMap: m.orm, metalnessMap: m.orm, roughness: 1, metalness: 1,
     clearcoat: 1, clearcoatMap: m.coat, clearcoatRoughness: 0.1,
     iridescence: m.irid ? 1 : 0, iridescenceMap: m.irid ?? null, iridescenceIOR: 1.6, iridescenceThicknessRange: [220, 880],
@@ -512,26 +492,11 @@ function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
 
 // where a card sits in a scene of several (world units; the card is 3 wide): it eases there from wherever it is
 export type Pose = { x?: number; y?: number; z?: number; rz?: number; s?: number };
-// layer: cards in a scene of several are drawn in layers; each layer is drawn over the ones below it whatever their depth,
-// so a card turning in front can never cut into the one behind it (and the one behind can sit close, at full size)
-// startBack: it starts face down. arrive: it arrives (after this many seconds): from far back, lying almost flat in deep
-// perspective, it rises and comes forward, landing slowly. show: the showcase drift (a slow sway, tilt and float).
-// spin: a new colourway is tipped in: the card tips back like a page until it is edge on, takes the new colour there,
-// and tips forward again
-// opacity: how much of it shows (eased; 0 to fade it away). from: where it comes in from (a place, a fade, a lean),
-// eased to where it should be. lean: a turn it holds (as it slides off, say). speed: how quick its moves are (the
-// spring's frequency; about 7 settles in two thirds of a second, with no overshoot)
 type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void; layer?: number; startBack?: boolean; arrive?: number; show?: boolean;
   opacity?: number; from?: Pose & { o?: number; yaw?: number }; lean?: number; speed?: number };
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 4), easeInOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
 const ARRIVE = 1.9, TIP = 1.25; // seconds
-const clearGeo = new THREE.PlaneGeometry(0.001, 0.001), clearMat = new THREE.MeshBasicMaterial({ transparent: true, colorWrite: false, depthWrite: false, depthTest: false });
-// drawn just before a layer: it wipes the depth of everything drawn so far, so the layer lands on top
-function DepthClear({ order }: { order: number }) {
-  return <mesh geometry={clearGeo} material={clearMat} renderOrder={order} frustumCulled={false} onBeforeRender={(r) => r.clearDepth()} />;
-}
-// spin: a new colourway arrives with a full turn, swapped in while the card is edge on, so the change is never seen
-function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, layer = 0, startBack = false, arrive, show = false, opacity = 1, from, lean = 0, speed = 7 }: CardProps) {
+function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, startBack = false, arrive, show = false, opacity = 1, from, lean = 0, speed = 7 }: CardProps) {
   const [shown, setShown] = useState(maps);
   // the same card made properly (or a change without the turn): show it straight away
   if (maps !== shown && (!spin || maps.key === shown.key)) setShown(maps);
@@ -560,16 +525,12 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
 
   // turning it: drag sideways to spin, it settles face up or face down; double click (or tap) flips it; at rest it
   // leans toward the pointer, or sways a little
-  const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null), shade = useRef<THREE.Mesh>(null);
-  const shadeGeo = useMemo(() => new THREE.PlaneGeometry(S.w + 2 * SH_PAD, S.h + 2 * SH_PAD), [S.w, S.h]);
-  useEffect(() => () => shadeGeo.dispose(), [shadeGeo]);
-  const shadeMat = useMemo(() => new THREE.MeshBasicMaterial({ alphaMap: softShadow(S.w, S.h), color: "#05060d", transparent: true, opacity: 0, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
-    stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp }), [S.w, S.h]);
-  useEffect(() => () => shadeMat.dispose(), [shadeMat]);
-  const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter, ...from };
+  const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null);
+  const pick = (k: keyof Pose, d: number) => from?.[k] ?? enter?.[k] ?? pose?.[k] ?? d; // the first given, never undefined
+  const p0 = { x: pick("x", 0), y: pick("y", 0), z: pick("z", 0), rz: pick("rz", 0), s: pick("s", 1) };
   const y0 = startBack ? Math.PI : 0;
   const st = useRef({ yaw: y0 + (from?.yaw ?? 0), vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1,
-    p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0, sh: layer > 0 ? 1 : 0, lz: 0 });
+    p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0 });
   const { gl } = useThree();
   useEffect(() => {
     if (!interactive) return;
@@ -600,7 +561,7 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   useFrame(({ clock }, delta) => {
     const s = st.current, T = clock.elapsedTime, L = latest.current, leanHold = lean;
     const dt = Math.min(delta, 1 / 20);
-    const want = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose };
+    const want = { x: pose?.x ?? 0, y: pose?.y ?? 0, z: pose?.z ?? 0, rz: pose?.rz ?? 0, s: pose?.s ?? 1 }; // an undefined value keeps its default
     let lift = 0, extraPitch = 0; // offsets the arrival and the tip lay over the springs
     // arriving: from far back and above, lying back almost flat, it rises and comes forward and lands
     if (s.arr === -1) s.arr = T + (arrive ?? 0);
@@ -642,30 +603,16 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
     if (m.front.opacity !== s.o) { m.front.opacity = s.o; m.back.opacity = s.o; m.edge.opacity = s.o; }
     // the showcase's float: a slow loop up and down and side to side, and a breath nearer and back
     const fx = show ? Math.sin(T * 0.37) * 0.05 : 0, fy = show ? Math.sin(T * 0.53) * 0.06 : 0, fz = show ? Math.sin(T * 0.29) * 0.12 : 0;
-    // picked up: while it is held or turning (dragged, turned over, tipped to a new colour) the card lifts towards you,
-    // clear of the cards behind, so it never seems to pass through them; it settles back when it comes to rest
-    const turning = s.drag || s.tip >= 0 || Math.abs(s.yaw - s.ty) > 0.25;
-    s.lz += ((turning && layer > 0 ? 1 : 0) - s.lz) * Math.min(1, dt * (turning ? 7 : 3.5));
-    place.current?.position.set(s.p.x + fx, s.p.y + lift + fy, s.p.z + fz + s.lz * 1.3); place.current?.rotation.set(0, 0, s.p.rz + (show ? Math.sin(T * 0.23) * 0.02 : 0)); place.current?.scale.setScalar(s.p.s);
+    place.current?.position.set(s.p.x + fx, s.p.y + lift + fy, s.p.z + fz); place.current?.rotation.set(0, 0, s.p.rz + (show ? Math.sin(T * 0.23) * 0.02 : 0)); place.current?.scale.setScalar(s.p.s);
     g.current?.rotation.set(s.pitch + extraPitch, s.yaw, 0);
-    // the shadow fades in and out as the card goes up or down a layer (so it never pops), and with the card
-    s.sh += ((layer > 0 ? 1 : 0) - s.sh) * Math.min(1, dt * 7);
-    // lifted, the shadow falls further away, grows and softens and lightens, as a real one does
-    if (shade.current) {
-      (shade.current.material as THREE.MeshBasicMaterial).opacity = 0.32 * s.o * s.sh * (1 - 0.4 * s.lz);
-      shade.current.position.set(1.2 + 3 * s.lz, -2 - 5 * s.lz, -t / 2 - 0.05);
-      shade.current.scale.setScalar(1 + 0.1 * s.lz);
-    }
   });
 
   return (
     <group ref={place} position={[p0.x, p0.y, p0.z]} rotation={[0, 0, p0.rz]} scale={p0.s} onClick={onTap ? (e) => { if (e.delta < 8) { e.stopPropagation(); onTap(); } } : undefined}>
-      {layer > 0 && <DepthClear order={layer * 10} />}
       <group ref={g} scale={1 / 30}>
-        <mesh ref={shade} geometry={shadeGeo} material={shadeMat} renderOrder={layer * 10 - 1} position={[1, -1.6, -t / 2 - 0.05]} frustumCulled={false} />
-        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} renderOrder={layer * 10 + 1} />
-        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} renderOrder={layer * 10 + 1} />
-        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} renderOrder={layer * 10 + 1} />
+        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} castShadow receiveShadow />
+        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} castShadow receiveShadow />
+        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} castShadow receiveShadow />
       </group>
     </group>
   );
@@ -724,13 +671,27 @@ export function Sweep({ on }: { on: boolean }) {
   return <pointLight ref={l} color="#e9ecff" intensity={0} distance={9} decay={1.2} />;
 }
 
+// the shadow light: low and to the right, nearly from the front, so a card's shadow falls up and to the left, on the
+// strips of the cards behind that show (the key light, up and to the left, casts none: its shadows would fall behind
+// the card that throws them). Soft: a variance shadow map, blurred. A card throws its shadow on the cards behind it and
+// nowhere else (there is nothing else there)
+function ShadowLight() {
+  const l = useRef<THREE.DirectionalLight>(null);
+  useEffect(() => {
+    const d = l.current; if (!d) return;
+    const c = d.shadow.camera as THREE.OrthographicCamera;
+    c.left = -6; c.right = 6; c.top = 6; c.bottom = -6; c.near = 1; c.far = 40; c.updateProjectionMatrix();
+    d.shadow.mapSize.set(2048, 2048); d.shadow.radius = 14; d.shadow.blurSamples = 24; d.shadow.bias = -0.0004;
+  }, []);
+  return <directionalLight ref={l} position={[2.4, -2.2, 12]} intensity={0.9} castShadow />;
+}
 // the scene: lights, the studio the foil reflects, the camera; put cards (LiveCard) inside
 export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0 }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number }) {
   return (
     <div className={className} style={{ touchAction: touch, ...style }}>
-      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} gl={{ stencil: true }} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
-        <directionalLight position={[-3, 4, 4]} intensity={1.6} />
-        <directionalLight position={[3, -1, 3]} intensity={0.35} />
+      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} shadows="variance" onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
+        <directionalLight position={[-3, 4, 4]} intensity={1.25} />
+        <ShadowLight />
         <Environment resolution={1024} frames={1}>
           <Lightformer form="rect" intensity={4} position={[0, 4, 3]} scale={[8, 2, 1]} rotation-x={Math.PI / 3} />
           <Lightformer form="rect" intensity={2.5} color="#e6e9ff" position={[-5, 1, 2]} scale={[1.2, 6, 1]} rotation-y={Math.PI / 2.5} />
