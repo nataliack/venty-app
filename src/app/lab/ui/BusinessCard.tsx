@@ -487,16 +487,16 @@ const MARK_STENCIL = { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.Alw
 // light is up and to the left), with a soft edge; drawn only where a card below has marked the stencil, so never on the
 // background, never on the card itself. A real shadow cannot be cast here: the layers draw each card over the ones below
 // whatever their depth, so the shadow has to be the card's own silhouette, offset
-const SH_PAD = 6, SH_PX = 4; // mm of soft edge round the card; texture pixels per mm
+const SH_PAD = 16, SH_PX = 4; // mm of soft edge round the card; texture pixels per mm
 const shadowTexs = new Map<string, THREE.CanvasTexture>();
 function softShadow(w: number, h: number) {
   const key = `${w}x${h}`; const hit = shadowTexs.get(key); if (hit) return hit;
   const c = document.createElement("canvas"); c.width = Math.round((w + 2 * SH_PAD) * SH_PX); c.height = Math.round((h + 2 * SH_PAD) * SH_PX);
   const x = c.getContext("2d")!;
-  // white, used as the alpha (the shape); the colour comes from the material. Inset 1 mm, so its dark core stays under
-  // the card and only the soft edge shows past it
-  x.shadowColor = "#fff"; x.shadowBlur = 4.5 * SH_PX; x.shadowOffsetX = 10000; x.fillStyle = "#fff";
-  x.beginPath(); x.roundRect(-10000 + (SH_PAD + 1) * SH_PX, (SH_PAD + 1) * SH_PX, (w - 2) * SH_PX, (h - 2) * SH_PX, 2 * SH_PX); x.fill();
+  // white, used as the alpha (the shape); the colour comes from the material. Inset 3 mm with a 9 mm blur, so its dark
+  // core stays well under the card and only a long soft fall-off shows past it
+  x.shadowColor = "#fff"; x.shadowBlur = 9 * SH_PX; x.shadowOffsetX = 10000; x.fillStyle = "#fff";
+  x.beginPath(); x.roundRect(-10000 + (SH_PAD + 3) * SH_PX, (SH_PAD + 3) * SH_PX, (w - 6) * SH_PX, (h - 6) * SH_PX, 4 * SH_PX); x.fill();
   const t = new THREE.CanvasTexture(c); shadowTexs.set(key, t); return t;
 }
 function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
@@ -569,7 +569,7 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter, ...from };
   const y0 = startBack ? Math.PI : 0;
   const st = useRef({ yaw: y0 + (from?.yaw ?? 0), vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1,
-    p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0, sh: layer > 0 ? 1 : 0 });
+    p: { x: p0.x, y: p0.y, z: p0.z, rz: p0.rz, s: p0.s }, v: { x: 0, y: 0, z: 0, rz: 0, s: 0 }, o: arrive !== undefined ? 0 : from?.o ?? 1, vo: 0, sh: layer > 0 ? 1 : 0, lz: 0 });
   const { gl } = useThree();
   useEffect(() => {
     if (!interactive) return;
@@ -642,11 +642,20 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
     if (m.front.opacity !== s.o) { m.front.opacity = s.o; m.back.opacity = s.o; m.edge.opacity = s.o; }
     // the showcase's float: a slow loop up and down and side to side, and a breath nearer and back
     const fx = show ? Math.sin(T * 0.37) * 0.05 : 0, fy = show ? Math.sin(T * 0.53) * 0.06 : 0, fz = show ? Math.sin(T * 0.29) * 0.12 : 0;
-    place.current?.position.set(s.p.x + fx, s.p.y + lift + fy, s.p.z + fz); place.current?.rotation.set(0, 0, s.p.rz + (show ? Math.sin(T * 0.23) * 0.02 : 0)); place.current?.scale.setScalar(s.p.s);
+    // picked up: while it is held or turning (dragged, turned over, tipped to a new colour) the card lifts towards you,
+    // clear of the cards behind, so it never seems to pass through them; it settles back when it comes to rest
+    const turning = s.drag || s.tip >= 0 || Math.abs(s.yaw - s.ty) > 0.25;
+    s.lz += ((turning && layer > 0 ? 1 : 0) - s.lz) * Math.min(1, dt * (turning ? 7 : 3.5));
+    place.current?.position.set(s.p.x + fx, s.p.y + lift + fy, s.p.z + fz + s.lz * 1.3); place.current?.rotation.set(0, 0, s.p.rz + (show ? Math.sin(T * 0.23) * 0.02 : 0)); place.current?.scale.setScalar(s.p.s);
     g.current?.rotation.set(s.pitch + extraPitch, s.yaw, 0);
     // the shadow fades in and out as the card goes up or down a layer (so it never pops), and with the card
     s.sh += ((layer > 0 ? 1 : 0) - s.sh) * Math.min(1, dt * 7);
-    if (shade.current) (shade.current.material as THREE.MeshBasicMaterial).opacity = 0.38 * s.o * s.sh;
+    // lifted, the shadow falls further away, grows and softens and lightens, as a real one does
+    if (shade.current) {
+      (shade.current.material as THREE.MeshBasicMaterial).opacity = 0.32 * s.o * s.sh * (1 - 0.4 * s.lz);
+      shade.current.position.set(1.2 + 3 * s.lz, -2 - 5 * s.lz, -t / 2 - 0.05);
+      shade.current.scale.setScalar(1 + 0.1 * s.lz);
+    }
   });
 
   return (
