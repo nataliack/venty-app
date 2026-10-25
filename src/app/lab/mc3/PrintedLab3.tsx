@@ -82,25 +82,25 @@ function Fabric({ m }: { m: ReturnType<typeof useMade> }) {
   const stretch = m.stretch === "A lot" ? "stretchy" : m.stretch === "No" ? "with no stretch" : "with a little stretch";
   return (
     <div className={SURFACE}>
-      <h3 className="text-[17px] font-medium">Fabric to buy</h3>
-      <div className="mt-2 flex items-baseline gap-2">
+      <h3 className="text-center text-[17px] font-medium">Fabric to buy</h3>
+      <div className="mt-2 flex items-baseline justify-center gap-2">
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span key={w} className="serif text-[52px] leading-[.9]" initial={still ? false : { y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -14, opacity: 0 }} transition={{ duration: 0.25 }}>{m.metres(w)}</motion.span>
         </AnimatePresence>
         <span className="text-[18px]">metres</span>
       </div>
-      <p className="mt-1.5 text-[15px] leading-snug text-[#12131c]/70">of fabric {w} cm wide, {stretch}.</p>
-      <p className="mt-4 text-[14px] text-[#12131c]/55">Is the fabric at the shop another width?</p>
+      <p className="mt-1.5 text-center text-[15px] leading-snug text-[#12131c]/70">of fabric {w} cm wide, {stretch}.</p>
+      <p className="mt-4 text-center text-[14px] text-[#12131c]/55">Is the fabric at the shop another width?</p>
       {/* the fabric's width: a track pressed in, the knob raised, sliding to the width chosen */}
-      <div className="relative mt-2 flex h-11 self-start rounded-full bg-[#12131c]/[.07] p-[5px] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85)]" role="radiogroup" aria-label="The fabric's width">
+      <div className="relative mt-2 flex h-11 self-center rounded-full bg-[#12131c]/[.07] p-[5px] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85)]" role="radiogroup" aria-label="The fabric's width">
         <motion.span className={cx("absolute top-[5px] h-[34px] rounded-full", raised)} style={{ width: seg }} initial={false} animate={{ left: 5 + at * seg }} transition={still ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 28 }} aria-hidden />
         {widths.map((x) => (
           <button key={x} role="radio" aria-checked={w === x} onClick={() => setW(x)} className={cx("relative z-10 h-[34px] text-[15px] transition-colors", w === x ? "font-medium text-[#12131c]" : "text-[#12131c]/50")} style={{ width: seg }}>{x} cm</button>
         ))}
       </div>
       <div className="mt-4 border-t border-[#12131c]/10 pt-3">
-        <h3 className="text-[16px] font-medium">Also buy</h3>
-        <ul className="mt-1.5 space-y-1.5">{m.extras.map((t) => (
+        <h3 className="text-center text-[16px] font-medium">Also buy</h3>
+        <ul className="mx-auto mt-1.5 w-fit space-y-1.5">{m.extras.map((t) => (
           <li key={t} className="flex gap-2.5 text-[15px] leading-snug"><span className="mt-[8px] h-[5px] w-[5px] shrink-0 rounded-full bg-[#12131c]/45" />{t}</li>
         ))}</ul>
       </div>
@@ -118,8 +118,8 @@ function Help({ m }: { m: ReturnType<typeof useMade> }) {
   ];
   return (
     <div className={SURFACE}>
-      <h3 className="text-[17px] font-medium">Help while you sew</h3>
-      <p className="mt-1 text-[15px] leading-snug text-[#12131c]/60">Open any of these when you need it.</p>
+      <h3 className="text-center text-[17px] font-medium">Help while you sew</h3>
+      <p className="mt-1 text-center text-[15px] leading-snug text-[#12131c]/60">Open any of these when you need it.</p>
       <div className="mt-4 flex flex-col gap-2.5">{rows.map(([ic, t, d]) => (
         <button key={t} className={cx("flex items-center gap-3 rounded-[18px] p-3 text-left", raised)}>
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-[#12131c]/[.06] text-[#3c4b63] shadow-[inset_0_1px_2px_rgb(18_19_28/.14)]" aria-hidden><Icon name={ic} size={19} /></span>
