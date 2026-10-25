@@ -459,7 +459,7 @@ export function drawFlat(canvas: HTMLCanvasElement, els: El[], stock: Stock, fac
     if (e.surface === "ink") {
       style = e.color ?? stock.ink;
       if (e.paint?.to) { const g = ctx.createLinearGradient(e.paint.from[0] * px, e.paint.from[1] * px, e.paint.end[0] * px, e.paint.end[1] * px); g.addColorStop(0, style); g.addColorStop(1, e.paint.to); style = g; }
-    } else if (e.surface === "spot") style = mix(hex(paper), dark ? [255, 255, 255] : [0, 0, 0], dark ? 0.07 : 0.1);
+    } else if (e.surface === "spot") style = mix(hex(paper), dark ? [255, 255, 255] : [0, 0, 0], dark ? 0.12 : 0.12); // a flat picture has no light for the gloss to catch, so it shows as a tint
     else if (FOIL[e.surface]) style = foilStyle(ctx, e.surface, W, H);
     if (e.surface !== "blind") ctx.drawImage(tint(3, style), 0, 0); // blind: no ink, only the press shows
     if (raised || sunk) {
@@ -492,9 +492,22 @@ function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
 
 // where a card sits in a scene of several (world units; the card is 3 wide): it eases there from wherever it is
 export type Pose = { x?: number; y?: number; z?: number; rz?: number; s?: number };
-type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void };
+// layer: cards in a scene of several are drawn in layers; each layer is drawn over the ones below it whatever their depth,
+// so a card turning in front can never cut into the one behind it (and the one behind can sit close, at full size)
+// startBack: it starts face down. arrive: it arrives (after this many seconds): from far back, lying almost flat in deep
+// perspective, it rises and comes forward, landing slowly. show: the showcase drift (a slow sway, tilt and float).
+// spin: a new colourway is tipped in: the card tips back like a page until it is edge on, takes the new colour there,
+// and tips forward again
+type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void; layer?: number; startBack?: boolean; arrive?: number; show?: boolean };
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 4), easeInOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
+const ARRIVE = 1.9, TIP = 1.25; // seconds
+const clearGeo = new THREE.PlaneGeometry(0.001, 0.001), clearMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false });
+// drawn just before a layer: it wipes the depth of everything drawn so far, so the layer lands on top
+function DepthClear({ order }: { order: number }) {
+  return <mesh geometry={clearGeo} material={clearMat} renderOrder={order} frustumCulled={false} onBeforeRender={(r) => r.clearDepth()} />;
+}
 // spin: a new colourway arrives with a full turn, swapped in while the card is edge on, so the change is never seen
-function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap }: CardProps) {
+function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, layer = 0, startBack = false, arrive, show = false }: CardProps) {
   const [shown, setShown] = useState(maps);
   // the same card made properly (or a change without the turn): show it straight away
   if (maps !== shown && (!spin || maps.key === shown.key)) setShown(maps);
@@ -523,7 +536,8 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   // leans toward the pointer, or sways a little
   const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null);
   const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter };
-  const st = useRef({ yaw: 0, vy: 0, ty: 0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, spinning: false, swapped: false, base: 0, after: 0, p: { ...p0 } });
+  const y0 = startBack ? Math.PI : 0;
+  const st = useRef({ yaw: y0, vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1, p: { ...p0 } });
   const { gl } = useThree();
   useEffect(() => {
     if (!interactive) return;
@@ -554,35 +568,52 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
   useFrame(({ clock }, delta) => {
     const s = st.current, T = clock.elapsedTime, L = latest.current;
     const dt = Math.min(delta, 1 / 20);
-    // a new colourway waiting: turn once round, swap it in edge on, then settle on the face that was showing
-    if (spin && L.maps !== L.shown && !s.spinning && !s.drag) { s.spinning = true; s.swapped = false; s.base = (((Math.round(s.ty / Math.PI) % 2) + 2) % 2) * Math.PI; }
-    if (s.spinning) {
-      s.vy += (11 - s.vy) * Math.min(1, dt * 8); s.yaw += s.vy * dt;
-      if (!s.swapped && Math.abs(Math.cos(s.yaw)) < 0.3) { if (L.maps !== L.shown) setShown(L.maps); s.swapped = true; s.after = s.yaw; }
-      if (s.swapped && s.yaw - s.after > 0.5) { s.spinning = false; s.ty = s.base + Math.ceil((s.yaw - s.base) / (2 * Math.PI)) * 2 * Math.PI; }
-    } else if (!s.drag) {
-      const lean = interactive && s.hover;
-      const ty = s.ty + (lean ? s.hx * 0.3 : Math.sin(T * 0.6) * 0.09), tp = lean ? s.hy * 0.22 : Math.sin(T * 0.45) * 0.05;
-      let d = dt;
-      while (d > 0) { // damped springs, in small steps so a slow frame can't overshoot
-        const h = Math.min(d, 1 / 120); d -= h;
-        s.vy += (90 * (ty - s.yaw) - 13 * s.vy) * h; s.yaw += s.vy * h;
-        s.vp += (90 * (tp - s.pitch) - 13 * s.vp) * h; s.pitch += s.vp * h;
-      }
+    const want = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose };
+    let lift = 0, extraPitch = 0; // offsets the arrival and the tip lay over the springs
+    // arriving: from far back and above, lying back almost flat, it rises and comes forward and lands
+    if (s.arr === -1) s.arr = T + (arrive ?? 0);
+    if (s.arr >= 0) {
+      const u = Math.max(0, (T - s.arr) / ARRIVE), e = easeOut(Math.min(1, u));
+      const far = 1 - e;
+      s.p = { x: want.x, y: want.y + 0.7 * far, z: want.z - 7 * far, rz: want.rz - 0.12 * far, s: want.s };
+      extraPitch = -1.25 * far; s.yaw = s.ty + 0.35 * far; s.vy = 0; s.vp = 0;
+      if (u >= 1) s.arr = -2;
     }
-    // the place in the scene, eased
-    const k = 1 - Math.exp(-dt * 7), want = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose };
-    for (const n of ["x", "y", "z", "rz", "s"] as const) s.p[n] += (want[n] - s.p[n]) * k;
-    place.current?.position.set(s.p.x, s.p.y, s.p.z); place.current?.rotation.set(0, 0, s.p.rz); place.current?.scale.setScalar(s.p.s);
-    g.current?.rotation.set(s.pitch, s.yaw, 0);
+    // a new colourway waiting: tip it back to edge on, swap it there, tip it forward again
+    if (spin && L.maps !== L.shown && s.tip < 0 && !s.drag && s.arr === -2) { s.tip = T; s.swapped = false; }
+    if (s.tip >= 0) {
+      const u = Math.min(1, (T - s.tip) / TIP), e = easeInOut(u), a = Math.sin(Math.PI * e);
+      extraPitch = -(Math.PI / 2) * a; lift = -0.22 * a;
+      if (!s.swapped && e >= 0.5) { if (L.maps !== L.shown) setShown(L.maps); s.swapped = true; }
+      if (u >= 1) s.tip = -1;
+    }
+    if (!s.drag && s.arr === -2) {
+      // the showcase: a long slow sway and tilt; otherwise a breath of movement; a hovering pointer leans it
+      const lean = interactive && s.hover;
+      const ty = s.ty + (lean ? s.hx * 0.3 : show ? Math.sin(T * 0.32) * 0.5 + Math.sin(T * 0.11) * 0.15 : Math.sin(T * 0.6) * 0.09);
+      const tp = lean ? s.hy * 0.22 : show ? Math.sin(T * 0.23) * 0.16 : Math.sin(T * 0.45) * 0.05;
+      let d = dt;
+      while (d > 0) { // damped springs (soft, so a turn over takes its time), in small steps so a slow frame can't overshoot
+        const h = Math.min(d, 1 / 120); d -= h;
+        s.vy += (38 * (ty - s.yaw) - 10.5 * s.vy) * h; s.yaw += s.vy * h;
+        s.vp += (38 * (tp - s.pitch) - 10.5 * s.vp) * h; s.pitch += s.vp * h;
+      }
+      // the place in the scene, eased slowly
+      const k = 1 - Math.exp(-dt * 3.2);
+      for (const n of ["x", "y", "z", "rz", "s"] as const) s.p[n] += (want[n] - s.p[n]) * k;
+    }
+    const float = show ? Math.sin(T * 0.5) * 0.05 : 0;
+    place.current?.position.set(s.p.x, s.p.y + lift + float, s.p.z); place.current?.rotation.set(0, 0, s.p.rz); place.current?.scale.setScalar(s.p.s);
+    g.current?.rotation.set(s.pitch + extraPitch, s.yaw, 0);
   });
 
   return (
     <group ref={place} position={[p0.x, p0.y, p0.z]} rotation={[0, 0, p0.rz]} scale={p0.s} onClick={onTap ? (e) => { if (e.delta < 8) { e.stopPropagation(); onTap(); } } : undefined}>
+      {layer > 0 && <DepthClear order={layer * 10} />}
       <group ref={g} scale={1 / 30}>
-        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} />
-        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} />
-        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} />
+        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} renderOrder={layer * 10 + 1} />
+        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} renderOrder={layer * 10 + 1} />
+        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} renderOrder={layer * 10 + 1} />
       </group>
     </group>
   );
@@ -599,7 +630,7 @@ function Lens({ near, dist = 1 }: { near: boolean; dist?: number }) {
 }
 
 // a card's maps: the real ones when made (they are made in the background, a few at a time), the quick flat ones until
-function useLiveMaps(els: El[], stock: Stock) {
+function useLiveMaps(els: El[], stock: Stock, madeOnly = false) {
   const fonts = useFonts();
   const key = cardKey(els, stock);
   const [full, setFull] = useState<CardMaps | null>(null);
@@ -611,7 +642,34 @@ function useLiveMaps(els: El[], stock: Stock) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fonts, key]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => (!fonts ? null : full && full.key === key ? full : cachedCard(els, stock) ?? quickCard(els, stock, fonts)), [fonts, key, full]);
+  const m = useMemo(() => (!fonts ? null : full && full.key === key ? full : cachedCard(els, stock) ?? (madeOnly ? null : quickCard(els, stock, fonts))), [fonts, key, full]);
+  // made only: until the next card is made, the last one stays (a spinning card then swaps once it is ready)
+  const [keep, setKeep] = useState(m);
+  if (m && m !== keep) setKeep(m);
+  return m ?? keep;
+}
+// true once every card in the list is made (they are made one after another, in the background)
+export function useCardsReady(list: { els: El[]; stock: Stock }[]) {
+  const key = list.map((c) => cardKey(c.els, c.stock)).join("|");
+  const [done, setDone] = useState("");
+  useEffect(() => {
+    let live = true;
+    loadFonts().then((f) => Promise.all(list.map((c) => requestCard(c.els, c.stock, f)))).then(() => { if (live) setDone(key); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return done === key;
+}
+// the showcase's light: a soft light that sweeps across the cards now and then, so foil and gloss catch it
+export function Sweep({ on }: { on: boolean }) {
+  const l = useRef<THREE.PointLight>(null);
+  useFrame(({ clock }) => {
+    const t = (clock.elapsedTime % 6) / 6; // across in the first two seconds of every six
+    if (!l.current) return;
+    l.current.position.set(-5 + Math.min(1, t * 3) * 10, 1.2, 2.2);
+    l.current.intensity += ((on && t < 0.34 ? 9 : 0) - l.current.intensity) * 0.08;
+  });
+  return <pointLight ref={l} color="#e9ecff" intensity={0} distance={9} decay={1.2} />;
 }
 
 // the scene: lights, the studio the foil reflects, the camera; put cards (LiveCard) inside
@@ -635,8 +693,8 @@ export function CardStage({ children, className, style, near = false, dist = 1, 
   );
 }
 // one card in a stage
-export function LiveCard({ els, stock, ...rest }: { els: El[]; stock: Stock } & Omit<CardProps, "maps">) {
-  const maps = useLiveMaps(els, stock);
+export function LiveCard({ els, stock, madeOnly, ...rest }: { els: El[]; stock: Stock; madeOnly?: boolean } & Omit<CardProps, "maps">) {
+  const maps = useLiveMaps(els, stock, madeOnly);
   return maps ? <Card maps={maps} {...rest} /> : null;
 }
 // make a card's maps ahead of time (so a colourway the viewer may pick next is ready)

@@ -8,11 +8,13 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence, LayoutGroup } from "motion/react";
-import { cx, Pill } from "@/components/ui";
+import { cx, Pill, RB } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { BodyFigure } from "@/components/art";
+import { BodyFigure, Ruler } from "@/components/art";
+import { ALL_MEASURES, GROUPS } from "@/lib/data";
 import { BodyLoader } from "@/components/BodyLoader";
 import { TabBar } from "@/screens/home";
+import { SKINS, ToolBtn, SearchOpen, PhoneSheet, SheetTitle } from "./concepts";
 
 // three.js only runs in the browser
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
@@ -128,14 +130,6 @@ function Live({ b, chart, stage = "grid", focus = "height", room, className }: {
 
 // ─── shared bits ───
 const N = ({ v, className }: { v: number; className?: string }) => <span className={cx("serif", className)}>{v}</span>;
-// how complete: 24 ticks like the marks on a tape, the measured ones lit
-function Ticks({ n, className, tall = 10 }: { n: number; className?: string; tall?: number }) {
-  return (
-    <span className={cx("flex items-end gap-[3px]", className)} aria-label={`${n} of 24 measurements`}>
-      {Array.from({ length: 24 }, (_, i) => <span key={i} className={cx("w-[2px] rounded-full", i < n ? "bg-peri" : "bg-white/15")} style={{ height: i % 4 === 3 ? tall : tall * 0.6 }} />)}
-    </span>
-  );
-}
 const doneLine = (b: B) => (b.done >= 24 ? "Fully measured" : `${b.done} of 24 measured`);
 function Head({ right }: { right?: ReactNode }) {
   return (
@@ -159,14 +153,14 @@ function ViewSwitch({ compact, set }: { compact: boolean; set: (c: boolean) => v
   );
 }
 // the phone's screen: a scroll area and the real tab bar, on Bodies
-function Screen({ children, overlay, onScroll }: { children: ReactNode; overlay?: ReactNode; onScroll?: (el: HTMLDivElement) => void }) {
+function Screen({ children, overlay, onScroll, footer }: { children: ReactNode; overlay?: ReactNode; onScroll?: (el: HTMLDivElement) => void; footer?: ReactNode }) {
   return (
     <LayoutGroup id={useId()}>
       <div data-screen className="absolute inset-0 flex flex-col text-white">
         <div className="dotgrid" />
         <div onScroll={onScroll && ((e) => onScroll(e.currentTarget))} className="noscroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-[124px] pt-[62px]">{children}</div>
         {overlay}
-        <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-2"><TabBar tab="bodies" /></div>
+        <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-2">{footer ?? <TabBar tab="bodies" />}</div>
       </div>
     </LayoutGroup>
   );
@@ -196,278 +190,409 @@ function Today({ list }: Props) {
   );
 }
 
-// ═══ Round 2 (25 Oct 2026): "more cinematic". Full-bleed and dark, no cards: the body is the picture, the words are
-//     titles and credits laid over it, and moving between bodies is a cut or a camera move ═══
+// ═══ Round 3 (25 Oct 2026): Spotlight, refined from Jose's notes. The body in a smaller stage built like the measuring
+//     screens' (ink with a faint light from above, the pattern floor), its name faint behind it and its numbers as
+//     credits; under it, what to do with this body; then the bodies themselves as raised rows (or wide cards, to
+//     compare), each with a face, a name, its marks and its height, the chosen one in snow. Options are always there:
+//     Search, Edit (choose and delete) and personal or compact, however few bodies there are ═══
+type Sel = "rows" | "cards";
+const RIM_D = SKINS.dark.rim, TILE_D = SKINS.dark.tile;
+const NewBody = () => <Pill className="!h-10 !w-auto shrink-0 gap-1.5 px-4 !text-[15px]" icon={<Icon name="plus" size={18} strokeWidth={2.2} />}>New body</Pill>;
+// the box for choosing, pressed into the row's right end
+const PickBox = ({ on }: { on: boolean }) => (
+  <span className={cx("grid h-[24px] w-[24px] shrink-0 place-items-center rounded-[7px] transition-colors", on ? "icon-primary text-white" : "")} style={on ? undefined : { boxShadow: "inset 0 0 0 1.5px rgb(255 255 255 / .5)" }}>
+    {on && <Icon name="check" size={13} strokeWidth={3} />}
+  </span>
+);
+// one body as a raised row: its face pressed into a tile, the name, its 24 marks and how many, its height. Chosen: snow
+function BodyRow({ b, on, compact, pick, onClick, wide }: { b: B; on: boolean; compact: boolean; pick?: boolean | null; onClick: () => void; wide?: boolean }) {
+  const snow = on && pick == null;
+  return (
+    <button onClick={onClick} aria-pressed={pick != null ? pick : on}
+      className={cx("tap flex shrink-0 items-center gap-3 p-[5px] pr-4 text-left transition-colors duration-300", compact ? "h-[52px] rounded-[18px] pl-4" : "h-[76px] rounded-[22px]", wide ? "w-[262px] snap-start" : "w-full", snow && "bg-snow text-ink")}
+      style={snow ? { boxShadow: "0 10px 24px -14px rgb(0 0 0 / .7)" } : RIM_D}>
+      {!compact && (
+        <span className="relative h-[66px] w-[54px] shrink-0 overflow-hidden rounded-[17px]" style={snow ? { background: "rgb(52 62 110 / .07)" } : TILE_D}>
+          <Still b={b} shot="portrait" className="object-cover object-top" />
+          <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: snow ? "inset 0 3px 7px rgb(28 36 84 / .3), inset 0 -1px 0 rgb(255 255 255 / .9)" : "inset 0 3px 7px rgb(0 0 0 / .65), inset 0 -1px 0 rgb(255 255 255 / .06)" }} />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[17px] leading-tight">{b.name}</span>
+        {!compact && (
+          <span className="mt-1.5 flex items-center gap-2">
+            <span className={cx("flex items-end gap-[2px]", snow && "[&>span]:!bg-ink/15 [&>span.lit]:!bg-primary")}>
+              {Array.from({ length: 24 }, (_, k) => <span key={k} className={cx("w-[2px] rounded-full", k < b.done ? "lit bg-peri" : "bg-white/15")} style={{ height: k % 4 === 3 ? 8 : 5 }} />)}
+            </span>
+            <span className={cx("text-[12px]", snow ? "text-ink/55" : "text-white/50")}>{b.done >= 24 ? "Fully measured" : `${b.done} of 24`}</span>
+          </span>
+        )}
+      </span>
+      {pick != null ? <PickBox on={pick} /> : (
+        <span className={cx("shrink-0 text-right text-[12px]", snow ? "text-ink/55" : "text-white/50")}><N v={b.m.height} className={cx("text-[20px]", snow ? "text-ink" : "text-white")} /> cm</span>
+      )}
+    </button>
+  );
+}
+function Spot({ list: start, sel }: Props & { sel: Sel }) {
+  const [gone, setGone] = useState<string[]>([]);
+  const list = start.filter((x) => !gone.includes(x.id));
+  const [id, setId] = useState<string | null>(null);
+  const [dark, setDark] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [q, setQ] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [ask, setAsk] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const b = list.find((x) => x.id === id) ?? list[0];
+  const shown = list.filter((x) => !q.trim() || x.name.toLowerCase().includes(q.trim().toLowerCase()));
+  // another body: the light dims, a cut, and it comes up on them
+  const cut = (x: B) => { if (x.id === b?.id) return; setDark(true); setTimeout(() => { setId(x.id); setDark(false); }, 260); };
+  const stop = () => { setPicking(false); setPicked([]); };
+  const toggle = (x: B) => setPicked((p) => (p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id]));
+  const all = shown.length > 0 && shown.every((x) => picked.includes(x.id));
+  const remove = () => {
+    const n = picked.length;
+    setGone([...gone, ...picked]); setAsk(false); stop();
+    setToast(n === 1 ? "Body deleted" : `${n} bodies deleted`); setTimeout(() => setToast(null), 2200);
+  };
+  const footer = picking ? (
+    <div className="flex items-center gap-3 pb-1">
+      <Pill variant="dark" className="flex-1" onClick={stop}>Cancel</Pill>
+      <Pill className={cx("flex-1", !picked.length && "is-off")} onClick={() => picked.length && setAsk(true)} icon={<Icon name="trash" size={18} />}>{picked.length ? `Delete ${picked.length}` : "Delete"}</Pill>
+    </div>
+  ) : undefined;
+  const overlay = (
+    <>
+      <PhoneSheet open={ask} onClose={() => setAsk(false)}>
+        <SheetTitle>{picked.length === 1 ? "Delete this body?" : `Delete ${picked.length} bodies?`}</SheetTitle>
+        <p className="mt-2 text-[15px] text-white/60">Their measurements go too. Patterns already made for them stay. This can’t be undone.</p>
+        <Pill className="mt-6" onClick={remove}>Delete</Pill>
+        <Pill variant="dark" className="mt-2.5" onClick={() => setAsk(false)}>{picked.length === 1 ? "Keep it" : "Keep them"}</Pill>
+      </PhoneSheet>
+      <AnimatePresence>{toast && <motion.div key="t" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute inset-x-0 bottom-[112px] z-30 flex justify-center"><span className="flex h-10 items-center gap-2 rounded-full bg-snow px-4 text-[14px] font-medium text-ink shadow-[0_10px_30px_-10px_rgb(0_0_0/.6)]"><Icon name="check" size={15} strokeWidth={2.6} />{toast}</span></motion.div>}</AnimatePresence>
+    </>
+  );
+  // the stage: the measuring screens' build (ink, a faint light from above, the pattern floor)
+  const stage = (inner: ReactNode, h = 250) => <div className="stage-ink relative mx-6 overflow-hidden rounded-[30px] border border-white/[.08]" style={{ height: h }}>{inner}</div>;
+  if (!b) return (
+    <Screen footer={footer} overlay={overlay}>
+      <div className="flex h-11 items-center justify-between gap-3 px-6"><h1 className="h1 !text-[34px]">Body library</h1></div>
+      <div className="mt-5">{stage(<>
+        <Live stage="grid" room={0.36} className="absolute inset-0 opacity-50" />
+        <div className="absolute inset-x-5 bottom-5 text-center">
+          <p className="text-[22px] leading-tight tracking-[-.02em]">Your body, to your measurements</p>
+          <p className="mt-1 text-[14px] text-white/55">Four to start, twenty more when you have time.</p>
+        </div>
+      </>, 420)}</div>
+      <div className="mt-4 px-6"><Pill>Set up a body</Pill></div>
+    </Screen>
+  );
+  const first = b.name.split(" ")[0];
+  return (
+    <Screen footer={footer} overlay={overlay}>
+      <div className="flex h-11 items-center justify-between gap-3 px-6"><h1 className="h1 !text-[34px]">Body library</h1>{!picking && <NewBody />}</div>
+      {/* the tools, always: finding on the left (Search), the list on the right (Edit, personal or compact) */}
+      <div className="mt-4 px-6">
+        {picking ? (
+          <div className="flex h-10 items-center justify-between">
+            <span className="text-[15px] text-white/70">{picked.length ? `${picked.length} selected` : "Choose bodies to delete"}</span>
+            <button onClick={() => setPicked(all ? [] : shown.map((x) => x.id))} className="h-10 px-1 text-[15px] font-medium text-peri">{all ? "Clear" : "Select all"}</button>
+          </div>
+        ) : searching ? <SearchOpen q={q} setQ={setQ} placeholder="Search bodies" onCancel={() => { setSearching(false); setQ(""); }} /> : (
+          <div className="flex h-10 items-center justify-between">
+            <ToolBtn icon="search" label="Search" onClick={() => setSearching(true)} />
+            <span className="flex items-center gap-2">
+              <ToolBtn icon="select" label="Edit" onClick={() => { setPicking(true); setSearching(false); }} />
+              <ViewSwitch compact={compact} set={setCompact} />
+            </span>
+          </div>
+        )}
+      </div>
+      {/* the chosen body, live in its stage; its name faint behind it, its numbers as credits */}
+      <div className="mt-4">{stage(<>
+        <div className={cx("pointer-events-none absolute left-1/2 top-0 h-full w-[300px] -translate-x-1/2 transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")} style={{ background: "radial-gradient(ellipse 40% 90% at 50% 0%, rgb(240 244 254 / .1), transparent 75%)" }} />
+        <AnimatePresence mode="wait">
+          <motion.p key={b.id} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.3 }}
+            className="pointer-events-none absolute inset-x-0 top-[34px] text-center leading-none tracking-[-.06em] text-snow/[.08]" style={{ fontSize: Math.min(120, 520 / Math.max(3, first.length)) }}>{first}</motion.p>
+        </AnimatePresence>
+        <Live b={b} stage="grid" room={0.12} className={cx("absolute inset-0 transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")} />
+        <div className={cx("pointer-events-none absolute inset-x-4 bottom-3 flex items-end justify-between transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}>
+          <span><span className="block text-[20px] leading-none tracking-[-.02em]">{b.name}</span><span className="mt-1 block text-[12px] text-white/50">{b.how}</span></span>
+          <span className="flex gap-3">{KEYS.slice(1).map(([k, l]) => <span key={k} className="text-center"><span className="block text-[10px] text-white/45">{l}</span><N v={b.m[k]} className="text-[17px]" /></span>)}</span>
+        </div>
+      </>)}</div>
+      {/* what to do with this body */}
+      {!picking && (
+        <div className="mt-3 flex gap-2.5 px-6">
+          <Pill variant="dark" className="!h-11 flex-1 !text-[15px]" icon={<Icon name="ruler" size={17} />}>{b.done >= 24 ? "Measurements" : `Finish measuring`}</Pill>
+          <Pill variant="white" className="!h-11 flex-1 !text-[15px]" icon={<Icon name="scissors" size={17} />}>Make a pattern</Pill>
+        </div>
+      )}
+      {/* the bodies */}
+      {shown.length === 0 ? <p className="mt-8 px-6 text-center text-[15px] text-white/55">No bodies called “{q.trim()}”.</p> : sel === "cards" && !compact ? (
+        <div className="noscroll -mb-5 mt-5 flex snap-x snap-mandatory scroll-px-6 gap-2.5 overflow-x-auto px-6 pb-8 pt-1">
+          {shown.map((x) => <BodyRow key={x.id} b={x} on={x.id === b.id} compact={false} wide pick={picking ? picked.includes(x.id) : null} onClick={() => (picking ? toggle(x) : cut(x))} />)}
+        </div>
+      ) : (
+        <div className={cx("mt-5 flex flex-col px-6", compact ? "gap-1.5" : "gap-2.5")}>
+          {shown.map((x) => <BodyRow key={x.id} b={x} on={x.id === b.id} compact={compact} pick={picking ? picked.includes(x.id) : null} onClick={() => (picking ? toggle(x) : cut(x))} />)}
+        </div>
+      )}
+    </Screen>
+  );
+}
+const SpotRows = (p: Props) => <Spot {...p} sel="rows" />;
+// ═══ Round 4 (25 Oct 2026), from Jose's notes on Spotlight · Rows: no big name behind the body; the actions belong to
+//     the body (built into its card, on the rim under the stage, like the pattern tray's band); the stage never
+//     scrolls away (only the rows scroll, and as they do the stage folds to a waist-up portrait, the camera gliding in);
+//     and the body opens into its own page: the measurements in groups, tap one and the camera goes to it on the body
+//     with its tape, a sheet with the dial to change it ═══
+const PRESS_D = SKINS.dark.press;
+type Edits = { m: Record<string, Record<string, number>>; done: Record<string, string[]>; names: Record<string, string>; gone: string[] };
+const KEYS_ALL = ALL_MEASURES.map((x) => x.key);
+// a body's measurement: what was typed here, else its own base four, else the starting body's
+const valueOf = (b: B, k: string, e: Edits) => e.m[b.id]?.[k] ?? (k in b.m ? b.m[k as keyof M] : ALL_MEASURES.find((x) => x.key === k)!.value);
+const doneOf = (b: B, e: Edits) => new Set([...KEYS_ALL.slice(0, b.done), ...(e.done[b.id] ?? [])]);
+const nameOf = (b: B, e: Edits) => e.names[b.id] ?? b.name;
+const toastNode = (t: string | null) => (
+  <AnimatePresence>{t && <motion.div key="t" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="pointer-events-none absolute inset-x-0 bottom-[112px] z-50 flex justify-center"><span className="flex h-10 items-center gap-2 rounded-full bg-snow px-4 text-[14px] font-medium text-ink shadow-[0_10px_30px_-10px_rgb(0_0_0/.6)]"><Icon name="check" size={15} strokeWidth={2.6} />{t}</span></motion.div>}</AnimatePresence>
+);
+function useToastLab() {
+  const [t, setT] = useState<string | null>(null);
+  const show = (s: string) => { setT(s); setTimeout(() => setT(null), 2200); };
+  return { t, show };
+}
 
-// the full-bleed screen: the stage behind everything, the title and New body over its top, the tab bar over its foot
-function Cine({ children, top, overlay, scroll, onScroll }: { children: ReactNode; top?: ReactNode; overlay?: ReactNode; scroll?: boolean; onScroll?: (el: HTMLDivElement) => void }) {
+function Library4({ list: start }: Props) {
+  const [e, setE] = useState<Edits>({ m: {}, done: {}, names: {}, gone: [] });
+  const [page, setPage] = useState<"list" | "body">("list");
+  const [id, setId] = useState<string | null>(null);
+  const list = start.filter((x) => !e.gone.includes(x.id)).map((x) => ({ ...x, name: nameOf(x, e), done: doneOf(x, e).size, m: { height: valueOf(x, "height", e), bust: valueOf(x, "bust", e), waist: valueOf(x, "waist", e), hips: valueOf(x, "hips", e) } }));
+  const b = list.find((x) => x.id === id) ?? list[0];
   return (
     <LayoutGroup id={useId()}>
-      <div data-screen className="absolute inset-0 overflow-hidden bg-bg text-white">
-        {scroll ? <div onScroll={onScroll && ((e) => onScroll(e.currentTarget))} className="noscroll absolute inset-0 overflow-y-auto overflow-x-hidden">{children}</div> : children}
-        {/* a soft shade under the status bar and the title, and over the tab bar, so the words read on any frame */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[150px] bg-gradient-to-b from-bg via-bg/70 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[150px] bg-gradient-to-t from-bg via-bg/60 to-transparent" />
-        <div className="absolute inset-x-6 top-[58px] z-20 flex h-10 items-center justify-between gap-3">
-          <span className="text-[20px] tracking-[-.02em]">Body library</span>
-          {top}
-        </div>
-        {overlay}
-        <div className="absolute inset-x-0 bottom-0 z-30 px-6 pb-2"><TabBar tab="bodies" /></div>
-      </div>
+      <AnimatePresence initial={false} mode="popLayout">
+        {page === "body" && b ? (
+          <motion.div key="body" className="absolute inset-0" initial={{ x: 393 }} animate={{ x: 0 }} exit={{ x: 393 }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
+            <BodyPage b={start.find((x) => x.id === b.id)!} e={e} setE={setE} onBack={() => setPage("list")} />
+          </motion.div>
+        ) : (
+          <motion.div key="list" className="absolute inset-0" initial={{ x: -120, opacity: 0.6 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -120, opacity: 0.6 }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
+            <List4 list={list} b={b} setId={setId} onOpen={() => setPage("body")} onDelete={(ids) => setE({ ...e, gone: [...e.gone, ...ids] })} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </LayoutGroup>
   );
 }
-const NewBodyRound = () => <button aria-label="New body" className="tap grid h-10 w-10 place-items-center rounded-full pill-primary"><Icon name="plus" size={20} strokeWidth={2.2} /></button>;
-// the many: personal or compact, beside New body
-const TopTools = ({ many, compact, set }: { many: boolean; compact: boolean; set: (c: boolean) => void }) => (
-  <span className="flex items-center gap-2">{many && <ViewSwitch compact={compact} set={set} />}<NewBodyRound /></span>
-);
-// the numbers as credits: four short columns, the label small over the number
-function Credits({ b, className }: { b: B; className?: string }) {
-  return (
-    <div className={cx("flex justify-center gap-6", className)}>
-      {KEYS.map(([k, l]) => (
-        <div key={k} className="text-center">
-          <div className="text-[11px] text-white/45">{l}</div>
-          <div className="mt-0.5 leading-none"><N v={b.m[k]} className="text-[20px]" /></div>
-        </div>
-      ))}
-    </div>
-  );
-}
-// compact, for the many: end credits. Names centred one under the other, each with its height and how complete it is,
-// and a small still beside; tap one to see them on the stage
-function CastList({ list, onPick }: { list: B[]; onPick: (i: number) => void }) {
-  return (
-    <div className="noscroll absolute inset-0 overflow-y-auto px-6 pb-[140px] pt-[124px]">
-      <p className="text-center text-[13px] text-white/40">The cast</p>
-      <div className="mt-4 flex flex-col">
-        {list.map((b, i) => (
-          <button key={b.id} onClick={() => onPick(i)} className="tap grid grid-cols-[36px_1fr_36px] items-center gap-3 border-b border-white/[.06] py-3 text-left">
-            <span className="h-[52px]"><Still b={b} className="object-contain opacity-80" /></span>
-            <span className="text-center">
-              <span className="block text-[19px] leading-tight tracking-[-.02em]">{b.name}</span>
-              <span className="mt-1 block text-[12px] text-white/45"><N v={b.m.height} className="text-[13px] text-white/70" /> cm · {doneLine(b)}</span>
-            </span>
-            <span />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-// ═══ A · Spotlight: a dark stage and one light from above; the body stands in it, live, its name huge behind it; the
-//     numbers as credits; the others wait at the foot as silhouettes. Choosing another dims the light, cuts, and
-//     brings it up on them ═══
-function Spotlight({ list }: Props) {
-  const [i, setI] = useState(0);
+// the library: a fixed top (title, tools, the chosen body's card) and the rows scrolling under it
+function List4({ list, b, setId, onOpen, onDelete }: { list: B[]; b?: B; setId: (id: string) => void; onOpen: () => void; onDelete: (ids: string[]) => void }) {
   const [dark, setDark] = useState(false);
+  const [small, setSmall] = useState(false);
   const [compact, setCompact] = useState(false);
-  const many = list.length > 6;
-  const b = list[Math.min(i, list.length - 1)];
-  const cut = (n: number) => { setCompact(false); if (n === i) return; setDark(true); setTimeout(() => { setI(n); setDark(false); }, 280); };
-  const light = (
-    <>
-      {/* the light: a cone from the top, brightest where it lands */}
-      <div className={cx("pointer-events-none absolute left-1/2 top-0 h-[640px] w-[420px] -translate-x-1/2 transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}
-        style={{ background: "radial-gradient(ellipse 34% 100% at 50% 0%, rgb(240 244 254 / .13), rgb(240 244 254 / .04) 55%, transparent 75%)" }} />
-      <div className={cx("pointer-events-none absolute left-1/2 top-[548px] h-[70px] w-[260px] -translate-x-1/2 rounded-[50%] transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}
-        style={{ background: "radial-gradient(closest-side, rgb(240 244 254 / .2), rgb(104 126 245 / .08) 60%, transparent)" }} />
-    </>
-  );
-  if (!b) return (
-    <Cine top={<NewBodyRound />}>
-      {light}
-      <div className="absolute inset-x-6 top-[300px] text-center">
-        <p className="text-[30px] leading-[1.08] tracking-[-.03em]">The stage is set</p>
-        <p className="mt-2 text-[15px] text-white/55">Measure someone and they stand here,<br />in their own shape.</p>
-      </div>
-      <div className="absolute inset-x-6 bottom-[120px] z-20"><Pill>Set up a body</Pill></div>
-    </Cine>
-  );
-  const size = Math.min(150, 620 / Math.max(3, b.name.split(" ")[0].length));
-  return (
-    <Cine top={<TopTools many={many} compact={compact} set={setCompact} />}>
-      {compact ? <CastList list={list} onPick={cut} /> : (
-        <>
-          {light}
-          {/* the name behind the body, huge and faint */}
-          <AnimatePresence mode="wait">
-            <motion.p key={b.id} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.35 }}
-              className="pointer-events-none absolute inset-x-0 top-[150px] text-center leading-none tracking-[-.06em] text-snow/[.09]" style={{ fontSize: size }}>
-              {b.name.split(" ")[0]}
-            </motion.p>
-          </AnimatePresence>
-          <Live b={b} stage="none" className={cx("absolute inset-x-0 bottom-[240px] top-[110px] transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")} />
-          {/* the credits */}
-          <div className={cx("absolute inset-x-6 bottom-[176px] z-20 text-center transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}>
-            <p className="text-[24px] leading-none tracking-[-.02em]">{b.name}</p>
-            <p className="mt-1.5 text-[12px] text-white/45">{b.how} · {doneLine(b)}{b.done < 24 && <> · <span className="text-peri">Finish</span></>}</p>
-            <Credits b={b} className="mt-3" />
-          </div>
-          {/* the others, waiting at the foot as silhouettes; the one on stage lit */}
-          {/* centred while they fit; a row that runs past the edges scrolls from its start (a centred overflow would hide it) */}
-          <div className="noscroll absolute inset-x-0 bottom-[100px] z-20 overflow-x-auto px-6">
-            <div className="mx-auto flex w-max gap-3">
-            {list.map((x, n) => (
-              <button key={x.id} onClick={() => cut(n)} aria-label={x.name} className="flex w-[30px] shrink-0 flex-col items-center gap-1">
-                <span className={cx("block h-[58px] w-full transition-[filter,opacity] duration-300", n === i ? "" : "opacity-70 [filter:brightness(.18)]")}><Still b={x} /></span>
-                <span className={cx("h-[2px] w-4 rounded-full", n === i ? "bg-peri" : "bg-transparent")} />
-              </button>
-            ))}
-            </div>
-          </div>
-        </>
-      )}
-    </Cine>
-  );
-}
-
-// ═══ B · Orbit: everyone stands on a turntable, the one at the front live and lit, the rest round the ring, smaller,
-//     darker and softer the further back; tap one and the ring swings round to it ═══
-function Orbit({ list }: Props) {
-  const [rot, setRot] = useState(0);
-  const [moving, setMoving] = useState(false);
-  const [compact, setCompact] = useState(false);
-  const many = list.length > 6;
-  const n = list.length;
-  const front = n ? (((Math.round(rot) % n) + n) % n) : 0;
-  const b = list[front];
-  const raf = useRef(0);
-  // swing round the short way, easing in and out
-  const spin = (k: number) => {
-    setCompact(false);
-    let d = k - (((rot % n) + n) % n); if (d > n / 2) d -= n; if (d < -n / 2) d += n;
-    if (!d) return;
-    const from = rot, to = rot + d, T = 700 + Math.abs(d) * 120;
-    let t0 = -1;
-    setMoving(true);
-    cancelAnimationFrame(raf.current);
-    const step = (t: number) => { if (t0 < 0) t0 = t; const p = Math.min(1, (t - t0) / T); const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; setRot(from + (to - from) * e); if (p < 1) raf.current = requestAnimationFrame(step); else setMoving(false); };
-    raf.current = requestAnimationFrame(step);
-  };
-  useEffect(() => () => cancelAnimationFrame(raf.current), []);
-  const disc = (
-    // the turntable: an ellipse of light on the floor with fine marks round its rim
-    <div className="pointer-events-none absolute left-1/2 top-[470px] h-[110px] w-[350px] -translate-x-1/2">
-      <div className="absolute inset-0 rounded-[50%] border border-white/10" style={{ background: "radial-gradient(closest-side, rgb(104 126 245 / .16), rgb(104 126 245 / .04) 70%, transparent)" }} />
-      <svg viewBox="0 0 350 110" className="absolute inset-0" aria-hidden>
-        {Array.from({ length: 72 }, (_, k) => { const a = (k / 72) * Math.PI * 2 + rot * (Math.PI * 2 / Math.max(n, 1)); const x = 175 + Math.sin(a) * 171, y = 55 + Math.cos(a) * 53; return <circle key={k} cx={x} cy={y} r={k % 6 ? 0.8 : 1.4} fill="rgb(240 244 254)" opacity={0.15 + 0.35 * ((Math.cos(a) + 1) / 2)} />; })}
-      </svg>
+  const [q, setQ] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [ask, setAsk] = useState(false);
+  const { t, show } = useToastLab();
+  const shown = list.filter((x) => !q.trim() || x.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const cut = (x: B) => { if (x.id === b?.id) return; setDark(true); setTimeout(() => { setId(x.id); setDark(false); }, 260); };
+  const stop = () => { setPicking(false); setPicked([]); };
+  const all = shown.length > 0 && shown.every((x) => picked.includes(x.id));
+  const remove = () => { const n = picked.length; onDelete(picked); setAsk(false); stop(); show(n === 1 ? "Body deleted" : `${n} bodies deleted`); };
+  // the rows scroll; past a little, the stage folds to a portrait (and opens again at the top)
+  const onScroll = (el: HTMLDivElement) => { if (!small && el.scrollTop > 24) setSmall(true); else if (small && el.scrollTop < 4) setSmall(false); };
+  const footer = picking ? (
+    <div className="flex items-center gap-3 pb-1">
+      <Pill variant="dark" className="flex-1" onClick={stop}>Cancel</Pill>
+      <Pill className={cx("flex-1", !picked.length && "is-off")} onClick={() => picked.length && setAsk(true)} icon={<Icon name="trash" size={18} />}>{picked.length ? `Delete ${picked.length}` : "Delete"}</Pill>
     </div>
-  );
-  if (!b) return (
-    <Cine top={<NewBodyRound />}>
-      {disc}
-      <div className="absolute inset-x-6 top-[250px] text-center">
-        <p className="text-[30px] leading-[1.08] tracking-[-.03em]">Nobody on the turntable yet</p>
-        <p className="mt-2 text-[15px] text-white/55">Everyone you measure takes a place here.</p>
-      </div>
-      <div className="absolute inset-x-6 bottom-[120px] z-20"><Pill>Set up a body</Pill></div>
-    </Cine>
-  );
+  ) : <TabBar tab="bodies" />;
   return (
-    <Cine top={<TopTools many={many} compact={compact} set={setCompact} />}>
-      {compact ? <CastList list={list} onPick={spin} /> : (
-        <>
-          {disc}
-          {list.map((x, k) => {
-            const a = ((k - rot) / n) * Math.PI * 2;
-            const z = Math.cos(a), depth = (z + 1) / 2; // 1 at the front, 0 at the back
-            const isFront = k === front && !moving;
-            const h = 330 * (0.42 + 0.58 * depth ** 1.6) * (x.m.height / 180);
-            return (
-              <button key={x.id} onClick={() => spin(k)} aria-label={x.name} className="absolute left-1/2 top-[525px] -translate-x-1/2"
-                style={{ transform: `translate(calc(-50% + ${Math.sin(a) * 150}px), ${-h - (1 - depth) * 40}px)`, zIndex: Math.round(depth * 100), width: h * 0.42, height: h }}>
-                <span className="block h-full w-full transition-opacity" style={{ opacity: isFront ? 0 : 0.25 + 0.75 * depth, filter: `brightness(${0.35 + 0.65 * depth}) blur(${(1 - depth) * 1.5}px)` }}><Still b={x} /></span>
-              </button>
-            );
-          })}
-          {/* the one at the front, live, once the ring has stopped */}
-          {!moving && <Live key={b.id} b={b} stage="none" className="pointer-events-auto absolute inset-x-0 top-[150px] z-[101] h-[385px]" />}
-          <div className="absolute inset-x-6 bottom-[112px] z-20 text-center">
-            <AnimatePresence mode="wait">
-              <motion.div key={b.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
-                <p className="text-[30px] leading-none tracking-[-.03em]">{b.name}</p>
-                <p className="mt-2 text-[12px] text-white/45">{b.how} · {doneLine(b)}</p>
-                <Credits b={b} className="mt-3" />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </>
-      )}
-    </Cine>
-  );
-}
-
-// ═══ C · Scenes: scroll and the camera moves, like a title sequence. Each body opens close on the face with its name
-//     as a title card; scroll and the camera pulls back to the whole body and its height, then glides to bust, waist
-//     and hips, each with its tape round the body and its number; then a cut to the next one ═══
-const SCENE_H = 560;
-const SCENES: { focus: string; k?: keyof M; label?: string }[] = [{ focus: "portrait" }, { focus: "height", k: "height", label: "Height" }, { focus: "bust", k: "bust", label: "Bust" }, { focus: "waist", k: "waist", label: "Waist" }, { focus: "hips", k: "hips", label: "Hips" }];
-function Scenes({ list }: Props) {
-  const [at, setAt] = useState(0);
-  const [compact, setCompact] = useState(false);
-  const box = useRef<HTMLDivElement | null>(null);
-  const many = list.length > 6;
-  const total = list.length * SCENES.length;
-  const bi = Math.min(Math.floor(at / SCENES.length), Math.max(0, list.length - 1));
-  const sc = SCENES[at % SCENES.length];
-  const b = list[bi];
-  const onScroll = (el: HTMLDivElement) => { box.current = el; setAt(Math.max(0, Math.min(total - 1, Math.round(el.scrollTop / SCENE_H)))); };
-  const pick = (i: number) => { setCompact(false); requestAnimationFrame(() => box.current?.scrollTo({ top: i * SCENES.length * SCENE_H })); };
-  if (!b) return (
-    <Cine top={<NewBodyRound />}>
-      <Live stage="none" focus="portrait" className="absolute inset-x-0 bottom-[260px] top-[110px] opacity-50" />
-      <div className="absolute inset-x-6 bottom-[150px] z-20">
-        <p className="text-[30px] leading-[1.08] tracking-[-.03em]">Every body has a story</p>
-        <p className="mt-2 text-[15px] text-white/55">Measure the first one and it starts here.</p>
-        <Pill className="mt-5">Set up a body</Pill>
-      </div>
-    </Cine>
-  );
-  if (compact) return <Cine top={<TopTools many={many} compact={compact} set={setCompact} />}><CastList list={list} onPick={pick} /></Cine>;
-  return (
-    <Cine scroll onScroll={onScroll} top={<TopTools many={many} compact={compact} set={setCompact} />}
-      overlay={
-        // where you are: a thin line down the right edge, one notch per body, the one you are in lit
-        <div className="pointer-events-none absolute bottom-[150px] right-3 top-[150px] z-20 flex flex-col justify-center gap-1.5">
-          {list.map((x, k) => <span key={x.id} className={cx("w-[2px] rounded-full transition-all", k === bi ? "h-8 bg-peri" : "h-3 bg-white/20")} />)}
-        </div>
-      }>
-      {/* the stage stays put while the scenes scroll past it; the camera follows the scene */}
-      <div className="sticky top-0 z-0 h-[852px]" style={{ marginBottom: -852 }}>
-        <Live key={b.id} b={b} stage="none" focus={sc.focus} className="absolute inset-x-0 bottom-[150px] top-[100px]" />
-      </div>
-      <div className="relative z-10 snap-y">
-        {list.map((x) => SCENES.map((s, k) => (
-          <section key={x.id + k} className="relative" style={{ height: SCENE_H }}>
-            {k === 0 ? (
-              <div className="absolute inset-x-6 bottom-[160px]">
-                <p className="text-[64px] leading-[.92] tracking-[-.05em]">{x.name.split(" ")[0]}</p>
-                <p className="mt-3 text-[14px] text-white/55">{x.how} · {doneLine(x)}</p>
-                <Ticks n={x.done} className="mt-3" />
+    <div data-screen className="absolute inset-0 flex flex-col text-white">
+      <div className="dotgrid" />
+      <div className="relative shrink-0 pt-[62px]">
+        <div className="flex h-11 items-center justify-between gap-3 px-6"><h1 className="h1 !text-[34px]">Body library</h1>{!picking && b && <NewBody />}</div>
+        {b && (
+          <div className="mt-4 px-6">
+            {picking ? (
+              <div className="flex h-10 items-center justify-between">
+                <span className="text-[15px] text-white/70">{picked.length ? `${picked.length} selected` : "Choose bodies to delete"}</span>
+                <button onClick={() => setPicked(all ? [] : shown.map((x) => x.id))} className="h-10 px-1 text-[15px] font-medium text-peri">{all ? "Clear" : "Select all"}</button>
               </div>
-            ) : (
-              <div className="absolute bottom-[160px] right-6 text-right">
-                <p className="text-[14px] text-white/55">{s.label}</p>
-                <p className="leading-none"><N v={x.m[s.k!]} className="text-[72px]" /><span className="unit ml-1 text-[18px] text-white/55" translate="no">cm</span></p>
+            ) : searching ? <SearchOpen q={q} setQ={setQ} placeholder="Search bodies" onCancel={() => { setSearching(false); setQ(""); }} /> : (
+              <div className="flex h-10 items-center justify-between">
+                <ToolBtn icon="search" label="Search" onClick={() => setSearching(true)} />
+                <span className="flex items-center gap-2">
+                  <ToolBtn icon="select" label="Edit" onClick={() => { setPicking(true); setSearching(false); }} />
+                  <ViewSwitch compact={compact} set={setCompact} />
+                </span>
               </div>
             )}
-          </section>
-        )))}
-        <div style={{ height: 852 - SCENE_H }} />
+          </div>
+        )}
+        {/* the chosen body's card, the pattern tray's build: a raised rim, the stage pressed into it (the measuring
+            screens' ink and pattern floor), and on the rim below, what to do with this body */}
+        {b ? (
+          <div className="mx-6 mt-4 rounded-[30px] p-[7px]" style={RIM_D}>
+            <div className="stage-ink relative overflow-hidden rounded-[24px] transition-[height] duration-300 ease-out" style={{ height: small ? 120 : 236 }}>
+              <Live b={b} stage="grid" focus={small ? "portrait" : "height"} room={small ? 0 : 0.08} className={cx("absolute inset-0 transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")} />
+              <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS_D }} />
+              <div className={cx("pointer-events-none absolute left-4 top-3.5 transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}>
+                <p className="text-[21px] leading-none tracking-[-.02em]">{b.name}</p>
+                <p className="mt-1.5 text-[12px] text-white/50">{b.how} · {doneLine(b)}</p>
+              </div>
+              <div className={cx("pointer-events-none absolute bottom-3 right-4 flex gap-3 transition-opacity duration-300", dark ? "opacity-0" : "opacity-100")}>
+                {KEYS.map(([k, l]) => <span key={k} className="text-center"><span className="block text-[10px] text-white/45">{l}</span><N v={b.m[k]} className="text-[17px]" /></span>)}
+              </div>
+            </div>
+            {!picking && (
+              <div className="flex gap-[7px] pt-[7px]">
+                <Pill variant="dark" className="!h-11 flex-1 !text-[15px]" icon={<Icon name="ruler" size={17} />} onClick={onOpen}>{b.done >= 24 ? "Measurements" : "Finish measuring"}</Pill>
+                <Pill variant="white" className="!h-11 flex-1 !text-[15px]" icon={<Icon name="scissors" size={17} />}>Make a pattern</Pill>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="mx-6 mt-5 rounded-[30px] p-[7px]" style={RIM_D}>
+            <div className="stage-ink relative h-[380px] overflow-hidden rounded-[24px]">
+              <Live stage="grid" room={0.3} className="absolute inset-0 opacity-50" />
+              <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS_D }} />
+              <div className="absolute inset-x-5 bottom-5 text-center">
+                <p className="text-[22px] leading-tight tracking-[-.02em]">Your body, to your measurements</p>
+                <p className="mt-1 text-[14px] text-white/55">Four to start, twenty more when you have time.</p>
+              </div>
+            </div>
+            <div className="pt-[7px]"><Pill className="!h-12">Set up a body</Pill></div>
+          </div>
+        )}
       </div>
-    </Cine>
+      {/* the rows: the only part that scrolls, fading in under the card */}
+      {b && (
+        <div onScroll={(ev) => onScroll(ev.currentTarget)} className="noscroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-[124px] pt-4 [mask-image:linear-gradient(to_bottom,transparent,#000_16px)]">
+          {shown.length === 0 ? <p className="mt-6 px-6 text-center text-[15px] text-white/55">No bodies called “{q.trim()}”.</p> : (
+            <div className={cx("flex flex-col px-6", compact ? "gap-1.5" : "gap-2.5")}>
+              {shown.map((x) => <BodyRow key={x.id} b={x} on={x.id === b.id} compact={compact} pick={picking ? picked.includes(x.id) : null} onClick={() => (picking ? setPicked((p) => (p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])) : x.id === b.id ? onOpen() : cut(x))} />)}
+            </div>
+          )}
+        </div>
+      )}
+      <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-2">{footer}</div>
+      <PhoneSheet open={ask} onClose={() => setAsk(false)}>
+        <SheetTitle>{picked.length === 1 ? "Delete this body?" : `Delete ${picked.length} bodies?`}</SheetTitle>
+        <p className="mt-2 text-[15px] text-white/60">Their measurements go too. Patterns already made for them stay. This can’t be undone.</p>
+        <Pill className="mt-6" onClick={remove}>Delete</Pill>
+        <Pill variant="dark" className="mt-2.5" onClick={() => setAsk(false)}>{picked.length === 1 ? "Keep it" : "Keep them"}</Pill>
+      </PhoneSheet>
+      {toastNode(t)}
+    </div>
+  );
+}
+
+// ─── a body's own page: the body live at the top (the camera on the measurement you are looking at, with its tape),
+//     the measurements under it in their groups; tap one to change it in a sheet with the dial; rename; delete ───
+const GROUP_LIST = [{ key: "base", title: "The first four" }, ...GROUPS.map((g) => ({ key: g.key, title: g.title }))];
+function BodyPage({ b, e, setE, onBack }: { b: B; e: Edits; setE: (e: Edits) => void; onBack: () => void }) {
+  const [sel, setSel] = useState("height");
+  const [dial, setDial] = useState<string | null>(null);
+  const [v, setV] = useState(0);
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState("");
+  const [del, setDel] = useState(false);
+  const { t, show } = useToastLab();
+  const done = doneOf(b, e);
+  const cur = ALL_MEASURES.find((x) => x.key === sel)!;
+  const nm = nameOf(b, e);
+  const open = (k: string) => { setSel(k); setV(valueOf(b, k, e)); setDial(k); };
+  const save = () => {
+    if (!dial) return;
+    setE({ ...e, m: { ...e.m, [b.id]: { ...(e.m[b.id] ?? {}), [dial]: v } }, done: { ...e.done, [b.id]: [...new Set([...(e.done[b.id] ?? []), dial])] } });
+    show(`${ALL_MEASURES.find((x) => x.key === dial)!.label} saved`); setDial(null);
+  };
+  const dm = dial ? ALL_MEASURES.find((x) => x.key === dial)! : null;
+  return (
+    <div data-screen className="absolute inset-0 flex flex-col bg-bg text-white">
+      <div className="dotgrid" />
+      <div className="relative shrink-0 px-6 pt-[62px]">
+        <div className="flex h-11 items-center justify-between">
+          <button onClick={onBack} aria-label="Back" className="rb"><Icon name="back" size={20} /></button>
+          <button onClick={() => { setName(nm); setNaming(true); }} className="h-11 px-1 text-[15px] font-medium text-white/80">Rename</button>
+        </div>
+        <h1 className="h1 mt-3 !text-[34px]">{nm}</h1>
+        <p className="mt-1 text-[14px] text-white/55">{b.how} · {done.size >= 24 ? "Fully measured" : `${done.size} of 24 measured`}</p>
+        {/* the body, live; the camera on the measurement you are looking at, its tape round the body */}
+        <div className="stage-ink relative mt-4 h-[250px] overflow-hidden rounded-[28px] border border-white/[.08]">
+          <Live b={{ ...b, m: { height: valueOf(b, "height", e), bust: valueOf(b, "bust", e), waist: valueOf(b, "waist", e), hips: valueOf(b, "hips", e) } }} stage="grid" focus={sel} className="absolute inset-0" />
+          <div className="pointer-events-none absolute bottom-3 left-4">
+            <p className="text-[12px] text-white/55">{cur.label}</p>
+            <p className="leading-none">{done.has(sel) ? <><N v={valueOf(b, sel, e)} className="text-[34px]" /><span className="unit ml-1 text-[13px] text-white/55" translate="no">cm</span></> : <span className="text-[17px] text-white/60">Not measured yet</span>}</p>
+          </div>
+        </div>
+      </div>
+      {/* the measurements, in their groups: raised cards, a row each; tap one to change it */}
+      <div className="noscroll relative mt-3 min-h-0 flex-1 overflow-y-auto px-6 pb-[110px] pt-2 [mask-image:linear-gradient(to_bottom,transparent,#000_12px)]">
+        {GROUP_LIST.map((g) => {
+          const items = ALL_MEASURES.filter((x) => (g.key === "base" ? x.group === "base" : x.group === g.key));
+          const n = items.filter((x) => done.has(x.key)).length;
+          return (
+            <section key={g.key} className="mb-4">
+              <div className="mb-2 flex items-baseline justify-between px-1"><h2 className="text-[16px]">{g.title}</h2><span className="text-[12px] text-white/45"><span className="tabular-nums">{n}</span> of {items.length}</span></div>
+              <div className="overflow-hidden rounded-[22px]" style={RIM_D}>
+                {items.map((x, k) => (
+                  <button key={x.key} onClick={() => open(x.key)} className={cx("flex h-12 w-full items-center justify-between px-4 text-left transition-colors", k > 0 && "border-t border-white/[.06]", sel === x.key && "bg-white/[.05]")}>
+                    <span className="text-[15px] text-white/80">{x.label}</span>
+                    {done.has(x.key) ? <span><N v={valueOf(b, x.key, e)} className="text-[18px]" /><span className="unit ml-1 text-[12px] text-white/45" translate="no">cm</span></span> : <span className="text-[14px] font-medium text-peri">Measure</span>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+        <button onClick={() => setDel(true)} className="mx-auto mt-2 block h-11 text-[15px] font-medium text-white/50">Delete this body</button>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-[34px]"><Pill>Make a pattern for {nm.split(" ")[0]}</Pill></div>
+      {/* change one: the dial, as on the measuring steps */}
+      <PhoneSheet open={!!dm} onClose={() => setDial(null)}>
+        {dm && (
+          <>
+            <SheetTitle>{dm.label}</SheetTitle>
+            <p className="mt-1.5 text-[15px] leading-snug text-white/60">{dm.hint}</p>
+            <div className="dial mt-5 overflow-hidden">
+              <div className="flex items-center justify-between px-3 pt-3">
+                <RB icon="minus" size={46} onClick={() => setV((x) => Math.max(dm.min, x - 0.5))} label="Minus 0.5" className="rb-plain" />
+                <span className="flex items-baseline gap-1.5"><N v={v} className="text-[44px] leading-none" /><span className="unit text-[14px] text-white/55" translate="no">cm</span></span>
+                <RB icon="plus" size={46} onClick={() => setV((x) => Math.min(dm.max, x + 0.5))} label="Plus 0.5" className="rb-plain" />
+              </div>
+              <Ruler value={v} min={dm.min} max={dm.max} onChange={setV} className="mt-2" />
+            </div>
+            <Pill className="mt-5" onClick={save}>Save</Pill>
+          </>
+        )}
+      </PhoneSheet>
+      <PhoneSheet open={naming} onClose={() => setNaming(false)}>
+        <SheetTitle>Rename</SheetTitle>
+        <input value={name} onChange={(ev) => setName(ev.target.value)} aria-label="Name" className="ruler-track mt-5 block h-12 w-full rounded-full px-5 text-[16px] text-white outline-none" />
+        <Pill className={cx("mt-5", !name.trim() && "is-off")} onClick={() => { if (!name.trim()) return; setE({ ...e, names: { ...e.names, [b.id]: name.trim() } }); setNaming(false); show("Renamed"); }}>Save</Pill>
+      </PhoneSheet>
+      <PhoneSheet open={del} onClose={() => setDel(false)}>
+        <SheetTitle>Delete {nm}?</SheetTitle>
+        <p className="mt-2 text-[15px] text-white/60">Their measurements go too. Patterns already made for them stay. This can’t be undone.</p>
+        <Pill className="mt-6" onClick={() => { setE({ ...e, gone: [...e.gone, b.id] }); setDel(false); onBack(); }}>Delete</Pill>
+        <Pill variant="dark" className="mt-2.5" onClick={() => setDel(false)}>Keep it</Pill>
+      </PhoneSheet>
+      {toastNode(t)}
+    </div>
   );
 }
 
 const DIRS: { k: string; name: string; note: string; C: (p: Props) => ReactNode }[] = [
-  { k: "spotlight", name: "A · Spotlight", note: "A dark stage and one light from above. The body stands in it, live, its name huge and faint behind it; the numbers as credits; the others wait at the foot as silhouettes. Choosing another dims the light, cuts, and brings it up on them.", C: Spotlight },
-  { k: "orbit", name: "B · Orbit", note: "Everyone on a turntable in perspective: the one at the front live and lit, the rest round the ring, smaller, darker and softer the further back. Tap one and the ring swings round to it.", C: Orbit },
-  { k: "scenes", name: "C · Scenes", note: "Scroll and the camera moves, like a title sequence: close on the face with the name as a title card, then back to the whole body and its height, then round to bust, waist and hips, each with its tape and number; then a cut to the next person.", C: Scenes },
+  { k: "r4", name: "Spotlight · Round 4", note: "No big name behind the body. The chosen body’s card is the pattern tray’s build: the stage (the measuring screens’ ink and pattern floor) pressed into a raised rim, and on the rim below it, what to do with this body. Only the rows scroll; as they do, the stage folds to a waist-up portrait (the camera glides in) and opens again at the top. Tap the chosen row, or Measurements, to open the body’s own page: tap a measurement and the camera goes to it with its tape, and a sheet with the dial changes it; Rename; Delete.", C: Library4 },
+  { k: "rows", name: "Round 3 · Rows", note: "Round 3 as it was, for comparison.", C: SpotRows },
 ];
 
 function Phone({ label, children }: { label: string; children: ReactNode }) {
@@ -480,14 +605,14 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function BodyLab() {
-  const [d, setD] = useState("spotlight");
+  const [d, setD] = useState("r4");
   const [n, setN] = useState<"none" | "few" | "many">("few");
   const c = DIRS.find((x) => x.k === d)!;
   const list = n === "none" ? [] : n === "few" ? FEW : MANY;
   return (
     <section className="mx-auto max-w-[1000px]">
       <h1 className="h1 !text-[34px]">Body library</h1>
-      <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Round 2, more cinematic: full-bleed and dark, the body as the picture, the words as titles and credits over it, a cut or a camera move between bodies. One body live at a time; the others are stills taken from their own 3D body (they appear as they are made). Three directions beside Today.</p>
+      <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Round 3, Spotlight refined: the body in a smaller stage built like the measuring screens, actions for it, and the bodies as raised rows (or wide cards) with faces and names; Search, Edit and personal or compact always there. One body live at a time; the others are stills taken from their own 3D body (they appear as they are made).</p>
       <div className="noscroll mt-6 flex gap-2 overflow-x-auto">
         {DIRS.map((x) => <button key={x.k} onClick={() => setD(x.k)} className={cx("h-11 shrink-0 rounded-full px-5 text-[15px] font-medium transition-colors", x.k === d ? "bg-snow text-ink" : "bg-card text-white/75 hover:text-white")}>{x.name}</button>)}
       </div>
