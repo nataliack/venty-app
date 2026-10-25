@@ -102,12 +102,12 @@ export function Seam() {
 // 3 · arrange the pieces on the sheets. The grid is the real paper: each cell is one A4 sheet.
 // Drag pieces closer together and the count of sheets to print goes down. The layout is saved, and the
 // mini map later draws exactly this arrangement.
-const COLS = 4, ROWS = 4, SHEET_W = 210, SHEET_H = 297; // mm
+export const COLS = 4, ROWS = 4, SHEET_W = 210, SHEET_H = 297; // mm
 const MM_PER_UNIT = 1.8; // pattern-piece units to mm
-const W_MM = COLS * SHEET_W, H_MM = ROWS * SHEET_H;
-type At = Record<string, { x: number; y: number; r: number }>;
-const pieceW = (k: PieceKey) => ((pieceSize(k).w * MM_PER_UNIT) / W_MM) * 100; // width, % of the sheet area
-function pack(pieces: PieceKey[]): At {
+export const W_MM = COLS * SHEET_W, H_MM = ROWS * SHEET_H;
+export type At = Record<string, { x: number; y: number; r: number }>;
+export const pieceW = (k: PieceKey) => ((pieceSize(k).w * MM_PER_UNIT) / W_MM) * 100; // width, % of the sheet area
+export function pack(pieces: PieceKey[]): At {
   // simple shelf packing, left to right, in mm; stored as piece centres in %
   const gap = 24; let x = gap, y = gap, row = 0; const out: At = {};
   pieces.forEach((k) => {
@@ -119,7 +119,7 @@ function pack(pieces: PieceKey[]): At {
   return out;
 }
 // which sheets a set of piece boxes touches
-function sheetsUsed(box: DOMRect, rects: DOMRect[]) {
+export function sheetsUsed(box: DOMRect, rects: DOMRect[]) {
   const cw = box.width / COLS, ch = box.height / ROWS, on = new Set<string>();
   rects.forEach((r) => {
     for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
