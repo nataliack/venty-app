@@ -28,7 +28,8 @@ const PX = 9, TICK = { major: [0.42, 0.42, 1.5], mid: [0.26, 0.24, 1], minor: [0
 const STEP = (BIG + SMALL) / 2 + GAP; // a finger's travel for one icon
 const R = TOP + BIG * 0.2237; // the track's corner: the raised icon's corner plus the room above it, so they run parallel
 
-export function IconTrack({ k, setK, tone }: { k: IconKey | null; setK: (k: IconKey) => void; tone: Tone }) {
+// `dark`: the track in the night's build (the measuring dial's own pressed track, its ruler white) even on paper
+export function IconTrack({ k, setK, tone, dark }: { k: IconKey | null; setK: (k: IconKey) => void; tone: Tone; dark?: boolean }) {
   const { p, near, here, touched, ref, handlers } = useIconLoop(k, setK, STEP);
   // the centre icon rises once the track is first touched, over a moment, never with a jump
   const still = useReducedMotion();
@@ -36,7 +37,7 @@ export function IconTrack({ k, setK, tone }: { k: IconKey | null; setK: (k: Icon
   const [up, setUp] = useState(touched ? 1 : 0);
   useMotionValueEvent(lift, "change", setUp);
   useEffect(() => { if (touched) { if (still) lift.set(1); else animate(lift, 1, { duration: 0.35, ease: [0.2, 0.9, 0.3, 1.2] }); } }, [touched, still, lift]);
-  const paper = tone === "paper";
+  const paper = tone === "paper" && !dark;
   const ink = paper ? "18 19 28" : "0 0 0";
 
   // each icon's size from how near the centre it is; then each placed from its neighbour's edge (centres apart by half of
@@ -54,7 +55,7 @@ export function IconTrack({ k, setK, tone }: { k: IconKey | null; setK: (k: Icon
   return (
     <div ref={ref} role="slider" tabIndex={0} aria-label="Icon" aria-valuemin={0} aria-valuemax={ICONS.length - 1} aria-valuenow={mod(near, ICONS.length)} aria-valuetext={touched ? here.name : "None chosen"}
       data-need={k ? undefined : "1"} {...handlers}
-      className={cx("relative cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing", pressed[tone])}
+      className={cx("relative cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing", pressed[paper ? "paper" : "night"])}
       style={{ height: H, borderRadius: R, overflow: "hidden", clipPath: `inset(0 round ${R}px)` /* Safari leaks moving layers past a rounded overflow */ }}>
       {/* the icons, fading out towards the track's ends */}
       <div className="absolute inset-0 [mask-image:linear-gradient(90deg,transparent,#000_24%,#000_76%,transparent)]">

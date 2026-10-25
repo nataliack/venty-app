@@ -26,7 +26,7 @@ function Label({ tone, children, className }: { tone: Tone; children: ReactNode;
   return <p className={cx("text-center text-[15px]", tone === "paper" ? "text-[#12131c]/60" : "text-white/55", className)}>{children}</p>;
 }
 
-function Page({ tone, os, k, setK, light }: { tone: Tone; os: OS; k: IconKey | null; setK: (k: IconKey) => void; light: boolean }) {
+function Page({ tone, os, k, setK, light, darkTrack }: { tone: Tone; os: OS; k: IconKey | null; setK: (k: IconKey) => void; light: boolean; darkTrack: boolean }) {
   const paper = tone === "paper";
   const icon = k ?? "today";
   return (
@@ -42,7 +42,7 @@ function Page({ tone, os, k, setK, light }: { tone: Tone; os: OS; k: IconKey | n
       <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 noscroll">
         <div className="min-h-5 flex-1" />
         <Label tone={tone}>Select an icon</Label>
-        <div className="mt-3"><IconTrack k={k} setK={setK} tone={tone} /></div>
+        <div className="mt-3"><IconTrack k={k} setK={setK} tone={tone} dark={darkTrack} /></div>
         <div className="min-h-6 flex-1" />
         <Label tone={tone}>{os === "ios" ? "Then follow these steps" : "Then confirm it in Chrome"}</Label>
         <div className="mt-3">
@@ -66,13 +66,15 @@ function Page({ tone, os, k, setK, light }: { tone: Tone; os: OS; k: IconKey | n
   );
 }
 
+const TRACKS: { k: "light" | "dark"; name: string }[] = [{ k: "light", name: "Light track" }, { k: "dark", name: "Dark track" }];
 const PICS: { k: "dark" | "light"; name: string }[] = [{ k: "dark", name: "Dark pictures" }, { k: "light", name: "Light pictures" }];
 const OSES: { k: OS; name: string }[] = [{ k: "ios", name: "iPhone" }, { k: "android", name: "Android" }];
 
 const NOTES = [
+  "Dark track: the icons' track in the dark build of the app's pressed shapes (the measuring dial's own track), on the paper, so the icons stand out more; its ruler and centre line turn white, as on the dark measuring screens.",
   "On an iPhone, Done is gone: a page cannot open Safari's Add to Home Screen, so Done would only do what Continue in my browser does. On Android, Add to home screen stays the primary, as Chrome installs for real.",
   "To check on your iPhone: Test the share sheet (above the phones) opens the share sheet a page is allowed to open. If Add to Home Screen is not in it, a button for it cannot exist.",
-  "The icons: one rule, the bird the same size and in the same place on every one (today's, matched to the pixel). Today, Night (as you tuned it: one indigo light rising from below, wide and soft, with a touch of grain), Primary (the landing page's favicon gradient, Haze), Snow, Pattern (the grid, the bird in steel), Pressed, Raised and Denim.",
+  "The icons: one rule, the bird the same size and in the same place on every one (today's, matched to the pixel). Today, Night (as you tuned it: one cornflower light rising from below, wide and soft, with a touch of grain), Primary (the landing page's favicon gradient, Haze), Snow, Pattern (the grid, the bird in steel), Pressed, Raised and Denim.",
 ]
 
 export function InstallLab3() {
@@ -80,6 +82,7 @@ export function InstallLab3() {
   const [os, setOs] = useState<OS>("ios");
   const [k, setK] = useState<IconKey | null>(null);
   const [pics, setPics] = useState<"dark" | "light">("dark");
+  const [track, setTrack] = useState<"light" | "dark">("light");
   const [run, setRun] = useState(0); // starts the page again (nothing chosen, the steps playing)
   const pick = <K extends string>(list: { k: K; name: string }[], cur: K, set: (k: K) => void) => (
     <div className="flex flex-wrap gap-2">{list.map((x) => (
@@ -91,6 +94,7 @@ export function InstallLab3() {
       <h2 className="h1 !text-[34px]">Add Venty to your home screen, round 5</h2>
       <p className="mt-3 max-w-[640px] text-[15px] leading-snug text-white/65">Paper, with your notes on round 4. The phone works: drag the icons, swipe the steps.</p>
       <div className="mt-6 flex max-w-[720px] flex-col gap-3">
+        {pick(TRACKS, track, setTrack)}
         {pick(PICS, pics, setPics)}
         <div className="flex flex-wrap items-center gap-2">{pick(OSES, os, setOs)}
           <button onClick={() => { setK(null); setRun((r) => r + 1); }} className="h-10 rounded-full border border-white/15 px-4 text-[14px] font-medium text-white/75 hover:text-white">Start again</button>
@@ -99,7 +103,7 @@ export function InstallLab3() {
         </div>
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-10">
-        <Phone label="Round 5"><Page key={`${os}${run}`} tone={tone} os={os} k={k} setK={setK} light={pics === "light"} /></Phone>
+        <Phone label="Round 5"><Page key={`${os}${run}`} tone={tone} os={os} k={k} setK={setK} light={pics === "light"} darkTrack={track === "dark"} /></Phone>
         <Phone label="Today"><Today os={os} /></Phone>
       </div>
       <p className="mt-10 text-[15px] text-white/50">What changed</p>
