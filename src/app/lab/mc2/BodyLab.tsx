@@ -880,9 +880,12 @@ function BodyPage5({ b, e, setE, onBack, startDial, startGroup }: { b: B; e: Edi
             </button>
           ))}
         </div>
-        {/* the measurements, two to a row. Measured: a raised tile, the name over the number, a pencil to change it.
-            Missing: the tile pressed in and empty, "Not measured", the periwinkle add. Tap either for the sheet */}
-        <div className="mt-3 grid grid-cols-2 gap-2">
+      </div>
+      {/* the measurements, two to a row, in their own scroll that stops 16px above the button (so a long group never
+          crowds it). Measured: a raised tile, the name over the number, a pencil to change it. Missing: the tile pressed
+          in and empty, "Not measured", the periwinkle add. Tap either for the sheet */}
+      <div className="noscroll relative min-h-0 flex-1 overflow-y-auto px-6 pb-2 pt-3 [mask-image:linear-gradient(to_bottom,transparent,#000_10px,#000_calc(100%-14px),transparent)]">
+        <div className="grid grid-cols-2 gap-2">
           {items.map((x) => done.has(x.key) ? (
             <button key={x.key} onClick={() => open(x.key)} aria-label={`Change ${x.label}`} className="pill-dark tap flex h-[60px] items-center justify-between gap-2 rounded-[18px] pl-3.5 pr-2.5 text-left">
               <span className="min-w-0">
@@ -902,7 +905,8 @@ function BodyPage5({ b, e, setE, onBack, startDial, startGroup }: { b: B; e: Edi
           ))}
         </div>
       </div>
-      <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-[34px]"><Pill>Make a pattern for {nm.split(" ")[0]}</Pill></div>
+      {/* in the flow, under the tiles' scroll (never over them); no name on it, so a long one never crowds it */}
+      <div className="relative z-20 shrink-0 px-6 pb-[34px] pt-4"><Pill>Make a pattern for this body</Pill></div>
       <PhoneSheet open={!!dm} onClose={() => setDial(null)}>
         {dm && (
           <>
