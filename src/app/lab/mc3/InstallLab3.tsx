@@ -48,7 +48,7 @@ function Page({ tone, os, k, setK, light, darkTrack }: { tone: Tone; os: OS; k: 
         <div className="mt-3">
           {os === "ios" ? <StepRow steps={STEPS} icon={icon} tone={tone} auto light={light} /> : (
             <>
-              <div className={cx("rounded-[22px] p-1.5", bezel(paper, light))}><Pic k="chromeInstall" w={paper ? 333 : 331} icon={icon} light={light} live className="!rounded-[16px]" /></div>
+              <div className={cx("rounded-[22px]", !light && "p-1.5", bezel(paper, light))}><Pic k="chromeInstall" w={light ? 345 : paper ? 333 : 331} icon={icon} light={light} live className={light ? "!rounded-[22px]" : "!rounded-[16px]"} /></div>
               <p className={cx("mt-3 text-center text-[15px] leading-snug", paper ? "text-[#12131c]/60" : "text-white/60")}>Chrome asks you to confirm,<br />then Venty is on your home screen.</p>
             </>
           )}
@@ -58,7 +58,7 @@ function Page({ tone, os, k, setK, light, darkTrack }: { tone: Tone; os: OS; k: 
       <div className="relative shrink-0 px-6" style={{ paddingBottom: "var(--bottom)" }}>
         {/* on Android, Chrome installs for real, so that is the primary; on an iPhone a page cannot open Safari's Add to Home
             Screen, so a Done would only repeat Continue in my browser, and it is left out */}
-        {os === "android" && <div className="mb-1 flex items-center gap-3"><NextButton ready={!!k} label="Add to home screen" className="flex-1" /></div>}
+        {os === "android" && <div className="mb-1 flex items-center gap-3"><NextButton ready label="Add to home screen" className="flex-1" /></div>}
         {/* the quiet second choice: words only */}
         <TextButton tone={paper ? "paper" : "dark"}>Continue in my browser</TextButton>
       </div>
@@ -71,6 +71,10 @@ const PICS: { k: "dark" | "light"; name: string }[] = [{ k: "dark", name: "Dark 
 const OSES: { k: OS; name: string }[] = [{ k: "ios", name: "iPhone" }, { k: "android", name: "Android" }];
 
 const NOTES = [
+  "26 Oct: the last step card comes to rest with its right edge on the page's padding; a pull past either end keeps the knob in its track; the knob in the paper's colour (all three live).",
+  "The centre icon is already a little bigger on arrival (today's, the one the phone gets if none is chosen), and rises the rest of the way once touched; Add to home screen on Android is ready from the start.",
+  "The pictures laid out as Safari is on iOS 26 (from your screenshots): the bar as three shapes (back, the address with its page icon and reload, the three dots); the menus with their icons on the left; Add to Home Screen in the share sheet's list; the Add screen with a round close, Add on the right, Venty and its address.",
+  "Light pictures without the icy snow: the screen pressed into the paper like the light track, white menus and controls with neutral shadows, no bezel.",
   "Dark track: the icons' track in the dark build of the app's pressed shapes (the measuring dial's own track), on the paper, so the icons stand out more; its ruler and centre line turn white, as on the dark measuring screens.",
   "On an iPhone, Done is gone: a page cannot open Safari's Add to Home Screen, so Done would only do what Continue in my browser does. On Android, Add to home screen stays the primary, as Chrome installs for real.",
   "To check on your iPhone: Test the share sheet (above the phones) opens the share sheet a page is allowed to open. If Add to Home Screen is not in it, a button for it cannot exist.",

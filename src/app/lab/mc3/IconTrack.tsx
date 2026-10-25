@@ -27,14 +27,16 @@ const BIG = 64, SMALL = 46, GAP = 16, TOP = 13, RULER = 24, FLOOR = 1, H = TOP +
 const PX = 9, TICK = { major: [0.42, 0.42, 1.5], mid: [0.26, 0.24, 1], minor: [0.15, 0.14, 1] } as const; // height, opacity, width
 const STEP = (BIG + SMALL) / 2 + GAP; // a finger's travel for one icon
 const R = TOP + BIG * 0.2237; // the track's corner: the raised icon's corner plus the room above it, so they run parallel
+const REST = 0.4; // how far the centre icon has grown before the track is touched
 
 // `dark`: the track in the night's build (the measuring dial's own pressed track, its ruler white) even on paper
 export function IconTrack({ k, setK, tone, dark }: { k: IconKey | null; setK: (k: IconKey) => void; tone: Tone; dark?: boolean }) {
   const { p, near, here, touched, ref, handlers } = useIconLoop(k, setK, STEP);
-  // the centre icon rises once the track is first touched, over a moment, never with a jump
+  // the centre icon is already a little bigger on arrival (REST of the way: today's icon, the one the phone gets if none is
+  // chosen), and rises the rest of the way once the track is first touched, over a moment, never with a jump
   const still = useReducedMotion();
-  const lift = useMotionValue(touched ? 1 : 0);
-  const [up, setUp] = useState(touched ? 1 : 0);
+  const lift = useMotionValue(touched ? 1 : REST);
+  const [up, setUp] = useState(touched ? 1 : REST);
   useMotionValueEvent(lift, "change", setUp);
   useEffect(() => { if (touched) { if (still) lift.set(1); else animate(lift, 1, { duration: 0.35, ease: [0.2, 0.9, 0.3, 1.2] }); } }, [touched, still, lift]);
   const paper = tone === "paper" && !dark;
