@@ -38,15 +38,23 @@ const Complete = ({ className }: { className?: string }) => (
 // ─── the dial ───
 // arc: how much of the circle it draws (it opens at the bottom); the fill is the share of the 24 added
 type Build = "channel" | "thumb" | "bezel" | "scale" | "lit" | "well";
-function Dial({ count, build, size = 172 }: { count: number; build: Build; size?: number }) {
+function Dial({ count, build, size = 172, shine = true }: { count: number; build: Build; size?: number; shine?: boolean }) {
   const id = useId().replace(/:/g, "");
   const all = count >= 24;
   const cx0 = size / 2, cy0 = size / 2;
   const W = build === "lit" ? 14 : 16; // the channel's width
   const r = size / 2 - W / 2 - (build === "scale" ? 12 : build === "bezel" ? 14 : 4);
-  const arc = 0.72, sweep = 360 * arc, start = 90 + (360 - sweep) / 2; // degrees, 0 = right, clockwise (screen)
-  const pt = (deg: number, rr = r) => [cx0 + rr * Math.cos((deg * Math.PI) / 180), cy0 + rr * Math.sin((deg * Math.PI) / 180)];
-  const path = (a0: number, a1: number, rr = r) => { const [x0, y0] = pt(a0, rr), [x1, y1] = pt(a1, rr); return `M${x0} ${y0}A${rr} ${rr} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
+  // degrees, 0 = right, clockwise (screen): open at the bottom while measurements are still to add, a full circle with all 24
+  const sweep = all ? 360 : 360 * 0.72, start = all ? -90 : 90 + (360 - sweep) / 2;
+  // points to two decimals, so the server's drawing and the browser's are the same
+  const q = (v: number) => Math.round(v * 100) / 100;
+  const pt = (deg: number, rr = r) => [q(cx0 + rr * Math.cos((deg * Math.PI) / 180)), q(cy0 + rr * Math.sin((deg * Math.PI) / 180))];
+  // an arc from a0 to a1 (a whole circle as two halves, since one arc cannot end where it starts)
+  const path = (a0: number, a1: number, rr = r) => {
+    const [x0, y0] = pt(a0, rr), [x1, y1] = pt(a1, rr);
+    if (a1 - a0 >= 359.9) { const [xm, ym] = pt(a0 + 180, rr); return `M${x0} ${y0}A${rr} ${rr} 0 1 1 ${xm} ${ym}A${rr} ${rr} 0 1 1 ${x0} ${y0}`; }
+    return `M${x0} ${y0}A${rr} ${rr} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`;
+  };
   const end = start + sweep * Math.min(1, count / 24);
   const track = path(start, start + sweep), fill = path(start, Math.max(start + 0.01, end));
   const dark = build === "lit";
@@ -70,7 +78,7 @@ function Dial({ count, build, size = 172 }: { count: number; build: Build; size?
           <filter id={`glow${id}`} filterUnits="userSpaceOnUse" x={-20} y={-20} width={size + 40} height={size + 40}><feGaussianBlur stdDeviation="4" result="g" /><feMerge><feMergeNode in="g" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         </defs>
         {/* the scale: a fine mark for each of the 24, a longer one every six (a ruler round the dial, not the progress) */}
-        {build === "scale" && Array.from({ length: 25 }, (_, i) => {
+        {build === "scale" && Array.from({ length: all ? 24 : 25 }, (_, i) => {
           const a = start + (sweep * i) / 24, long = i % 6 === 0;
           const [x0, y0] = pt(a, r + W / 2 + 3), [x1, y1] = pt(a, r + W / 2 + (long ? 10 : 6));
           return <line key={i} x1={x0} y1={y0} x2={x1} y2={y1} stroke="#12131c" strokeOpacity={long ? 0.4 : 0.22} strokeWidth="1.2" strokeLinecap="round" />;
@@ -79,63 +87,67 @@ function Dial({ count, build, size = 172 }: { count: number; build: Build; size?
         <path d={track} fill="none" stroke={dark ? "#1b1c26" : "#e6e4de"} strokeWidth={W} strokeLinecap="round" filter={`url(#in${id})`} />
         {/* the fill */}
         {count > 0 && <path d={fill} fill="none" stroke={`url(#fg${id})`} strokeWidth={W - 6} strokeLinecap="round" filter={dark ? `url(#glow${id})` : `url(#up${id})`} />}
-        {count > 0 && <path d={fill} fill="none" stroke="#fff" strokeOpacity={dark ? 0.35 : 0.45} strokeWidth="1.2" strokeLinecap="round" transform={`translate(0 ${-(W - 6) / 2 + 1.5})`} style={{ mixBlendMode: "screen" }} />}
+        {/* its light edge: a fine arc drawn on the same centre, just inside the bar's outer edge, from its start to its
+            end, so it follows the bar exactly wherever the fill stops (none in the plain version) */}
+        {count > 0 && shine && <path d={path(start, Math.max(start + 0.01, end), r + (W - 6) / 2 - 1)} fill="none" stroke="#fff" strokeOpacity={dark ? 0.35 : 0.5} strokeWidth="1" strokeLinecap="round" />}
         {/* the thumb: a raised knob where the fill ends */}
         {build === "thumb" && !all && <g filter={`url(#up${id})`}><circle cx={tx} cy={ty} r={W / 2 + 3} fill="#fff" /><circle cx={tx} cy={ty} r={3} fill="#687ef5" /></g>}
       </svg>
       {/* the words in the middle, a little above it (the button sits in the opening below) */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ paddingBottom: size * (all ? 0.1 : 0.16) }}>
-        <span className="font-medium leading-none tabular-nums tracking-[-.01em] text-[#12131c]" style={{ fontSize: size < 160 ? 18 : 22 }}>{all ? "All 24" : `${count} of 24`}</span>
-        <span className="mt-1.5 whitespace-nowrap text-[#12131c]/60" style={{ fontSize: size < 160 ? 11 : 12 }}>measurements added</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ paddingBottom: all ? 0 : size * 0.15 }}>
+        <span className="text-[24px] font-medium leading-none tabular-nums tracking-[-.01em] text-[#12131c]">{all ? "All 24" : `${count} of 24`}</span>
+        <span className="mt-1.5 text-[14px] leading-[1.15] text-[#12131c]/60">measurements<br />added</span>
       </div>
     </div>
   );
 }
 
-// the art: the start screen's night card and the 3D body from the waist up, posed (as in the app), and the body's name
-// in a small glass tag floating at its foot (a caption, not a button). Shorter while measurements are still to add
-function Art({ sex, name, short }: { sex: "female" | "male"; name: string; short: boolean }) {
+// the art: the start screen's night card and the 3D body from the waist up, posed (as in the app), drawn bigger than the
+// card so its thighs run off the bottom, and the body's name in a small tag floating at its foot (a caption, not a
+// button). The same height whether measurements are still to add or all 24 are in
+function Art({ sex, name }: { sex: "female" | "male"; name: string }) {
   return (
-    <div className={cx("relative shrink-0 overflow-hidden rounded-b-[32px] text-white transition-[height] duration-500", short ? "h-[31%]" : "h-[40%]")}>
+    <div className="relative h-[31%] shrink-0 overflow-hidden rounded-b-[32px] text-white">
       <Crown />
       <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
-      <div className="absolute inset-0 pt-9"><Body3D sex={sex} focus="portrait" autoRotate={false} className="h-full w-full" /></div>
+      <div className="absolute inset-x-0 top-0 h-[128%] pt-8"><Body3D sex={sex} focus="portrait" autoRotate={false} className="h-full w-full" /></div>
       <div className="absolute inset-x-6 flex justify-center" style={{ bottom: GAP }}>
-        <span className="max-w-full truncate rounded-[12px] px-3.5 py-2 text-[14px] font-medium text-white backdrop-blur-md"
+        <span className="max-w-full truncate rounded-[12px] px-3.5 py-2 text-[14px] font-medium text-white"
           style={{ background: "rgb(13 14 24 / .5)", boxShadow: "inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .12)" }}>{name}</span>
       </div>
     </div>
   );
 }
 
-// the dial under the text; Complete measurements sitting in its opening while measurements are still to add
-// (with all 24 the card is back to its full height and there is no button, so the dial is smaller)
-function DialBlock({ count, build }: { count: number; build: Build }) {
-  const size = count < 24 ? 188 : 150;
+// the dial under the text; Complete measurements sitting in its opening while measurements are still to add. With all
+// 24 the dial closes into a full circle, sized to take the same room
+function DialBlock({ count, build, shine }: { count: number; build: Build; shine?: boolean }) {
+  const open = count < 24, size = open ? 188 : 168;
   return (
-    <div className={cx("relative mx-auto", count < 24 ? "mt-4" : "mt-2")} style={{ width: size, height: count < 24 ? size * 0.9 : size * 0.8 }}>
-      <Dial count={count} build={build} size={size} />
+    <div className="relative mx-auto mt-4" style={{ width: size, height: open ? size * 0.9 : size }}>
+      <Dial count={count} build={build} size={size} shine={shine} />
       {count < 24 && <div className="absolute inset-x-0 flex justify-center" style={{ bottom: 0 }}><Complete className={build === "bezel" ? "!h-10" : ""} /></div>}
     </div>
   );
 }
 
-const VERSIONS: { k: Build; name: string; note: string }[] = [
-  { k: "channel", name: "A · Pressed channel", note: "10, built: the dial's track is a channel pressed into the paper (a shadow along its upper inside edge), the fill raised out of it in cornflower with a lit top edge." },
-  { k: "thumb", name: "B · With a thumb", note: "The pressed channel and its raised fill, with a white knob where the fill ends, as on a slider." },
-  { k: "bezel", name: "C · Raised bezel", note: "The dial set in a round bezel raised off the paper, like a watch face, its channel pressed into the bezel; the button tucked at its foot." },
-  { k: "scale", name: "D · With a scale", note: "A fine scale round the outside of the channel, a mark for each of the 24 and a longer one every six, like a measuring dial (a ruler, not the progress)." },
-  { k: "lit", name: "E · Lit gauge", note: "An instrument's lit gauge: the channel in ink, pressed in, the cornflower fill glowing in it." },
-  { k: "well", name: "F · In a well", note: "The whole dial pressed into the paper in one round well, its channel and raised fill inside it." },
+const VERSIONS: { id: string; k: Build; name: string; note: string; shine?: boolean }[] = [
+  { id: "d", k: "scale", name: "D · With a scale (locked)", note: "D, refined: the fill's light edge is now a fine arc on the same centre, just inside the bar's outer edge, so it follows the bar exactly wherever it stops. \"measurements added\" larger, on two lines. The card is the same height in both states, the body bigger in it (its thighs run off the bottom), and the name's tag has no blur. With all 24 the dial closes into a full circle." },
+  { id: "d-plain", k: "scale", shine: false, name: "D · With a scale, no light edge", note: "The same, with no light edge on the fill: a plain raised cornflower bar with its short shadow." },
+  { id: "a", k: "channel", name: "A · Pressed channel", note: "The dial's track a channel pressed into the paper, the fill raised out of it." },
+  { id: "b", k: "thumb", name: "B · With a thumb", note: "The pressed channel and its raised fill, with a white knob where the fill ends, as on a slider." },
+  { id: "c", k: "bezel", name: "C · Raised bezel", note: "The dial set in a round bezel raised off the paper, like a watch face." },
+  { id: "e", k: "lit", name: "E · Lit gauge", note: "An instrument's lit gauge: the channel in ink, pressed in, the cornflower fill glowing in it." },
+  { id: "f", k: "well", name: "F · In a well", note: "The whole dial pressed into the paper in one round well." },
 ];
 
-function Phone({ label, sex, name, count, build }: { label: string; sex: "female" | "male"; name: string; count: number; build: Build }) {
+function Phone({ label, sex, name, count, build, shine }: { label: string; sex: "female" | "male"; name: string; count: number; build: Build; shine?: boolean }) {
   return (
     <figure className="flex flex-col items-center gap-3">
       <div className="paper relative isolate flex h-[852px] w-[393px] shrink-0 flex-col overflow-hidden rounded-[46px] shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
-        <Art sex={sex} name={name} short={count < 24} />
+        <Art sex={sex} name={name} />
         <div className="min-h-0 flex-1 overflow-y-auto px-6 noscroll" style={{ paddingTop: GAP }}>
-          <Saved /><Text name={name} /><DialBlock count={count} build={build} />
+          <Saved /><Text name={name} /><DialBlock count={count} build={build} shine={shine} />
         </div>
         <div className="flex shrink-0 flex-col items-center gap-1 px-6 pb-6 pt-3">
           <span className="pill pill-primary w-full text-[16px] text-white">Choose what to make</span>
@@ -163,7 +175,7 @@ export function ReadyLab() {
   return (
     <section>
       <h2 className="h1 !text-[34px]">Body ready</h2>
-      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">Round 3, from 10 (the dial). The body&apos;s name in a small glass tag floating on the 3D body&apos;s card (a caption, not a button). The dial in six skeuomorphic builds: a channel pressed into the paper and a cornflower fill raised out of it, lit from above. While measurements are still to add, the body&apos;s card is shorter, so the dial and its button have room; with all 24 it keeps its full height and the dial closes on a tick. Switch the state with the tabs (they stay at the top while you scroll).</p>
+      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">Round 4: D (with a scale) locked, first, with its fill&apos;s light edge fixed and without it; the other builds after. The body&apos;s name in a small tag floating on the 3D body&apos;s card (a caption, not a button). The card is the same height in both states, the body bigger in it; with all 24 the dial closes into a full circle. Switch the state with the tabs (they stay at the top while you scroll).</p>
       {/* the tabs: the two states of the screen, and the name and body to try; pinned while scrolling */}
       <div className="sticky top-0 z-30 -mx-6 mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-white/10 bg-[#05060b]/90 px-6 py-3 backdrop-blur">
         <div role="tablist" aria-label="Screen state" className="flex rounded-full bg-white/[.06] p-1">
@@ -176,8 +188,8 @@ export function ReadyLab() {
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {VERSIONS.map((v) => (
-          <div key={v.k} className="flex w-[393px] flex-col gap-4">
-            <Phone label={v.name} sex={sex} name={name} count={count} build={v.k} />
+          <div key={v.id} className="flex w-[393px] flex-col gap-4">
+            <Phone label={v.name} sex={sex} name={name} count={count} build={v.k} shine={v.shine} />
             <p className="text-[14px] leading-snug text-white/55">{v.note}</p>
           </div>
         ))}
