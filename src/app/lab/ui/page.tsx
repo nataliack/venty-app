@@ -114,14 +114,6 @@ export default function LabUI() {
               <span className="ml-1 flex items-center gap-2">{BACKDROPS.map((b) => <Dot key={b.c} size={22} on={backdrop === b.c} title={`${b.name} backdrop`} style={{ background: b.c }} onClick={() => setBackdrop(b.c)} />)}</span>
               <span className="text-[13px] text-white/40">Drag to turn. Double click to flip.</span>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {(["front", "back"] as const).map((f) => (
-                <figure key={f}>
-                  <FlatFace els={els} stock={stock} face={f} px={6} className="w-full rounded-[4px]" />
-                  <figcaption className="mt-1.5 text-[12.5px] text-white/40">{f === "front" ? "Front" : "Back"}, flat</figcaption>
-                </figure>
-              ))}
-            </div>
           </div>
 
           {/* the inspector */}
@@ -208,6 +200,27 @@ export default function LabUI() {
             </div>
           </div>
         </div>
+
+        {/* the colourways of this design side by side, front over back and big enough to judge; the one on the card shows
+            your edits, and a click puts another on the card */}
+        <section className="mt-14">
+          <h2 className="h1 !text-[28px]">{design.name}, every colourway</h2>
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {all.find((x) => x.d.id === design.id)!.ways.map((w) => {
+              const on = sel.w === w.w.id, c = on ? card : w;
+              return (
+                <button key={w.w.id} type="button" onClick={() => choose(design.id, w.w.id)} aria-pressed={on} className={cx("rounded-[24px] p-3 text-left transition-colors", on ? "bg-white/[.09] ring-1 ring-white/30" : "bg-white/[.03] hover:bg-white/[.06]")}>
+                  <FlatFace els={c.els} stock={c.stock} face="front" px={6} className="w-full rounded-[4px] shadow-[0_18px_40px_-18px_rgb(0_0_0/.9)]" />
+                  <FlatFace els={c.els} stock={c.stock} face="back" px={6} className="mt-3 w-full rounded-[4px] shadow-[0_18px_40px_-18px_rgb(0_0_0/.9)]" />
+                  <span className="mt-3 flex items-center gap-2.5 px-1">
+                    <span className="flex">{w.w.sw.map((x, i) => <span key={i} className="-ml-1.5 h-5 w-5 rounded-full ring-2 ring-[#0d0e16] first:ml-0" style={{ background: x }} />)}</span>
+                    <span className={cx("text-[14px]", on ? "text-white" : "text-white/65")}>{w.w.name}{on ? ", on the card" : ""}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         {/* the wall */}
         {(["venty", "natalia"] as const).map((f) => (

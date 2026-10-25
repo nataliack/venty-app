@@ -6,7 +6,7 @@
 // measurements sitting in the opening. Six skeuomorphic builds of it (a channel pressed into the paper and a raised
 // fill, lit from above). While measurements are still to add, the body's card is shorter, so the dial has room; with
 // all 24 added it keeps its full height and the dial closes, with no button.
-import { useId, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@/components/icons";
 import { cx, Crown } from "@/components/ui";
@@ -25,10 +25,11 @@ const GAP = 20; // the paper's top to the label; the name tag's bottom to the ca
 
 const Tick = ({ size = 22 }: { size?: number }) => <span className="grid shrink-0 place-items-center rounded-full text-white" style={{ ...KNOB, width: size, height: size }}><Icon name="check" size={Math.round(size * 0.55)} strokeWidth={3} /></span>;
 const Saved = () => <div className="text-center"><span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75" style={PRESSED}><Tick />Saved to your bodies</span></div>;
-const Text = ({ name }: { name: string }) => (
-  <div className="mt-5 text-center">
-    <h1 className="h1 !text-[32px] text-[#12131c] [text-wrap:balance]">Well done! Your body is ready</h1>
-    <p className="lead mx-auto mt-3 max-w-[320px] [text-wrap:pretty]">Every pattern you make for {name} will be drafted to these measurements.</p>
+// (compact: a short phone, under 720 px tall, such as an iPhone SE: a smaller heading and tighter gaps)
+const Text = ({ name, compact }: { name: string; compact?: boolean }) => (
+  <div className={cx("text-center", compact ? "mt-4" : "mt-5")}>
+    <h1 className={cx("h1 text-[#12131c] [text-wrap:balance]", compact ? "!text-[28px]" : "!text-[32px]")}>Well done! Your body is ready</h1>
+    <p className={cx("lead mx-auto max-w-[320px] [text-wrap:pretty]", compact ? "mt-2" : "mt-3")}>Every pattern you make for {name} will be drafted to these measurements.</p>
   </div>
 );
 const Complete = ({ className }: { className?: string }) => (
@@ -95,8 +96,8 @@ function Dial({ count, build, size = 172, shine = true }: { count: number; build
       </svg>
       {/* the words in the middle, a little above it (the button sits in the opening below) */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ paddingBottom: all ? 0 : size * 0.15 }}>
-        <span className="text-[24px] font-medium leading-none tabular-nums tracking-[-.01em] text-[#12131c]">{all ? "All 24" : `${count} of 24`}</span>
-        <span className="mt-1.5 text-[14px] leading-[1.15] text-[#12131c]/60">measurements<br />added</span>
+        <span className="font-medium leading-none tabular-nums tracking-[-.01em] text-[#12131c]" style={{ fontSize: Math.round(Math.min(24, Math.max(19, size * 0.125))) }}>{all ? "All 24" : `${count} of 24`}</span>
+        <span className="mt-1.5 leading-[1.15] text-[#12131c]/60" style={{ fontSize: size < 175 ? 12.5 : 14 }}>measurements<br />added</span>
       </div>
     </div>
   );
@@ -107,47 +108,66 @@ function Dial({ count, build, size = 172, shine = true }: { count: number; build
 // button). The same height whether measurements are still to add or all 24 are in
 function Art({ sex, name }: { sex: "female" | "male"; name: string }) {
   return (
-    <div className="relative h-[31%] shrink-0 overflow-hidden rounded-b-[32px] text-white">
+    // 31% of the screen, down to 26% on a short phone (an iPhone SE), so the text and the dial still fit under it
+    <div className="relative shrink-0 overflow-hidden rounded-b-[32px] text-white" style={{ height: "max(26%, min(31%, calc(100% - 560px)))" }}>
       <Crown />
       <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
       <div className="absolute inset-x-0 top-0 h-[128%] pt-8"><Body3D sex={sex} focus="portrait" autoRotate={false} className="h-full w-full" /></div>
       <div className="absolute inset-x-6 flex justify-center" style={{ bottom: GAP }}>
-        <span className="max-w-full truncate rounded-[12px] px-3.5 py-2 text-[14px] font-medium text-white"
-          style={{ background: "rgb(13 14 24 / .5)", boxShadow: "inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .12)" }}>{name}</span>
+        <span className="max-w-full truncate rounded-[12px] bg-white px-3.5 py-2 text-[14px] font-medium text-[#12131c]">{name}</span>
       </div>
     </div>
   );
 }
 
 // the dial under the text; Complete measurements sitting in its opening while measurements are still to add. With all
-// 24 the dial closes into a full circle, sized to take the same room
-function DialBlock({ count, build, shine }: { count: number; build: Build; shine?: boolean }) {
-  const open = count < 24, size = open ? 188 : 168;
+// 24 the dial closes into a full circle. It takes the room between the text and the buttons: measured, the dial sized
+// to it (140 to 210 px, with some air above and below) and centred in it, so a tall phone gets a bigger dial in the
+// middle of that room, not a gap under it, and a short one a smaller dial (scrolling only on the very shortest)
+function DialArea({ count, build, shine }: { count: number; build: Build; shine?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(0);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(([e]) => setRoom(e.contentRect.height));
+    ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const open = count < 24;
+  // at least this much space above and below the dial: 28 px with room to spare, easing down to 8 px as the room shrinks
+  const air = Math.max(8, Math.min(28, (room - 150) / 3));
+  const size = Math.round(Math.max(150, Math.min(210, (room - air * 2 - 2) / (open ? 0.9 : 1))));
+  // (its middle 6 px below the room's, to balance the buttons' own 12 px top padding: the gaps above and below match)
   return (
-    <div className="relative mx-auto mt-4" style={{ width: size, height: open ? size * 0.9 : size }}>
-      <Dial count={count} build={build} size={size} shine={shine} />
-      {count < 24 && <div className="absolute inset-x-0 flex justify-center" style={{ bottom: 0 }}><Complete className={build === "bezel" ? "!h-10" : ""} /></div>}
+    // the dial sits over the room (absolute), so it never counts in the room it is sized from; the room clips the
+    // invisible margin its shadow is drawn in, which would otherwise count as something to scroll to
+    <div ref={ref} className="relative min-h-[150px] flex-1 overflow-hidden">
+      {room > 0 && (
+        <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: `calc(50% + 6px)`, width: size, height: open ? size * 0.9 : size }}>
+          <Dial count={count} build={build} size={size} shine={shine} />
+          {open && <div className="absolute inset-x-0 bottom-0 flex justify-center"><Complete /></div>}
+        </div>
+      )}
     </div>
   );
 }
 
-const VERSIONS: { id: string; k: Build; name: string; note: string; shine?: boolean }[] = [
-  { id: "d", k: "scale", name: "D · With a scale (locked)", note: "D, refined: the fill's light edge is now a fine arc on the same centre, just inside the bar's outer edge, so it follows the bar exactly wherever it stops. \"measurements added\" larger, on two lines. The card is the same height in both states, the body bigger in it (its thighs run off the bottom), and the name's tag has no blur. With all 24 the dial closes into a full circle." },
-  { id: "d-plain", k: "scale", shine: false, name: "D · With a scale, no light edge", note: "The same, with no light edge on the fill: a plain raised cornflower bar with its short shadow." },
-  { id: "a", k: "channel", name: "A · Pressed channel", note: "The dial's track a channel pressed into the paper, the fill raised out of it." },
-  { id: "b", k: "thumb", name: "B · With a thumb", note: "The pressed channel and its raised fill, with a white knob where the fill ends, as on a slider." },
-  { id: "c", k: "bezel", name: "C · Raised bezel", note: "The dial set in a round bezel raised off the paper, like a watch face." },
-  { id: "e", k: "lit", name: "E · Lit gauge", note: "An instrument's lit gauge: the channel in ink, pressed in, the cornflower fill glowing in it." },
-  { id: "f", k: "well", name: "F · In a well", note: "The whole dial pressed into the paper in one round well." },
+// D with a scale, no light edge (chosen 25 Oct 2026), on three phones: iPhone SE, iPhone 17, iPhone 17 Pro Max
+const PHONES: { k: string; name: string; w: number; h: number }[] = [
+  { k: "se", name: "iPhone SE · 375 × 667", w: 375, h: 667 },
+  { k: "17", name: "iPhone 17 · 393 × 852", w: 393, h: 852 },
+  { k: "max", name: "iPhone 17 Pro Max · 440 × 956", w: 440, h: 956 },
 ];
 
-function Phone({ label, sex, name, count, build, shine }: { label: string; sex: "female" | "male"; name: string; count: number; build: Build; shine?: boolean }) {
+function Phone({ label, w, h, sex, name, count }: { label: string; w: number; h: number; sex: "female" | "male"; name: string; count: number }) {
   return (
     <figure className="flex flex-col items-center gap-3">
-      <div className="paper relative isolate flex h-[852px] w-[393px] shrink-0 flex-col overflow-hidden rounded-[46px] shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
+      <div className="paper relative isolate flex shrink-0 flex-col overflow-hidden rounded-[46px] shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]" style={{ width: w, height: h }}>
         <Art sex={sex} name={name} />
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 noscroll" style={{ paddingTop: GAP }}>
-          <Saved /><Text name={name} /><DialBlock count={count} build={build} shine={shine} />
+        {/* the text at the top, the dial centred in the room left above the buttons */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 noscroll">
+          <div className="flex min-h-full flex-col" style={{ paddingTop: GAP }}>
+            <Saved /><Text name={name} compact={h < 720} /><DialArea count={count} build="scale" shine={false} />
+          </div>
         </div>
         <div className="flex shrink-0 flex-col items-center gap-1 px-6 pb-6 pt-3">
           <span className="pill pill-primary w-full text-[16px] text-white">Choose what to make</span>
@@ -175,7 +195,7 @@ export function ReadyLab() {
   return (
     <section>
       <h2 className="h1 !text-[34px]">Body ready</h2>
-      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">Round 4: D (with a scale) locked, first, with its fill&apos;s light edge fixed and without it; the other builds after. The body&apos;s name in a small tag floating on the 3D body&apos;s card (a caption, not a button). The card is the same height in both states, the body bigger in it; with all 24 the dial closes into a full circle. Switch the state with the tabs (they stay at the top while you scroll).</p>
+      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">Round 5: D with a scale, no light edge (chosen). The name&apos;s tag is white. The dial takes the room between the text and the buttons: measured, sized to it (150 to 210 px) and centred in it, so a tall phone gets a bigger dial in the middle of that room, not a gap under it, and a short one a smaller dial. Seen on three phones side by side; switch the state, the name and the body with the tabs (they stay at the top while you scroll).</p>
       {/* the tabs: the two states of the screen, and the name and body to try; pinned while scrolling */}
       <div className="sticky top-0 z-30 -mx-6 mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-white/10 bg-[#05060b]/90 px-6 py-3 backdrop-blur">
         <div role="tablist" aria-label="Screen state" className="flex rounded-full bg-white/[.06] p-1">
@@ -186,13 +206,8 @@ export function ReadyLab() {
         <Pick items={[{ k: "Me", name: "Me" }, { k: "Ana", name: "Ana" }, { k: "Mum, wedding guest dress", name: "A long name" }]} value={name} onChange={setName} />
         <Pick items={[{ k: "female" as const, name: "Female" }, { k: "male" as const, name: "Male" }]} value={sex} onChange={setSex} />
       </div>
-      <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
-        {VERSIONS.map((v) => (
-          <div key={v.id} className="flex w-[393px] flex-col gap-4">
-            <Phone label={v.name} sex={sex} name={name} count={count} build={v.k} shine={v.shine} />
-            <p className="text-[14px] leading-snug text-white/55">{v.note}</p>
-          </div>
-        ))}
+      <div className="mt-8 flex flex-wrap items-end justify-center gap-x-10 gap-y-12">
+        {PHONES.map((ph) => <Phone key={ph.k} label={ph.name} w={ph.w} h={ph.h} sex={sex} name={name} count={count} />)}
       </div>
     </section>
   );

@@ -3,6 +3,7 @@
 // who has made eight. Four concepts from Jose's references, beside Today. Nothing here is used by the app.
 import { useState, type ReactNode } from "react";
 import { cx } from "@/components/ui";
+import { StartLab } from "./StartLab";
 import { Today, Lookbook, Runway, Editorial, FittingRoom, BRIEFS, type Props, type LookOpts } from "./concepts";
 
 const CONCEPTS: { k: string; name: string; note: string; C: (p: Props) => ReactNode }[] = [
@@ -54,6 +55,9 @@ export default function LabMC2() {
   return (
     // the app pins html and body (position: fixed, overflow hidden), so the lab scrolls in its own layer
     <main className="fixed inset-0 overflow-y-auto bg-bg px-5 pb-24 pt-10 text-white lg:px-14">
+      {/* newest first: Start from a pattern (25 Oct 2026), then the pattern library */}
+      <StartLab />
+      <hr className="mx-auto my-16 max-w-[1000px] border-white/10" />
       <div className="mx-auto max-w-[1000px]">
         <h1 className="h1 !text-[34px]">Pattern library</h1>
         <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Both tabs, for a new visitor and for someone who has made eight. The photos are stand-ins from the sign-up page and the tour until yours are made; what each concept needs is listed under the phones.</p>
