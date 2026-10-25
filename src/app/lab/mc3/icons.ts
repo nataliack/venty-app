@@ -8,7 +8,7 @@ export type IconKey = "today" | "night" | "primary" | "snow" | "pattern" | "pres
 
 export const ICONS: { k: IconKey; name: string; note: string }[] = [
   { k: "today", name: "Today", note: "The icon on the home screen now: the bird in white on Crown's navy." },
-  { k: "night", name: "Night", note: "The landing page's loading-screen night, lifted very faintly with cornflower from below, the bird in snow." },
+  { k: "night", name: "Night", note: "The night with an indigo light rising softly from below (tuned in the lab), the bird in snow." },
   { k: "primary", name: "Primary", note: "The landing page's favicon gradient (Haze): periwinkle washing in from the top left over cornflower." },
   { k: "snow", name: "Snow", note: "Snow like the tab bar and the light tops, the bird in primary." },
   { k: "pattern", name: "Pattern", note: "Pattern paper with its periwinkle grid, the bird in steel, lit from the top." },
@@ -49,9 +49,10 @@ const bell = (id: string, cx: number, cy: number, r: number, sy: number, color: 
 export type NightLight = { color: string; x: number; y: number; w: number; h: number; a: number; soft: number };
 export type Night = { top: string; bottom: string; lights: NightLight[]; grain: number };
 export const NIGHT: Night = {
+  // Jose's settings from the tuner (26 Oct 2026)
   top: "#0b0c15", bottom: "#0b0c15", grain: 1.5,
   lights: [
-    { color: "#687ef5", x: 512, y: 1500, w: 1200, h: 0.75, a: 0.3, soft: 2.2 },
+    { color: "#4f63e0", x: 520, y: 1310, w: 2220, h: 0.93, a: 1, soft: 3.75 },
     { color: "#4f63e0", x: 512, y: 1400, w: 800, h: 0.75, a: 0, soft: 2.2 },
   ],
 };
