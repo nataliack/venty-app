@@ -8,6 +8,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { cx, Crown } from "@/components/ui";
 import { Studio3D } from "./Studio3D";
 import { AboutLab } from "./AboutLab";
+import { MatLab } from "./MatLab";
 
 // ─── a phone ───
 function Phone({ label, children }: { label: string; children: ReactNode }) {
@@ -164,6 +165,8 @@ export default function Lab() {
     <div className="fixed inset-0 overflow-y-auto bg-[#05060b] text-white">
       <div className="mx-auto max-w-[1280px] px-6 py-10">
         <p className="text-[14px] text-white/50">Venty lab</p>
+        <div className="mt-6"><MatLab /></div>
+        <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><AboutLab /></div>
         <div className="my-16 h-px bg-white/10" />
         <div className="mt-6"><Studio3D /></div>
