@@ -113,7 +113,7 @@ function useMade() {
 const GUIDES = (kind: string): [IconName, string, string][] => [["book", "Sewing guide", `for this ${kind}`], ["layers", "Sewing words", "explained"], ["video", "Video", "taping the sheets"]];
 
 // ─── Today ───
-function Today() {
+export function Today() {
   const m = useMade();
   return (
     <Paper artH="46%" footer={<Pill>Back to home</Pill>}
