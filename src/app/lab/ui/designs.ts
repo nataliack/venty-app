@@ -354,4 +354,72 @@ const tea: Design = {
   },
 };
 
-export const DESIGNS: Design[] = [wordmark, crown, ruler, bird, swash, gridCard, crossing, blind, tea];
+// ─── the two favourites (25 Oct 2026, from Jose) ───
+// Venty: Crown glow's front (the wordmark at its size, the glow from the bottom) with the wordmark in black foil and the
+// Ruler card's centimetres along the top, on a darker night; the back with tighter margins, no hairline or glow, her
+// role at the top right and the bird in cornflower foil
+const crownRuler: Design = {
+  id: "v-crown-ruler", family: "venty", name: "Crown ruler",
+  note: "Crown glow's front with the wordmark in black foil and the centimetre ruler along the top, on a darker night. The back is closer to the edges: name top left, role top right, details bottom left, the bird in cornflower foil bottom right.",
+  ways: [
+    { id: "deep", name: "Deep night", sw: ["#05060b", VC.corn, "#000000"] },
+    { id: "night", name: "Night", sw: [VC.night, VC.corn, "#000000"] },
+    { id: "ink", name: "Ink", sw: [VC.ink, VC.peri, "#000000"] },
+  ],
+  make: (w) => {
+    const paper = pick(w, { deep: "#05060b", night: VC.night, ink: VC.ink });
+    const s = stock({ paper, back: paper, ink: VC.snow, coating: "soft", thickness: 1.2, edge: "accent" });
+    const [g1, g2] = w === "ink" ? [VC.peri, "#c3cbff"] : [VC.corn, VC.peri];
+    const m = 5; // the back's margin
+    return {
+      stock: s,
+      els: [
+        el("glow", "Glow, big", "front", "ink", "flat", [{ t: "glow", x: 66, y: 66, rx: 86, ry: 42 }], { color: g1, paint: alpha(0.9) }),
+        el("glow2", "Glow, small", "front", "ink", "flat", [{ t: "glow", x: 8, y: 68, rx: 48, ry: 28 }], { color: g2, paint: alpha(0.7) }),
+        el("word", "Wordmark", "front", "foil-black", "flat", [A(WORD, 30, 19.6, 30)]),
+        el("ruler", "Centimetres", "front", "ink", "flat", [{ t: "path", d: cmRuler() }, ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => T(String(n), n * 10, 6.4, 1.9, { font: "num", align: "center" })), T("cm", 2.4, 3.2, 1.6)], { paint: alpha(0.85) }),
+        el("name", "Name", "back", "ink", "flat", [T("Natalia\nChamon", m, 10.6, 6.4, { lead: 1.02, track: -0.035 })]),
+        el("role", "Role", "back", "ink", "flat", [T(ME.role, 90 - m, 8.4, 2.6, { align: "right" })], { color: VC.peri }),
+        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], m, 44.6, 2.3, { gap: 5.4 })),
+        el("bird", "Bird", "back", "foil-cornflower", "flat", [A(MARK, 90 - m - 12, 50 - 7.2, 12)]),
+      ],
+    };
+  },
+};
+
+// Natalia: Big nck brought inside the card and centred, in spot gloss (no colour, only shine); the back is the Hero grid
+// back, with Chamon in the same serif italic as Natalia
+const nckGrid: Design = {
+  id: "n-nck-grid", family: "natalia", name: "nck and grid",
+  note: "Big nck contained and centred, in spot gloss so it shows only as shine on the paper. The back is the Hero grid's: the phone grid with its half stars, her name now all in serif italic, details with icons and the line from her site.",
+  ways: [
+    { id: "green", name: "Green", sw: [NC.green, NC.creamLight, NC.butter] },
+    { id: "ink", name: "Ink, grey lines", sw: [NC.inkDeep, NC.lines, NC.butter] },
+    { id: "cream", name: "Cream", sw: [NC.cream, NC.green, NC.lines] },
+  ],
+  make: (w) => {
+    const s = pick(w, {
+      green: stock({ paper: NC.green, back: NC.green, ink: NC.creamLight, coating: "soft", thickness: 0.8 }),
+      ink: stock({ paper: NC.inkDeep, back: NC.inkDeep, ink: NC.cream, coating: "soft", thickness: 0.8 }),
+      cream: stock({ paper: NC.cream, back: NC.cream, ink: NC.green, thickness: 0.8 }),
+    });
+    const st = 4.4, bh = 16.5, up = 0.73 * 90, dn = 0.16 * 90;
+    const lineColor = w === "ink" ? NC.lines : undefined, la = w === "ink" ? 1 : w === "green" ? 0.5 : 0.35;
+    const star: Surface = w === "cream" ? "ink" : "foil-butter", sp: Press = w === "cream" ? "letterpress" : "flat";
+    const nw = 66, nh = nw / 1.915;
+    return {
+      stock: s,
+      els: [
+        el("nck", "nck", "front", "spot", "flat", [A(NCK, (90 - nw) / 2, (55 - nh) / 2, nw, { evenodd: true })]),
+        el("blines", "Lines", "back", "ink", "flat", [{ t: "path", d: `M${r(up)} 0V${bh}M0 ${bh}H90M${r(dn)} ${bh}V55`, stroke: 0.12 }], { color: lineColor, paint: alpha(la) }),
+        el("bstars", "Half stars", "back", star, sp, [A(HALF_STAR, up - st / 2, bh - st / 2, st), A(HALF_STAR, dn + st / 2, bh + st / 2, st, { rot: 180 })]),
+        el("name", "Name", "back", "ink", "flat", [T("Natalia", 4, 8.2, 4.4, { font: "serif" }), T("Chamon", 4, 13.4, 4.4, { font: "serif" })]),
+        el("role", "Role", "back", "ink", "flat", [T("Product, UI/UX\nand front-end", 69.5, 7.2, 2, { font: "satoshi", weight: 500, lead: 1.35 })]),
+        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 20, 27, 1.95, { font: "mono", gap: 4.8 })),
+        el("tea", "Made with tea", "back", "ink", "flat", [T("Made with tea and care.", 86, 50.5, 2.5, { font: "serif", align: "right" }), A(TEA, 79.5, 36, 6.2)]),
+      ],
+    };
+  },
+};
+
+export const DESIGNS: Design[] = [crownRuler, wordmark, crown, ruler, bird, nckGrid, swash, gridCard, crossing, blind, tea];

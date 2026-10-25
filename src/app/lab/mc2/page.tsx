@@ -7,7 +7,7 @@ import { Today, Lookbook, Runway, Editorial, FittingRoom, BRIEFS, type Props, ty
 
 const CONCEPTS: { k: string; name: string; note: string; C: (p: Props) => ReactNode }[] = [
   { k: "today", name: "Today", note: "The library as it is on main: garments drawn on small Crown swatches, a list and a grid.", C: Today },
-  { k: "lookbook", name: "Lookbook", note: "Like a photo app’s albums: your patterns as tall photo cards you swipe (or a grid, with search, filters and an order, for when there are many), and the patterns to make in a row per kind under photo filters. Refined: the switches below change the cards, the filters and where Create a pattern sits.", C: Lookbook },
+  { k: "lookbook", name: "Lookbook", note: "Like a photo app’s albums: your patterns as tall photo cards you swipe (or a grid), and the patterns to make in a row per kind under photo filters. Both tabs have search; filters and the order open in bottom sheets, so the top stays calm. Refined: the switches below change the cards, the filters and where Create a pattern sits.", C: Lookbook },
   { k: "runway", name: "Runway", note: "The garments stand in a row on a dark stage, the middle one large. Patterns to make are cut-out photos; your own patterns stand on your body.", C: Runway },
   { k: "editorial", name: "Editorial", note: "A light page under a full-bleed photo, like a fashion shop: a featured pattern, round kind photos, then a grid of photos.", C: Editorial },
   { k: "fitting", name: "Fitting room", note: "Your body in the middle wearing one pattern at a time, notes in the margin like on a pattern, and a rail of round swatches to change it.", C: FittingRoom },
@@ -28,12 +28,22 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 // the lookbook's own choices, each with what it does
 const SWITCHES: { k: keyof LookOpts; name: string; opts: { v: string; name: string; note: string }[] }[] = [
   { k: "card", name: "Cards", opts: [
-    { v: "tray", name: "Tray", note: "The pattern tray’s build: a raised snow rim, the photo pressed into it, the words on the rim below." },
+    { v: "light", name: "Light tray", note: "The pattern tray’s build: a raised snow rim, the photo pressed into it, the words on the rim below." },
+    { v: "dark", name: "Dark tray", note: "The same tray in the dark secondary buttons’ build: a card-colour rim lit from the top, the photo pressed in like the inset tiles." },
     { v: "flat", name: "Flat", note: "Photos edge to edge, the words on the photo or under it." },
   ] },
-  { k: "filters", name: "Filters on scroll", opts: [
-    { v: "shrink", name: "Shrink", note: "Scroll past the round photos and they come back as a slim bar pinned to the top: small photos in pills." },
-    { v: "away", name: "Scroll away", note: "The round photos scroll off with the page." },
+  { k: "empty", name: "First pattern card", opts: [
+    { v: "contain", name: "Held in", note: "No patterns yet: the three looks lie inside the card’s pressed surface, clipped by its edge." },
+    { v: "spill", name: "Spilling over", note: "No patterns yet: the three looks rise over the card’s top and sides." },
+  ] },
+  { k: "kinds", name: "Kind filters", opts: [
+    { v: "tiles", name: "A · Tiles", note: "Square photos pressed into the page (the app’s icon tiles), the chosen one on a snow card. Scrolled: pills with the photo, the chosen one snow." },
+    { v: "track", name: "B · Track", note: "One pressed track holding the kinds, the chosen one raised out of it and gliding, like the look switch. Scrolled: the same track, words only." },
+    { v: "cards", name: "C · Cards", note: "Photo cards with the word on the photo, the rest dimmed and the chosen one ticked. Scrolled: the app’s text tabs with the underline." },
+  ] },
+  { k: "filters", name: "Kind filters on scroll", opts: [
+    { v: "shrink", name: "Shrink", note: "Scroll past them and their slim form is pinned to the top." },
+    { v: "away", name: "Scroll away", note: "They scroll off with the page." },
   ] },
   { k: "cta", name: "Create a pattern", opts: [
     { v: "row", name: "First card", note: "Once you have patterns, the first card of your own is Create a pattern (in the grid too)." },
@@ -43,7 +53,7 @@ const SWITCHES: { k: keyof LookOpts; name: string; opts: { v: string; name: stri
 
 export default function LabMC2() {
   const [k, setK] = useState("lookbook");
-  const [opts, setOpts] = useState<LookOpts>({ card: "tray", filters: "shrink", cta: "row" });
+  const [opts, setOpts] = useState<LookOpts>({ card: "light", empty: "contain", kinds: "tiles", filters: "shrink", cta: "row" });
   const c = CONCEPTS.find((x) => x.k === k)!;
   return (
     // the app pins html and body (position: fixed, overflow hidden), so the lab scrolls in its own layer
