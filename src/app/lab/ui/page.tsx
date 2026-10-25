@@ -11,12 +11,13 @@ import { NC } from "./brand";
 // ─── little visual controls ───
 const FOIL_CSS: Record<string, string> = {
   "foil-gold": "linear-gradient(135deg,#fff3cf,#c9a456 45%,#fbe3a1 62%,#a8833b)",
-  "foil-butter": "linear-gradient(135deg,#fffbe6,#d9c27a 45%,#fff2bf 62%,#bba35a)",
   "foil-silver": "linear-gradient(135deg,#ffffff,#9aa1ad 45%,#eef1f6 62%,#7d8592)",
   "foil-copper": "linear-gradient(135deg,#ffe0cc,#b8714b 45%,#f6c2a1 62%,#8f5233)",
   "foil-cornflower": "linear-gradient(135deg,#e3e8ff,#6b7de8 45%,#c6cefe 62%,#4f5fc4)",
   "foil-holo": "linear-gradient(135deg,#f4d4ff,#c9f1ff 30%,#fff3c4 55%,#d6dcff 75%,#ffd3e8)",
   "foil-white": "linear-gradient(135deg,#ffffff,#e8ebf2 55%,#ffffff)",
+  "foil-butter": "linear-gradient(135deg,#fffbe8,#fff0b2 55%,#f3e2a0)",
+  "foil-cream": "linear-gradient(135deg,#ffffff,#fff7e2 55%,#efe6cf)",
   "foil-black": "linear-gradient(135deg,#3a3c45,#07080b 45%,#2a2c33 62%,#000)",
 };
 function surfaceCss(s: Surface, color: string, paper: string) {
