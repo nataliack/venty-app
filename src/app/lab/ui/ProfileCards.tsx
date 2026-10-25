@@ -190,7 +190,7 @@ function DetailsSheet({ fam, onClose }: { fam: Family; onClose: () => void }) {
         <div className="mx-auto h-[5px] w-12 rounded-full bg-white/15" />
         <div className="mt-5 flex items-center gap-3.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/lab/natalia.webp" alt="" className="h-14 w-14 rounded-full object-cover shadow-[0_0_0_1px_rgb(255_255_255/.12)]" />
+          <img src="/lab/ui/natalia-face.webp" srcSet="/lab/ui/natalia-face.webp 1x, /lab/ui/natalia-face@2x.webp 2x" width={56} height={56} alt="" className="h-14 w-14 rounded-full object-cover shadow-[0_0_0_1px_rgb(255_255_255/.12)]" />
           <div className="min-w-0"><h3 className="text-[22px] font-normal leading-tight tracking-[-.02em]">Natalia Chamon</h3><p className="text-[14px] text-white/55">{fam === "venty" ? "Founder, Venty" : "UI/UX design and front-end"}</p></div>
         </div>
         <div className="mt-5 space-y-2">
@@ -227,11 +227,13 @@ const CASCADE: Pose[] = [{ x: -0.34, y: 0.5, z: -0.1, rz: 0.035, s: 0.86 }, { x:
 const DIST: Record<View, number> = { card: 0.88, show: 0.88, stack: 0.9, colours: 0.95, sides: 0.98 };
 // what changed last, which decides how new cards come in and old ones go:
 //   reveal  the first arrival after loading (from far back, landing slowly)
-//   tab     Venty to Natalia or back: a carousel; the old card slides off to the side it is leaving by, turning a
-//           little away, as the new one slides in from the other side turned a little in; both fade
-//   view    a cross fade: the old arrangement sinks back and fades as the new one comes forward out of it
+//   tab, view  a carousel, for the cards and for the views alike: the old card (or the whole arrangement) slides off
+//           to the side it is leaving by, turning a little away, as the new one slides in from the other side turned a
+//           little in. Solid all the way (nothing fades, so no card ever shows through another); the two sets travel
+//           together, a card's width and more apart, so they never overlap. The direction follows the control: to the
+//           right in the tabs or the views, and everything moves left
 type Change = "reveal" | "tab" | "view";
-const SLIDE = 3.6, TURN = 0.5, SINK = 0.9;
+const SLIDE = 4.3, TURN = 0.5;
 function useLeaving(items: Slot[], change: Change, dir: number) {
   // cards taken off the stage stay a moment, on their way out, then go. Worked out as the stage changes (in the same
   // render), so a leaving card is never unmounted and remounted; only the last change's cards are kept, so no more than
@@ -241,13 +243,11 @@ function useLeaving(items: Slot[], change: Change, dir: number) {
   const [gone, setGone] = useState<Slot[]>([]);
   if (keys !== was.keys) {
     const now = new Set(items.map((i) => i.key));
-    const out = (i: Slot): Slot => change === "tab"
-      ? { ...i, pose: { ...i.pose, x: (i.pose.x ?? 0) - dir * SLIDE }, lean: -dir * TURN, opacity: 0, interactive: false, onTap: undefined }
-      : { ...i, pose: { ...i.pose, z: (i.pose.z ?? 0) - SINK, s: (i.pose.s ?? 1) * 0.94 }, opacity: 0, interactive: false, onTap: undefined };
+    const out = (i: Slot): Slot => ({ ...i, pose: { ...i.pose, x: (i.pose.x ?? 0) - dir * SLIDE }, lean: -dir * TURN, interactive: false, onTap: undefined });
     setGone(was.items.filter((i) => !now.has(i.key)).map(out));
     setWas({ keys, items });
   }
-  useEffect(() => { const b = setTimeout(() => setGone([]), 800); return () => clearTimeout(b); }, [keys]);
+  useEffect(() => { const b = setTimeout(() => setGone([]), 950); return () => clearTimeout(b); }, [keys]);
   return gone.filter((g) => !items.some((i) => i.key === g.key));
 }
 // where the cards' band sits on the screen, in scene units, so the canvas can cover the whole screen (nothing is ever
@@ -285,7 +285,8 @@ export function CardsScreen() {
     // Stack: they trade places over the top (the old front card stays the top layer until the new one is above it)
     if (view === "stack") { setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 420); }
   };
-  const setView = (v: View) => { if (v === view) return; setViewNow(v); setChange("view"); setStep(""); };
+  const order = VIEWS.map((x) => x.k);
+  const setView = (v: View) => { if (v === view) return; setDir(order.indexOf(v) > order.indexOf(view) ? 1 : -1); setViewNow(v); setChange("view"); setStep(""); };
 
   // made ahead: each card's first colourway, then the rest
   useEffect(() => { for (const f of FAMS) prefetchCard(ALL[f][FIRST[f]].els, ALL[f][FIRST[f]].stock); for (const f of FAMS) for (const w of FAVOURITES[f].ways) prefetchCard(ALL[f][w.id].els, ALL[f][w.id].stock); }, []);
@@ -310,9 +311,7 @@ export function CardsScreen() {
   }
   const leaving = useLeaving(slots, change, dir);
   // where a new card comes in from, for the last change (a card already on the stage ignores it)
-  const from = (s: Slot) => change === "tab" && view !== "stack"
-    ? { ...s.pose, x: (s.pose.x ?? 0) + dir * SLIDE, o: 0, yaw: dir * TURN }
-    : { ...s.pose, z: (s.pose.z ?? 0) - SINK, s: (s.pose.s ?? 1) * 0.94, o: 0 };
+  const from = (s: Slot) => ({ ...s.pose, x: (s.pose.x ?? 0) + dir * SLIDE, yaw: dir * TURN });
 
   // nothing half made: the loader until every card this view needs is made. Then the cards are put on the stage unseen
   // for a moment (their textures go to the GPU and their shaders are built while nothing moves), and they arrive
@@ -375,7 +374,7 @@ export function ProfileCards() {
         <div className="max-w-[540px] space-y-4 text-[15px] leading-snug text-white/65">
           <p>One screen: the back button, a centred title and her details (the person button: a sheet where every detail can be tapped or copied); the cards by name; the cards; the views; the colourways; then turn and save.</p>
           <p>The views draw how the cards sit: one card, both stacked, all its colours cascaded (the swatches rest), front and back, and a slow showcase.</p>
-          <p>Motion: switching Venty and Natalia is a carousel (the old card slides off the way it is leaving, turning a little away and fading, as the new one slides in); changing the view cross fades (the old arrangement sinks back and fades as the new one comes forward); a new colour tips in like a page. Every move eases in and out (critically damped springs, no overshoot). The stage covers the whole screen under the controls, so nothing is cut off. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready; then they are put on the stage unseen for a moment (so their textures are on the GPU before anything moves) and arrive one after another from far back, landing slowly.</p>
+          <p>Motion: switching cards and switching views are the same carousel: the old card (or arrangement) slides off the way it is leaving, turning a little away, as the new one slides in from the other side, solid all the way (nothing fades, so no card shows through another); the direction follows the control. A new colour tips in like a page. Every move eases in and out. The stage covers the whole screen under the controls, so nothing is cut off. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready; then they are put on the stage unseen for a moment (so their textures are on the GPU before anything moves) and arrive from far back, landing slowly.</p>
           <p className="text-[13.5px] text-white/40">For the app: bake each card&apos;s maps at build time (a script renders them to compressed images in /public), so the screen only downloads and shows them, a few hundred KB a card, instead of making them on the phone. Preload the first colourway of each card when the profile opens, the rest after; keep only the cards on screen in memory. Saving opens the phone&apos;s share sheet (Save Image, Save to Files, Contacts); an Apple Wallet pass would need a signed pass from a server.</p>
         </div>
         <div className="relative isolate h-[760px] w-[360px] shrink-0 overflow-hidden rounded-[46px] bg-bg shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
