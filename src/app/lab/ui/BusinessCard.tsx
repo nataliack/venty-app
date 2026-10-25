@@ -459,7 +459,7 @@ export function drawFlat(canvas: HTMLCanvasElement, els: El[], stock: Stock, fac
     if (e.surface === "ink") {
       style = e.color ?? stock.ink;
       if (e.paint?.to) { const g = ctx.createLinearGradient(e.paint.from[0] * px, e.paint.from[1] * px, e.paint.end[0] * px, e.paint.end[1] * px); g.addColorStop(0, style); g.addColorStop(1, e.paint.to); style = g; }
-    } else if (e.surface === "spot") style = mix(hex(paper), dark ? [255, 255, 255] : [0, 0, 0], dark ? 0.07 : 0.1);
+    } else if (e.surface === "spot") style = mix(hex(paper), dark ? [255, 255, 255] : [0, 0, 0], dark ? 0.12 : 0.12); // a flat picture has no light for the gloss to catch, so it shows as a tint
     else if (FOIL[e.surface]) style = foilStyle(ctx, e.surface, W, H);
     if (e.surface !== "blind") ctx.drawImage(tint(3, style), 0, 0); // blind: no ink, only the press shows
     if (raised || sunk) {
@@ -492,9 +492,16 @@ function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
 
 // where a card sits in a scene of several (world units; the card is 3 wide): it eases there from wherever it is
 export type Pose = { x?: number; y?: number; z?: number; rz?: number; s?: number };
-type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void };
+// layer: cards in a scene of several are drawn in layers; each layer is drawn over the ones below it whatever their depth,
+// so a card turning in front can never cut into the one behind it (and the one behind can sit close, at full size)
+type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void; layer?: number };
+const clearGeo = new THREE.PlaneGeometry(0.001, 0.001), clearMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false });
+// drawn just before a layer: it wipes the depth of everything drawn so far, so the layer lands on top
+function DepthClear({ order }: { order: number }) {
+  return <mesh geometry={clearGeo} material={clearMat} renderOrder={order} frustumCulled={false} onBeforeRender={(r) => r.clearDepth()} />;
+}
 // spin: a new colourway arrives with a full turn, swapped in while the card is edge on, so the change is never seen
-function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap }: CardProps) {
+function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap, layer = 0 }: CardProps) {
   const [shown, setShown] = useState(maps);
   // the same card made properly (or a change without the turn): show it straight away
   if (maps !== shown && (!spin || maps.key === shown.key)) setShown(maps);
@@ -579,10 +586,11 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
 
   return (
     <group ref={place} position={[p0.x, p0.y, p0.z]} rotation={[0, 0, p0.rz]} scale={p0.s} onClick={onTap ? (e) => { if (e.delta < 8) { e.stopPropagation(); onTap(); } } : undefined}>
+      {layer > 0 && <DepthClear order={layer * 10} />}
       <group ref={g} scale={1 / 30}>
-        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} />
-        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} />
-        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} />
+        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} renderOrder={layer * 10 + 1} />
+        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} renderOrder={layer * 10 + 1} />
+        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} renderOrder={layer * 10 + 1} />
       </group>
     </group>
   );

@@ -19,7 +19,8 @@ const ME = { name: "Natalia Chamon", role: "Product designer", email: "natalia.c
 
 export type Family = "venty" | "natalia";
 export type Way = { id: string; name: string; sw: string[] };
-export type Design = { id: string; family: Family; name: string; note: string; ways: Way[]; make: (way: string) => { stock: Stock; els: El[] } };
+// flat: the card for a flat picture (a download), where a colour that needs the light of the 3D card is adjusted
+export type Design = { id: string; family: Family; name: string; note: string; ways: Way[]; make: (way: string, flat?: boolean) => { stock: Stock; els: El[] } };
 
 // ─── helpers ───
 const stock = (o: Partial<Stock>): Stock => ({ size: "au", paper: VC.snow, back: VC.snow, ink: VC.ink, accent: VC.corn, coating: "uncoated", texture: "smooth", thickness: 0.6, corner: 0, edge: "paper", through: 0, ...o });
@@ -376,14 +377,17 @@ const crownRuler: Design = {
     { id: "white", name: "White", sw: [VC.snow, VC.corn, "#000000"] },
     { id: "purple", name: "Purple", sw: [VC.corn, "#c3cbff", "#000000"] },
   ],
-  make: (w) => {
+  make: (w, flat) => {
     // paper, type, glows (big and small, each with its strength), the ruler, the icons, the bird
     const c = pick(w, {
       dark: { paper: "#05060b", ink: VC.snow, g: [VC.corn, 0.9, VC.peri, 0.7], ruler: { color: VC.steel }, icons: { surface: "spot" as Surface }, bird: "foil-cornflower" as Surface, word: "foil-black" as Surface },
       white: { paper: VC.snow, ink: VC.ink, g: [VC.corn, 0.75, VC.peri, 0.6], ruler: { color: VC.steel }, icons: { surface: "spot" as Surface }, bird: "foil-cornflower" as Surface, word: "spot" as Surface },
       purple: { paper: VC.corn, ink: VC.snow, g: ["#c3cbff", 0.85, VC.snow, 0.45], ruler: { color: VC.snow }, icons: { surface: "spot" as Surface }, bird: "spot" as Surface, word: "spot" as Surface },
     });
-    const s = stock({ paper: c.paper, back: c.paper, ink: c.ink, coating: "soft", thickness: 1.2, edge: "foil-silver" });
+    // Dark's near-black paper reads as a deep navy only under the 3D card's light; a flat picture uses the app's card
+    // colour, which is what the eye sees on the 3D card
+    const paper = flat && w === "dark" ? VC.card : c.paper;
+    const s = stock({ paper, back: paper, ink: c.ink, coating: "soft", thickness: 1.2, edge: "foil-silver" });
     const [g1, a1, g2, a2] = c.g as [string, number, string, number];
     const m = 5; // the back's margin
     return {
