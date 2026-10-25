@@ -9,9 +9,10 @@ import { Icon, type IconName } from "@/components/icons";
 import { FlowHeader, bodySteps } from "./measure";
 import { useInstall } from "@/components/Install";
 import dynamic from "next/dynamic";
+import { BodyLoader } from "@/components/BodyLoader";
 
 // three.js only runs in the browser
-const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false });
+const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
 export { MeasureBase, HowSheet } from "./measure";
 
 const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={cx("text-[15px] font-medium text-white/80", className)}>{children}</div>;

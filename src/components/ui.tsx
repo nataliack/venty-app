@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons";
@@ -275,23 +275,89 @@ function Layer({ children }: { children: ReactNode }) {
   return el ? createPortal(children, el) : null;
 }
 
-export function Sheet({ open, onClose, children, className }: { open: boolean; onClose: () => void; children: ReactNode; className?: string }) {
+// The top of a bottom sheet (24 Oct 2026, from Jose's Figma, chosen in the lab as "C · Wider handle"): the drag handle
+// (48 × 5, its top on the sheet's top edge) sits in a cut in the edge. The cut is the handle's outline pushed out by one
+// channel (5px, as round the tab bar's plus), so the gap is 5px all round, and its corners round off into the edge with
+// a curve as large as half the handle (so the gap at the handle's ends is 5px too). The sheet's top corners are 45px.
+// The handle is drawn in the same picture as the cut, so it can never sit off it by a half pixel. At rest it is the
+// sheet's own colour and build (half-pixel lines: light along its top, deeper along its bottom); pressed or dragged (or
+// pointed at), it turns the periwinkle of home's card icons, with their rim and a glow.
+const SH_W = 48, SH_H = 5, SH_G = 5, SH_R = 45;
+function sheetTopPath(w: number, h: number) {
+  const c = w / 2, rh = SH_H / 2, cy = rh, half = SH_W / 2 - rh, rn = rh + SH_G, f = rh, r = SH_R;
+  const L = c - half, R = c + half; // the centres of the cut's round ends
+  const dx = Math.sqrt((rn + f) ** 2 - (f - cy) ** 2), k = rn / (rn + f);
+  const tl = [L - dx * k, cy + (f - cy) * k], tr = [R + dx * k, cy + (f - cy) * k];
+  return [`M ${r} 0`, `H ${L - dx}`, `A ${f} ${f} 0 0 1 ${tl[0]} ${tl[1]}`, `A ${rn} ${rn} 0 0 0 ${L} ${cy + rn}`, `H ${R}`,
+    `A ${rn} ${rn} 0 0 0 ${tr[0]} ${tr[1]}`, `A ${f} ${f} 0 0 1 ${R + dx} 0`, `H ${w - r}`, `A ${r} ${r} 0 0 1 ${w} ${r}`, `V ${h}`, `H 0`, `V ${r}`, `A ${r} ${r} 0 0 1 ${r} 0`, "Z"].join(" ");
+}
+// the sheet's surface on a phone: its outline with the cut, its rim, and the handle. tone: the sheet's colour (dark: the
+// card colour, the app's sheets today; snow: a light sheet, its handle in the same snow)
+function SheetSurface({ w, h, on, tone }: { w: number; h: number; on: boolean; tone: "dark" | "snow" }) {
+  const id = useId().replace(/:/g, "");
+  const d = sheetTopPath(w, h);
+  const snow = tone === "snow";
+  const fill = snow ? "var(--color-snow)" : "var(--color-card)";
+  const x = w / 2 - SH_W / 2, rr = SH_H / 2;
+  return (
+    <svg width={w} height={h} className="pointer-events-none absolute inset-0 -z-10 overflow-visible lg:hidden" style={{ filter: "drop-shadow(0 -20px 40px rgb(0 0 0 / .55))" }} aria-hidden>
+      <defs>
+        <linearGradient id={`${id}rim`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity={snow ? 1 : 0.14} /><stop offset=".12" stopColor="#fff" stopOpacity="0" /></linearGradient>
+        <linearGradient id={`${id}hw`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity={snow ? 0.5 : 0.04} /><stop offset=".6" stopColor="#fff" stopOpacity="0" /></linearGradient>
+        <linearGradient id={`${id}hr`} x1="0" y1="0" x2="0" y2="1">
+          {snow ? <><stop offset="0" stopColor="#fff" /><stop offset=".5" stopColor="rgb(19 21 35)" stopOpacity=".06" /><stop offset="1" stopColor="rgb(19 21 35)" stopOpacity=".16" /></>
+            : <><stop offset="0" stopColor="#fff" stopOpacity=".22" /><stop offset=".5" stopColor="#fff" stopOpacity=".07" /><stop offset="1" stopColor="#000" stopOpacity=".45" /></>}
+        </linearGradient>
+        <linearGradient id={`${id}hp`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7387f6" /><stop offset=".55" stopColor="#687ef5" /><stop offset="1" stopColor="#6479f2" /></linearGradient>
+        <linearGradient id={`${id}hpr`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".45" /><stop offset="1" stopColor="#fff" stopOpacity=".15" /></linearGradient>
+      </defs>
+      <path d={d} fill={fill} />
+      <path d={d} fill="none" stroke={`url(#${id}rim)`} strokeWidth="1" />
+      {/* the handle at rest: the sheet's colour, half-pixel lines just inside its edge (the sheet's 1px rim sits on its
+          outline, so only half of it shows) */}
+      <rect x={x} y={0} width={SH_W} height={SH_H} rx={rr} fill={fill} />
+      <rect x={x} y={0} width={SH_W} height={SH_H} rx={rr} fill={`url(#${id}hw)`} />
+      <rect x={x + 0.25} y={0.25} width={SH_W - 0.5} height={SH_H - 0.5} rx={rr - 0.25} fill="none" stroke={`url(#${id}hr)`} strokeWidth="0.5" />
+      {/* pressed: periwinkle, fading in over it */}
+      <g className={cx("sheet-handle-on", on && "is-on")}>
+        <rect x={x} y={0} width={SH_W} height={SH_H} rx={rr} fill={`url(#${id}hp)`} />
+        <rect x={x + 0.25} y={0.25} width={SH_W - 0.5} height={SH_H - 0.5} rx={rr - 0.25} fill="none" stroke={`url(#${id}hpr)`} strokeWidth="0.5" />
+      </g>
+    </svg>
+  );
+}
+
+export function Sheet({ open, onClose, children, className, tone = "dark" }: { open: boolean; onClose: () => void; children: ReactNode; className?: string; tone?: "dark" | "snow" }) {
   return (
     <Layer><AnimatePresence>
       {open && (
         <>
           <motion.div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <div className="pointer-events-none absolute inset-0 z-50 flex items-end justify-center lg:items-center">
-            <motion.div className={cx("pointer-events-auto w-full rounded-t-[30px] px-6 pt-2.5 lg:w-[480px] lg:rounded-[30px] lg:border lg:border-white/10 lg:px-8 lg:pb-8 lg:pt-6", className)} style={{ paddingBottom: "var(--bottom)", background: "var(--color-card)", boxShadow: "inset 0 1px 0 rgb(255 255 255 / .1), 0 -20px 60px -20px rgb(0 0 0 / .7)" }}
-              initial={{ y: "100%", opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}
-              drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.5 }} onDragEnd={(_, i) => { if (i.offset.y > 90) onClose(); }}>
-              <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-white/20 lg:hidden" />
-              {children}
-            </motion.div>
+            <SheetBody onClose={onClose} className={className} tone={tone}>{children}</SheetBody>
           </div>
         </>
       )}
     </AnimatePresence></Layer>
+  );
+}
+// On a phone the surface (outline, cut, handle) is drawn under the content; on a computer it is the plain rounded
+// dialog, as before (no handle). The top 44px, across the sheet, is where a finger reaches for the handle.
+function SheetBody({ onClose, className, tone, children }: { onClose: () => void; className?: string; tone: "dark" | "snow"; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [[w, h], setSize] = useState([0, 0]);
+  const [press, setPress] = useState(false);
+  const [drag, setDrag] = useState(false);
+  useEffect(() => { const el = ref.current; if (!el) return; const fit = () => setSize([el.offsetWidth, el.offsetHeight]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
+  return (
+    <motion.div ref={ref} className={cx("sheet-body pointer-events-auto relative isolate w-full px-6 pt-[34px] lg:w-[480px] lg:rounded-[30px] lg:border lg:px-8 lg:pb-8 lg:pt-6", tone === "snow" ? "sheet-snow" : "sheet-dark", className)} style={{ paddingBottom: "var(--bottom)" }}
+      initial={{ y: "100%", opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", bounce: 0.12, duration: 0.5 }}
+      drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.5 }} onDragStart={() => setDrag(true)} onDragEnd={(_, i) => { setDrag(false); if (i.offset.y > 90) onClose(); }}>
+      {w > 0 && <SheetSurface w={w} h={h} on={press || drag} tone={tone} />}
+      <div className="absolute inset-x-0 top-0 h-11 lg:hidden" aria-hidden onPointerDown={() => setPress(true)} onPointerUp={() => setPress(false)} onPointerCancel={() => setPress(false)}
+        onPointerEnter={(e) => { if (e.pointerType === "mouse") setPress(true); }} onPointerLeave={() => setPress(false)} />
+      {children}
+    </motion.div>
   );
 }
 
