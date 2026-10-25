@@ -15,7 +15,7 @@ export const PALETTE = {
 };
 // the wordmark is 1.9 times as wide as it is tall, the bird 1.67
 const MARK = [LOGO[4]], WORD = LOGO.slice(0, 4);
-const ME = { name: "Natalia Chamon", role: "Product designer", email: "natalia.chamom@gmail.com", phone: "0420 991 942", city: "Brisbane, Australia" };
+const ME = { name: "Natalia Chamon", role: "Product designer", email: "natalia.chamom@gmail.com", phone: "0420 991 942", city: "Brisbane, Australia", web: "nataliachamon.com" };
 
 export type Family = "venty" | "natalia";
 export type Way = { id: string; name: string; sw: string[] };
@@ -35,6 +35,7 @@ const ICON = {
   mail: "M3.5 6h17v12h-17Z M4 6.6l8 6.4 8-6.4",
   phone: "M8.3 3.6 9.9 7.4a1.2 1.2 0 0 1-.3 1.4L8 10.3a12 12 0 0 0 5.7 5.7l1.5-1.6a1.2 1.2 0 0 1 1.4-.3l3.8 1.6a1.2 1.2 0 0 1 .7 1.3l-.5 2.7a1.6 1.6 0 0 1-1.6 1.3C10.6 21 3 13.4 3 5.1a1.6 1.6 0 0 1 1.3-1.6L7 3a1.2 1.2 0 0 1 1.3.6Z",
   pin: "M12 21.5s-6.8-6.3-6.8-11.6a6.8 6.8 0 0 1 13.6 0c0 5.3-6.8 11.6-6.8 11.6Z M12 12.4a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+  web: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M3 12h18 M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z",
 };
 type Ic = keyof typeof ICON;
 // rows of an icon and a line of type. left: the type starts at x and the icon hangs in front of it (hang) or starts at
@@ -49,6 +50,13 @@ function rows(items: [Ic, string][], x: number, y: number, size: number, o: { ga
     out.push(T(s, tx, yy, size, { font: o.font, weight: o.weight, align: o.align === "right" ? "right" : "left" }));
   });
   return out;
+}
+// the rows as two elements, so the icons (as a group) and the type can each take their own colour and finish
+function contact(face: "front" | "back", shapes: Shape[], more: { color?: string; paint?: Paint } = {}, icons: { surface?: Surface; color?: string } = {}): El[] {
+  return [
+    el("contact", "Contact", face, "ink", "flat", shapes.filter((s) => s.t === "text"), more),
+    el("icons", "Icons", face, icons.surface ?? "ink", "flat", shapes.filter((s) => s.t === "art"), { ...more, ...(icons.color ? { color: icons.color } : {}) }),
+  ];
 }
 // a scale along an edge: the card is a 9 cm ruler on the back (top edge) and a 3½ inch one on the front (bottom edge)
 function cmRuler() {
@@ -87,7 +95,7 @@ const wordmark: Design = {
         el("word", "Wordmark", "front", surface, press, [A(WORD, 17, 12.6, 56)]),
         el("name", "Name", "back", "ink", "flat", [T(ME.name, 8, 14, 5.2, { track: -0.03 })]),
         el("role", "Role", "back", "ink", "flat", [T(`${ME.role}\nVenty, AI pattern studio`, 8, 19.8, 2.4, { lead: 1.45 })], { color: VC.peri }),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], 8, 41.5, 2.3, { gap: 5.2 })),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone]], 8, 41.5, 2.3, { gap: 5.2 })),
         el("mark", "Bird", "back", w === "silver" ? "foil-silver" : "blind", w === "silver" ? "flat" : "emboss", [A(MARK, 62, 31, 21)]),
       ],
     };
@@ -123,7 +131,7 @@ const crown: Design = {
         el("name", "Name", "back", "ink", "flat", [T("Natalia\nChamon", 7, 13.5, 6.4, { lead: 1.02, track: -0.035 })]),
         el("role", "Role", "back", "ink", "flat", [T(ME.role, 7, 26.6, 2.6)], { color: dark ? VC.peri : VC.corn }),
         el("rule", "Hairline", "back", "ink", "flat", [{ t: "rect", x: 7, y: 31.5, w: 76, h: 0.16 }], { color: dark ? VC.peri : VC.corn, paint: alpha(0.6) }),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], 7, 40, 2.3, { gap: 5.4 })),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone]], 7, 40, 2.3, { gap: 5.4 })),
         el("sig", "Wordmark", "back", sig, "flat", [A(WORD, 66, 36.6, 17)]),
       ],
     };
@@ -157,7 +165,7 @@ const ruler: Design = {
         el("ruler", "Centimetres", "back", scale, press, [{ t: "path", d: cmRuler() }, ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => T(String(n), n * 10, 6.4, 1.9, { font: "num", align: "center" })), T("cm", 2.4, 3.2, 1.6)]),
         el("name", "Name", "back", "ink", press, [T(ME.name, 7, 23, 5, { track: -0.03 })]),
         el("role", "Role", "back", "ink", "flat", [T(`${ME.role}, Venty`, 7, 28.4, 2.4)], { color: accent }),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], 7, 42, 2.25, { gap: 5.2 })),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone]], 7, 42, 2.25, { gap: 5.2 })),
         el("mark", "Bird", "back", w === "night" ? "foil-silver" : "ink", press, [A(MARK, 71, 38, 12)], { color: accent }),
       ],
     };
@@ -183,7 +191,7 @@ const bird: Design = {
         el("bird", "Bird", "front", "blind", "deboss", [A(MARK, 25, 15, 40)]),
         el("word", "Wordmark", "back", "ink", "flat", [A(WORD, 7, 7, 16)]),
         el("name", "Name", "back", "ink", "flat", [T(`${ME.name}\n${ME.role}`, 31, 22, 2.6, { lead: 1.3 })], { color: plain ? VC.peri : undefined }),
-        el("contact", "Contact", "back", "ink", "flat", [...rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 31, 34, 2.3, { gap: 5, hang: true })], { color: "#c3cbff" }),
+        ...contact("back", [...rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 31, 34, 2.3, { gap: 5, hang: true })], { color: "#c3cbff" }),
       ],
     };
   },
@@ -214,7 +222,7 @@ const swash: Design = {
         el("name", "Name", "back", "ink", "flat", [T("Natalia", 7, 29, 6.4, { font: "serif" }), T("Chamon", 7, 35.6, 6.4, { font: "satoshi", weight: 500, track: -0.02 })]),
         el("role", "Role", "back", "ink", "flat", [T(ME.role, 7, 42, 2.5, { font: "satoshi", weight: 500 })], { color: w === "butter" ? NC.butter : undefined }),
         el("place", "Brisbane", "back", "ink", "flat", [T("Brisbane", 83, 11.5, 3, { font: "serif", align: "right" })]),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], 83, 37.6, 2, { font: "mono", align: "right", gap: 4.6 })),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone]], 83, 37.6, 2, { font: "mono", align: "right", gap: 4.6 })),
       ],
     };
   },
@@ -253,7 +261,7 @@ const gridCard: Design = {
         el("bstars", "Half stars", "back", star, sp, [A(HALF_STAR, up - st / 2, bh - st / 2, st), A(HALF_STAR, dn + st / 2, bh + st / 2, st, { rot: 180 })]),
         el("name", "Name", "back", "ink", "flat", [T("Natalia", 4, 8.2, 4.4, { font: "serif" }), T("Chamon", 4, 13.4, 4.4, { font: "satoshi", weight: 500, track: -0.02 })]),
         el("role", "Role", "back", "ink", "flat", [T("Product, UI/UX\nand front-end", 69.5, 7.2, 2, { font: "satoshi", weight: 500, lead: 1.35 })]),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 20, 27, 1.95, { font: "mono", gap: 4.8 })),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 20, 27, 1.95, { font: "mono", gap: 4.8 })),
         el("tea", "Made with tea", "back", "ink", "flat", [T("Made with tea and care.", 86, 50.5, 2.5, { font: "serif", align: "right" }), A(TEA, 79.5, 36, 6.2)]),
       ],
     };
@@ -288,7 +296,7 @@ const crossing: Design = {
         el("tag", "Product designer", "front", "ink", "flat", [T("Product designer", 83, 49, 3.2, { font: "serif", align: "right" })]),
         el("bnck", "nck", "back", w === "ink" ? "foil-cream" : "ink", "flat", [A(NCK, 6, 6, 22, { evenodd: true })], { color: backInk }),
         el("name", "Name", "back", "ink", "flat", [T("Natalia", 6, 31, 5, { font: "serif" }), T("Chamon", 6, 37, 5, { font: "satoshi", weight: 500, track: -0.02 })], { color: backInk }),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], 6, 44.5, 1.9, { font: "mono", gap: 4.4 }), { color: backInk }),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone]], 6, 44.5, 1.9, { font: "mono", gap: 4.4 }), { color: backInk }),
         el("tea", "Tea", "back", w === "ink" ? "foil-cream" : w === "green" ? "foil-butter" : "ink", "flat", [A(TEA, 74, 33, 10)], { color: backInk }),
       ],
     };
@@ -319,7 +327,7 @@ const blind: Design = {
         el("role", "Role", "back", "ink", "flat", [T(ME.role, 7, 26.6, 2.3, { font: "satoshi", weight: 500 })], { paint: alpha(0.75) }),
         el("swash", "Icon", "back", w === "green" ? "foil-butter" : "ink", w === "green" ? "flat" : "letterpress", [A(SWASH, 74, 7.5, 9)]),
         el("rule", "Hairline", "back", "ink", "flat", [{ t: "rect", x: 7, y: 33, w: 76, h: 0.14 }], { paint: alpha(0.4) }),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], 7, 41, 2.1, { font: "satoshi", weight: 500, gap: 5 })),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone]], 7, 41, 2.1, { font: "satoshi", weight: 500, gap: 5 })),
         el("what", "What", "back", "ink", "flat", [T("Product, UI/UX\nand front-end", 83, 41, 2.1, { font: "satoshi", weight: 500, lead: 1.42, align: "right" })], { paint: alpha(0.75) }),
       ],
     };
@@ -347,7 +355,7 @@ const tea: Design = {
         el("cup", "Tea", "front", w === "green" ? "foil-butter" : "ink", w === "cream" ? "letterpress" : "flat", [A(TEA, 13, 12.5, 24)]),
         el("line", "Made with tea", "front", "ink", "flat", [T("Made with tea\nand care.", 43, 26, 5.4, { font: "serif", lead: 1.08 })]),
         el("name", "Name", "back", "ink", "flat", [T("Natalia", 6, 13, 5, { font: "serif" }), T("Chamon", 6, 18.8, 5, { font: "satoshi", weight: 500, track: -0.02 }), T(ME.role, 6, 24.4, 2.2, { font: "satoshi", weight: 500 })], { color: backInk }),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 6, 38.6, 1.9, { font: "mono", gap: 4.6 }), { color: backInk }),
+        ...contact("back", rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 6, 38.6, 1.9, { font: "mono", gap: 4.6 }), { color: backInk }),
         el("nck", "nck", "back", w === "green" ? "ink" : "foil-butter", "flat", [A(NCK, 63, 39, 21, { evenodd: true })], { color: backInk }),
       ],
     };
@@ -368,7 +376,7 @@ const crownRuler: Design = {
   ],
   make: (w) => {
     const paper = pick(w, { deep: "#05060b", night: VC.night, ink: VC.ink });
-    const s = stock({ paper, back: paper, ink: VC.snow, coating: "soft", thickness: 1.2, edge: "accent" });
+    const s = stock({ paper, back: paper, ink: VC.snow, coating: "soft", thickness: 1.2, edge: "foil-silver" });
     const [g1, g2] = w === "ink" ? [VC.peri, "#c3cbff"] : [VC.corn, VC.peri];
     const m = 5; // the back's margin
     return {
@@ -377,10 +385,10 @@ const crownRuler: Design = {
         el("glow", "Glow, big", "front", "ink", "flat", [{ t: "glow", x: 66, y: 66, rx: 86, ry: 42 }], { color: g1, paint: alpha(0.9) }),
         el("glow2", "Glow, small", "front", "ink", "flat", [{ t: "glow", x: 8, y: 68, rx: 48, ry: 28 }], { color: g2, paint: alpha(0.7) }),
         el("word", "Wordmark", "front", "foil-black", "flat", [A(WORD, 30, 19.6, 30)]),
-        el("ruler", "Centimetres", "front", "ink", "flat", [{ t: "path", d: cmRuler() }, ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => T(String(n), n * 10, 6.4, 1.9, { font: "num", align: "center" })), T("cm", 2.4, 3.2, 1.6)], { paint: alpha(0.85) }),
+        el("ruler", "Centimetres", "front", "ink", "flat", [{ t: "path", d: cmRuler() }, ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => T(String(n), n * 10, 6.4, 1.9, { font: "num", align: "center" })), T("cm", 2.4, 3.2, 1.6)], { color: VC.steel }),
         el("name", "Name", "back", "ink", "flat", [T("Natalia\nChamon", m, 10.6, 6.4, { lead: 1.02, track: -0.035 })]),
-        el("role", "Role", "back", "ink", "flat", [T(ME.role, 90 - m, 8.4, 2.6, { align: "right" })], { color: VC.peri }),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone]], m, 44.6, 2.3, { gap: 5.4 })),
+        el("role", "Role", "back", "ink", "flat", [T("Founder, Venty", 90 - m, 8.4, 2.6, { align: "right" })]),
+        ...contact("back", rows([["web", "app.venty.au"], ["phone", ME.phone], ["mail", ME.email]], m, 50 - 2 * 5.4, 2.3, { gap: 5.4 }), {}, { surface: "spot" }),
         el("bird", "Bird", "back", "foil-cornflower", "flat", [A(MARK, 90 - m - 12, 50 - 7.2, 12)]),
       ],
     };
@@ -403,20 +411,24 @@ const nckGrid: Design = {
       ink: stock({ paper: NC.inkDeep, back: NC.inkDeep, ink: NC.cream, coating: "soft", thickness: 0.8 }),
       cream: stock({ paper: NC.cream, back: NC.cream, ink: NC.green, thickness: 0.8 }),
     });
-    const st = 4.4, bh = 16.5, up = 0.73 * 90, dn = 0.16 * 90;
-    const lineColor = w === "ink" ? NC.lines : undefined, la = w === "ink" ? 1 : w === "green" ? 0.5 : 0.35;
-    const star: Surface = w === "cream" ? "ink" : "foil-butter", sp: Press = w === "cream" ? "letterpress" : "flat";
+    // one spacing everywhere, the card's margin (M = 4 mm): from the edges, from the lines and between the blocks. Type
+    // sits by its measured ascent (0.7 of the size in all three of her fonts). The name fills the top band from the top
+    // margin down; the line sits one margin below it; the role's last line shares Chamon's baseline, one margin above
+    // the line and one margin right of the upper rule; the details start one margin below the line and one margin
+    // right of the lower rule; the tea sits one margin in from the bottom right corner.
+    const M = 4, S = 4.4, b1 = M + 0.7 * S, b2 = b1 + 1.18 * S, bh = r(b2 + M), up = 0.73 * 90, dn = 0.16 * 90, st = 4.4;
+    const rs = 2.2, rg = 1.36 * rs, cs = 1.95, ic = cs * 1.3, row1 = bh + M + cs * 0.36 + ic / 2, tw = 6.2, th = (tw * 212) / 172;
     const nw = 66, nh = nw / 1.915;
     return {
       stock: s,
       els: [
         el("nck", "nck", "front", "spot", "flat", [A(NCK, (90 - nw) / 2, (55 - nh) / 2, nw, { evenodd: true })]),
-        el("blines", "Lines", "back", "ink", "flat", [{ t: "path", d: `M${r(up)} 0V${bh}M0 ${bh}H90M${r(dn)} ${bh}V55`, stroke: 0.12 }], { color: lineColor, paint: alpha(la) }),
-        el("bstars", "Half stars", "back", star, sp, [A(HALF_STAR, up - st / 2, bh - st / 2, st), A(HALF_STAR, dn + st / 2, bh + st / 2, st, { rot: 180 })]),
-        el("name", "Name", "back", "ink", "flat", [T("Natalia", 4, 8.2, 4.4, { font: "serif" }), T("Chamon", 4, 13.4, 4.4, { font: "serif" })]),
-        el("role", "Role", "back", "ink", "flat", [T("Product, UI/UX\nand front-end", 69.5, 7.2, 2, { font: "satoshi", weight: 500, lead: 1.35 })]),
-        el("contact", "Contact", "back", "ink", "flat", rows([["mail", ME.email], ["phone", ME.phone], ["pin", ME.city]], 20, 27, 1.95, { font: "mono", gap: 4.8 })),
-        el("tea", "Made with tea", "back", "ink", "flat", [T("Made with tea and care.", 86, 50.5, 2.5, { font: "serif", align: "right" }), A(TEA, 79.5, 36, 6.2)]),
+        el("blines", "Lines", "back", "spot", "flat", [{ t: "path", d: `M${r(up)} 0V${bh}M0 ${bh}H90M${r(dn)} ${bh}V55`, stroke: 0.16 }]),
+        el("bstars", "Half stars", "back", "spot", "flat", [A(HALF_STAR, up - st / 2, bh - st / 2, st), A(HALF_STAR, dn + st / 2, bh + st / 2, st, { rot: 180 })]),
+        el("name", "Name", "back", "ink", "flat", [T("Natalia", M, b1, S, { font: "serif" }), T("Chamon", M, b2, S, { font: "serif" })]),
+        el("role", "Role", "back", "ink", "flat", [T("Product, UI/UX\nand front-end", up + M, b2 - rg, rs, { font: "satoshi", weight: 500, lead: 1.36 })]),
+        ...contact("back", rows([["phone", ME.phone], ["web", ME.web], ["pin", ME.city], ["mail", ME.email]], dn + M, row1, cs, { font: "mono", gap: 4.8 }), {}, { surface: "spot" }),
+        el("tea", "Tea", "back", "spot", "flat", [A(TEA, 90 - M - tw, 55 - M - th, tw)]),
       ],
     };
   },

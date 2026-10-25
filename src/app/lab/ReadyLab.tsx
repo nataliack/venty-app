@@ -1,11 +1,12 @@
 "use client";
-// Lab · Body ready (25 Oct 2026): "Well done! Your body is ready" refined. From 1 (the pressed label), kept: the ticked
-// "Saved to your bodies" in a squarish container pressed into the paper, the heading and the line under it. New: the
-// body's name in white on the 3D body's card, its bottom as far from the card's edge as the label is from the top of the
-// paper (not a button); and under the text a ring of the measurements added, "18 of 24 / measurements added" inside it
-// in the app's font, with "Complete measurements". Five ways to fit it, centred, in the room a phone leaves.
-// Skeuomorphic like the look switch and the pattern tray: pressed into the paper, or raised off it, lit from above.
-import { useState, type CSSProperties, type ReactNode } from "react";
+// Lab · Body ready (25 Oct 2026), round 3, from 10 (the dial). Kept: the ticked "Saved to your bodies" pressed into the
+// paper, the heading and the line under it. The body's name in a small glass tag floating on the 3D body's card (a
+// caption, not a button), as far from its edge as the label is from the top of the paper. Under the text, the dial: the
+// ring opened at the bottom like a gauge, "18 of 24 / measurements added" in its middle in the app's font, Complete
+// measurements sitting in the opening. Six skeuomorphic builds of it (a channel pressed into the paper and a raised
+// fill, lit from above). While measurements are still to add, the body's card is shorter, so the dial has room; with
+// all 24 added it keeps its full height and the dial closes, with no button.
+import { useId, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { Icon } from "@/components/icons";
 import { cx, Crown } from "@/components/ui";
@@ -20,9 +21,8 @@ const PRESSED: CSSProperties = { background: "rgb(18 19 28 / .045)", boxShadow: 
 const RAISED: CSSProperties = { background: "linear-gradient(180deg, #ffffff, #f7f6f2)", boxShadow: "inset 0 1px 0 #fff, 0 0 0 1px rgb(18 19 28 / .05), 0 1px 2px rgb(18 19 28 / .12), 0 8px 18px -10px rgb(18 19 28 / .32)" };
 // the tick on a small raised ink knob (the look switch's knob)
 const KNOB: CSSProperties = { background: "linear-gradient(180deg, #2e3040, #1a1c28)", boxShadow: "0 2px 4px rgb(0 0 0 / .28), 0 1px 1px rgb(0 0 0 / .3), inset 0 1px 0 rgb(255 255 255 / .22)" };
-const GAP = 20; // the paper's top to the label; the name's bottom to the card's edge
+const GAP = 20; // the paper's top to the label; the name tag's bottom to the card's edge
 
-type S = { name: string; count: number };
 const Tick = ({ size = 22 }: { size?: number }) => <span className="grid shrink-0 place-items-center rounded-full text-white" style={{ ...KNOB, width: size, height: size }}><Icon name="check" size={Math.round(size * 0.55)} strokeWidth={3} /></span>;
 const Saved = () => <div className="text-center"><span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75" style={PRESSED}><Tick />Saved to your bodies</span></div>;
 const Text = ({ name }: { name: string }) => (
@@ -31,133 +31,112 @@ const Text = ({ name }: { name: string }) => (
     <p className="lead mx-auto mt-3 max-w-[320px] [text-wrap:pretty]">Every pattern you make for {name} will be drafted to these measurements.</p>
   </div>
 );
-const Complete = ({ className, style }: { className?: string; style?: CSSProperties }) => (
-  <span className={cx("inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-medium text-[#12131c]", className)} style={{ ...RAISED, ...style }}><Icon name="ruler" size={17} />Complete measurements</span>
+const Complete = ({ className }: { className?: string }) => (
+  <span className={cx("inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium text-[#12131c]", className)} style={RAISED}><Icon name="ruler" size={17} />Complete measurements</span>
 );
 
-// the ring: a solid cornflower arc for the measurements added (no dashes) on a faint track, "18 of 24" and
-// "measurements added" inside it in the app's font; full, with all 24
-function Ring({ count, size = 108, light, arc = 1 }: { count: number; size?: number; light?: boolean; arc?: number }) {
-  const w = 6, r = size / 2 - w, full = 2 * Math.PI * r, c = full * arc, all = count >= 24;
-  const start = arc < 1 ? 90 + (360 * (1 - arc)) / 2 : -90; // a dial (arc < 1) opens at the bottom
-  const ink = light ? "text-white" : "text-[#12131c]";
+// ─── the dial ───
+// arc: how much of the circle it draws (it opens at the bottom); the fill is the share of the 24 added
+type Build = "channel" | "thumb" | "bezel" | "scale" | "lit" | "well";
+function Dial({ count, build, size = 172 }: { count: number; build: Build; size?: number }) {
+  const id = useId().replace(/:/g, "");
+  const all = count >= 24;
+  const cx0 = size / 2, cy0 = size / 2;
+  const W = build === "lit" ? 14 : 16; // the channel's width
+  const r = size / 2 - W / 2 - (build === "scale" ? 12 : build === "bezel" ? 14 : 4);
+  const arc = 0.72, sweep = 360 * arc, start = 90 + (360 - sweep) / 2; // degrees, 0 = right, clockwise (screen)
+  const pt = (deg: number, rr = r) => [cx0 + rr * Math.cos((deg * Math.PI) / 180), cy0 + rr * Math.sin((deg * Math.PI) / 180)];
+  const path = (a0: number, a1: number, rr = r) => { const [x0, y0] = pt(a0, rr), [x1, y1] = pt(a1, rr); return `M${x0} ${y0}A${rr} ${rr} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
+  const end = start + sweep * Math.min(1, count / 24);
+  const track = path(start, start + sweep), fill = path(start, Math.max(start + 0.01, end));
+  const dark = build === "lit";
+  const [tx, ty] = pt(end);
   return (
-    <span className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
-      <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={light ? "rgb(255 255 255 / .16)" : "rgb(18 19 28 / .09)"} strokeWidth={w} strokeLinecap="round" strokeDasharray={`${c} ${full}`} transform={`rotate(${start} ${size / 2} ${size / 2})`} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#687ef5" strokeWidth={w} strokeLinecap="round" strokeDasharray={`${(c * Math.min(count, 24)) / 24} ${full}`} transform={`rotate(${start} ${size / 2} ${size / 2})`} />
+    <div className="relative" style={{ width: size, height: size }}>
+      {build === "bezel" && <span aria-hidden className="absolute inset-0 rounded-full" style={RAISED} />}
+      {build === "well" && <span aria-hidden className="absolute inset-[2px] rounded-full" style={PRESSED} />}
+      <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible" aria-hidden>
+        <defs>
+          {/* a channel pressed into the paper: a shadow along its upper inside edge */}
+          <filter id={`in${id}`} filterUnits="userSpaceOnUse" x={-20} y={-20} width={size + 40} height={size + 40}>
+            <feOffset in="SourceAlpha" dy="2" result="o" /><feGaussianBlur in="o" stdDeviation="1.6" result="b" />
+            <feComposite in="SourceAlpha" in2="b" operator="arithmetic" k2="1" k3="-1" result="edge" />
+            <feFlood floodColor="#12131c" floodOpacity={dark ? 0.7 : 0.32} /><feComposite in2="edge" operator="in" result="sh" />
+            <feMerge><feMergeNode in="SourceGraphic" /><feMergeNode in="sh" /></feMerge>
+          </filter>
+          {/* the fill raised out of it: a light top, a short shadow under */}
+          <linearGradient id={`fg${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8496f8" /><stop offset="1" stopColor="#5f74ef" /></linearGradient>
+          <filter id={`up${id}`} filterUnits="userSpaceOnUse" x={-20} y={-20} width={size + 40} height={size + 40}><feDropShadow dx="0" dy="1.2" stdDeviation="1" floodColor="#1c2454" floodOpacity=".35" /></filter>
+          <filter id={`glow${id}`} filterUnits="userSpaceOnUse" x={-20} y={-20} width={size + 40} height={size + 40}><feGaussianBlur stdDeviation="4" result="g" /><feMerge><feMergeNode in="g" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        </defs>
+        {/* the scale: a fine mark for each of the 24, a longer one every six (a ruler round the dial, not the progress) */}
+        {build === "scale" && Array.from({ length: 25 }, (_, i) => {
+          const a = start + (sweep * i) / 24, long = i % 6 === 0;
+          const [x0, y0] = pt(a, r + W / 2 + 3), [x1, y1] = pt(a, r + W / 2 + (long ? 10 : 6));
+          return <line key={i} x1={x0} y1={y0} x2={x1} y2={y1} stroke="#12131c" strokeOpacity={long ? 0.4 : 0.22} strokeWidth="1.2" strokeLinecap="round" />;
+        })}
+        {/* the channel */}
+        <path d={track} fill="none" stroke={dark ? "#1b1c26" : "#e6e4de"} strokeWidth={W} strokeLinecap="round" filter={`url(#in${id})`} />
+        {/* the fill */}
+        {count > 0 && <path d={fill} fill="none" stroke={`url(#fg${id})`} strokeWidth={W - 6} strokeLinecap="round" filter={dark ? `url(#glow${id})` : `url(#up${id})`} />}
+        {count > 0 && <path d={fill} fill="none" stroke="#fff" strokeOpacity={dark ? 0.35 : 0.45} strokeWidth="1.2" strokeLinecap="round" transform={`translate(0 ${-(W - 6) / 2 + 1.5})`} style={{ mixBlendMode: "screen" }} />}
+        {/* the thumb: a raised knob where the fill ends */}
+        {build === "thumb" && !all && <g filter={`url(#up${id})`}><circle cx={tx} cy={ty} r={W / 2 + 3} fill="#fff" /><circle cx={tx} cy={ty} r={3} fill="#687ef5" /></g>}
       </svg>
-      {/* the words scale with the ring, so they always sit inside it */}
-      <span className={cx("relative text-center leading-tight", arc < 1 ? "whitespace-nowrap" : "max-w-[74%]", ink)} style={arc < 1 ? { transform: `translateY(${-Math.round(size * 0.12)}px)` } : undefined}>
-        <span className="block font-medium tabular-nums" style={{ fontSize: Math.round(size * 0.16) }}>{all ? "All 24" : `${count} of 24`}</span>
-        <span className={cx("mt-0.5 block", light ? "text-white/70" : "text-[#12131c]/60")} style={{ fontSize: arc < 1 ? 11 : Math.max(9.5, +(size * 0.104).toFixed(1)) }}>measurements added</span>
-      </span>
-    </span>
-  );
-}
-
-// the art: the start screen's night card and the 3D body from the waist up, posed (as in the app), the body's name in
-// white at its foot (a caption, not a button); over: anything else laid on the card
-function Art({ sex, name, align = "center", over }: { sex: "female" | "male"; name: string; align?: "center" | "left"; over?: ReactNode }) {
-  return (
-    <div className="relative h-[40%] shrink-0 overflow-hidden rounded-b-[32px] text-white">
-      <Crown />
-      <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
-      <div className="absolute inset-0 pt-10"><Body3D sex={sex} focus="portrait" autoRotate={false} className="h-full w-full" /></div>
-      {/* a soft shade under the name, so white reads on the body */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24" style={{ background: "linear-gradient(180deg, transparent, rgb(11 12 21 / .55))" }} />
-      <div className={cx("absolute inset-x-6 truncate text-[17px] font-medium tracking-[-.01em]", align === "center" ? "text-center" : "text-left")} style={{ bottom: GAP }}>{name}</div>
-      {over}
+      {/* the words in the middle, a little above it (the button sits in the opening below) */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center" style={{ paddingBottom: size * (all ? 0.1 : 0.16) }}>
+        <span className="font-medium leading-none tabular-nums tracking-[-.01em] text-[#12131c]" style={{ fontSize: size < 160 ? 18 : 22 }}>{all ? "All 24" : `${count} of 24`}</span>
+        <span className="mt-1.5 whitespace-nowrap text-[#12131c]/60" style={{ fontSize: size < 160 ? 11 : 12 }}>measurements added</span>
+      </div>
     </div>
   );
 }
 
-// 1 · today's pressed label (for comparison): the count a plain line under the text
-function V1({ name, count }: S) {
+// the art: the start screen's night card and the 3D body from the waist up, posed (as in the app), and the body's name
+// in a small glass tag floating at its foot (a caption, not a button). Shorter while measurements are still to add
+function Art({ sex, name, short }: { sex: "female" | "male"; name: string; short: boolean }) {
   return (
-    <>
-      <Saved /><Text name={name} />
-      <div className="mt-5 text-center text-[15px] text-[#12131c]/60">{name} · <span className="tabular-nums">{count === 24 ? "All 24 measurements" : `${count} of 24 measurements`}</span></div>
-      {count < 24 && <div className="mt-2 text-center"><span className="inline-flex items-center gap-1 text-[15px] font-medium text-primary-2">Add the other {24 - count} for a closer fit<Icon name="chevR" size={16} /></span></div>}
-    </>
-  );
-}
-
-// 7 · the ring and the button side by side, centred under the text
-function V7({ name, count }: S) {
-  return (
-    <>
-      <Saved /><Text name={name} />
-      <div className="mt-5 flex items-center justify-center gap-4"><Ring count={count} />{count < 24 && <Complete />}</div>
-    </>
-  );
-}
-
-// 8 · the same pair in one well pressed into the paper, so the ring and its button read as one thing
-function V8({ name, count }: S) {
-  return (
-    <>
-      <Saved /><Text name={name} />
-      <div className="mx-auto mt-5 flex w-fit items-center gap-4 rounded-[30px] p-2 pr-3" style={PRESSED}>
-        <Ring count={count} size={96} />{count < 24 ? <Complete /> : <span className="pr-3 text-[14px] text-[#12131c]/60">Every measurement<br />Venty uses</span>}
+    <div className={cx("relative shrink-0 overflow-hidden rounded-b-[32px] text-white transition-[height] duration-500", short ? "h-[31%]" : "h-[40%]")}>
+      <Crown />
+      <div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
+      <div className="absolute inset-0 pt-9"><Body3D sex={sex} focus="portrait" autoRotate={false} className="h-full w-full" /></div>
+      <div className="absolute inset-x-6 flex justify-center" style={{ bottom: GAP }}>
+        <span className="max-w-full truncate rounded-[12px] px-3.5 py-2 text-[14px] font-medium text-white backdrop-blur-md"
+          style={{ background: "rgb(13 14 24 / .5)", boxShadow: "inset 0 0 0 1px rgb(255 255 255 / .14), inset 0 1px 0 rgb(255 255 255 / .12)" }}>{name}</span>
       </div>
-    </>
+    </div>
   );
 }
 
-// 9 · on the card: the ring in the night card's corner, in white, level with the name (a film's caption and its dial);
-// under the text only the button, centred
-function V9({ name, count }: S) {
+// the dial under the text; Complete measurements sitting in its opening while measurements are still to add
+// (with all 24 the card is back to its full height and there is no button, so the dial is smaller)
+function DialBlock({ count, build }: { count: number; build: Build }) {
+  const size = count < 24 ? 188 : 150;
   return (
-    <>
-      <Saved /><Text name={name} />
-      {count < 24 && <div className="mt-6 flex justify-center"><Complete /></div>}
-    </>
-  );
-}
-const over9 = (count: number) => <div className="absolute right-5" style={{ bottom: GAP - 8 }}><Ring count={count} size={100} light /></div>;
-
-// 10 · a dial: the ring opened at the bottom like a gauge, the words in its middle, the button sitting in the gap
-function V10({ name, count }: S) {
-  return (
-    <>
-      <Saved /><Text name={name} />
-      <div className="relative mx-auto mt-3 h-[110px] w-[150px]">
-        <div className="absolute inset-x-0 top-0 flex justify-center"><Ring count={count} size={124} arc={0.72} /></div>
-        {count < 24 && <div className="absolute inset-x-0 bottom-0 flex justify-center"><Complete className="!h-10 !px-3.5 !text-[14px]" /></div>}
-      </div>
-    </>
+    <div className={cx("relative mx-auto", count < 24 ? "mt-4" : "mt-2")} style={{ width: size, height: count < 24 ? size * 0.9 : size * 0.8 }}>
+      <Dial count={count} build={build} size={size} />
+      {count < 24 && <div className="absolute inset-x-0 flex justify-center" style={{ bottom: 0 }}><Complete className={build === "bezel" ? "!h-10" : ""} /></div>}
+    </div>
   );
 }
 
-// 11 · the ring as a dial raised off the paper (a knob, like the look switch's), the button a tab tucked under its foot
-function V11({ name, count }: S) {
-  return (
-    <>
-      <Saved /><Text name={name} />
-      <div className="relative mx-auto mt-2 flex w-fit flex-col items-center">
-        <span className="grid place-items-center rounded-full p-1.5" style={RAISED}><span className="grid place-items-center rounded-full" style={PRESSED}><Ring count={count} size={90} /></span></span>
-        {count < 24 && <Complete className="-mt-5 !h-10 !px-3.5 !text-[14px]" />}
-      </div>
-    </>
-  );
-}
-
-const VERSIONS: { k: string; name: string; note: string; C: (p: S) => ReactNode; align?: "center" | "left"; over?: (count: number) => ReactNode }[] = [
-  { k: "7", name: "7 · Ring and button", note: "The ring and Complete measurements side by side, centred under the text. The name sits in white at the foot of the body's card, centred.", C: V7 },
-  { k: "8", name: "8 · In one well", note: "The same pair held in one well pressed into the paper, so the ring and its button read as one thing to tap.", C: V8 },
-  { k: "9", name: "9 · On the card", note: "The most cinematic: the ring in white in the night card's corner, level with the name on the left, like a film's caption and its dial. Under the text, only the button.", C: V9, align: "left", over: over9 },
-  { k: "10", name: "10 · Dial", note: "The ring opened at the bottom like a gauge, the words in its middle and the button sitting in the opening.", C: V10 },
-  { k: "11", name: "11 · Raised dial", note: "The ring set in a dial raised off the paper (a knob, like the look switch's), with the button tucked under its foot like a tab.", C: V11 },
-  { k: "1", name: "1 · Pressed label (before)", note: "Version 1 as it was, to compare: the count as a plain line under the text.", C: V1 },
+const VERSIONS: { k: Build; name: string; note: string }[] = [
+  { k: "channel", name: "A · Pressed channel", note: "10, built: the dial's track is a channel pressed into the paper (a shadow along its upper inside edge), the fill raised out of it in cornflower with a lit top edge." },
+  { k: "thumb", name: "B · With a thumb", note: "The pressed channel and its raised fill, with a white knob where the fill ends, as on a slider." },
+  { k: "bezel", name: "C · Raised bezel", note: "The dial set in a round bezel raised off the paper, like a watch face, its channel pressed into the bezel; the button tucked at its foot." },
+  { k: "scale", name: "D · With a scale", note: "A fine scale round the outside of the channel, a mark for each of the 24 and a longer one every six, like a measuring dial (a ruler, not the progress)." },
+  { k: "lit", name: "E · Lit gauge", note: "An instrument's lit gauge: the channel in ink, pressed in, the cornflower fill glowing in it." },
+  { k: "well", name: "F · In a well", note: "The whole dial pressed into the paper in one round well, its channel and raised fill inside it." },
 ];
 
-function Phone({ label, sex, name, count, v }: { label: string; sex: "female" | "male"; name: string; count: number; v: (typeof VERSIONS)[number] }) {
+function Phone({ label, sex, name, count, build }: { label: string; sex: "female" | "male"; name: string; count: number; build: Build }) {
   return (
     <figure className="flex flex-col items-center gap-3">
       <div className="paper relative isolate flex h-[852px] w-[393px] shrink-0 flex-col overflow-hidden rounded-[46px] shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">
-        <Art sex={sex} name={name} align={v.align} over={v.over?.(count)} />
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 noscroll" style={{ paddingTop: GAP }}><v.C name={name} count={count} /></div>
+        <Art sex={sex} name={name} short={count < 24} />
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 noscroll" style={{ paddingTop: GAP }}>
+          <Saved /><Text name={name} /><DialBlock count={count} build={build} />
+        </div>
         <div className="flex shrink-0 flex-col items-center gap-1 px-6 pb-6 pt-3">
           <span className="pill pill-primary w-full text-[16px] text-white">Choose what to make</span>
           <span className="h-11 px-4 pt-3 text-[16px] font-medium text-[#12131c]/65">Go to home</span>
@@ -176,23 +155,29 @@ function Pick<T extends string>({ items, value, onChange }: { items: { k: T; nam
 }
 
 export function ReadyLab() {
-  const [count, setCount] = useState<"18" | "24">("18");
+  const [state, setState] = useState<"18" | "24">("18");
   const [sex, setSex] = useState<"female" | "male">("female");
-  // the body's name is whatever the person called it ("Me, Spring 26" was only a made-up name); a long one shows how it fits
+  // the body's name is whatever the person called it; a long one shows how the tag fits
   const [name, setName] = useState("Me");
+  const count = Number(state);
   return (
     <section>
       <h2 className="h1 !text-[34px]">Body ready</h2>
-      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">From 1 (the pressed label): the same Saved to your bodies label, heading and line under it. The body&apos;s name now sits in white at the foot of the 3D body&apos;s card (as far from its edge as the label is from the top of the paper; a caption, not a button). Under the text, a ring of the measurements added with &quot;18 of 24 / measurements added&quot; inside it in the app&apos;s font, and Complete measurements. Five ways to fit it, centred, on a phone at its real size (393 × 852), with 1 as it was to compare.</p>
-      <div className="mt-5 space-y-3">
-        <div><div className="mb-2 text-[14px] text-white/50">Measurements</div><Pick items={[{ k: "18" as const, name: "18 of 24" }, { k: "24" as const, name: "All 24" }]} value={count} onChange={setCount} /></div>
-        <div><div className="mb-2 text-[14px] text-white/50">Body&apos;s name</div><Pick items={[{ k: "Me", name: "Me" }, { k: "Ana", name: "Ana" }, { k: "Mum, wedding guest dress", name: "A long name" }]} value={name} onChange={setName} /></div>
-        <div><div className="mb-2 text-[14px] text-white/50">Body</div><Pick items={[{ k: "female" as const, name: "Female" }, { k: "male" as const, name: "Male" }]} value={sex} onChange={setSex} /></div>
+      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">Round 3, from 10 (the dial). The body&apos;s name in a small glass tag floating on the 3D body&apos;s card (a caption, not a button). The dial in six skeuomorphic builds: a channel pressed into the paper and a cornflower fill raised out of it, lit from above. While measurements are still to add, the body&apos;s card is shorter, so the dial and its button have room; with all 24 it keeps its full height and the dial closes on a tick. Switch the state with the tabs (they stay at the top while you scroll).</p>
+      {/* the tabs: the two states of the screen, and the name and body to try; pinned while scrolling */}
+      <div className="sticky top-0 z-30 -mx-6 mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-white/10 bg-[#05060b]/90 px-6 py-3 backdrop-blur">
+        <div role="tablist" aria-label="Screen state" className="flex rounded-full bg-white/[.06] p-1">
+          {([["18", "Still to add · 18 of 24"], ["24", "All added · 24 of 24"]] as const).map(([k, t]) => (
+            <button key={k} role="tab" aria-selected={state === k} onClick={() => setState(k)} className={cx("h-10 rounded-full px-5 text-[15px] font-medium transition-colors", state === k ? "bg-white text-bg" : "text-white/70 hover:text-white")}>{t}</button>
+          ))}
+        </div>
+        <Pick items={[{ k: "Me", name: "Me" }, { k: "Ana", name: "Ana" }, { k: "Mum, wedding guest dress", name: "A long name" }]} value={name} onChange={setName} />
+        <Pick items={[{ k: "female" as const, name: "Female" }, { k: "male" as const, name: "Male" }]} value={sex} onChange={setSex} />
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-12">
         {VERSIONS.map((v) => (
           <div key={v.k} className="flex w-[393px] flex-col gap-4">
-            <Phone label={v.name} sex={sex} name={name} count={Number(count)} v={v} />
+            <Phone label={v.name} sex={sex} name={name} count={count} build={v.k} />
             <p className="text-[14px] leading-snug text-white/55">{v.note}</p>
           </div>
         ))}
