@@ -1,111 +1,119 @@
 // Home-screen icons for the app (lab, MC 3). Each one is a full-bleed square SVG (iOS and Android round the corners
-// themselves), drawn in 1024 units with the bird mark (LOGO[4] in art.tsx) and the app's own colours. The lab shows these
-// strings as images; tools/lab-mc3-icons.mjs turns the same strings into the PNGs in public/lab/mc3/icons, so what you
-// see in the lab is what lands on the phone. Plain TypeScript with no imports, so Node can load it as it is.
+// themselves), drawn in 1024 units with the bird mark (LOGO[4] in art.tsx) and the app's own colours. The lab shows them
+// as images; tools/lab-mc3-icons.mjs turns these same strings into the PNGs in public/lab/mc3/icons, so what you see in
+// the lab is what lands on the phone. Plain TypeScript with no imports, so Node can load it as it is.
+// One rule: the bird is the same size and in the same place on every icon, today's (measured from public/icon-512.png).
 
-export type IconKey = "today" | "crown" | "night" | "primary" | "snow" | "paper" | "ink" | "dial" | "closeup";
+export type IconKey = "today" | "night" | "primary" | "snow" | "pattern" | "pressed" | "raised" | "paper" | "line" | "denim" | "glow";
 
 export const ICONS: { k: IconKey; name: string; note: string }[] = [
-  { k: "today", name: "Today", note: "The icon on the home screen now: the bird in white on a navy gradient with a fine grid." },
-  { k: "crown", name: "Crown", note: "The app's one gradient, as on Welcome and the splash, with the bird in snow. Opening the app feels continuous." },
-  { k: "night", name: "Night", note: "The landing page's loading-screen night: flat night with the cornflower lights low down, the bird in snow." },
-  { k: "primary", name: "Primary", note: "The primary button's periwinkle, lit from the top, the bird in snow. The brightest on a dark home screen." },
-  { k: "snow", name: "Snow", note: "Snow like the tab bar and the light tops, the bird in primary. Stands out on a dark or photo wallpaper, fades on a light one." },
-  { k: "paper", name: "Pattern piece", note: "The bird cut as a pattern piece on pattern paper: primary, with a dashed seam allowance and a snow grainline." },
-  { k: "ink", name: "Ink", note: "The app's ink, lit from the top like the dark secondary buttons, the bird in periwinkle. Quiet, for a dark home screen." },
-  { k: "dial", name: "Tape", note: "The measuring dial: the dark card, the ruler's ticks standing on the bottom edge, the bird in snow above it." },
-  { k: "closeup", name: "Close-up", note: "Crown with the bird drawn very large and cropped by the edges, its head leaving at the top right." },
+  { k: "today", name: "Today", note: "The icon on the home screen now: the bird in white on Crown's navy." },
+  { k: "night", name: "Night", note: "The landing page's loading-screen night, the cornflower glow low and soft, the bird in snow." },
+  { k: "primary", name: "Primary", note: "The landing page's favicon gradient (Haze): periwinkle washing in from the top left over cornflower." },
+  { k: "snow", name: "Snow", note: "Snow like the tab bar and the light tops, the bird in primary." },
+  { k: "pattern", name: "Pattern", note: "Pattern paper with its periwinkle grid, the bird in steel, lit from the top." },
+  { k: "pressed", name: "Pressed", note: "The bird pressed into snow, like the app's inset tiles: a shade inside its top edge, a lip of light at its foot." },
+  { k: "raised", name: "Raised", note: "The bird raised off the night like the app's knobs: lit along its top, a soft shadow under it." },
+  { k: "paper", name: "Paper", note: "The warm paper of the app's moments, the bird in ink." },
+  { k: "line", name: "Line", note: "The bird drawn as a line in periwinkle on the ink, like a pattern piece's outline." },
+  { k: "denim", name: "Denim", note: "The app's denim, lit from the top, the bird in snow." },
+  { k: "glow", name: "Glow", note: "The ink, the bird in a periwinkle to cornflower gradient with a soft glow behind it." },
 ];
 
 // the bird's box inside LOGO[4]'s own units (measured: x 207 to 1543, y 0 to 797)
 const BX = 207, BY = 0, BW = 1336, BH = 797;
-
-// the bird scaled to `w` icon units wide, its box centred on (cx, cy)
-function place(w: number, cx: number, cy: number) {
-  const s = w / BW;
-  return { s, t: `translate(${cx - (BX + BW / 2) * s} ${cy - (BY + BH / 2) * s}) scale(${s})` };
-}
+// where today's icon has it, in 1024 units: 738 wide, its box centred on (510, 503)
+const SIZE = 738, CX = 510, CY = 503;
+const S = SIZE / BW;
+const T = `translate(${CX - (BX + BW / 2) * S} ${CY - (BY + BH / 2) * S}) scale(${S})`;
 
 const wrap = (body: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">${body}</svg>`;
+const rect = (fill: string) => `<rect width="1024" height="1024" fill="${fill}"/>`;
 
-// a soft round light (like the blurred drift lights): a circle whose colour fades out to its edge
-const light = (id: string, cx: number, cy: number, r: number, color: string, a: number) =>
-  `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${color}" stop-opacity="${a}"/><stop offset=".55" stop-color="${color}" stop-opacity="${a * 0.55}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`;
+// a soft round light: a circle whose colour eases out to nothing at its edge (stops eased, so there is no hard rim)
+const light = (id: string, cx: number, cy: number, r: number, color: string, a: number, sy = 1) =>
+  `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}" gradientUnits="userSpaceOnUse"${sy !== 1 ? ` gradientTransform="translate(0 ${cy}) scale(1 ${sy}) translate(0 ${-cy})"` : ""}>` +
+  `<stop offset="0" stop-color="${color}" stop-opacity="${a}"/><stop offset=".25" stop-color="${color}" stop-opacity="${a * 0.82}"/>` +
+  `<stop offset=".5" stop-color="${color}" stop-opacity="${a * 0.45}"/><stop offset=".75" stop-color="${color}" stop-opacity="${a * 0.14}"/>` +
+  `<stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient>`;
 
-// Crown's static layers (.sky.sky-light in globals.css) plus its glow from the top and its four lights at rest
-const CROWN_DEFS =
-  `<linearGradient id="cb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7988b8"/><stop offset=".3" stop-color="#5a6c99"/><stop offset=".55" stop-color="#353f62"/><stop offset=".78" stop-color="#1b2035"/><stop offset="1" stop-color="#131523"/></linearGradient>` +
-  `<radialGradient id="ct" cx="512" cy="-102" r="717" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 -102) scale(1 .786) translate(0 102)"><stop offset="0" stop-color="#b4bdd9"/><stop offset=".35" stop-color="#8f9cc5"/><stop offset=".7" stop-color="#8f9cc5" stop-opacity="0"/></radialGradient>` +
-  `<radialGradient id="cu" cx="512" cy="1178" r="922" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 1178) scale(1 .556) translate(0 -1178)"><stop offset="0" stop-color="#687ef5" stop-opacity=".75"/><stop offset=".4" stop-color="#4f63e0" stop-opacity=".35"/><stop offset=".7" stop-color="#4f63e0" stop-opacity="0"/></radialGradient>` +
-  `<radialGradient id="cg" cx="512" cy="41" r="348" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 41) scale(1 .765) translate(0 -41)"><stop offset="0" stop-color="#f6f7ff" stop-opacity=".7"/><stop offset=".36" stop-color="#eceffc" stop-opacity=".3"/><stop offset="1" stop-color="#eceffc" stop-opacity="0"/></radialGradient>` +
-  light("c1", 512, 20, 360, "#f0f2ff", 0.4) + light("c2", 930, 1000, 400, "#687ef5", 0.5) +
-  light("c3", 94, 1000, 400, "#4f63e0", 0.45) + light("c4", 512, 1130, 330, "#8c9cf8", 0.4);
-const CROWN =
-  `<rect width="1024" height="1024" fill="url(#cb)"/><rect width="1024" height="1024" fill="url(#ct)"/><rect width="1024" height="1024" fill="url(#cu)"/>` +
-  `<rect width="1024" height="1024" fill="url(#c1)"/><rect width="1024" height="1024" fill="url(#c2)"/><rect width="1024" height="1024" fill="url(#c3)"/><rect width="1024" height="1024" fill="url(#c4)"/>` +
-  `<rect width="1024" height="1024" fill="url(#cg)"/>`;
+// lit from the top, as the app's buttons are: a white wash fading down the face
+const wash = (a: number, to = 0.6) =>
+  `<linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${a}"/><stop offset="${to}" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
 
-// lit from the top, as the app's buttons are: a faint white wash down the face
-const wash = (a: number) =>
-  `<linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${a}"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+// a shadow inside the bird (an inner shadow: the bird's outside, blurred and shifted, kept inside its shape)
+const inner = (id: string, dy: number, blur: number, color: string, a: number) =>
+  `<filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feComponentTransfer in="SourceAlpha"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>` +
+  `<feGaussianBlur stdDeviation="${blur}"/><feOffset dy="${dy}" result="o"/><feFlood flood-color="${color}" flood-opacity="${a}"/><feComposite in2="o" operator="in"/>` +
+  `<feComposite in2="SourceAlpha" operator="in"/></filter>`;
 
 export function iconSvg(k: Exclude<IconKey, "today">, bird: string): string {
-  const mid = place(680, 512, 524);
-  const mark = (fill: string, p = mid) => `<path d="${bird}" fill="${fill}" transform="${p.t}"/>`;
+  const mark = (fill: string, extra = "") => `<path d="${bird}" fill="${fill}" transform="${T}"${extra}/>`;
   switch (k) {
-    case "crown":
-      return wrap(`<defs>${CROWN_DEFS}</defs>${CROWN}${mark("#f0f4fe")}`);
-    case "closeup": {
-      const big = place(1300, 560, 560);
-      return wrap(`<defs>${CROWN_DEFS}</defs>${CROWN}${mark("#f0f4fe", big)}`);
-    }
     case "night":
+      // the night with its glow low down, much softer at its edges than before
       return wrap(
-        `<defs>${light("n1", 512, 1000, 560, "#687ef5", 0.42)}${light("n2", 512, 1060, 440, "#4f63e0", 0.4)}${light("n3", 512, 1080, 300, "#8c9cf8", 0.22)}</defs>` +
-        `<rect width="1024" height="1024" fill="#0b0c15"/><rect width="1024" height="1024" fill="url(#n1)"/><rect width="1024" height="1024" fill="url(#n2)"/><rect width="1024" height="1024" fill="url(#n3)"/>${mark("#f0f4fe")}`,
+        `<defs>${light("n1", 512, 1080, 780, "#687ef5", 0.36, 0.8)}${light("n2", 512, 1140, 560, "#4f63e0", 0.3, 0.8)}${light("n3", 512, 1160, 380, "#8c9cf8", 0.14, 0.8)}</defs>` +
+        rect("#0b0c15") + rect("url(#n1)") + rect("url(#n2)") + rect("url(#n3)") + mark("#f0f4fe"),
       );
     case "primary":
+      // Haze, the landing page's favicon (its purple sky, rendered with its lights spread wide): matched to the favicon's
+      // colours, sampled at nine points. A diagonal from light periwinkle to cornflower, the pale light in the top left, and a
+      // broad soft light down the left side and one on the right
       return wrap(
-        `<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7387f6"/><stop offset=".55" stop-color="#687ef5"/><stop offset="1" stop-color="#6479f2"/></linearGradient>${wash(0.16)}</defs>` +
-        `<rect width="1024" height="1024" fill="url(#p)"/><rect width="1024" height="1024" fill="url(#w)"/>${mark("#f0f4fe")}`,
+        `<defs><linearGradient id="hb" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b3c0f8"/><stop offset=".45" stop-color="#8c9ff8"/><stop offset="1" stop-color="#687ce9"/></linearGradient>` +
+        light("h1", 60, 60, 520, "rgb(239,244,255)", 0.55) + light("h2", 120, 640, 560, "rgb(176,192,250)", 0.62) + light("h3", 420, 1000, 460, "rgb(150,168,250)", 0.32) +
+        light("h4", 900, 560, 420, "rgb(176,192,250)", 0.55) +
+        `</defs>` + rect("url(#hb)") + rect("url(#h2)") + rect("url(#h3)") + rect("url(#h4)") + rect("url(#h1)") + mark("#f0f4fe"),
       );
     case "snow":
-      return wrap(`<defs>${wash(0.7)}</defs><rect width="1024" height="1024" fill="#f0f4fe"/><rect width="1024" height="1024" fill="url(#w)"/>${mark("#687ef5")}`);
-    case "ink":
-      return wrap(`<defs>${wash(0.07)}</defs><rect width="1024" height="1024" fill="#131523"/><rect width="1024" height="1024" fill="url(#w)"/>${mark("#8c9cf8")}`);
-    case "dial": {
-      // the ruler: a long tick every 128 units, short ones every 32, standing on the bottom edge, fading at the sides
-      let ticks = "";
-      for (let x = 0; x <= 1024; x += 32) {
-        const long = x % 128 === 0;
-        ticks += `<rect x="${x - (long ? 5 : 3)}" y="${1024 - (long ? 150 : 84)}" width="${long ? 10 : 6}" height="${long ? 150 : 84}" fill="#fff" fill-opacity="${long ? 0.75 : 0.4}"/>`;
-      }
-      const up = place(640, 512, 440);
-      return wrap(
-        `<defs>${wash(0.06)}<linearGradient id="f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".2" stop-color="#fff"/><stop offset=".8" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><mask id="m"><rect width="1024" height="1024" fill="url(#f)"/></mask></defs>` +
-        `<rect width="1024" height="1024" fill="#1b1c26"/><rect width="1024" height="1024" fill="url(#w)"/><g mask="url(#m)">${ticks}</g>${mark("#f0f4fe", up)}`,
-      );
-    }
-    case "paper": {
-      // pattern paper (.pattern-mat): a periwinkle grid, a strong line every 256 units and a faint one every 64
+      return wrap(`<defs>${wash(0.7)}</defs>${rect("#f0f4fe")}${rect("url(#w)")}${mark("#687ef5")}`);
+    case "pattern": {
+      // pattern paper (.pattern-mat): a periwinkle grid, a strong line every 256 units and a faint one every 64; the bird in
+      // steel, lit from the top like brushed metal
       let grid = "";
       for (let v = 0; v <= 1024; v += 64) {
-        const major = v % 256 === 0;
-        const a = major ? 0.2 : 0.09, sw = major ? 5 : 3;
+        const major = v % 256 === 0, a = major ? 0.2 : 0.09, sw = major ? 5 : 3;
         grid += `<line x1="${v}" y1="0" x2="${v}" y2="1024" stroke="#687ef5" stroke-opacity="${a}" stroke-width="${sw}"/><line x1="0" y1="${v}" x2="1024" y2="${v}" stroke="#687ef5" stroke-opacity="${a}" stroke-width="${sw}"/>`;
       }
-      const p = place(600, 512, 526);
-      // the seam allowance: a line 30 units outside the bird, dashed, cut from a wide dashed stroke minus a narrower solid one
-      const off = 30 / p.s, lw = 9 / p.s, g = 12 / p.s;
       return wrap(
-        `<defs><mask id="sa" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#000"/>` +
-        `<path d="${bird}" transform="${p.t}" fill="none" stroke="#fff" stroke-width="${2 * off + lw}" stroke-linejoin="round" stroke-dasharray="${30 / p.s} ${22 / p.s}"/>` +
-        `<path d="${bird}" transform="${p.t}" fill="#000" stroke="#000" stroke-width="${2 * off - lw}" stroke-linejoin="round"/></mask></defs>` +
-        `<rect width="1024" height="1024" fill="#f6f7fd"/>${grid}<rect width="1024" height="1024" fill="#687ef5" mask="url(#sa)"/>${mark("#687ef5", p)}` +
-        // the grainline: a snow line down the wing (in the bird's own units) with an arrowhead at each end
-        `<g transform="${p.t}" stroke="#f0f4fe" stroke-width="${g}" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M525 250 V630"/><path d="M470 305 L525 250 L580 305"/><path d="M470 575 L525 630 L580 575"/></g>`,
+        `<defs><linearGradient id="st" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d7299"/><stop offset=".55" stop-color="#485f88"/><stop offset="1" stop-color="#3c4b63"/></linearGradient></defs>` +
+        rect("#f6f7fd") + grid + mark("url(#st)"),
       );
     }
+    case "pressed":
+      // the bird pressed into snow: its floor a touch deeper, a shade inside its top edge, a lip of light along its foot
+      return wrap(
+        // (its floor: snow with 9% of the ink)
+        `<defs>${wash(0.7)}${inner("ps", 16, 9, "#131523", 0.42)}${inner("pl", -6, 3, "#ffffff", 0.95)}</defs>` +
+        rect("#f0f4fe") + rect("url(#w)") + mark("#dce0ea") + mark("#dce0ea", ` filter="url(#ps)"`) + mark("#dce0ea", ` filter="url(#pl)"`),
+      );
+    case "raised":
+      // the bird raised off the night like the app's knobs: a soft shadow under it, lit along its top, deeper at its foot
+      return wrap(
+        `<defs><filter id="ds" x="-20%" y="-20%" width="140%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="14"/><feOffset dy="18"/><feComponentTransfer><feFuncA type="linear" slope=".6"/></feComponentTransfer></filter>` +
+        `${inner("rt", 8, 4, "#ffffff", 0.9)}${inner("rb", -10, 8, "#4f63e0", 0.35)}` +
+        `<linearGradient id="rf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0f4fe"/><stop offset="1" stop-color="#c1c8d9"/></linearGradient>${light("rg", 512, 1060, 700, "#687ef5", 0.22, 0.8)}</defs>` +
+        rect("#0b0c15") + rect("url(#rg)") + mark("#000", ` filter="url(#ds)"`) + mark("url(#rf)") + mark("#fff", ` filter="url(#rt)"`) + mark("#fff", ` filter="url(#rb)"`),
+      );
+    case "paper":
+      return wrap(`<defs>${wash(0.5)}</defs>${rect("#f3f1ec")}${rect("url(#w)")}${mark("#12131c")}`);
+    case "line":
+      // the outline drawn inside the bird's edge (clipped to it), so the bird stays exactly the size of the others
+      return wrap(
+        `<defs>${wash(0.07)}<clipPath id="lc"><path d="${bird}"/></clipPath></defs>` +
+        rect("#131523") + rect("url(#w)") + `<path d="${bird}" transform="${T}" fill="none" stroke="#8c9cf8" stroke-width="${(2 * 22) / S}" stroke-linejoin="round" clip-path="url(#lc)"/>`,
+      );
+    case "denim":
+      return wrap(
+        `<defs>${wash(0.16)}<linearGradient id="dn" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#131523" stop-opacity="0"/><stop offset="1" stop-color="#131523" stop-opacity=".22"/></linearGradient></defs>` +
+        rect("#4d5e85") + rect("url(#w)") + rect("url(#dn)") + mark("#f0f4fe"),
+      );
+    case "glow":
+      return wrap(
+        `<defs>${wash(0.06)}${light("gl", CX, CY + 40, 420, "#687ef5", 0.45, 0.75)}<linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8c9cf8"/><stop offset="1" stop-color="#687ef5"/></linearGradient></defs>` +
+        rect("#131523") + rect("url(#w)") + rect("url(#gl)") + mark("url(#gb)"),
+      );
   }
 }

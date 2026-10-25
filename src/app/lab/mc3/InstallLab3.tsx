@@ -37,10 +37,14 @@ function Page({ tone, os, k, setK, light }: { tone: Tone; os: OS; k: IconKey | n
         <div className="flex h-12 items-center"><RB icon="back" label="Back" className={paper ? "sec-dark" : undefined} /></div>
         <h1 className="h-serif mt-1.5 text-center !text-[30px] leading-[1.08]">Add Venty to<br />your home screen</h1>
       </div>
-      <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 noscroll">
-        <Label tone={tone} className="mt-5">Select an icon</Label>
+      {/* any height to spare is shared evenly by the three gaps (above the icons, between the two parts, above the bottom),
+          each keeping its least: 20, 24 and 24 */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 noscroll">
+        <div className="min-h-5 flex-1" />
+        <Label tone={tone}>Select an icon</Label>
         <div className="mt-3"><IconTrack k={k} setK={setK} tone={tone} /></div>
-        <Label tone={tone} className="mt-6">{os === "ios" ? "Then follow these steps" : "Then confirm it in Chrome"}</Label>
+        <div className="min-h-6 flex-1" />
+        <Label tone={tone}>{os === "ios" ? "Then follow these steps" : "Then confirm it in Chrome"}</Label>
         <div className="mt-3">
           {os === "ios" ? <StepRow steps={STEPS} icon={icon} tone={tone} auto light={light} /> : (
             <>
@@ -49,11 +53,14 @@ function Page({ tone, os, k, setK, light }: { tone: Tone; os: OS; k: IconKey | n
             </>
           )}
         </div>
+        <div className="min-h-6 flex-1" />
       </div>
-      <div className="relative shrink-0 px-6 pt-3" style={{ paddingBottom: "var(--bottom)" }}>
-        <div className="flex items-center gap-3"><NextButton ready={!!k} label={os === "ios" ? "Done" : "Add to home screen"} className="flex-1" /></div>
+      <div className="relative shrink-0 px-6" style={{ paddingBottom: "var(--bottom)" }}>
+        {/* on Android, Chrome installs for real, so that is the primary; on an iPhone a page cannot open Safari's Add to Home
+            Screen, so a Done would only repeat Continue in my browser, and it is left out */}
+        {os === "android" && <div className="mb-1 flex items-center gap-3"><NextButton ready={!!k} label="Add to home screen" className="flex-1" /></div>}
         {/* the quiet second choice: words only */}
-        <TextButton tone={paper ? "paper" : "dark"} className="mt-1">Continue in my browser</TextButton>
+        <TextButton tone={paper ? "paper" : "dark"}>Continue in my browser</TextButton>
       </div>
     </div>
   );
@@ -63,11 +70,9 @@ const PICS: { k: "dark" | "light"; name: string }[] = [{ k: "dark", name: "Dark 
 const OSES: { k: OS; name: string }[] = [{ k: "ios", name: "iPhone" }, { k: "android", name: "Android" }];
 
 const NOTES = [
-  "The ruler under the icons is the measuring ruler's own geometry (Ruler in art.tsx): a tick every 9 px, a mid tick every 2nd and a major every 10th, at 15%, 26% and 42% of its height, the same weights and opacities, the centre line at 62%. Its ticks stop 1 px above the track's floor, as on the measuring dial.",
-  "The icons fade with a gradient mask towards the track's ends, not by turning down their opacity.",
-  "Above the steps: Then follow these steps (on Android: Then confirm it in Chrome).",
-  "The pictures in a light version too: snow screens, white menus with a soft shadow, ink words, the thing to tap circled in primary, in a white bezel. Switch Dark pictures and Light pictures.",
-  "The address in the pictures is app.venty.au (step 1, and Chrome's dialog).",
+  "On an iPhone, Done is gone: a page cannot open Safari's Add to Home Screen, so Done would only do what Continue in my browser does. On Android, Add to home screen stays the primary, as Chrome installs for real.",
+  "To check on your iPhone: Test the share sheet (above the phones) opens the share sheet a page is allowed to open. If Add to Home Screen is not in it, a button for it cannot exist.",
+  "The icons: one rule, the bird the same size and in the same place on every one (today's, matched to the pixel). Today, Night (its glow softer), Primary (the landing page's favicon gradient, Haze), Snow, Pattern (the grid, the bird in steel), and six new: Pressed, Raised, Paper, Line, Denim, Glow.",
 ]
 
 export function InstallLab3() {
@@ -89,6 +94,8 @@ export function InstallLab3() {
         {pick(PICS, pics, setPics)}
         <div className="flex flex-wrap items-center gap-2">{pick(OSES, os, setOs)}
           <button onClick={() => { setK(null); setRun((r) => r + 1); }} className="h-10 rounded-full border border-white/15 px-4 text-[14px] font-medium text-white/75 hover:text-white">Start again</button>
+          {/* a test for the iPhone: does the share sheet a page can open (the Web Share API) offer Add to Home Screen? */}
+          <button onClick={() => { navigator.share?.({ title: "Venty", url: location.href }).catch(() => {}); }} className="h-10 rounded-full border border-white/15 px-4 text-[14px] font-medium text-white/75 hover:text-white">Test the share sheet</button>
         </div>
       </div>
       <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-10">
