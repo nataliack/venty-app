@@ -6,17 +6,10 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Piece } from "@/components/art";
+import { CELL, grid, SNOW_RIM, SNOW_SURFACE, SnowTray } from "./SnowTray";
 import { cx } from "@/components/ui";
 import { PIECE_LABEL, type GarmentKey } from "@/lib/data";
 import { piecesFor } from "@/screens/pattern";
-
-// the grid: thin squares of CELL px, a thick line every five (an odd number, so centred thick and thin lines meet)
-const CELL = 20;
-const grid = (thin: string, thick: string): CSSProperties => ({
-  backgroundImage: `linear-gradient(${thick} 1px, transparent 1px), linear-gradient(90deg, ${thick} 1px, transparent 1px), linear-gradient(${thin} 1px, transparent 1px), linear-gradient(90deg, ${thin} 1px, transparent 1px)`,
-  backgroundSize: `${CELL * 5}px ${CELL * 5}px, ${CELL * 5}px ${CELL * 5}px, ${CELL}px ${CELL}px, ${CELL}px ${CELL}px`,
-  backgroundPosition: "center",
-});
 
 // the raised rim and the pressed surface, lit from above (a light top edge, a shadow under; the surface darker along
 // its top inside edge, a faint lip below), in the switch's colours
@@ -33,6 +26,7 @@ const PRESS_LIGHT = "inset 0 3px 8px rgb(28 36 84 / .32), inset 0 1px 2px rgb(28
 
 type Mat = { k: string; name: string; note: string; rim: CSSProperties; surface: CSSProperties; tone: "dark" | "light"; text: string; ruler?: boolean; lit?: boolean };
 const MATS: Mat[] = [
+  { k: "snowRuled", name: "7 · Snow tray with a band", note: "The snow tray with a taller raised band at the bottom that holds the count, so the pieces have the whole surface (no ticks on the rim). Grey and white grid lines. The pieces are solid white paper with a soft slate outline and a crisp shadow, all at one scale and as big as the tray allows; each label sits inside its piece where it fits", rim: SNOW_RIM, surface: SNOW_SURFACE, tone: "light", text: "" },
   { k: "inkSnow", name: "1 · Ink rim, snow paper", note: "The switch's dark knob as the rim; inside, snow paper pressed down, the cornflower grid on it. Closest to today, with depth.", rim: RIM_INK,
     surface: { backgroundColor: "#f1f3fc", boxShadow: PRESS_LIGHT, ...grid("rgb(104 126 245 / .09)", "rgb(104 126 245 / .2)") }, tone: "light", text: "text-[#3c4b63]" },
   { k: "inkInk", name: "2 · All ink", note: "The rim and the switch's pressed-in track as the surface, snow grid lines, the pieces drawn in white. One piece with the switch and the dark screen.", rim: RIM_INK,
@@ -128,7 +122,7 @@ export function MatLab() {
                 <p className="mt-1 text-[14px] text-white/60">Drafted to Me · relaxed fit</p>
                 <div className="mx-auto mt-4 flex w-[240px] rounded-full bg-card p-1 text-[14px] font-medium"><span className="flex-1 py-2 text-white/70">On your body</span><span className="flex-1 rounded-full bg-white py-2 text-bg">Pattern</span></div>
               </div>
-              <div className="absolute inset-x-4 top-[244px] h-[408px]"><Tray mat={m} rim={rim} pieces={pieces} name={`${m.k}-${g}`} /></div>
+              <div className="absolute inset-x-4 top-[244px] h-[408px]">{m.k === "snowRuled" ? <SnowTray rim={rim} pieces={pieces} name={`${m.k}-${g}`} /> : <Tray mat={m} rim={rim} pieces={pieces} name={`${m.k}-${g}`} />}</div>
               <div className="absolute inset-x-5 bottom-8 flex gap-3 text-white"><span className="pill pill-dark flex-1 text-[15px]">Change the design</span><span className="pill pill-primary flex-1 text-[15px]">Looks right</span></div>
             </Phone>
             <p className="text-[14px] leading-snug text-white/55">{m.note}</p>
