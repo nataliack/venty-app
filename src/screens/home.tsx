@@ -1,9 +1,9 @@
 "use client";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, animate } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
-import { fabricAdvice, fitName, metresFor, metresAt, notionsFor, kindOf, FLUTTER, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
+import { fabricAdvice, fitName, templateBy, metresFor, metresAt, notionsFor, kindOf, FLUTTER, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
 import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { useInstall } from "@/components/Install";
@@ -273,49 +273,160 @@ function SectionHead({ title, onAll }: { title: string; onAll: () => void }) {
   );
 }
 
-// Notifications behind the bell: only things that matter to you (work waiting, patterns ready, what's new). No marketing.
-function useUpdates() {
-  const { bodies, patterns, resumeBody, set, go } = useApp();
+// Notifications behind the bell (from the lab, 25 Oct 2026): only things that matter to you. No marketing. Two kinds.
+// Reminders (finish a body's measurements, print a pattern) come from what is waiting, so they go by themselves once it
+// is done. News (what is new in Venty) stays, read or not, under Earlier. Nothing is ever deleted: a tap reads one, Mark
+// all as read reads them all (the ids kept in updatesRead). A reminder goes straight to its place; news has more to
+// say, so it opens a page of its own over the sheet (a picture, paragraphs with links, pictures, one thing to do), and
+// back returns to the sheet.
+type Story = { kicker: string; image: string; body: ReactNode[]; gallery?: { src: string; caption: string }[]; cta: string; act: () => void };
+type Update = { id: string; icon: IconName; t: string; d: string; when: string; today: boolean; go?: () => void; story?: Story };
+// a link inside a story's paragraph: it goes somewhere in the app
+const StoryLink = ({ onClick, children }: { onClick: () => void; children: ReactNode }) => (
+  <button onClick={onClick} className="inline font-medium text-[#a9b5fb] underline decoration-[#a9b5fb]/40 underline-offset-[3px] hover:decoration-[#a9b5fb]">{children}</button>
+);
+function useUpdates(close: () => void) {
+  const { bodies, patterns, resumeBody, set, go, newDraft } = useApp();
+  const to = (fn: () => void) => () => { close(); fn(); };
   const unfinished = bodies.find((x) => x.id === resumeBody && x.done.length < 24);
   const ready = patterns.find((x) => x.status === "Fitting");
-  const list: { icon: IconName; t: string; d: string; when: string; go?: () => void }[] = [];
-  if (unfinished) list.push({ icon: "ruler", t: `Finish ${unfinished.name}’s measurements`, d: `${unfinished.done.length} of 24 saved. Pick up where you left off.`, when: "Today", go: () => { set({ activeBody: unfinished.id }); go("wizard"); } });
-  if (ready) list.push({ icon: "printer", t: `${ready.name} is ready to print`, d: `Drafted to ${ready.body}. Lay it out on your sheets when you’re ready.`, when: "Today", go: () => go("pattern", { id: ready.id }) });
-  list.push({ icon: "dress", t: "New patterns to make", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", go: () => go("templates") });
-  list.push({ icon: "pencil", t: "New: sketch on your photos", d: "Add a photo and draw your changes on top of it.", when: "This week" });
+  const wrap = templateBy("wrap"), wide = templateBy("wideleg");
+  const list: Update[] = [];
+  if (unfinished) list.push({ id: `measure-${unfinished.id}`, icon: "ruler", t: `Finish ${unfinished.name}’s measurements`, d: `${unfinished.done.length} of 24 saved. Pick up where you left off.`, when: "Today", today: true, go: to(() => { set({ activeBody: unfinished.id }); go("wizard"); }) });
+  if (ready) list.push({ id: `print-${ready.id}`, icon: "printer", t: `${ready.name} is ready to print`, d: `Drafted to ${ready.body}. Lay it out on your sheets when you’re ready.`, when: "Today", today: true, go: to(() => go("pattern", { id: ready.id })) });
+  list.push({
+    id: "news-new-patterns", icon: "dress", t: "New patterns to make", d: "A wrap dress and wide-leg trousers were added to the library.", when: "Yesterday", today: false,
+    story: {
+      kicker: "New in Patterns to make", image: "/auth/look-street-green.webp",
+      body: [
+        <>Two new patterns are in the library, each drafted to your own measurements when you choose it.</>,
+        <><b className="font-medium text-white">{wrap.name}.</b> {wrap.blurb}</>,
+        <><b className="font-medium text-white">{wide.name}.</b> {wide.blurb}</>,
+        <>Both are in <StoryLink onClick={to(() => go("templates"))}>Patterns to make</StoryLink>, with the rest of the library.</>,
+      ],
+      gallery: [{ src: "/auth/look-limo-mauve.webp", caption: `${wrap.name} · ${wrap.level}` }, { src: "/auth/look-street-burgundy.webp", caption: `${wide.name} · ${wide.level}` }],
+      cta: "See the new patterns", act: to(() => go("templates")),
+    },
+  });
+  list.push({
+    id: "news-sketch", icon: "pencil", t: "New: sketch on your photos", d: "Add a photo and draw your changes on top of it.", when: "This week", today: false,
+    story: {
+      kicker: "What’s new", image: "/auth/detail-bows.webp",
+      body: [
+        <>Add a photo of a garment you like, then draw your changes on top of it: circle a neckline, sketch a longer hem, add bows.</>,
+        <>Venty uses your lines with the picture when it drafts the pattern. <StoryLink onClick={to(() => go("info", { doc: "ai" }))}>About the AI</StoryLink> explains what it does with your photos, and what to check.</>,
+      ],
+      gallery: [{ src: "/auth/detail-hems.webp", caption: "A longer hem, drawn on" }, { src: "/auth/detail-corset.webp", caption: "A new neckline" }],
+      cta: "Make a pattern", act: to(() => { newDraft(); go("patSelectBody"); }),
+    },
+  });
   return list;
 }
 
+// a row: the icon in its pressed tile (a cornflower dot on it while unread), the title (white while unread), when, the
+// line under it, a chevron (every row leads somewhere)
+function UpdateRow({ u, unread, onTap }: { u: Update; unread: boolean; onTap: () => void }) {
+  return (
+    <button onClick={onTap} className="group relative flex w-full items-start gap-3.5 px-2 py-3.5 text-left">
+      <span aria-hidden className="absolute inset-x-0 inset-y-1 rounded-[14px] transition-colors group-hover:bg-white/[.04]" />
+      <span className="iconbadge relative grid h-9 w-9 shrink-0 place-items-center rounded-[11px]">
+        <Icon name={u.icon} size={17} strokeWidth={1.9} />
+        {unread && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#687ef5] ring-2 ring-[var(--color-card)]" />}
+      </span>
+      <span className="relative min-w-0 flex-1">
+        <span className="flex items-baseline justify-between gap-3">
+          <span className={cx("text-[16px] leading-snug", unread ? "font-medium text-white" : "text-white/80")}>{u.t}{unread && <span className="sr-only"> (new)</span>}</span>
+          <span className="shrink-0 text-[13px] text-white/40">{u.when}</span>
+        </span>
+        <span className="mt-0.5 block text-[14px] leading-snug text-white/55">{u.d}</span>
+      </span>
+      <Icon name="chevR" size={16} className="relative mt-1 shrink-0 text-white/30" />
+    </button>
+  );
+}
+
+// a news item's page, over the sheet (in the device frame, like the sheet): back returns to the sheet
+function StoryPage({ u, onBack }: { u: Update; onBack: () => void }) {
+  const r = u.story!;
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onBack(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onBack]);
+  return (
+    <motion.div role="dialog" aria-modal="true" aria-label={u.t} className="absolute inset-0 z-[60] flex flex-col bg-bg text-white"
+      initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
+      <div className="min-h-0 flex-1 overflow-y-auto noscroll">
+        <div className="mx-auto w-full max-w-[640px] lg:px-8 lg:pt-8">
+          <div className="relative">
+            <img src={r.image} alt="" className="h-[300px] w-full object-cover lg:h-[360px] lg:rounded-[28px]" />
+            <div className="absolute inset-0 lg:rounded-[28px]" style={{ background: "linear-gradient(180deg, rgb(11 12 21 / .45), transparent 30%, transparent 60%, var(--color-bg))" }} />
+            <div className="absolute left-5" style={{ top: "var(--top)" }}><RB icon="back" size={40} onClick={onBack} label="Back to notifications" /></div>
+          </div>
+          <div className="relative -mt-6 px-6 pb-8 lg:px-0">
+            <div className="text-[13px] text-white/50">{r.kicker} · {u.when}</div>
+            <h1 className="mt-2 text-[30px] font-normal leading-[1.08] tracking-[-.03em] lg:text-[36px]">{u.t}</h1>
+            <div className="mt-4 space-y-3.5 text-[16px] leading-relaxed text-white/75">{r.body.map((b, i) => <p key={i}>{b}</p>)}</div>
+            {r.gallery && (
+              <div className="mt-6 grid grid-cols-2 gap-3">{r.gallery.map((g) => (
+                <figure key={g.src}><img src={g.src} alt="" className="aspect-[4/5] w-full rounded-[18px] object-cover" /><figcaption className="mt-2 text-[13px] text-white/55">{g.caption}</figcaption></figure>
+              ))}</div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="mx-auto w-full max-w-[640px] shrink-0 px-6 pt-3 lg:px-8" style={{ paddingBottom: "var(--bottom)" }}><Pill onClick={r.act}>{r.cta}</Pill></div>
+    </motion.div>
+  );
+}
+
 function UpdatesButton() {
-  const seen = useApp((s) => s.updatesSeen);
+  const read = useApp((s) => s.updatesRead) ?? [];
   const set = useApp((s) => s.set);
   const [open, setOpen] = useState(false);
-  const list = useUpdates();
+  const [story, setStory] = useState<Update | null>(null);
+  const close = () => { setStory(null); setOpen(false); };
+  const list = useUpdates(close);
+  const isUnread = (u: Update) => !read.includes(u.id);
+  const unread = list.filter(isUnread).length;
+  const markRead = (ids: string[]) => set({ updatesRead: Array.from(new Set([...useApp.getState().updatesRead ?? [], ...ids])) });
+  const tap = (u: Update) => { markRead([u.id]); if (u.story) setStory(u); else u.go?.(); };
+  // the story's page lives in the device frame, over the sheet (as the sheet does), while the sheet is open
+  const frame = open && typeof document !== "undefined" ? document.querySelector(".device") ?? document.body : null;
   return (
     <>
-      <button onClick={() => { setOpen(true); set({ updatesSeen: true }); }} aria-label={seen ? "Notifications" : "Notifications, new"} className="bell-btn tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full">
+      <button onClick={() => setOpen(true)} aria-label={unread ? `Notifications, ${unread} new` : "Notifications"} className="bell-btn tap relative grid h-10 w-10 shrink-0 place-items-center rounded-full">
         <Icon name="bell" size={19} strokeWidth={1.8} />
-        {!seen && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-white" />}
+        {unread > 0 && <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full bg-[#687ef5] ring-2 ring-white" />}
       </button>
-      <Sheet open={open} onClose={() => setOpen(false)}>
-        <h3 className="mb-2 text-[20px] font-normal tracking-[-.02em]">Notifications</h3>
-        {/* a quiet feed, not a stack of buttons: plain rows split by hairlines. Rows that lead somewhere are still tappable.
-            The hairlines are their own straight lines between the rows (a row's rounded corners would bend a border at
-            its ends); the hover's rounded background is a layer inside the row */}
-        <div className="-mx-2 flex flex-col">{list.map((u, i) => {
-          const body = <><span className="iconbadge relative grid h-9 w-9 shrink-0 place-items-center rounded-[11px]"><Icon name={u.icon} size={17} strokeWidth={1.9} /></span>
-            <span className="relative min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px]">{u.t}</span><span className="shrink-0 text-[13px] text-white/40">{u.when}</span></span><span className="mt-0.5 block text-[14px] leading-snug text-white/55">{u.d}</span></span></>;
-          const row = "relative flex items-start gap-3.5 px-2 py-3.5 text-left";
-          return (
-            <Fragment key={u.t}>
-              {i > 0 && <span aria-hidden className="mx-2 block h-px bg-white/[.07]" />}
-              {u.go
-                ? <button onClick={() => { setOpen(false); u.go!(); }} className={cx(row, "group")}><span aria-hidden className="absolute inset-x-0 inset-y-1 rounded-[14px] transition-colors group-hover:bg-white/[.04]" />{body}</button>
-                : <div className={row}>{body}</div>}
-            </Fragment>
-          );
-        })}</div>
+      <Sheet open={open} onClose={close}>
+        <div className="mb-1 flex items-center gap-3">
+          <h3 className="flex-1 text-[20px] font-normal tracking-[-.02em]">Notifications{unread > 0 && <span className="ml-2 align-middle text-[13px] text-white/45">{unread} new</span>}</h3>
+          {unread > 0 && <button onClick={() => markRead(list.map((u) => u.id))} className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[13px] font-medium text-[#a9b5fb] hover:bg-white/[.05]"><Icon name="check" size={14} strokeWidth={2.4} />Mark all as read</button>}
+        </div>
+        {/* a quiet feed: Today and Earlier, plain rows split by straight hairlines of their own (a row's rounded corners
+            would bend a border at its ends; the hover's rounded background is a layer inside the row) */}
+        <div className="-mx-2 max-h-[62dvh] overflow-y-auto noscroll">
+          {list.length === 0 ? (
+            <div className="flex flex-col items-center px-6 py-10 text-center">
+              <span className="iconbadge grid h-12 w-12 place-items-center rounded-[14px]"><Icon name="bell" size={20} /></span>
+              <div className="mt-4 text-[16px] font-medium">You’re all caught up</div>
+              <div className="mt-1 max-w-[240px] text-[14px] leading-snug text-white/55">When a pattern is ready or something new arrives, you’ll see it here.</div>
+            </div>
+          ) : ([true, false] as const).map((today) => {
+            const rows = list.filter((u) => u.today === today);
+            if (!rows.length) return null;
+            return (
+              <section key={String(today)} className="mt-2 first:mt-0">
+                <h4 className="px-2 pb-1 pt-2 text-[13px] font-normal text-white/45">{today ? "Today" : "Earlier"}</h4>
+                {rows.map((u, i) => (
+                  <Fragment key={u.id}>
+                    {i > 0 && <span aria-hidden className="mx-2 block h-px bg-white/[.07]" />}
+                    <UpdateRow u={u} unread={isUnread(u)} onTap={() => tap(u)} />
+                  </Fragment>
+                ))}
+              </section>
+            );
+          })}
+        </div>
       </Sheet>
+      {frame && createPortal(<AnimatePresence>{story && <StoryPage key={story.id} u={story} onBack={() => setStory(null)} />}</AnimatePresence>, frame)}
     </>
   );
 }
