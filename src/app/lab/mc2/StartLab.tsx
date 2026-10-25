@@ -85,15 +85,34 @@ function useShrink() {
   const onScroll = (el: HTMLDivElement) => { const r = kinds.current; setBar(!!r && el.scrollTop > r.offsetTop + r.offsetHeight - 96); };
   return { kinds, bar, onScroll };
 }
-// "Request a pattern" (today's dashed card), as an empty tray: the pressed surface with a plus, in the same frame
-const Request = ({ imgH }: { imgH: number }) => (
-  <Frame s={s} imgH={imgH} pic={<span className="absolute inset-0 grid place-items-center" style={s.surface}><span className="grid h-12 w-12 place-items-center rounded-full text-white/70" style={s.tile}><Icon name="plus" size={22} /></span></span>}
-    name="Request a pattern" line={<span className="text-[13px] text-white/55">Tell us what to add</span>} />
+// "Request a pattern" is not a pattern, so it never looks like one: one quiet line under the grid, only its last words
+// a link, opening a sheet with one box to type in. It also shows when a search finds nothing (when it is most useful)
+const RequestLine = ({ onOpen, className }: { onOpen: () => void; className?: string }) => (
+  <p className={cx("px-6 text-center text-[15px] text-white/50", className)}>
+    Can’t find what you’re after? <button onClick={onOpen} className="font-medium text-peri">Request a pattern</button>
+  </p>
 );
-const Nothing = ({ k }: { k: Picker }) => (
+function RequestSheet({ open, onClose, onSent }: { open: boolean; onClose: () => void; onSent: () => void }) {
+  const [text, setText] = useState("");
+  const box = useRef<HTMLTextAreaElement>(null);
+  const ready = text.trim().length > 0;
+  const send = () => { if (!ready) { box.current?.focus(); return; } setText(""); onSent(); };
+  return (
+    <PhoneSheet open={open} onClose={onClose}>
+      <SheetTitle>Request a pattern</SheetTitle>
+      <p className="mt-2 text-[16px] leading-snug text-white/65">Tell us what you’d like to make.</p>
+      {/* a box pressed into the sheet, like the search field; empty, with a hint of what to write */}
+      <textarea ref={box} value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="A wrap top with puff sleeves, for a beginner"
+        className="ruler-track mt-5 block w-full resize-none rounded-[20px] px-4 py-3.5 text-[16px] leading-snug text-white outline-none placeholder:text-white/35" />
+      <Pill className={cx("mt-5", !ready && "is-off")} onClick={send}>Send request</Pill>
+    </PhoneSheet>
+  );
+}
+const Nothing = ({ k, onRequest }: { k: Picker; onRequest?: () => void }) => (
   <div className="mt-10 px-6 text-center">
     <p className="text-[17px]">No patterns match</p>
     <button onClick={() => { k.setQ(""); k.clear(); k.setCat("All"); }} className="tap mt-2 h-10 text-[15px] font-medium text-peri">Clear the search and filters</button>
+    {onRequest && <RequestLine onOpen={onRequest} className="mt-6 !px-0" />}
   </div>
 );
 const noTabs = <span />;
@@ -122,17 +141,25 @@ function Today() {
 function Shelf() {
   const k = usePicker();
   const { kinds, bar, onScroll } = useShrink();
+  const [asking, setAsking] = useState(false);
+  const [thanks, setThanks] = useState(false);
+  const sent = () => { setAsking(false); setThanks(true); setTimeout(() => setThanks(false), 2400); };
   return (
-    <Shell footer={noTabs} onScroll={onScroll} overlay={<><AnimatePresence>{bar && <PinnedKinds k={k} />}</AnimatePresence><FilterSheet k={k} /></>}>
+    <Shell footer={noTabs} onScroll={onScroll} overlay={<>
+      <AnimatePresence>{bar && <PinnedKinds k={k} />}</AnimatePresence>
+      <FilterSheet k={k} />
+      <RequestSheet open={asking} onClose={() => setAsking(false)} onSent={sent} />
+      <AnimatePresence>{thanks && <motion.div key="thanks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute inset-x-0 bottom-10 z-30 flex justify-center"><span className="flex h-10 items-center gap-2 rounded-full bg-snow px-4 text-[14px] font-medium text-ink shadow-[0_10px_30px_-10px_rgb(0_0_0/.6)]"><Icon name="check" size={15} strokeWidth={2.6} />Thanks, your request is in</span></motion.div>}</AnimatePresence>
+    </>}>
       <Head k={k} />
       <div ref={kinds} className="mt-5"><KindFilter v="tiles" value={k.cat} onChange={k.setCat} /></div>
       <OnChips items={k.on} onClear={k.clear} />
       {k.list.length ? (
         <div className="mt-5 grid grid-cols-2 items-start gap-x-3 gap-y-4 px-6">
           {k.list.map((t) => <Frame key={t.key} s={s} imgH={206} pic={<Img src={PHOTO[t.key]} />} name={t.name} line={<Lvl t={t} s={s} />} />)}
-          {!k.q && !k.on.length && <Request imgH={206} />}
         </div>
-      ) : <Nothing k={k} />}
+      ) : <Nothing k={k} onRequest={() => setAsking(true)} />}
+      {k.list.length > 0 && <RequestLine onOpen={() => setAsking(true)} className="mt-8" />}
     </Shell>
   );
 }
@@ -214,7 +241,7 @@ function Rows() {
 }
 
 const DIRS: { k: string; name: string; note: string; C: () => ReactNode }[] = [
-  { k: "shelf", name: "A · Shelf", note: "The library’s Patterns to make as a page of its own: Back, Search and Filter by the title, the kinds as pressed photo tiles, then one grid of tray cards (Request a pattern as an empty tray at the end). The kinds pin to the top as pills once you scroll.", C: Shelf },
+  { k: "shelf", name: "A · Shelf", note: "The library’s Patterns to make as a page of its own: Back, Search and Filter by the title, the kinds as pressed photo tiles, then one grid of tray cards. Request a pattern is one quiet line under the grid (and under “No patterns match”), opening a sheet with one box to type in. The kinds pin to the top as pills once you scroll.", C: Shelf },
   { k: "deck", name: "B · Deck", note: "For choosing: one big tray at a time, the ones beside it peeking and dimmed; its kind, tag, lengths and a line about it under the deck, and its own button at the bottom (See the slip dress). Swipe or pick a kind.", C: Deck },
   { k: "rows", name: "C · Rows", note: "For comparing: wide trays one under the other, the photo pressed in on the left, the name, level, pieces, two lines about it and its tag on the right. The kinds pin to the top as pills once you scroll.", C: Rows },
 ];
