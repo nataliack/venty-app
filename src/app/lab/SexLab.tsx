@@ -27,6 +27,10 @@ export function SexCapture() {
       {(["female", "male"] as const).map((s) => (
         <div key={`p${s}`} className="relative h-[560px] w-[440px] bg-transparent"><Body3D sex={s} focus="portrait" autoRotate={false} snapshot={`portrait-${s}`} className="absolute inset-0" /></div>
       ))}
+      {/* close-ups for the cards' faces (6): the portrait shot, sharper, to be turned either way before saving */}
+      {(["female", "male"] as const).flatMap((s) => ["a", "b"].map((t) => (
+        <div key={`c${s}${t}`} className="relative h-[700px] w-[600px] bg-transparent"><Body3D sex={s} focus="portrait" autoRotate={false} snapshot={`close-${s}-${t}`} className="absolute inset-0" /></div>
+      )))}
     </div>
   );
 }
@@ -144,6 +148,34 @@ function Stage({ sex, pick }: CardsProps) {
   );
 }
 
+// 6 · A pressed row and a close-up (Jose, 25 Oct 2026): two cards in a row. At the top of each, a row pressed into the
+// card holds the name on two lines and, on its right, the app's choice circle (a ring at rest). Under it, the body
+// close up, its head and chest, turned to the right, far bigger than the card, so only that shows. Chosen, the whole
+// card turns snow, its pressed row the snow version of it, and the circle the primary's cornflower with its tick.
+const close = (s: Sex) => `/lab/sex-close-${s}.webp`;
+const ROW_DARK: CSSProperties = { background: "rgb(0 0 0 / .26)", boxShadow: "inset 0 2px 5px rgb(0 0 0 / .55), inset 0 1px 1.5px rgb(0 0 0 / .5), inset 0 -1px 0 rgb(255 255 255 / .06)" };
+const ROW_SNOW: CSSProperties = { background: "rgb(52 62 110 / .07)", boxShadow: "inset 0 3px 7px rgb(28 36 84 / .22), inset 0 1px 1.5px rgb(28 36 84 / .22), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9)" };
+function CloseUp({ sex, pick }: CardsProps) {
+  return (
+    <div className="grid grid-cols-2 gap-3">{SEXES.map((s) => {
+      const on = sex === s;
+      return (
+        <button key={s} onClick={() => pick(s)} role="radio" aria-checked={on} aria-label={label(s)}
+          className={cx("relative h-[218px] overflow-hidden rounded-[22px] text-left transition-colors duration-300", on ? "bg-snow" : "bg-card shadow-[inset_0_0_0_1px_rgb(255_255_255/.08)]")}>
+          {/* the body, close up: its head and chest, turned to the right, bigger than the card */}
+          <img src={close(s)} alt="" className="absolute -bottom-[64px] left-1/2 h-[218px] w-auto max-w-none -translate-x-[46%]" />
+          {on && <span aria-hidden className="absolute inset-x-0 bottom-0 h-10" style={{ background: "linear-gradient(180deg, transparent, rgb(240 244 254 / .6))" }} />}
+          {/* the pressed row: the name on two lines, the choice circle on its right */}
+          <span className="absolute inset-x-2 top-2 flex items-start justify-between rounded-[16px] px-3 py-2.5 transition-[background,box-shadow] duration-300" style={on ? ROW_SNOW : ROW_DARK}>
+            <span className={cx("text-[15px] font-medium leading-[1.2] transition-colors", on ? "text-ink" : "text-white")}>{s === "female" ? "Female" : "Male"}<br />form</span>
+            <span className={cx("radio relative", on && "icon-primary")} style={on ? { border: 0 } : undefined}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>
+          </span>
+        </button>
+      );
+    })}</div>
+  );
+}
+
 // the screen around the cards: as the app's first step (progress, the question, the name, then the form)
 function Screen({ children, ready }: { children: ReactNode; ready: boolean }) {
   return (
@@ -161,6 +193,7 @@ function Screen({ children, ready }: { children: ReactNode; ready: boolean }) {
 }
 
 const VERSIONS: { k: string; name: string; note: string; C: (p: CardsProps) => ReactNode }[] = [
+  { k: "close", name: "6 · A pressed row and a close-up", note: "Jose's: at the top of each card, a row pressed into it with the name on two lines and the app's choice circle on its right (a ring at rest). Under it, the body close up, head and chest, turned to the right, far bigger than the card. Chosen, the whole card turns snow, the pressed row its snow version, the circle cornflower with a tick.", C: CloseUp },
   { k: "portrait", name: "1 · Portrait", note: "The body waist up, three-quarter and posed (as on Body ready), bleeding off the card's foot; its name over a soft shade. The chosen card ringed in white with a tick, the other dimmed.", C: Portrait },
   { k: "floor", name: "2 · On the floor", note: "The whole body standing on the pattern floor, as on the measuring stage, the name under the card. The chosen one lit from above in cornflower, its floor brighter.", C: Floor },
   { k: "option", name: "3 · The app's option", note: "The same card as every other choice in the app (glass, snow once chosen), the body waist up on its right half. The most consistent.", C: AppOption },
