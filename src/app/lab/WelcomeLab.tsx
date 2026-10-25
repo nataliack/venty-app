@@ -12,7 +12,7 @@ import { LOGO, VentyLogo } from "@/components/art";
 import { Icon } from "@/components/icons";
 
 const MS = 1900;
-type Hold = "play" | "half" | "done";
+type Hold = "play" | "start" | "half" | "done";
 const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
 // the screen's progress, 0..1: played over 1.9 s (again every few seconds), or held
@@ -26,29 +26,31 @@ function useProgress(hold: Hold, run: number) {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [hold, run]);
-  return hold === "half" ? 0.58 : hold === "done" ? 1 : p;
+  return hold === "start" ? 0.06 : hold === "half" ? 0.58 : hold === "done" ? 1 : p;
 }
 
 // ─── the filament, in white: a fine track; the lit part runs from faint to full white at its head, a soft glow along
 // it (strongest at the head), a sweep of light running inside the lit part, the head breathing ───
 const CSS = `
 .wl-bar { position: relative; height: 2px; border-radius: 999px; background: rgb(255 255 255 / .2); }
-.wl-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px 0 0 999px;
+/* nothing of the lit line (its glow, its head) ever shows left of where the track starts: clipped there, free above,
+   below and past its head */
+.wl-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px 0 0 999px; clip-path: inset(-40px -40px -40px 0);
   background: linear-gradient(90deg, rgb(255 255 255 / .3), rgb(255 255 255 / .75) 60%, #fff); }
 .wl-fill::before, .wl-fill::after { content: ""; position: absolute; top: 50%; translate: 0 -50%; box-sizing: content-box; border-radius: 999px; pointer-events: none; background-clip: content-box; }
 .wl-fill::before { inset-inline: -28px; padding: 24px 28px; height: 12px; filter: blur(8px);
   background-image: linear-gradient(90deg, rgb(255 255 255 / .04), rgb(255 255 255 / .2) 55%, rgb(255 255 255 / .42));
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 50px, #000 calc(100% - 40px), transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 50px, #000 calc(100% - 40px), transparent 100%); }
+  -webkit-mask-image: linear-gradient(90deg, transparent 28px, #000 74px, #000 calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 28px, #000 74px, #000 calc(100% - 40px), transparent 100%); }
 .wl-fill::after { inset-inline: -10px; padding: 8px 10px; height: 4px; filter: blur(2px);
   background-image: linear-gradient(90deg, rgb(255 255 255 / .1), rgb(255 255 255 / .45) 55%, rgb(255 255 255 / .85));
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 14px), transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 14px), transparent 100%); }
+  -webkit-mask-image: linear-gradient(90deg, transparent 10px, #000 26px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 10px, #000 26px, #000 calc(100% - 14px), transparent 100%); }
 .wl-sweep { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
 .wl-pulse { position: absolute; inset: 0; background: linear-gradient(90deg, transparent 60%, rgb(255 255 255 / .95) 88%, transparent); animation: wl-pulse 1.6s cubic-bezier(.55,0,1,.45) infinite; }
 /* the head: no ball. A short streak of light at the growing end, brightest just before it and tapering off at the very
    end (as on the landing page), a touch brighter than the line; it breathes */
-.wl-head { position: absolute; right: 0; top: 0; width: 30px; height: 100%; translate: 10% 0;
+.wl-head { position: absolute; right: 0; top: 0; width: min(30px, 100%); height: 100%; translate: 10% 0;
   background: linear-gradient(90deg, transparent, #fff 72%, rgb(255 255 255 / .55));
   box-shadow: 0 0 4px rgb(255 255 255 / .7); animation: wl-breathe 1.8s ease-in-out infinite; }
 @keyframes wl-pulse { from { translate: -100% 0; opacity: 0; } to { translate: 0 0; opacity: 1; } }
@@ -150,7 +152,7 @@ function WelcomeText({ run, mark }: { run: number; mark?: ReactNode }) {
     <div key={run} className="flex flex-col items-center">
       {mark}
       <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className={cx("h1 !text-[36px]", mark ? "mt-6" : "")}>Welcome, Ana.</motion.h2>
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="lead mt-2 !text-white/80">Your account is ready. Let’s show you around.</motion.p>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="lead mt-2 !text-white/80">Your account is ready.<br />Let’s show you around.</motion.p>
     </div>
   );
 }
@@ -160,6 +162,7 @@ const VERSIONS: V[] = [
   { k: "now", name: "Today", note: "The check in a glass circle and a plain white bar that fills." },
   { k: "a", name: "A · The filament", note: "No check at all: the words say it. At the foot, the landing page's filament in white: a fine line whose head glows and breathes, a sweep of light running along the lit part." },
   { k: "b", name: "B · Filament, word and number", note: "A, with the landing's word and number under the line, in the same type: the word for what it is doing rising from its mask (Setting up, Saving, Ready) on the left, the percentage on the right." },
+  { k: "f", name: "F · Filament, word, number and a tick", note: "B, with D's tick of light over the heading: one fine line of light that draws itself, foot to tip, with a soft glow, while the filament fills below with the word and the percentage." },
   { k: "c", name: "C · The mark takes a lap", note: "No check: the moment is the logo's own. The bird lifts off the wordmark, takes a small lap and lands, and the letters ripple under it as it touches down (as on the landing). The filament sits right under the logo, as in the landing's lockup." },
   { k: "d", name: "D · A tick of light", note: "The tick without its circle or glass: one fine line of light that draws itself, foot to tip, with a soft glow. The filament at the foot." },
   { k: "e", name: "E · The ring", note: "The tick and the progress in one: a fine ring the lit line draws round, its head glowing; once round, the tick draws in it. Nothing at the foot." },
@@ -178,12 +181,13 @@ function Screen({ v, p, run, hold, bg }: { v: string; p: number; run: number; ho
     foot = <div className="h-[3px] w-[132px] overflow-hidden rounded-full bg-white/25"><div className="h-full rounded-full bg-white" style={{ width: `${p * 100}%` }} /></div>;
   }
   if (v === "a") foot = <Filament p={p} w={180} />;
-  if (v === "b") foot = (
+  if (v === "b" || v === "f") foot = (
     <div className="flex w-[200px] flex-col gap-2.5">
       <Filament p={p} w={200} />
       <div className="flex items-center justify-between"><Roll i={wordAt(p)} /><p className="wl-roll tabular-nums">{Math.round(p * 100)}%</p></div>
     </div>
   );
+  if (v === "f") mark = <DrawnTick p={still ? 1 : Math.min(1, p * 2.6)} size={60} />;
   if (v === "c") underLogo = <Filament p={p} w={150} className="mt-9" />;
   if (v === "d") { mark = <DrawnTick p={still ? 1 : Math.min(1, p * 2.6)} size={60} />; foot = <Filament p={p} w={180} />; }
   if (v === "e") mark = <RingFilament p={p} />;
@@ -231,9 +235,9 @@ export function WelcomeLab() {
     <section>
       <style>{CSS}</style>
       <h2 className="text-[30px] font-normal tracking-[-.03em]">Welcome, Ana: the check and the progress</h2>
-      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">The screen after signing up. The check in its glass circle and the plain bar redone in the spirit of the landing page&apos;s loading screen: a fine filament whose head glows, a sweep of light along it, the word rising from its mask, the logo&apos;s letters rippling as the mark lands. In white. Round 2: on Haze, the landing&apos;s locked purple sky (Crown to compare), and the growing end of every line is a short streak of light that tapers off, as on the landing, never a ball. Splash uses the same bar, so whichever is chosen goes there too.</p>
+      <p className="mt-3 max-w-[760px] text-[16px] leading-snug text-white/65">The screen after signing up. The check in its glass circle and the plain bar redone in the spirit of the landing page&apos;s loading screen: a fine filament whose head glows, a sweep of light along it, the word rising from its mask, the logo&apos;s letters rippling as the mark lands. In white. Round 2: on Haze, the landing&apos;s locked purple sky (Crown to compare), and the growing end of every line is a short streak of light that tapers off, as on the landing, never a ball. Round 3: F (B with D&apos;s tick), the line under the heading always on two rows (no widow), and the glow never starting left of the line. Splash uses the same bar, so whichever is chosen goes there too.</p>
       <div className="sticky top-0 z-10 -mx-6 mt-6 flex gap-1 bg-[#05060b]/85 px-6 py-3 backdrop-blur" role="tablist">
-        {([["play", "Playing"], ["half", "Halfway"], ["done", "Done"]] as const).map(([k, t]) => (
+        {([["play", "Playing"], ["start", "Starting"], ["half", "Halfway"], ["done", "Done"]] as const).map(([k, t]) => (
           <button key={k} role="tab" aria-selected={hold === k} onClick={() => { setHold(k); setRun((r) => r + 1); }} className={cx("h-10 rounded-full px-4 text-[14px] font-medium", hold === k ? "bg-white text-[#12131c]" : "text-white/70 hover:bg-white/10")}>{t}</button>
         ))}
         {hold === "play" && <button onClick={() => setRun((r) => r + 1)} className="ml-2 h-10 rounded-full px-4 text-[14px] font-medium text-white/70 hover:bg-white/10">Replay</button>}

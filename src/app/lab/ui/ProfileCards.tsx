@@ -11,11 +11,11 @@
 //   All its colours  the three colourways cascaded; tap one to bring it forward (the swatches rest)
 //   Front and back the two faces together
 // Motion is slow and quiet: cards arrive one after another from far back, lying almost flat in deep perspective, and
-// land slowly; a new colourway is tipped in like a page (back to edge on, swapped there, forward again); cards glide
-// between views and drop away when they leave. No full turns.
+// land slowly; a new colourway is another card, so it comes in as the cards and the views do: the old one slides off
+// as the new one slides in, the way the swatches go; cards glide between views. No full turns.
 // Loading: nothing is shown half made. The 3D body's loader ring shows until every card the view needs is made (they
 // are made in slices in the background, the first colourway of each card first, then the rest); then they arrive. A
-// colour picked before its card is made waits, with a small ring, and tips in as soon as it is ready. (For the app:
+// colour picked before its card is made waits, with a small ring, and slides in as soon as it is ready. (For the app:
 // bake the maps at build time; see the lab's note.)
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -235,12 +235,12 @@ const SLIP: Pose = { x: 1.0, y: -1.88, rz: -0.06, s: 0.86 };
 const DIST: Record<View, number> = { card: 0.88, stack: 0.9, colours: 0.95, sides: 0.98 };
 // what changed last, which decides how new cards come in and old ones go:
 //   reveal  the first arrival after loading (from far back, landing slowly)
-//   tab, view  a carousel, for the cards and for the views alike: the old card (or the whole arrangement) slides off
+//   tab, view, colour  a carousel, for the cards, the views and the colours alike: the old card (or the whole arrangement) slides off
 //           to the side it is leaving by, turning a little away, as the new one slides in from the other side turned a
 //           little in. Solid all the way (nothing fades, so no card ever shows through another); the two sets travel
 //           together, a card's width and more apart, so they never overlap. The direction follows the control: to the
-//           right in the tabs or the views, and everything moves left
-type Change = "reveal" | "tab" | "view";
+//           right in the tabs, the views or the swatches, and everything moves left
+type Change = "reveal" | "tab" | "view" | "colour";
 const SLIDE = 4.3, TURN = 0.5;
 function useLeaving(items: Slot[], change: Change, dir: number) {
   // cards taken off the stage stay a moment, on their way out, then go. Worked out as the stage changes (in the same
@@ -298,6 +298,13 @@ export function CardsScreen() {
   const [slip, setSlip] = useState<string | null>(null);
   useEffect(() => { if (!slip) return; const t = setTimeout(() => setSlip(null), 480); return () => clearTimeout(t); }, [slip]);
   const bring = (w: string) => { setSlip(w); setWay((x) => ({ ...x, [fam]: w })); };
+  // a colour from the swatches: in All its colours the card comes forward; elsewhere the new colour slides in
+  const ways = FAVOURITES[fam].ways.map((w) => w.id);
+  const pickWay = (w: string) => {
+    if (w === way[fam]) return;
+    if (view === "colours") return bring(w);
+    setDir(ways.indexOf(w) > ways.indexOf(way[fam]) ? 1 : -1); setChange("colour"); setWay((x) => ({ ...x, [fam]: w }));
+  };
   const setView = (v: View) => { if (v === view) return; setDir(order.indexOf(v) > order.indexOf(view) ? 1 : -1); setViewNow(v); setChange("view"); setStep(""); };
 
   // made ahead: each card's first colourway, then the rest
@@ -307,8 +314,10 @@ export function CardsScreen() {
   const { off: offset, d: camD } = useBandOffset(screen, band, DIST[view]);
   // a pose set back by z, scaled and moved out to look as it would at the front
   const deep = (p: Pose, z: number): Pose => { const k = (camD - z) / camD; return { x: (p.x ?? 0) * k, y: ((p.y ?? 0) + offset) * k - offset, z, rz: p.rz ?? 0, s: (p.s ?? 1) * k }; };
-  // every card on the stage is keyed by its view, so a new view is a new set
-  const main = (f: Family): Slot => ({ key: `${view}:main-${f}`, fam: f, way: way[f], pose: { y: 0 }, layer: 1, interactive: true, spin: true, flip: flip(`main-${f}`) });
+  // every card on the stage is keyed by its view and its colour, so a new view or a new colour is a new card; a new
+  // card shows the side the one before it showed (after Turn)
+  const odd = (f: Family) => flip(`main-${f}`) % 2 === 1;
+  const main = (f: Family): Slot => ({ key: `${view}:main-${f}-${way[f]}`, fam: f, way: way[f], pose: { y: 0 }, layer: 1, interactive: true, startBack: odd(f), flip: flip(`main-${f}`) });
   let slots: Slot[];
   if (view === "card") slots = [{ ...main(fam), show: true }]; // the card drifts, tilts and floats on its own
   else if (view === "stack") slots = FAMS.map((f) => {
@@ -320,7 +329,7 @@ export function CardsScreen() {
     // the front above and a little to the left, set back; the back below, in front; they overlap at a corner. Both take
     // the drag, so either turns them together (they stay parallel, so they never meet)
     { ...main(fam), pose: deep({ x: -0.12, y: 0.62, rz: 0.03, s: 0.84 }, -GAP), layer: 0 },
-    { key: `${view}:back-${fam}`, fam, way: way[fam], pose: { x: 0.12, y: -0.64, rz: -0.03, s: 0.84 }, layer: 1, interactive: true, spin: true, startBack: true, flip: flip(`main-${fam}`) },
+    { key: `${view}:back-${fam}-${way[fam]}`, fam, way: way[fam], pose: { x: 0.12, y: -0.64, rz: -0.03, s: 0.84 }, layer: 1, interactive: true, startBack: !odd(fam), flip: flip(`main-${fam}`) },
   ];
   else {
     // All its colours: the pick last (in front); the others behind it in order
@@ -369,7 +378,7 @@ export function CardsScreen() {
           </div>
         </div>
         <div className="pointer-events-auto px-5"><ViewSwitch view={view} setView={setView} /></div>
-        <div className="pointer-events-auto mt-3 px-5"><Swatches fam={fam} way={way[fam]} setWay={(w) => setWay((x) => ({ ...x, [fam]: w }))} rest={view === "colours"} /></div>
+        <div className="pointer-events-auto mt-3 px-5"><Swatches fam={fam} way={way[fam]} setWay={pickWay} rest={view === "colours"} /></div>
         <div className="pointer-events-auto mt-3 flex gap-2.5 px-5 pb-7">
           <button type="button" onClick={turnNow} className="pill pill-dark h-12 w-12 shrink-0 !px-0" aria-label="Turn it over"><Icon name="rotate" size={18} /></button>
           <button type="button" onClick={() => setSave(true)} className="pill pill-primary h-12 flex-1 text-[15px]"><Icon name="download" size={18} />Save card</button>
@@ -390,7 +399,7 @@ export function ProfileCards() {
         <div className="max-w-[540px] space-y-4 text-[15px] leading-snug text-white/65">
           <p>One screen: the back button, a centred title and her details (the person button: a sheet where every detail can be tapped or copied); the cards by name; the cards; the views; the colourways; then turn and save.</p>
           <p>Four views, drawn as how the cards sit: one card (it drifts, tilts and floats, a light sweeping across it), both stacked (pick one and they shuffle: they part, swap once apart, and come together), all its colours cascaded (the swatches rest), and front and back. A card above throws a soft shadow on the cards below, and only on them.</p>
-          <p>Motion: switching cards and switching views are the same carousel: the old card (or arrangement) slides off the way it is leaving, turning a little away, as the new one slides in from the other side, solid all the way (nothing fades, so no card shows through another); the direction follows the control. A new colour tips in like a page. Every move eases in and out. The stage covers the whole screen under the controls, so nothing is cut off. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready; then they are put on the stage unseen for a moment (so their textures are on the GPU before anything moves) and arrive from far back, landing slowly.</p>
+          <p>Motion: switching cards and switching views are the same carousel: the old card (or arrangement) slides off the way it is leaving, turning a little away, as the new one slides in from the other side, solid all the way (nothing fades, so no card shows through another); the direction follows the control. A new colour slides in the same way, following the swatches. Every move eases in and out. The stage covers the whole screen under the controls, so nothing is cut off. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready; then they are put on the stage unseen for a moment (so their textures are on the GPU before anything moves) and arrive from far back, landing slowly.</p>
           <p className="text-[13.5px] text-white/40">For the app: bake each card&apos;s maps at build time (a script renders them to compressed images in /public), so the screen only downloads and shows them, a few hundred KB a card, instead of making them on the phone. Preload the first colourway of each card when the profile opens, the rest after; keep only the cards on screen in memory. Saving opens the phone&apos;s share sheet (Save Image, Save to Files, Contacts); an Apple Wallet pass would need a signed pass from a server.</p>
         </div>
         <div className="relative isolate h-[760px] w-[360px] shrink-0 overflow-hidden rounded-[46px] bg-bg shadow-[0_0_0_10px_#15161f,0_0_0_11px_#2a2c3a,0_40px_100px_-30px_rgb(0_0_0/.8)]">

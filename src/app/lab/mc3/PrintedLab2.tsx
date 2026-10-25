@@ -19,7 +19,7 @@ type V = "envelope" | "printer" | "tape";
 const RATIO = SHEET_H / SHEET_W;
 
 // ─── the pattern, the sheets it prints on, and what to buy, from the store's draft ───
-function useMade() {
+export function useMade() {
   const { draft } = useApp();
   const body = useApp((s) => s.body());
   const pieces = piecesFor(draft.garment);
@@ -66,7 +66,7 @@ function LayoutInk({ pieces, pos, cell }: { pieces: PieceKey[]; pos: At; cell: n
   );
 }
 // one printed sheet: white paper, the part of the pattern printed on it, the corner marks used to line sheets up
-function Sheet({ rc, cell, m, className, style }: { rc: [number, number]; cell: number; m: ReturnType<typeof useMade>; className?: string; style?: CSSProperties }) {
+export function Sheet({ rc, cell, m, className, style }: { rc: [number, number]; cell: number; m: ReturnType<typeof useMade>; className?: string; style?: CSSProperties }) {
   const [r, c] = rc, h = cell * RATIO;
   return (
     <div className={cx("absolute overflow-hidden bg-white shadow-[0_6px_14px_-8px_rgb(18_19_28/.35),0_0_0_1px_rgb(18_19_28/.06)]", className)} style={{ width: cell, height: h, ...style }}>
@@ -78,7 +78,7 @@ function Sheet({ rc, cell, m, className, style }: { rc: [number, number]; cell: 
 }
 
 // the page: paper, the content, then View pattern map and Back to home
-function Page({ children, top = true }: { children: ReactNode; top?: boolean }) {
+export function Page({ children, top = true }: { children: ReactNode; top?: boolean }) {
   return (
     <div className="paper absolute inset-0 flex flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 noscroll" style={{ paddingTop: top ? "var(--top)" : 0 }}>{children}</div>
@@ -89,8 +89,8 @@ function Page({ children, top = true }: { children: ReactNode; top?: boolean }) 
     </div>
   );
 }
-const raised = "bg-white shadow-[0_6px_14px_-8px_rgb(18_19_28/.32),0_1px_2px_rgb(18_19_28/.08),inset_0_-1px_0_rgb(18_19_28/.06)]";
-const Title = ({ children, line }: { children: ReactNode; line: ReactNode }) => (
+export const raised = "bg-white shadow-[0_6px_14px_-8px_rgb(18_19_28/.32),0_1px_2px_rgb(18_19_28/.08),inset_0_-1px_0_rgb(18_19_28/.06)]";
+export const Title = ({ children, line }: { children: ReactNode; line: ReactNode }) => (
   <div className="text-center">
     <h1 className="h1 !text-[30px] text-[#12131c] [text-wrap:balance]">{children}</h1>
     <p className="lead mx-auto mt-2 max-w-[330px] [text-wrap:pretty]">{line}</p>
