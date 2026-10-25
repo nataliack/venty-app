@@ -7,7 +7,7 @@ import { useId, useRef, useState, type CSSProperties, type ReactNode } from "rea
 import { motion, LayoutGroup, AnimatePresence } from "motion/react";
 import { TEMPLATES, CATEGORIES, type Category, type GarmentKey } from "@/lib/data";
 import { BodyFigure, Flat } from "@/components/art";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { cx, Segmented, Pill } from "@/components/ui";
 import { TabBar } from "@/screens/home";
 import { TplCard } from "@/screens/templates";
@@ -157,8 +157,8 @@ export function Today({ has, tab }: Props) {
 // build, or flat photos), every card a fixed size so a name or line never shifts it; the first-pattern card's looks
 // spilling over or held in its pressed surface; three kinds of kind filter, each with its own slim form once you
 // scroll; search on both tabs, and filters and the order in bottom sheets (like a shop), so the top stays calm.
-export type LookOpts = { card: "light" | "dark" | "flat"; empty: "spill" | "contain"; kinds: "tiles" | "track" | "cards"; filters: "shrink" | "away"; cta: "row" | "title" };
-const LOOK_DEFAULT: LookOpts = { card: "light", empty: "contain", kinds: "tiles", filters: "shrink", cta: "row" };
+export type LookOpts = { card: "light" | "dark" | "flat"; empty: "spill" | "contain"; kinds: "tiles" | "track" | "cards"; filters: "shrink" | "away"; tools: "row" | "title"; cta: "row" | "title" };
+const LOOK_DEFAULT: LookOpts = { card: "dark", empty: "contain", kinds: "tiles", filters: "shrink", tools: "row", cta: "row" };
 
 // ─── the builds ───
 const gridLines = (thin: string, thick: string) => ({
@@ -179,7 +179,7 @@ const SKINS: Record<LookOpts["card"], Skin> = {
   },
   dark: {
     tray: true, light: false, press: PRESS_DARK, name: "text-white", sub: "text-white/55", stroke: "rgb(193 200 230 / .75)",
-    rim: { background: "linear-gradient(180deg, rgb(255 255 255 / .06), rgb(255 255 255 / 0) 60%) var(--color-card)", boxShadow: "0 18px 36px -16px rgb(0 0 0 / .8), 0 2px 4px rgb(0 0 0 / .35), inset 0 0 0 1px rgb(255 255 255 / .1), inset 0 1px 0 rgb(255 255 255 / .2), inset 0 -1px 0 rgb(0 0 0 / .35)" },
+    rim: { background: "linear-gradient(180deg, rgb(255 255 255 / .035), rgb(255 255 255 / 0) 50%) var(--color-card)", boxShadow: "0 18px 36px -16px rgb(0 0 0 / .8), 0 2px 4px rgb(0 0 0 / .35), inset 0 0 0 1px rgb(255 255 255 / .07), inset 0 1px 0 rgb(255 255 255 / .1), inset 0 -1px 0 rgb(0 0 0 / .35)" },
     surface: { backgroundColor: "#141520", boxShadow: PRESS_DARK, ...gridLines("rgb(255 255 255 / .035)", "rgb(255 255 255 / .07)") },
     tile: { background: "rgb(0 0 0 / .26)", boxShadow: "inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06), 0 1px 0 rgb(255 255 255 / .07)" },
   },
@@ -277,11 +277,14 @@ function NewTall({ s }: { s: Skin }) {
 
 // ─── the first-pattern card: three looks fanned out, spilling over the card or held in its pressed surface ───
 const FAN = [P.rust, P.green, P.mauve];
-function FirstCard({ s, contain }: { s: Skin; contain: boolean }) {
+// always the light tray, whatever the cards: with no patterns yet it is the one thing on the page, and it is primary.
+// The words are broken by hand, so neither line leaves a word on its own
+function FirstCard({ contain }: { contain: boolean }) {
+  const s = SKINS.light;
   const text = (
     <div className="absolute inset-x-5 bottom-5 text-center">
-      <p className={cx("text-[22px] leading-tight tracking-[-.02em]", s.name)}>Your first pattern starts with a picture</p>
-      <p className={cx("mx-auto mt-1.5 max-w-[270px] text-[15px] leading-snug", s.light ? "text-slate" : "text-white/60")}>A photo, a sketch or a few words, drafted to your measurements.</p>
+      <p className={cx("text-[24px] leading-[1.12] tracking-[-.025em]", s.name)}>If you can imagine it,<br />you can wear it.</p>
+      <p className="mx-auto mt-2 text-[15px] leading-snug text-slate">A photo, a sketch or a few words,<br />drafted to your measurements.</p>
       <Pill className="mt-4">Create a pattern</Pill>
     </div>
   );
@@ -454,6 +457,14 @@ function Group<T extends string>({ title, items, value, onChange, label }: { tit
     </div>
   );
 }
+function One<T extends string>({ title, items, value, onChange }: { title: string; items: readonly T[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="mt-6">
+      <div className="text-[15px] text-white/60">{title}</div>
+      <div className="mt-2.5 flex flex-wrap gap-2">{items.map((it) => <Choice key={it} on={value === it} onClick={() => onChange(it)}>{it}</Choice>)}</div>
+    </div>
+  );
+}
 const SheetFooter = ({ n, onClear, onShow, canClear }: { n: number; onClear: () => void; onShow: () => void; canClear: boolean }) => (
   <div className="mt-8 flex items-center gap-4">
     <button onClick={onClear} disabled={!canClear} className={cx("h-14 shrink-0 px-2 text-[15px] font-medium transition-opacity", canClear ? "text-white/80" : "text-white/30")}>Clear all</button>
@@ -461,22 +472,30 @@ const SheetFooter = ({ n, onClear, onShow, canClear }: { n: number; onClear: () 
   </div>
 );
 
-// ─── the top: search, and one round Filter button that shows how many filters are on ───
-function SearchRow({ q, setQ, placeholder, n, onFilter }: { q: string; setQ: (q: string) => void; placeholder: string; n: number; onFilter: () => void }) {
+// ─── the tools (round 3): no search field until you ask for one. Round buttons in the dark secondary's build: Search,
+//     Filter and sort (one sheet, with how many filters are on beside it), and on your own patterns carousel or grid ───
+function ToolBtn({ icon, label, n, onClick }: { icon: IconName; label: string; n?: number; onClick: () => void }) {
   return (
-    <div className="mt-4 flex gap-2.5 px-6">
-      <label className="ruler-track flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full px-4 text-white/45">
-        <Icon name="search" size={17} />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40" />
-        {q && <button onClick={() => setQ("")} aria-label="Clear the search" className="grid h-6 w-6 place-items-center rounded-full text-white/55"><Icon name="close" size={15} /></button>}
-      </label>
-      <span className="relative shrink-0">
-        <button onClick={onFilter} aria-label={n ? `Filter, ${n} on` : "Filter"} className="rb !h-11 !w-11"><Icon name="sliders" size={18} /></button>
-        {n > 0 && <span className="pointer-events-none absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full bg-primary px-1 text-[11px] font-semibold tabular-nums text-white shadow-[0_0_0_2px_var(--color-bg)]">{n}</span>}
-      </span>
-    </div>
+    <span className="relative shrink-0">
+      <button onClick={onClick} aria-label={n ? `${label}, ${n} on` : label} className="rb !h-10 !w-10"><Icon name={icon} size={18} /></button>
+      {!!n && <span className="pointer-events-none absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[11px] font-semibold tabular-nums text-white shadow-[0_0_0_2px_var(--color-bg)]">{n}</span>}
+    </span>
   );
 }
+// search, once its button is tapped: the field takes the whole row, with Cancel to put it away
+function SearchOpen({ q, setQ, placeholder, onCancel }: { q: string; setQ: (q: string) => void; placeholder: string; onCancel: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="flex h-11 items-center gap-3">
+      <label className="ruler-track flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full px-4 text-white/45">
+        <Icon name="search" size={17} />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40" />
+        {q && <button onClick={() => setQ("")} aria-label="Clear the search" className="grid h-6 w-6 place-items-center rounded-full text-white/55"><Icon name="close" size={15} /></button>}
+      </label>
+      <button onClick={onCancel} className="h-11 shrink-0 text-[15px] font-medium text-white/80">Cancel</button>
+    </motion.div>
+  );
+}
+const Count = ({ n }: { n: number }) => <><span className="tabular-nums">{n}</span> {n === 1 ? "pattern" : "patterns"}</>;
 // what is on, each removable (only shown when something is on)
 const OnChips = ({ items, onClear }: { items: { k: string; off: () => void }[]; onClear: () => void }) =>
   items.length ? (
@@ -496,7 +515,8 @@ const LEVELS_ = ["Easy", "Intermediate", "Hard"] as const;
 const PIECES_ = ["Up to 3", "4 to 6", "7 or more"] as const;
 const piecesIn = (n: number, p: string) => (p === "Up to 3" ? n <= 3 : p === "4 to 6" ? n >= 4 && n <= 6 : n >= 7);
 const SORTS = ["Newest first", "Oldest first", "A to Z"] as const;
-const Row = ({ children }: { children: ReactNode }) => <div className="noscroll mt-3 flex snap-x snap-mandatory scroll-px-6 items-start gap-3 overflow-x-auto px-6 pb-2">{children}</div>;
+// a horizontal scroller clips whatever spills out of it, so it has room below for the cards' shadows (taken back after)
+const Row = ({ children }: { children: ReactNode }) => <div className="noscroll -mb-5 mt-1 flex snap-x snap-mandatory scroll-px-6 items-start gap-3 overflow-x-auto px-6 pb-8 pt-2">{children}</div>;
 const ROW_W = 150, ROW_H = 188, GRID_H = 206;
 
 export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
@@ -517,7 +537,8 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const [ft, setFt] = useState<string[]>([]);
   const [sort, setSort] = useState<(typeof SORTS)[number]>("Newest first");
   const [grid, setGrid] = useState(false);
-  const [sheet, setSheet] = useState<null | "filter" | "sort" | "mfilter">(null);
+  const [sheet, setSheet] = useState<null | "filter" | "mfilter">(null);
+  const [searching, setSearching] = useState(false);
   const scrolled = (el: HTMLDivElement) => {
     const r = kinds.current;
     setBar(!!r && make && opts.filters === "shrink" && el.scrollTop > r.offsetTop + r.offsetHeight - 96);
@@ -535,46 +556,64 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
   const tpls = TEMPLATES.filter((t) => (cat === "All" || CAT[t.category] === cat) && (!lv.length || lv.includes(t.level)) && (!pc.length || pc.some((p) => piecesIn(t.pieces, p))) && (!mq.trim() || t.name.toLowerCase().includes(mq.trim().toLowerCase())));
   const mOn = [...lv.map((x) => ({ k: x, off: () => setLv(lv.filter((y) => y !== x)) })), ...pc.map((x) => ({ k: `${x} pieces`, off: () => setPc(pc.filter((y) => y !== x)) }))];
   const narrowed = cat !== "All" || mOn.length > 0 || !!mq.trim();
-  const titleCta = opts.cta === "title" && has && !make;
+  const byTitle = opts.tools === "title";
+  // beside the title there is room for the tools or for Create, not both: with the tools there, Create is the first card
+  const cta = byTitle ? "row" : opts.cta;
+  const titleCta = cta === "title" && has && !make;
+  const tools = make || has;
+  const cancel = () => { setSearching(false); if (make) setMq(""); else setQ(""); };
+  const search = <SearchOpen q={make ? mq : q} setQ={make ? setMq : setQ} placeholder={make ? "Search patterns to make" : "Search your patterns"} onCancel={cancel} />;
+  const nOn = make ? mOn.length : on.length;
+  const btns = <>
+    <ToolBtn icon="search" label="Search" onClick={() => setSearching(true)} />
+    <ToolBtn icon="sliders" label={make ? "Filter" : "Filter and sort"} n={nOn} onClick={() => setSheet(make ? "mfilter" : "filter")} />
+  </>;
   return (
     <Shell onScroll={scrolled} overlay={<>
       <AnimatePresence>{bar && <KindBar v={opts.kinds} value={cat} onChange={setCat} />}</AnimatePresence>
       <PhoneSheet open={sheet === "filter"} onClose={() => setSheet(null)}>
-        <SheetTitle>Filter your patterns</SheetTitle>
+        <SheetTitle>Filter and sort</SheetTitle>
+        <One title="Sort by" items={SORTS} value={sort} onChange={setSort} />
+        {byTitle && <One title="Show as" items={["Carousel", "Grid"] as const} value={grid ? "Grid" : "Carousel"} onChange={(v) => setGrid(v === "Grid")} />}
         <Group title="Where it stands" items={STATUSES} value={st as (typeof STATUSES)[number][]} onChange={setSt} />
         <Group title="Kind" items={KIND_LIST} value={kd as (typeof KIND_LIST)[number][]} onChange={setKd} />
         <Group title="Fit" items={FITS} value={ft as (typeof FITS)[number][]} onChange={setFt} />
         <SheetFooter n={mine.length} canClear={on.length > 0} onClear={clearMine} onShow={() => setSheet(null)} />
       </PhoneSheet>
-      <PhoneSheet open={sheet === "sort"} onClose={() => setSheet(null)}>
-        <SheetTitle>Sort by</SheetTitle>
-        <div className="mt-4 divide-y divide-white/8">
-          {SORTS.map((x) => (
-            <button key={x} onClick={() => { setSort(x); setSheet(null); }} className="flex h-14 w-full items-center justify-between text-left text-[16px]">
-              {x}
-              <span className={cx("radio grid !h-6 !w-6 place-items-center", x === sort && "icon-primary")}>{x === sort && <Icon name="check" size={12} strokeWidth={3} />}</span>
-            </button>
-          ))}
-        </div>
-      </PhoneSheet>
       <PhoneSheet open={sheet === "mfilter"} onClose={() => setSheet(null)}>
-        <SheetTitle>Filter patterns to make</SheetTitle>
+        <SheetTitle>Filter</SheetTitle>
         <Group title="Level" items={LEVELS_} value={lv as (typeof LEVELS_)[number][]} onChange={setLv} />
         <Group title="Pieces" items={PIECES_} value={pc as (typeof PIECES_)[number][]} onChange={setPc} />
         <SheetFooter n={tpls.length} canClear={mOn.length > 0} onClear={() => { setLv([]); setPc([]); }} onShow={() => setSheet(null)} />
       </PhoneSheet>
     </>}>
       <div className="px-6">
-        <div className="flex h-11 items-center justify-between gap-3">
-          <Title />
-          {titleCta && <Pill className="!h-10 !w-auto shrink-0 gap-1.5 px-4 !text-[15px]" icon={<Icon name="plus" size={18} strokeWidth={2.2} />}>Create</Pill>}
-        </div>
-        <Segmented className="mt-4" items={TABS} value={view} onChange={(v) => { setView(v); setBar(false); }} />
+        {byTitle && tools && searching ? search : (
+          <div className="flex h-11 items-center justify-between gap-3">
+            <Title />
+            <span className="flex shrink-0 items-center gap-2">
+              {titleCta && <Pill className="!h-10 !w-auto gap-1.5 px-4 !text-[15px]" icon={<Icon name="plus" size={18} strokeWidth={2.2} />}>Create</Pill>}
+              {byTitle && tools && btns}
+            </span>
+          </div>
+        )}
+        <Segmented className="mt-4" items={TABS} value={view} onChange={(v) => { setView(v); setBar(false); setSearching(false); }} />
+        {/* one row under the tabs: how many, then the tools (or the search, once opened) */}
+        {!byTitle && tools && (
+          <div className="mt-4">
+            {searching ? search : (
+              <div className="flex h-11 items-center gap-2">
+                <span className="flex-1 text-[14px] text-white/55"><Count n={make ? tpls.length : mine.length} /></span>
+                {btns}
+                {!make && <ToolBtn icon={grid ? "image" : "grid"} label={grid ? "Show as carousel" : "Show as grid"} onClick={() => setGrid(!grid)} />}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {make ? (
         <>
-          <SearchRow q={mq} setQ={setMq} placeholder="Search patterns to make" n={mOn.length} onFilter={() => setSheet("mfilter")} />
-          <div ref={kinds} className="mt-4"><KindFilter v={opts.kinds} value={cat} onChange={setCat} /></div>
+          <div ref={kinds} className={byTitle ? "mt-5" : "mt-3"}><KindFilter v={opts.kinds} value={cat} onChange={setCat} /></div>
           <OnChips items={mOn} onClear={() => { setLv([]); setPc([]); }} />
           {!narrowed ? (
             // a row per kind, like albums
@@ -586,8 +625,8 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
             ))
           ) : tpls.length ? (
             <>
-              <p className="mt-5 px-6 text-[14px] text-white/55"><span className="tabular-nums">{tpls.length}</span> {tpls.length === 1 ? "pattern" : "patterns"}</p>
-              <div className="mt-3 grid grid-cols-2 items-start gap-x-3 gap-y-4 px-6">{tpls.map((t) => <TplSmall key={t.key} t={t} has={has} s={s} imgH={GRID_H} />)}</div>
+              {byTitle && <p className="mt-5 px-6 text-[14px] text-white/55"><Count n={tpls.length} /></p>}
+              <div className={cx(byTitle ? "mt-3" : "mt-5", "grid grid-cols-2 items-start gap-x-3 gap-y-4 px-6")}>{tpls.map((t) => <TplSmall key={t.key} t={t} has={has} s={s} imgH={GRID_H} />)}</div>
             </>
           ) : (
             <div className="mt-10 px-6 text-center">
@@ -598,23 +637,8 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
         </>
       ) : has ? (
         <>
-          <SearchRow q={q} setQ={setQ} placeholder="Search your patterns" n={on.length} onFilter={() => setSheet("filter")} />
           <OnChips items={on} onClear={clearMine} />
-          {/* the count, then the order (a sheet) and carousel or grid */}
-          <div className="mt-4 flex items-center justify-between px-6">
-            <span className="text-[14px] text-white/55"><span className="tabular-nums">{mine.length}</span> {mine.length === 1 ? "pattern" : "patterns"}</span>
-            <span className="flex items-center gap-2">
-              <button onClick={() => setSheet("sort")} className="flex h-9 items-center gap-1 px-1 text-[14px] text-white/80">{sort}<Icon name="chevD" size={15} /></button>
-              <span className="ruler-track flex h-9 items-center rounded-full p-[3px]" role="radiogroup" aria-label="View">
-                {[false, true].map((g) => (
-                  <button key={String(g)} role="radio" aria-checked={grid === g} aria-label={g ? "Grid" : "Carousel"} onClick={() => setGrid(g)} className={cx("relative grid h-[30px] w-[34px] place-items-center rounded-full transition-colors", grid === g ? "text-white" : "text-white/45")}>
-                    {grid === g && <motion.span layoutId="lbview" className="knob absolute inset-0 rounded-full" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
-                    <Icon name={g ? "grid" : "image"} size={15} className="relative" />
-                  </button>
-                ))}
-              </span>
-            </span>
-          </div>
+          {byTitle && (on.length > 0 || !!q.trim()) && <p className="mt-4 px-6 text-[14px] text-white/55"><Count n={mine.length} /></p>}
           {mine.length === 0 ? (
             <div className="mt-10 text-center">
               <p className="text-[17px]">No patterns match</p>
@@ -632,7 +656,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
             ))
           ) : (
             <>
-              <div className="noscroll mt-2 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-3">
+              <div className="noscroll -mb-6 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-9 pt-2">
                 {opts.cta === "row" && <NewTall s={s} />}
                 {mine.map((m) => <TallCard key={m.id} m={m} s={s} />)}
               </div>
@@ -645,7 +669,7 @@ export function Lookbook({ has, tab, opts = LOOK_DEFAULT }: Props) {
         </>
       ) : (
         <>
-          <FirstCard s={s} contain={opts.empty === "contain"} />
+          <FirstCard contain={opts.empty === "contain"} />
           <section className="mt-7">
             <SectionHead title="Or start from a pattern" n={TEMPLATES.length} />
             <Row>{TEMPLATES.slice(0, 5).map((t) => <TplSmall key={t.key} t={t} has={false} s={s} w={ROW_W} imgH={ROW_H} />)}</Row>
