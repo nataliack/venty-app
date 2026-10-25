@@ -273,7 +273,7 @@ export const OnChips = ({ items, onClear }: { items: { k: string; off: () => voi
   </div>
 ) : null;
 // a choice in a sheet: snow when on, like a chosen card
-const Choice = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) => (
+export const Choice = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) => (
   <button onClick={onClick} aria-pressed={on} className={cx("h-10 shrink-0 rounded-full px-4 text-[15px] transition-colors", on ? "bg-snow font-medium text-ink" : "pill-dark text-white/80")}>{children}</button>
 );
 export function Group({ title, items, value, onChange }: { title: string; items: readonly string[]; value: string[]; onChange: (v: string[]) => void }) {

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, animate } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
 import { fabricAdvice, fitName, templateBy, metresFor, metresAt, notionsFor, kindOf, FLUTTER, SEED_PATTERNS, type GarmentKey } from "@/lib/data";
-import { Screen, H1, Pill, Glow, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
+import { Screen, H1, Pill, Chip, RB, Sheet, TopBar, Split, Crown, Avatar, cx, useDesk } from "@/components/ui";
 import { BodyFigure, Flat } from "@/components/art";
 import { useInstall } from "@/components/Install";
 import { MapBoard } from "./print";
@@ -485,7 +485,7 @@ export function Home() {
                 <Icon name="plus" size={22} /><span className="hidden lg:inline">New body</span>
               </button>
               {bodies.map((b) => (
-                <button key={b.id} onClick={() => { set({ activeBody: b.id }); go("preview"); }} className="card-soft tap flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4 text-left">
+                <button key={b.id} onClick={() => { set({ activeBody: b.id }); go("bodyPage"); }} className="card-soft tap flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4 text-left">
                   <span className="grid h-[60px] w-11 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-primary/20"><BodyFigure sex={b.sex} width={20} glow={false} className="h-[52px] w-full" /></span>
                   <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/55">{b.done.length} of 24 measurements</span></span>
                 </button>
@@ -517,90 +517,6 @@ export function Home() {
 }
 
 // ─── Libraries: Edit lets you pick items and delete them. Picking is a quiet tick, deleting asks once. ───
-const Tick = ({ on }: { on: boolean }) => (
-  <span className={cx("grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors", on ? "border-white bg-white text-[#0b0c15]" : "border-white/40")}>{on && <Icon name="check" size={13} strokeWidth={3} />}</span>
-);
-function useEditing<T extends string>() {
-  const [editing, setEditing] = useState(false);
-  const [sel, setSel] = useState<T[]>([]);
-  const [ask, setAsk] = useState(false);
-  const toggle = (id: T) => setSel((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
-  const stop = () => { setEditing(false); setSel([]); setAsk(false); };
-  return { editing, setEditing, sel, toggle, stop, ask, setAsk };
-}
-const EditButton = ({ editing, onClick }: { editing: boolean; onClick: () => void }) => (
-  <button onClick={onClick} className={cx("tap h-9 rounded-full px-4 text-[14px] font-medium transition-colors", editing ? "bg-white text-[#0b0c15]" : "border border-white/15 text-white/85 hover:border-white/30")}>{editing ? "Done" : "Edit"}</button>
-);
-// Library top: just the title, with Edit on the same line. While editing, one quiet line says what to do.
-function LibraryHead({ title, editing, canEdit, onEdit }: { title: string; editing: boolean; canEdit: boolean; onEdit: () => void }) {
-  return (
-    <div className="pt-7 lg:pt-6">
-      <div className="flex items-center justify-between gap-4">
-        <H1 className="min-w-0">{title}</H1>
-        {canEdit && <EditButton editing={editing} onClick={onEdit} />}
-      </div>
-      <p className={cx("text-[15px] text-white/55 transition-all", editing ? "mt-1.5 h-6 opacity-100" : "h-0 opacity-0")} aria-hidden={!editing}>Tap the ones you want to delete.</p>
-    </div>
-  );
-}
-function DeleteBar({ n, what, onDelete, onCancel }: { n: number; what: string; onDelete: () => void; onCancel: () => void }) {
-  return (
-    <div className="flex items-center gap-3 pb-1">
-      <Pill variant="dark" className="flex-1" onClick={onCancel}>Cancel</Pill>
-      <Pill className="flex-1" disabled={n === 0} onClick={onDelete} icon={<Icon name="trash" size={18} />}>{n ? `Delete ${n}` : `Pick ${what}`}</Pill>
-    </div>
-  );
-}
-function ConfirmDelete({ open, n, one, many, onYes, onNo }: { open: boolean; n: number; one: string; many: string; onYes: () => void; onNo: () => void }) {
-  return (
-    <Sheet open={open} onClose={onNo}>
-      <h3 className="text-[22px] font-normal">Delete {n === 1 ? `this ${one}` : `${n} ${many}`}?</h3>
-      <p className="mt-2 text-[15px] text-white/60">This can’t be undone.</p>
-      <Pill className="mt-5" onClick={onYes}>Delete</Pill>
-      <Pill variant="dark" className="mt-2.5" onClick={onNo}>Keep {n === 1 ? "it" : "them"}</Pill>
-    </Sheet>
-  );
-}
-
-export function Bodies() {
-  const { go, bodies, set, startBody, removeBodies } = useApp();
-  const [q, setQ] = useState("");
-  const ed = useEditing<string>();
-  const list = bodies.filter((b) => !q.trim() || b.name.toLowerCase().includes(q.trim().toLowerCase()));
-  const desk = useDesk();
-  const footer = ed.editing ? <DeleteBar n={ed.sel.length} what="bodies" onDelete={() => ed.setAsk(true)} onCancel={ed.stop} /> : desk ? undefined : <TabBar tab="bodies" />;
-  return (
-    <Screen dock={!ed.editing} footer={footer}>
-      <LibraryHead title="Body library" editing={ed.editing} canEdit={bodies.length > 0} onEdit={() => (ed.editing ? ed.stop() : ed.setEditing(true))} />
-      <label className="field mt-4 flex h-12 items-center gap-2.5 px-4 lg:max-w-[420px]">
-        <Icon name="search" size={18} className="shrink-0 text-white/50" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} type="text" enterKeyHint="search" placeholder="Search bodies" aria-label="Search bodies" autoComplete="off" spellCheck={false} className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-white/40" />
-        {q && <button onClick={() => setQ("")} aria-label="Clear search" className="grid h-7 w-7 place-items-center rounded-full bg-white/10"><Icon name="close" size={13} /></button>}
-      </label>
-      <div className="mt-4 grid grid-cols-2 gap-3 lg:mt-7 lg:grid-cols-4 lg:gap-5">
-        {list.map((b, i) => {
-          const on = ed.sel.includes(b.id);
-          return (
-            <Glow key={b.id} as="button" color="#4d5e85" variant="fade" onClick={() => (ed.editing ? ed.toggle(b.id) : (set({ activeBody: b.id }), go("preview")))} className={cx("relative h-[230px] rounded-[26px] p-4 transition-[box-shadow,opacity] lg:h-[320px] lg:p-5", ed.editing && !on && "opacity-70", on && "ring-2 ring-white")}>
-              {b.done.length < 24 && !ed.editing && <span className="absolute left-3 top-3 rounded-full bg-white/20 px-2 py-1 text-[11px] font-medium">Incomplete</span>}
-              {ed.editing && <span className="absolute right-3 top-3"><Tick on={on} /></span>}
-              <div className="flex h-[150px] justify-center lg:h-[230px]"><BodyFigure sex={b.sex} width={desk ? 90 : 62} variant="solid" glow={false} /></div>
-              <div className="absolute bottom-4 left-4 right-4"><div className="text-[15px] font-medium">{b.name}</div><div className="text-[13px] text-white/65"><span className="serif text-[15px] text-white">{b.done.length}</span> of 24 measurements</div></div>
-            </Glow>
-          );
-        })}
-        {!ed.editing && !q && (
-          <button onClick={() => startBody()} className="tap flex h-[230px] flex-col items-center justify-center rounded-[26px] border border-dashed border-white/25 lg:h-[320px]">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-primary"><Icon name="plus" size={24} /></span>
-            <span className="mt-3 text-[15px] font-medium">New body</span><span className="text-[13px] text-white/50">4 measures to start</span>
-          </button>
-        )}
-      </div>
-      {q && list.length === 0 && <p className="mt-6 text-center text-[15px] text-white/55">No bodies called “{q.trim()}”.</p>}
-      <ConfirmDelete open={ed.ask} n={ed.sel.length} one="body" many="bodies" onNo={() => ed.setAsk(false)} onYes={() => { removeBodies(ed.sel); ed.stop(); }} />
-    </Screen>
-  );
-}
 
 // What a pattern's card says: where it stands, in words that help you decide what to do next.
 export const specOf = (p: Pattern): NonNullable<Pattern["spec"]> => p.spec ?? SEED_PATTERNS.find((x) => x.id === p.id)?.spec ?? { ease: 4, drape: 0.6, seam: 1.5, printer: "A4" as const, metres: metresFor(p.garment, 4) };
