@@ -5,7 +5,7 @@
 // in 3D at a time, every other one a still taken from its own 3D body; at a glance, how complete it is and the key
 // numbers; personal by default, with a compact view once there are many. Three directions beside Today, each in three
 // states: no bodies yet, three, and twelve. Nothing here is used by the app.
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence, LayoutGroup } from "motion/react";
 import { cx, Pill, RB } from "@/components/ui";
@@ -44,8 +44,8 @@ type Props = { list: B[] };
 // ─── stills: a picture taken once from each body's own 3D body (its own measurements), front on and transparent.
 //     One hidden 3D view takes them one after another (phones allow only a few 3D views), and they are kept for the
 //     page; until one is ready, the drawn mannequin holds its place ───
-type Shot = "whole" | "portrait";
-type Job = { key: string; b: B; shot: Shot };
+type Shot = "whole" | "portrait" | "bust" | "profile";
+type Job = { key: string; b: B; shot: Shot; again?: number };
 const stills = new Map<string, string>();
 const queue: Job[] = [];
 const subs = new Set<() => void>();
@@ -75,6 +75,9 @@ function hasBody(url: string) {
     im.src = url;
   });
 }
+// a profile: the body turned this far (radians) from facing the camera. Its 3D view runs continuously while it is
+// taken (turning), so the turn is drawn before the picture is (on demand, it would not be)
+const PROFILE_YAW = 1.3;
 export function StillMaker() {
   useSyncExternalStore(subscribe, () => version, () => 0);
   const job = queue[0];
@@ -87,12 +90,13 @@ export function StillMaker() {
       if (gone) return;
       const snap = w.__ventySnap?.[id];
       if (snap) {
-        w.__ventyFace?.[id]?.(0);
+        w.__ventyFace?.[id]?.(job.shot === "profile" ? PROFILE_YAW : 0);
         await new Promise((r) => setTimeout(r, 120));
         const url = snap(2);
         if (await hasBody(url)) { stills.set(job.key, url); queue.shift(); notify(); return; }
       }
-      if (++tries < 40) setTimeout(take, 350); else { queue.shift(); notify(); }
+      // not drawn in time (a page in the background draws nothing): to the back of the queue, tried twice more
+      if (++tries < 40) setTimeout(take, 350); else { queue.shift(); if ((job.again ?? 0) < 2) queue.push({ ...job, again: (job.again ?? 0) + 1 }); notify(); }
     };
     const t = setTimeout(take, 900);
     return () => { gone = true; clearTimeout(t); };
@@ -100,8 +104,8 @@ export function StillMaker() {
   if (!job) return null;
   return (
     // the whole body in a tall frame, the waist-up portrait in a square one (so it fills a small tile)
-    <div aria-hidden className={cx("pointer-events-none fixed left-0 top-0 -z-10 w-[300px] opacity-0", job.shot === "portrait" ? "h-[300px]" : "h-[600px]")}>
-      <Body3D key={id} sex={job.b.sex} measures={job.b.m} focus={job.shot === "portrait" ? "portrait" : "height"} whole={job.shot === "whole"} autoRotate={false} stage="none" snapshot={id} className="absolute inset-0" />
+    <div aria-hidden className={cx("pointer-events-none fixed left-0 top-0 -z-10 w-[300px] opacity-0", job.shot === "whole" ? "h-[600px]" : "h-[300px]")}>
+      <Body3D key={id} sex={job.b.sex} measures={job.b.m} focus={job.shot === "whole" ? "height" : job.shot === "profile" ? "portrait" : job.shot} whole={job.shot === "whole"} autoRotate={job.shot === "profile"} turn={job.shot === "profile"} stage="none" snapshot={id} className="absolute inset-0" />
     </div>
   );
 }
@@ -497,10 +501,11 @@ function List4({ list, b, setId, onOpen, onDelete }: { list: B[]; b?: B; setId: 
 // ─── a body's own page: the body live at the top (the camera on the measurement you are looking at, with its tape),
 //     the measurements under it in their groups; tap one to change it in a sheet with the dial; rename; delete ───
 const GROUP_LIST = [{ key: "base", title: "The first four" }, ...GROUPS.map((g) => ({ key: g.key, title: g.title }))];
-function BodyPage({ b, e, setE, onBack }: { b: B; e: Edits; setE: (e: Edits) => void; onBack: () => void }) {
-  const [sel, setSel] = useState("height");
-  const [dial, setDial] = useState<string | null>(null);
-  const [v, setV] = useState(0);
+// sheetStage: the measure sheet carries the 3D body, the camera on that measurement with its tape (round 5)
+function BodyPage({ b, e, setE, onBack, sheetStage, startDial }: { b: B; e: Edits; setE: (e: Edits) => void; onBack: () => void; sheetStage?: boolean; startDial?: string }) {
+  const [sel, setSel] = useState(startDial ?? "height");
+  const [dial, setDial] = useState<string | null>(startDial ?? null);
+  const [v, setV] = useState(() => (startDial ? valueOf(b, startDial, e) : 0));
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
   const [del, setDel] = useState(false);
@@ -562,7 +567,14 @@ function BodyPage({ b, e, setE, onBack }: { b: B; e: Edits; setE: (e: Edits) => 
           <>
             <SheetTitle>{dm.label}</SheetTitle>
             <p className="mt-1.5 text-[15px] leading-snug text-white/60">{dm.hint}</p>
-            <div className="dial mt-5 overflow-hidden">
+            {/* the body itself, so you see what you change: the camera on this measurement, its dashed tape round the
+                body, following the number as you move it */}
+            {sheetStage && (
+              <div className="stage-ink relative mt-4 h-[230px] overflow-hidden rounded-[24px] border border-white/[.08]">
+                <Live b={{ ...b, m: { height: valueOf(b, "height", e), bust: valueOf(b, "bust", e), waist: valueOf(b, "waist", e), hips: valueOf(b, "hips", e), [dm.key]: v } as M }} stage="grid" focus={dm.key} className="absolute inset-0" />
+              </div>
+            )}
+            <div className={cx("dial overflow-hidden", sheetStage ? "mt-3" : "mt-5")}>
               <div className="flex items-center justify-between px-3 pt-3">
                 <RB icon="minus" size={46} onClick={() => setV((x) => Math.max(dm.min, x - 0.5))} label="Minus 0.5" className="rb-plain" />
                 <span className="flex items-baseline gap-1.5"><N v={v} className="text-[44px] leading-none" /><span className="unit text-[14px] text-white/55" translate="no">cm</span></span>
@@ -590,7 +602,310 @@ function BodyPage({ b, e, setE, onBack }: { b: B; e: Edits; setE: (e: Edits) => 
   );
 }
 
+// ═══ Round 5 (25 Oct 2026), from Jose's notes: the bodies as cards again, the size of today's, in the raised build
+//     (a rim, the body's own still pressed into a small stage), the name and its numbers under it, "Incomplete" on the
+//     ones not finished; a card opens the body's page. With no bodies, one big Set up a body under a cinematic carousel.
+//     Changing a measurement: the sheet carries the 3D body itself, the camera on that measurement with its dashed
+//     tape, so you see what you are changing ═══
+// the floor of a small stage: a soft light where the body stands and a few pattern lines going back
+const MiniFloor = () => (
+  <>
+    <span className="pointer-events-none absolute bottom-[10px] left-1/2 h-[26px] w-[120px] -translate-x-1/2 rounded-[50%]" style={{ background: "radial-gradient(closest-side, rgb(240 244 254 / .16), transparent)" }} />
+    <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[54px] opacity-60 [mask-image:linear-gradient(to_top,#000,transparent)]"
+      style={{ backgroundImage: "linear-gradient(rgb(255 255 255 / .07) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .05) 1px, transparent 1px)", backgroundSize: "18px 12px", backgroundPosition: "center bottom" }} />
+  </>
+);
+// ─── raised corners: a corner of the card's stage cut away (a CSS mask), so the rim rises into it, its inner corner
+//     rounded and curving into the stage's edges, its shadow falling on the stage. "Incomplete" sits in the top-left one;
+//     choosing (Edit) raises a second at the top right with its box. w × h: the cut; f: the curve into the edges; rb:
+//     its inner corner. The pattern library's lifted corner, on either side ───
+type Notch = { side: "l" | "r"; w: number; h: number; f?: number; rb?: number };
+const notchPath = ({ w, h, f = 8, rb = 10 }: Notch) => {
+  const W = w + f;
+  return `M${f} 0H${W}V${h}H${f + rb}A${rb} ${rb} 0 0 1 ${f} ${h - rb}Z M0 0H${f}V${f}A${f} ${f} 0 0 0 0 0Z M${W - f} ${h}H${W}V${h + f}A${f} ${f} 0 0 0 ${W - f} ${h}Z`;
+};
+// drawn as for the top right; the top left is the same mirrored
+const notchSvg = (n: Notch, body: string) => {
+  const W = n.w + (n.f ?? 8), H = n.h + (n.f ?? 8);
+  return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'>${n.side === "r" ? body : `<g transform='translate(${W} 0) scale(-1 1)'>${body}</g>`}</svg>`;
+};
+function notchMask(ns: Notch[]): CSSProperties {
+  if (!ns.length) return {};
+  const urls = ns.map((n) => `url("data:image/svg+xml,${encodeURIComponent(notchSvg(n, `<path d='${notchPath(n)}'/>`))}")`);
+  const img = [...urls, "linear-gradient(#000, #000)"].join(", ");
+  const pos = [...ns.map((n) => (n.side === "r" ? "top right" : "top left")), "0 0"].join(", ");
+  const size = [...ns.map((n) => `${n.w + (n.f ?? 8)}px ${n.h + (n.f ?? 8)}px`), "100% 100%"].join(", ");
+  return { WebkitMaskImage: img, maskImage: img, WebkitMaskPosition: pos, maskPosition: pos, WebkitMaskSize: size, maskSize: size, WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskComposite: "xor", maskComposite: "exclude" };
+}
+// the raised corner's shadow on the stage (drawn inside it, so the cut takes the rest away)
+function NotchShade({ n }: { n: Notch }) {
+  const W = n.w + (n.f ?? 8), H = n.h + (n.f ?? 8);
+  return (
+    <svg width={W} height={H} className={cx("pointer-events-none absolute top-0 overflow-visible", n.side === "r" ? "right-0" : "left-0")} aria-hidden>
+      <g transform={n.side === "r" ? undefined : `translate(${W} 0) scale(-1 1)`}><path d={notchPath(n)} transform="translate(-1 2.5)" fill="#000" opacity={0.75} style={{ filter: "blur(3.5px)" }} /></g>
+    </svg>
+  );
+}
+const INC: Notch = { side: "l", w: 84, h: 24 };
+const PICK: Notch = { side: "r", w: 34, h: 34, rb: 13 };
+function BodyCard({ b, onClick, pick }: { b: B; onClick: () => void; pick?: boolean | null }) {
+  const notches = [...(b.done < 24 ? [INC] : []), ...(pick != null ? [PICK] : [])];
+  return (
+    <button onClick={onClick} aria-pressed={pick ?? undefined} className="tap relative block w-full rounded-[24px] p-[5px] text-left" style={RIM_D}>
+      <span className="stage-ink relative block h-[150px] overflow-hidden rounded-[19px]" style={notchMask(notches)}>
+        {/* face and shoulders, in profile, a soft light behind (a picture taken from the body's own 3D form) */}
+        <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 70% at 70% 30%, rgb(104 126 245 / .16), transparent 70%)" }} />
+        <span className="absolute inset-0 overflow-hidden"><Still b={b} shot="profile" className="origin-top scale-[2] object-cover object-top" /></span>
+        <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS_D }} />
+        {notches.map((n) => <NotchShade key={n.side} n={n} />)}
+        <span className="absolute bottom-2 right-3 text-[11px] text-white/55"><N v={b.m.height} className="text-[15px] text-white/90" /> cm</span>
+      </span>
+      {/* in the raised corners: the word, and the box when choosing */}
+      {b.done < 24 && <span className="pointer-events-none absolute left-0 top-0 grid place-items-center text-[11px] text-white/70" style={{ width: INC.w + 5, height: INC.h + 5 }}>Incomplete</span>}
+      {pick != null && <span className="pointer-events-none absolute right-0 top-0 grid place-items-center" style={{ width: PICK.w + 5, height: PICK.h + 5 }}><PickBox on={pick} /></span>}
+      <span className="block px-2 pb-1.5 pt-2.5">
+        <span className="block truncate text-[16px] leading-tight">{b.name}</span>
+        {/* the three numbers spread evenly, each centred over its own label */}
+        <span className="mt-2 flex justify-evenly">
+          {KEYS.slice(1).map(([k, l]) => <span key={k} className="text-center"><span className="block text-[10px] leading-none text-white/45">{l}</span><N v={b.m[k]} className="mt-1 block text-[16px] leading-none" /></span>)}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+// ─── no bodies yet: a cinematic carousel (it moves on by itself; drag it too), then one big Set up a body ───
+const DEMO: B = { id: "demo", name: "", sex: "female", m: { height: 166, bust: 88, waist: 69, hips: 95 }, done: 24, how: "By hand" };
+const SLIDES: { k: string; cap: string; art: ReactNode }[] = [
+  { k: "form", cap: "Your body, as a 3D form", art: <><div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div><img src="/start/mannequin-1100.webp" alt="" draggable={false} className="absolute left-1/2 top-[6%] h-[118%] max-w-none -translate-x-1/2 object-contain" /></> },
+  { k: "tape", cap: "Measured where it matters", art: <div className="stage-ink absolute inset-0"><span className="absolute inset-x-6 bottom-0 top-6"><Still b={DEMO} shot="bust" className="object-cover object-center" /></span></div> },
+  { k: "stage", cap: "Every pattern drafted to it", art: <div className="stage-ink absolute inset-0"><MiniFloor /><span className="absolute inset-x-10 bottom-6 top-8"><Still b={DEMO} /></span></div> },
+  { k: "look", cap: "Then make what you love", art: <img src="/auth/look-cliff-rust.webp" alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" /> },
+];
+function EmptyHero() {
+  const [i, setI] = useState(0);
+  const [held, setHeld] = useState(false);
+  useEffect(() => { if (held) return; const t = setInterval(() => setI((x) => (x + 1) % SLIDES.length), 4500); return () => clearInterval(t); }, [held]);
+  const W = 331;
+  return (
+    <>
+      <div className="mx-6 mt-5 rounded-[32px] p-[7px]" style={RIM_D}>
+        <div className="relative h-[440px] overflow-hidden rounded-[26px]">
+          <motion.div className="absolute inset-y-0 left-0 flex" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.25}
+            onDragStart={() => setHeld(true)} onDragEnd={(_, d) => { setHeld(false); if (Math.abs(d.offset.x) > 50) setI((x) => (x + (d.offset.x < 0 ? 1 : SLIDES.length - 1)) % SLIDES.length); }}
+            animate={{ x: -i * W }} transition={{ type: "spring", bounce: 0, duration: 0.7 }}>
+            {SLIDES.map((s) => <div key={s.k} className="relative h-[440px] shrink-0 overflow-hidden" style={{ width: W }}>{s.art}</div>)}
+          </motion.div>
+          <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS_D }} />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-bg/85 to-transparent" />
+          <AnimatePresence mode="wait">
+            <motion.p key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35 }} className="pointer-events-none absolute bottom-10 left-5 right-5 text-[24px] leading-[1.1] tracking-[-.025em]">{SLIDES[i].cap}</motion.p>
+          </AnimatePresence>
+          <div className="absolute bottom-4 left-5 flex gap-1.5">
+            {SLIDES.map((s, k) => <button key={s.k} onClick={() => setI(k)} aria-label={s.cap} className={cx("h-[5px] rounded-full transition-all duration-300", k === i ? "w-5 bg-snow" : "w-[5px] bg-white/35")} />)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 px-6">
+        <Pill className="!h-[60px] !text-[17px]">Set up a body</Pill>
+        <p className="mt-2.5 text-center text-[14px] text-white/50">Four measurements to start, twenty more<br />when you have time.</p>
+      </div>
+    </>
+  );
+}
+
+function Library5({ list: start, initial = "list", dial }: Props & { initial?: "list" | "body"; dial?: string }) {
+  const [e, setE] = useState<Edits>({ m: {}, done: {}, names: {}, gone: [] });
+  const [page, setPage] = useState<"list" | "body">(initial);
+  const [id, setId] = useState<string | null>(null);
+  const list = start.filter((x) => !e.gone.includes(x.id)).map((x) => ({ ...x, name: nameOf(x, e), done: doneOf(x, e).size, m: { height: valueOf(x, "height", e), bust: valueOf(x, "bust", e), waist: valueOf(x, "waist", e), hips: valueOf(x, "hips", e) } }));
+  const b = list.find((x) => x.id === id) ?? list[0];
+  return (
+    <LayoutGroup id={useId()}>
+      <AnimatePresence initial={false} mode="popLayout">
+        {page === "body" && b ? (
+          <motion.div key="body" className="absolute inset-0" initial={{ x: 393 }} animate={{ x: 0 }} exit={{ x: 393 }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
+            <BodyPage5 b={start.find((x) => x.id === b.id)!} e={e} setE={setE} onBack={() => setPage("list")} startDial={dial} />
+          </motion.div>
+        ) : (
+          <motion.div key="list" className="absolute inset-0" initial={{ x: -120, opacity: 0.6 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -120, opacity: 0.6 }} transition={{ type: "spring", bounce: 0, duration: 0.45 }}>
+            <List5 list={list} onOpen={(x) => { setId(x.id); setPage("body"); }} onDelete={(ids) => setE({ ...e, gone: [...e.gone, ...ids] })} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </LayoutGroup>
+  );
+}
+function List5({ list, onOpen, onDelete }: { list: B[]; onOpen: (b: B) => void; onDelete: (ids: string[]) => void }) {
+  const [q, setQ] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [ask, setAsk] = useState(false);
+  const { t, show } = useToastLab();
+  const shown = list.filter((x) => !q.trim() || x.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const stop = () => { setPicking(false); setPicked([]); };
+  const all = shown.length > 0 && shown.every((x) => picked.includes(x.id));
+  const remove = () => { const n = picked.length; onDelete(picked); setAsk(false); stop(); show(n === 1 ? "Body deleted" : `${n} bodies deleted`); };
+  const footer = picking ? (
+    <div className="flex items-center gap-3 pb-1">
+      <Pill variant="dark" className="flex-1" onClick={stop}>Cancel</Pill>
+      <Pill className={cx("flex-1", !picked.length && "is-off")} onClick={() => picked.length && setAsk(true)} icon={<Icon name="trash" size={18} />}>{picked.length ? `Delete ${picked.length}` : "Delete"}</Pill>
+    </div>
+  ) : undefined;
+  return (
+    <Screen footer={footer} overlay={<>
+      <PhoneSheet open={ask} onClose={() => setAsk(false)}>
+        <SheetTitle>{picked.length === 1 ? "Delete this body?" : `Delete ${picked.length} bodies?`}</SheetTitle>
+        <p className="mt-2 text-[15px] text-white/60">Their measurements go too. Patterns already made for them stay. This can’t be undone.</p>
+        <Pill className="mt-6" onClick={remove}>Delete</Pill>
+        <Pill variant="dark" className="mt-2.5" onClick={() => setAsk(false)}>{picked.length === 1 ? "Keep it" : "Keep them"}</Pill>
+      </PhoneSheet>
+      {toastNode(t)}
+    </>}>
+      <div className={cx("flex h-11 items-center gap-3 px-6", list.length ? "justify-between" : "justify-center")}><h1 className="h1 !text-[34px]">Body library</h1>{list.length > 0 && !picking && <NewBody />}</div>
+      {list.length === 0 ? <EmptyHero /> : (
+        <>
+          <div className="mt-4 px-6">
+            {picking ? (
+              <div className="flex h-10 items-center justify-between">
+                <span className="text-[15px] text-white/70">{picked.length ? `${picked.length} selected` : "Choose bodies to delete"}</span>
+                <button onClick={() => setPicked(all ? [] : shown.map((x) => x.id))} className="h-10 px-1 text-[15px] font-medium text-peri">{all ? "Clear" : "Select all"}</button>
+              </div>
+            ) : searching ? <SearchOpen q={q} setQ={setQ} placeholder="Search bodies" onCancel={() => { setSearching(false); setQ(""); }} /> : (
+              <div className="flex h-10 items-center justify-between">
+                <ToolBtn icon="search" label="Search" onClick={() => setSearching(true)} />
+                <ToolBtn icon="select" label="Edit" onClick={() => { setPicking(true); setSearching(false); }} />
+              </div>
+            )}
+          </div>
+          {shown.length === 0 ? <p className="mt-8 px-6 text-center text-[15px] text-white/55">No bodies called “{q.trim()}”.</p> : (
+            <div className="mt-4 grid grid-cols-2 gap-3 px-6">
+              {shown.map((x) => <BodyCard key={x.id} b={x} pick={picking ? picked.includes(x.id) : null} onClick={() => (picking ? setPicked((p) => (p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])) : onOpen(x))} />)}
+            </div>
+          )}
+        </>
+      )}
+    </Screen>
+  );
+}
+// ─── round 5's body page: the body turning at the top, always the same (opening a measurement never moves it); the
+//     measurements as raised tiles you can tap, one group at a time (a pressed switch picks the group), so nothing
+//     needs scrolling; a measurement opens the sheet with the 3D body on that measurement and its tape; Rename and
+//     Delete under the "more" button ───
+const GROUP_TABS = [{ key: "base", short: "First 4" }, ...GROUPS.map((g) => ({ key: g.key, short: g.short }))];
+function BodyPage5({ b, e, setE, onBack, startDial }: { b: B; e: Edits; setE: (e: Edits) => void; onBack: () => void; startDial?: string }) {
+  const [group, setGroup] = useState("base");
+  const [dial, setDial] = useState<string | null>(startDial ?? null);
+  const [v, setV] = useState(() => (startDial ? valueOf(b, startDial, e) : 0));
+  const [more, setMore] = useState(false);
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState("");
+  const [del, setDel] = useState(false);
+  const { t, show } = useToastLab();
+  const done = doneOf(b, e);
+  const nm = nameOf(b, e);
+  const m4 = { height: valueOf(b, "height", e), bust: valueOf(b, "bust", e), waist: valueOf(b, "waist", e), hips: valueOf(b, "hips", e) };
+  const items = ALL_MEASURES.filter((x) => x.group === group);
+  const open = (k: string) => { setV(valueOf(b, k, e)); setDial(k); };
+  const save = () => {
+    if (!dial) return;
+    setE({ ...e, m: { ...e.m, [b.id]: { ...(e.m[b.id] ?? {}), [dial]: v } }, done: { ...e.done, [b.id]: [...new Set([...(e.done[b.id] ?? []), dial])] } });
+    show(`${ALL_MEASURES.find((x) => x.key === dial)!.label} saved`); setDial(null);
+  };
+  const dm = dial ? ALL_MEASURES.find((x) => x.key === dial)! : null;
+  return (
+    <div data-screen className="absolute inset-0 flex flex-col bg-bg text-white">
+      <div className="dotgrid" />
+      <div className="relative px-6 pt-[62px]">
+        <div className="flex h-11 items-center justify-between">
+          <button onClick={onBack} aria-label="Back" className="rb"><Icon name="back" size={20} /></button>
+          <button onClick={() => setMore(true)} aria-label="More" className="rb"><Icon name="more" size={20} /></button>
+        </div>
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <h1 className="h1 !text-[34px]">{nm}</h1>
+          <span className="pb-1 text-[13px] text-white/55">{done.size >= 24 ? "Fully measured" : <><N v={done.size} className="text-[16px] text-white" /> of 24 measured</>}</span>
+        </div>
+        {/* the body, turning; it stays like this whatever you open below */}
+        <div className="stage-ink relative mt-4 h-[226px] overflow-hidden rounded-[28px] border border-white/[.08]">
+          <Live b={{ ...b, m: m4 }} stage="grid" className="absolute inset-0" />
+        </div>
+        {/* which group: a pressed track, the chosen one raised */}
+        <div className="ruler-track mt-4 flex h-11 rounded-full p-1">
+          {GROUP_TABS.map((g) => (
+            <button key={g.key} onClick={() => setGroup(g.key)} className={cx("relative flex-1 rounded-full text-[13px]", g.key === group ? "font-medium text-white" : "text-white/50")}>
+              {g.key === group && <motion.span layoutId="bodygroup" className="knob absolute inset-0 rounded-full" transition={{ type: "spring", bounce: 0.18, duration: 0.4 }} />}
+              <span className="relative">{g.short}</span>
+            </button>
+          ))}
+        </div>
+        {/* the measurements as raised tiles: the name, the number (or Measure); tap one to change it */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {items.map((x) => (
+            <button key={x.key} onClick={() => open(x.key)} className="pill-dark tap flex h-[66px] flex-col justify-between rounded-[18px] px-3 py-2.5 text-left">
+              <span className="block truncate text-[12px] leading-none text-white/60">{x.label}</span>
+              {done.has(x.key)
+                ? <span className="leading-none"><N v={valueOf(b, x.key, e)} className="text-[21px]" /><span className="unit ml-0.5 text-[11px] text-white/45" translate="no">cm</span></span>
+                : <span className="flex items-center gap-1 text-[13px] font-medium text-peri"><Icon name="plus" size={14} strokeWidth={2.4} />Measure</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 z-20 px-6 pb-[34px]"><Pill>Make a pattern for {nm.split(" ")[0]}</Pill></div>
+      <PhoneSheet open={!!dm} onClose={() => setDial(null)}>
+        {dm && (
+          <>
+            <SheetTitle>{dm.label}</SheetTitle>
+            <p className="mt-1.5 text-[15px] leading-snug text-white/60">{dm.hint}</p>
+            {/* the body itself, the camera on this measurement, its dashed tape round it, following the number */}
+            <div className="stage-ink relative mt-4 h-[230px] overflow-hidden rounded-[24px] border border-white/[.08]">
+              <Live b={{ ...b, m: { ...m4, [dm.key]: v } as M }} stage="grid" focus={dm.key} className="absolute inset-0" />
+            </div>
+            <div className="dial mt-3 overflow-hidden">
+              <div className="flex items-center justify-between px-3 pt-3">
+                <RB icon="minus" size={46} onClick={() => setV((x) => Math.max(dm.min, x - 0.5))} label="Minus 0.5" className="rb-plain" />
+                <span className="flex items-baseline gap-1.5"><N v={v} className="text-[44px] leading-none" /><span className="unit text-[14px] text-white/55" translate="no">cm</span></span>
+                <RB icon="plus" size={46} onClick={() => setV((x) => Math.min(dm.max, x + 0.5))} label="Plus 0.5" className="rb-plain" />
+              </div>
+              <Ruler value={v} min={dm.min} max={dm.max} onChange={setV} className="mt-2" />
+            </div>
+            <Pill className="mt-5" onClick={save}>Save</Pill>
+          </>
+        )}
+      </PhoneSheet>
+      <PhoneSheet open={more} onClose={() => setMore(false)}>
+        <SheetTitle>{nm}</SheetTitle>
+        <div className="mt-4 divide-y divide-white/8">
+          <button onClick={() => { setMore(false); setName(nm); setNaming(true); }} className="flex h-14 w-full items-center gap-3 text-left text-[16px]"><Icon name="pencil" size={19} className="text-white/60" />Rename</button>
+          <button onClick={() => { setMore(false); setDel(true); }} className="flex h-14 w-full items-center gap-3 text-left text-[16px]"><Icon name="trash" size={19} className="text-white/60" />Delete this body</button>
+        </div>
+      </PhoneSheet>
+      <PhoneSheet open={naming} onClose={() => setNaming(false)}>
+        <SheetTitle>Rename</SheetTitle>
+        <input value={name} onChange={(ev) => setName(ev.target.value)} aria-label="Name" className="ruler-track mt-5 block h-12 w-full rounded-full px-5 text-[16px] text-white outline-none" />
+        <Pill className={cx("mt-5", !name.trim() && "is-off")} onClick={() => { if (!name.trim()) return; setE({ ...e, names: { ...e.names, [b.id]: name.trim() } }); setNaming(false); show("Renamed"); }}>Save</Pill>
+      </PhoneSheet>
+      <PhoneSheet open={del} onClose={() => setDel(false)}>
+        <SheetTitle>Delete {nm}?</SheetTitle>
+        <p className="mt-2 text-[15px] text-white/60">Their measurements go too. Patterns already made for them stay. This can’t be undone.</p>
+        <Pill className="mt-6" onClick={() => { setE({ ...e, gone: [...e.gone, b.id] }); setDel(false); onBack(); }}>Delete</Pill>
+        <Pill variant="dark" className="mt-2.5" onClick={() => setDel(false)}>Keep it</Pill>
+      </PhoneSheet>
+      {toastNode(t)}
+    </div>
+  );
+}
+const IMAGE_IDEAS = [
+  "A soft tape measure round a waist, low light, a cornflower rim light from one side, the rest falling into the dark.",
+  "Close on the 3D form at the bust, the dashed tape running round it, on the night stage (we can render this from the app).",
+  "Someone standing against a wall of height marks, lit from the side, their shadow on the marks.",
+  "A flat lay on a cutting mat: tape measure, chalk, pins and paper pattern pieces, shot from above, deep shadows.",
+  "A figure behind frosted glass, only the outline sharp, with a tape across it: measured, never exposed.",
+  "Over the shoulder: a phone showing the 3D body beside the real person in a mirror, same pose.",
+];
+
 const DIRS: { k: string; name: string; note: string; C: (p: Props) => ReactNode }[] = [
+  { k: "r5", name: "Round 5 · Cards", note: "The bodies as cards the size of today’s, in the raised build: a rim, each body’s own still pressed into a small stage with a floor, “Incomplete” pressed in on the ones not finished, the height in the corner; under it the name, bust, waist and hips. A card opens the body’s page. No bodies: one big Set up a body under a cinematic carousel (it moves on by itself, or drag it). Changing a measurement: the sheet carries the 3D body, the camera on that measurement with its dashed tape, following the number.", C: Library5 },
   { k: "r4", name: "Spotlight · Round 4", note: "No big name behind the body. The chosen body’s card is the pattern tray’s build: the stage (the measuring screens’ ink and pattern floor) pressed into a raised rim, and on the rim below it, what to do with this body. Only the rows scroll; as they do, the stage folds to a waist-up portrait (the camera glides in) and opens again at the top. Tap the chosen row, or Measurements, to open the body’s own page: tap a measurement and the camera goes to it with its tape, and a sheet with the dial changes it; Rename; Delete.", C: Library4 },
   { k: "rows", name: "Round 3 · Rows", note: "Round 3 as it was, for comparison.", C: SpotRows },
 ];
@@ -605,26 +920,42 @@ function Phone({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function BodyLab() {
-  const [d, setD] = useState("r4");
+  const [d, setD] = useState("r5");
   const [n, setN] = useState<"none" | "few" | "many">("few");
   const c = DIRS.find((x) => x.k === d)!;
   const list = n === "none" ? [] : n === "few" ? FEW : MANY;
   return (
-    <section className="mx-auto max-w-[1000px]">
-      <h1 className="h1 !text-[34px]">Body library</h1>
-      <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Round 3, Spotlight refined: the body in a smaller stage built like the measuring screens, actions for it, and the bodies as raised rows (or wide cards) with faces and names; Search, Edit and personal or compact always there. One body live at a time; the others are stills taken from their own 3D body (they appear as they are made).</p>
-      <div className="noscroll mt-6 flex gap-2 overflow-x-auto">
-        {DIRS.map((x) => <button key={x.k} onClick={() => setD(x.k)} className={cx("h-11 shrink-0 rounded-full px-5 text-[15px] font-medium transition-colors", x.k === d ? "bg-snow text-ink" : "bg-card text-white/75 hover:text-white")}>{x.name}</button>)}
+    <section>
+      <div className="max-w-[1000px]">
+        <h1 className="h1 !text-[34px]">Body library</h1>
+        <p className="mt-2 max-w-[640px] text-[16px] leading-snug text-white/60">Every screen side by side, Today on the right. One body is live in 3D at a time; the others are stills taken from their own 3D body (they appear as they are made).</p>
+        <div className="noscroll mt-6 flex gap-2 overflow-x-auto">
+          {DIRS.map((x) => <button key={x.k} onClick={() => setD(x.k)} className={cx("h-11 shrink-0 rounded-full px-5 text-[15px] font-medium transition-colors", x.k === d ? "bg-snow text-ink" : "bg-card text-white/75 hover:text-white")}>{x.name}</button>)}
+        </div>
+        <p className="mt-3 max-w-[640px] text-[15px] leading-snug text-white/70">{c.note}</p>
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <span className="w-[150px] text-[15px] text-white/55">Bodies</span>
+          {([["none", "None yet"], ["few", "Three"], ["many", "Twelve"]] as const).map(([k, l]) => <button key={k} onClick={() => setN(k)} className={cx("h-10 rounded-full px-4 text-[14px] font-medium transition-colors", n === k ? "bg-snow text-ink" : "bg-card text-white/75 hover:text-white")}>{l}</button>)}
+        </div>
       </div>
-      <p className="mt-3 max-w-[640px] text-[15px] leading-snug text-white/70">{c.note}</p>
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <span className="w-[150px] text-[15px] text-white/55">Bodies</span>
-        {([["none", "None yet"], ["few", "Three"], ["many", "Twelve"]] as const).map(([k, l]) => <button key={k} onClick={() => setN(k)} className={cx("h-10 rounded-full px-4 text-[14px] font-medium transition-colors", n === k ? "bg-snow text-ink" : "bg-card text-white/75 hover:text-white")}>{l}</button>)}
-      </div>
-      <div key={d + n} className="mt-8 flex flex-wrap justify-center gap-x-14 gap-y-10">
+      <div key={d + n} className="mt-8 flex flex-wrap justify-center gap-x-10 gap-y-10">
+        {d === "r5" ? (
+          <>
+            <Phone label="The library"><Library5 list={list} /></Phone>
+            <Phone label="No bodies yet"><Library5 list={[]} /></Phone>
+            <Phone label="A body’s page"><Library5 list={FEW} initial="body" /></Phone>
+            <Phone label="Changing a measurement"><Library5 list={FEW} initial="body" dial="bust" /></Phone>
+          </>
+        ) : <Phone label={c.name}><c.C list={list} /></Phone>}
         <Phone label="Today"><Today list={list} /></Phone>
-        <Phone label={c.name}><c.C list={list} /></Phone>
       </div>
+      {d === "r5" && (
+        <div className="mt-10 max-w-[680px]">
+          <h2 className="text-[22px] tracking-[-.02em]">Pictures for the empty carousel</h2>
+          <p className="mt-2 text-[15px] text-white/60">Today it uses stand-ins: the start screen’s mannequin, two pictures taken from the 3D body, and a sign-up look. Ideas for the real set, cinematic and dark with a cornflower light:</p>
+          <ul className="mt-3 flex flex-col gap-2">{IMAGE_IDEAS.map((x) => <li key={x} className="text-[15px] leading-snug text-white/70">{x}</li>)}</ul>
+        </div>
+      )}
       <StillMaker />
     </section>
   );
