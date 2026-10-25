@@ -379,9 +379,9 @@ const crownRuler: Design = {
   make: (w) => {
     // paper, type, glows (big and small, each with its strength), the ruler, the icons, the bird
     const c = pick(w, {
-      dark: { paper: "#05060b", ink: VC.snow, g: [VC.corn, 0.9, VC.peri, 0.7], ruler: { color: VC.steel }, icons: { surface: "spot" as Surface }, bird: "foil-cornflower" as Surface },
-      white: { paper: VC.snow, ink: VC.ink, g: [VC.corn, 0.75, VC.peri, 0.6], ruler: { color: VC.steel }, icons: { color: VC.steel }, bird: "foil-cornflower" as Surface },
-      purple: { paper: VC.corn, ink: VC.snow, g: ["#c3cbff", 0.85, VC.snow, 0.45], ruler: { color: VC.ink, paint: alpha(0.55) }, icons: { surface: "spot" as Surface }, bird: "foil-white" as Surface },
+      dark: { paper: "#05060b", ink: VC.snow, g: [VC.corn, 0.9, VC.peri, 0.7], ruler: { color: VC.steel }, icons: { surface: "spot" as Surface }, bird: "foil-cornflower" as Surface, word: "foil-black" as Surface },
+      white: { paper: VC.snow, ink: VC.ink, g: [VC.corn, 0.75, VC.peri, 0.6], ruler: { color: VC.steel }, icons: { surface: "spot" as Surface }, bird: "foil-cornflower" as Surface, word: "spot" as Surface },
+      purple: { paper: VC.corn, ink: VC.snow, g: ["#c3cbff", 0.85, VC.snow, 0.45], ruler: { color: VC.snow }, icons: { surface: "spot" as Surface }, bird: "spot" as Surface, word: "spot" as Surface },
     });
     const s = stock({ paper: c.paper, back: c.paper, ink: c.ink, coating: "soft", thickness: 1.2, edge: "foil-silver" });
     const [g1, a1, g2, a2] = c.g as [string, number, string, number];
@@ -391,7 +391,7 @@ const crownRuler: Design = {
       els: [
         el("glow", "Glow, big", "front", "ink", "flat", [{ t: "glow", x: 66, y: 66, rx: 86, ry: 42 }], { color: g1, paint: alpha(a1) }),
         el("glow2", "Glow, small", "front", "ink", "flat", [{ t: "glow", x: 8, y: 68, rx: 48, ry: 28 }], { color: g2, paint: alpha(a2) }),
-        el("word", "Wordmark", "front", "foil-black", "flat", [A(WORD, 30, 19.6, 30)]),
+        el("word", "Wordmark", "front", c.word, "flat", [A(WORD, 30, 19.6, 30)]),
         el("ruler", "Centimetres", "front", "ink", "flat", [{ t: "path", d: cmRuler() }, ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => T(String(n), n * 10, 6.4, 1.9, { font: "num", align: "center" })), T("cm", 2.4, 3.2, 1.6)], c.ruler),
         el("name", "Name", "back", "ink", "flat", [T("Natalia\nChamon", m, 10.6, 6.4, { lead: 1.02, track: -0.035 })]),
         el("role", "Role", "back", "ink", "flat", [T("Founder, Venty", 90 - m, 8.4, 2.6, { align: "right" })]),
@@ -408,18 +408,18 @@ const nckGrid: Design = {
   id: "n-nck-grid", family: "natalia", name: "nck and grid",
   note: "Big nck contained and centred, in spot gloss so it shows only as shine on the paper. The back is the Hero grid's: the phone grid with its half stars, her name now all in serif italic, details with icons and the line from her site.",
   // three colourways (25 Oct 2026): Green is the approved card (git tag cards-favourites-2026-10-25); Brown is her
-  // darkest brown (#0f0c08, her site's ink-deep) and Butter is #f3e7c1, with green type for contrast. The gloss, the
+  // darkest brown (#0f0c08, her site's ink-deep) and Cream is #fff7e2 (from Jose; #f3e7c1 read too strong), with green type. The gloss, the
   // lines and the icons stay spot gloss on all three
   ways: [
     { id: "green", name: "Green", sw: [NC.green, NC.creamLight, NC.butter] },
     { id: "brown", name: "Brown", sw: [NC.inkDeep, NC.creamLight, NC.butter] },
-    { id: "butter", name: "Butter", sw: [NC.butterSoft, NC.green, NC.cream] },
+    { id: "cream", name: "Cream", sw: [NC.creamLight, NC.green, NC.butter] },
   ],
   make: (w) => {
     const s = pick(w, {
       green: stock({ paper: NC.green, back: NC.green, ink: NC.creamLight, coating: "soft", thickness: 0.8 }),
       brown: stock({ paper: NC.inkDeep, back: NC.inkDeep, ink: NC.creamLight, coating: "soft", thickness: 0.8 }),
-      butter: stock({ paper: NC.butterSoft, back: NC.butterSoft, ink: NC.green, thickness: 0.8 }),
+      cream: stock({ paper: NC.creamLight, back: NC.creamLight, ink: NC.green, thickness: 0.8 }),
     });
     // one spacing everywhere, the card's margin (M = 4 mm): from the edges, from the lines and between the blocks. Type
     // sits by its measured ascent (0.7 of the size in all three of her fonts). The name fills the top band from the top
@@ -443,5 +443,8 @@ const nckGrid: Design = {
     };
   },
 };
+
+// the two approved cards, each in its three approved colourways
+export const FAVOURITES = { venty: crownRuler, natalia: nckGrid };
 
 export const DESIGNS: Design[] = [crownRuler, wordmark, crown, ruler, bird, nckGrid, swash, gridCard, crossing, blind, tea];

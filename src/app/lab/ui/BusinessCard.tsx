@@ -137,8 +137,11 @@ function drawShapes(ctx: CanvasRenderingContext2D, shapes: Shape[], px: number, 
 }
 
 // ─── maths on whole images (Float32Array, w × h, rows top to bottom) ───
+// A card takes a second or two to make, so the making is written as generators that pause (yield) every few rows; a
+// runner (slices, below) works on it a few milliseconds at a time between frames, so animations never stall.
+type Gen<T> = Generator<void, T, void>;
 const sm = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-function boxPass(src: Float32Array, dst: Float32Array, w: number, h: number, r: number, horiz: boolean) {
+function* boxPass(src: Float32Array, dst: Float32Array, w: number, h: number, r: number, horiz: boolean): Gen<void> {
   const n = 2 * r + 1, len = horiz ? w : h, lines = horiz ? h : w, step = horiz ? 1 : w;
   for (let l = 0; l < lines; l++) {
     const o = horiz ? l * w : l;
@@ -148,39 +151,46 @@ function boxPass(src: Float32Array, dst: Float32Array, w: number, h: number, r: 
       dst[o + i * step] = s / n;
       s += src[o + Math.min(len - 1, i + r + 1) * step] - src[o + Math.max(0, i - r) * step];
     }
+    if ((l & 31) === 31) yield;
   }
 }
 // three box passes ≈ a gaussian of about r px; rx/ry apart for streaky (felt) paper
-function blur(src: Float32Array, w: number, h: number, rx: number, ry = rx) {
+function* blur(src: Float32Array, w: number, h: number, rx: number, ry = rx): Gen<Float32Array> {
   let a = src;
   const t = new Float32Array(w * h);
   const bx = Math.max(0, Math.round(rx / Math.sqrt(3))), by = Math.max(0, Math.round(ry / Math.sqrt(3)));
   for (let k = 0; k < 3; k++) {
     const out = new Float32Array(w * h);
-    if (bx > 0) boxPass(a, t, w, h, bx, true); else t.set(a);
-    if (by > 0) boxPass(t, out, w, h, by, false); else out.set(t);
+    if (bx > 0) yield* boxPass(a, t, w, h, bx, true); else t.set(a);
+    if (by > 0) yield* boxPass(t, out, w, h, by, false); else out.set(t);
     a = out;
   }
   return a;
 }
 // distance (px) from each inside pixel to the nearest outside one; the image border counts as inside (art that bleeds
 // off the card has no bevel at the trim). Partly covered edge pixels get a fraction, so bevels stay smooth.
-function insideDist(a: Float32Array, w: number, h: number) {
+function* insideDist(a: Float32Array, w: number, h: number): Gen<Float32Array> {
   const d = new Float32Array(w * h), D = Math.SQRT2;
   for (let i = 0; i < w * h; i++) d[i] = a[i] > 0.5 ? 1e6 : 0;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = y * w + x; if (d[i] === 0) continue;
-    let v = d[i];
-    if (x > 0) v = Math.min(v, d[i - 1] + 1);
-    if (y > 0) { v = Math.min(v, d[i - w] + 1); if (x > 0) v = Math.min(v, d[i - w - 1] + D); if (x < w - 1) v = Math.min(v, d[i - w + 1] + D); }
-    d[i] = v;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x; if (d[i] === 0) continue;
+      let v = d[i];
+      if (x > 0) v = Math.min(v, d[i - 1] + 1);
+      if (y > 0) { v = Math.min(v, d[i - w] + 1); if (x > 0) v = Math.min(v, d[i - w - 1] + D); if (x < w - 1) v = Math.min(v, d[i - w + 1] + D); }
+      d[i] = v;
+    }
+    if ((y & 15) === 15) yield;
   }
-  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
-    const i = y * w + x; if (d[i] === 0) continue;
-    let v = d[i];
-    if (x < w - 1) v = Math.min(v, d[i + 1] + 1);
-    if (y < h - 1) { v = Math.min(v, d[i + w] + 1); if (x < w - 1) v = Math.min(v, d[i + w + 1] + D); if (x > 0) v = Math.min(v, d[i + w - 1] + D); }
-    d[i] = v;
+  for (let y = h - 1; y >= 0; y--) {
+    for (let x = w - 1; x >= 0; x--) {
+      const i = y * w + x; if (d[i] === 0) continue;
+      let v = d[i];
+      if (x < w - 1) v = Math.min(v, d[i + 1] + 1);
+      if (y < h - 1) { v = Math.min(v, d[i + w] + 1); if (x < w - 1) v = Math.min(v, d[i + w + 1] + D); if (x > 0) v = Math.min(v, d[i + w - 1] + D); }
+      d[i] = v;
+    }
+    if ((y & 15) === 15) yield;
   }
   for (let i = 0; i < w * h; i++) d[i] = a[i] > 0.5 ? d[i] - 1 + a[i] : a[i];
   return d;
@@ -192,10 +202,11 @@ function mirror(src: Float32Array, w: number, h: number) {
 }
 function rand(seed: number) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 // noise with a standard deviation of amp, blurred to grain size r (rx, ry)
-function noise(w: number, h: number, seed: number, amp: number, rx: number, ry = rx) {
+function* noise(w: number, h: number, seed: number, amp: number, rx: number, ry = rx): Gen<Float32Array> {
   const r = rand(seed), n = new Float32Array(w * h);
   for (let i = 0; i < n.length; i++) n[i] = r() - 0.5;
-  const b = rx > 0 || ry > 0 ? blur(n, w, h, rx, ry) : n;
+  yield;
+  const b = rx > 0 || ry > 0 ? yield* blur(n, w, h, rx, ry) : n;
   let s = 0; for (let i = 0; i < b.length; i += 7) s += b[i] * b[i];
   const k = amp / Math.sqrt(s / Math.ceil(b.length / 7) || 1);
   for (let i = 0; i < b.length; i++) b[i] *= k;
@@ -218,21 +229,21 @@ function maskOf(el: El, w: number, h: number, fonts: Fonts): Mask {
   while (maskCache.size > 40) maskCache.delete(maskCache.keys().next().value!);
   return m;
 }
-const distOf = (m: Mask, w: number, h: number) => (m.d ??= insideDist(m.a, w, h));
-const blurOf = (m: Mask, w: number, h: number, r: number) => { let b = m.blurs.get(r); if (!b) { b = blur(m.a, w, h, r); m.blurs.set(r, b); } return b; };
+function* distOf(m: Mask, w: number, h: number): Gen<Float32Array> { if (!m.d) m.d = yield* insideDist(m.a, w, h); return m.d; }
+function* blurOf(m: Mask, w: number, h: number, r: number): Gen<Float32Array> { let b = m.blurs.get(r); if (!b) { b = yield* blur(m.a, w, h, r); m.blurs.set(r, b); } return b; }
 
-// the height (in 0.1 mm) a press gives one pixel (distances in px at PX per mm)
+// the height (in 0.1 mm) a press gives one pixel: d is its distance in from the edge (px), b the mask blurred (for
+// the presses that spread past the edge)
 const MM = PX / 20; // the presses were tuned at 20 px per mm
-function pressHeight(p: Press, surface: Surface, m: Mask, i: number, w: number, h: number) {
-  if (p === "flat" && surface === "ink") return 0;
-  const d = distOf(m, w, h)[i] / MM;
+function pressHeight(p: Press, surface: Surface, m: Mask, i: number, dist: Float32Array, b: Float32Array | null) {
+  const d = dist[i] / MM;
   switch (p) {
     case "emboss": return 2 * sm(d / 7);
     case "chisel-emboss": return 3 * Math.min(d, 14) / 14;
-    case "deep-emboss": return 3.6 * (0.7 * sm(d / 16) + 0.3 * blurOf(m, w, h, Math.round(16 * MM))[i]);
+    case "deep-emboss": return 3.6 * (0.7 * sm(d / 16) + 0.3 * b![i]);
     case "deboss": return -1.7 * sm(d / 6);
     case "chisel-deboss": return -3 * Math.min(d, 14) / 14;
-    case "letterpress": return -1.3 * sm(d / 2) + 0.3 * Math.max(0, blurOf(m, w, h, Math.round(5 * MM))[i] - m.a[i]);
+    case "letterpress": return -1.3 * sm(d / 2) + 0.3 * Math.max(0, b![i] - m.a[i]);
     case "flat":
       if (surface.startsWith("foil")) return -0.25 * sm(d / 1.5); // foil is stamped, so it sits a hair below the paper
       if (surface === "spot") return 0.15 * sm(d / 2); // a raised varnish
@@ -255,12 +266,12 @@ export const FOIL: Record<string, { c: string; rough: number; metal: number; coa
 const PAPER_ROUGH = { uncoated: 0.93, silk: 0.55, soft: 0.8 };
 
 const noiseCache = new Map<string, Float32Array>();
-function paperNoise(w: number, h: number, t: Stock["texture"]) {
+function* paperNoise(w: number, h: number, t: Stock["texture"]): Gen<Float32Array> {
   const key = `${w}x${h}${t}`; const hit = noiseCache.get(key); if (hit) return hit;
   let n: Float32Array;
-  if (t === "smooth") n = noise(w, h, 1, 0.012, 1.5);
-  else if (t === "cotton") { n = noise(w, h, 2, 0.03, 1.2); const b = noise(w, h, 3, 0.045, 6); for (let i = 0; i < n.length; i++) n[i] += b[i]; }
-  else { n = noise(w, h, 4, 0.06, 14, 1.2); const b = noise(w, h, 5, 0.03, 1); for (let i = 0; i < n.length; i++) n[i] += b[i]; }
+  if (t === "smooth") n = yield* noise(w, h, 1, 0.012, 1.5);
+  else if (t === "cotton") { n = yield* noise(w, h, 2, 0.03, 1.2); const b = yield* noise(w, h, 3, 0.045, 6); for (let i = 0; i < n.length; i++) n[i] += b[i]; }
+  else { n = yield* noise(w, h, 4, 0.06, 14, 1.2); const b = yield* noise(w, h, 5, 0.03, 1); for (let i = 0; i < n.length; i++) n[i] += b[i]; }
   noiseCache.set(key, n); return n;
 }
 
@@ -271,7 +282,7 @@ function paintT(p: Paint, xmm: number, ymm: number) {
 }
 
 // ─── one face's maps ───
-type FaceMaps = { map: THREE.DataTexture; normal: THREE.DataTexture; orm: THREE.DataTexture; coat: THREE.DataTexture; irid: THREE.DataTexture };
+type FaceMaps = { map: THREE.Texture; normal?: THREE.DataTexture; orm?: THREE.DataTexture; coat?: THREE.DataTexture; irid?: THREE.DataTexture };
 function tex(data: Uint8Array, w: number, h: number, red = false, srgb = false) {
   const t = new THREE.DataTexture(data, w, h, red ? THREE.RedFormat : THREE.RGBAFormat, THREE.UnsignedByteType);
   t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = true;
@@ -279,82 +290,137 @@ function tex(data: Uint8Array, w: number, h: number, red = false, srgb = false) 
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.needsUpdate = true; return t;
 }
-function faceMaps(els: El[], masks: Mask[], H: Float32Array, stock: Stock, paperHex: string, w: number, h: number): FaceMaps {
+function* faceMaps(els: El[], masks: Mask[], H: Float32Array, stock: Stock, paperHex: string, w: number, h: number): Gen<FaceMaps> {
   const N = w * h;
-  const albedo = new Uint8Array(N * 4), nrm = new Uint8Array(N * 4), orm = new Uint8Array(N * 4), coat = new Uint8Array(N), irid = new Uint8Array(N);
+  const albedo = new Uint8Array(N * 4), nrm = new Uint8Array(N * 4), orm = new Uint8Array(N * 4), coat = new Uint8Array(N);
+  const holo = els.some((e) => e.surface === "foil-holo"), irid = holo ? new Uint8Array(N) : null; // only made when needed
   const paper = hex(paperHex), pr = PAPER_ROUGH[stock.coating];
-  const grain = paperNoise(w, h, stock.texture);
+  const grain = yield* paperNoise(w, h, stock.texture);
   const inks = els.map((e) => hex(e.color ?? stock.ink)), tos = els.map((e) => (e.paint?.to ? hex(e.paint.to) : null));
   const foils = els.map((e) => (FOIL[e.surface] ? { ...FOIL[e.surface], rgb: hex(FOIL[e.surface].c) } : null));
-  const Hb = blur(H, w, h, 6 * MM); // hollows go a little dark (light can't reach the bottom of a pressed letter)
+  const Hb = yield* blur(H, w, h, 6 * MM); // hollows go a little dark (light can't reach the bottom of a pressed letter)
   const rb = new THREE.Color();
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = y * w + x, o = ((h - 1 - y) * w + x) * 4, j = (h - 1 - y) * w + x; // textures start at the bottom row
-    const g = 1 + grain[i] * 0.08;
-    let r = paper[0] * g, gg = paper[1] * g, b = paper[2] * g, rough = pr, metal = 0, cc = 0, ir = 0;
-    for (let k = 0; k < els.length; k++) {
-      let a = masks[k].a[i]; if (a <= 0.002) continue;
-      const e = els[k], f = foils[k];
-      let c: number[] | null = null, er = rough, em = 0, ec = 0, ei = 0;
-      let t = 0;
-      if (e.paint) { t = paintT(e.paint, x / PX, y / PX); a *= (e.paint.a0 ?? 1) + ((e.paint.a1 ?? 1) - (e.paint.a0 ?? 1)) * t; }
-      if (e.surface === "ink") {
-        c = inks[k]; const to = tos[k];
-        if (to) c = [c[0] + (to[0] - c[0]) * t, c[1] + (to[1] - c[1]) * t, c[2] + (to[2] - c[2]) * t];
-        er = stock.coating === "silk" ? 0.45 : pr;
-      } else if (e.surface === "spot") { c = [r * 0.88, gg * 0.88, b * 0.88]; er = 0.12; ec = 1; }
-      else if (f) {
-        c = f.rgb; er = f.rough; em = f.metal; ec = f.coat;
-        if (e.surface === "foil-holo") { // a faint rainbow in the foil itself; the iridescence does the rest as it turns
-          rb.setHSL((((x + y * 0.6) / w) * 2.2) % 1, 0.55, 0.78);
-          c = [c[0] * 0.55 + rb.r * 115, c[1] * 0.55 + rb.g * 115, c[2] * 0.55 + rb.b * 115]; ei = 1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x, o = ((h - 1 - y) * w + x) * 4, j = (h - 1 - y) * w + x; // textures start at the bottom row
+      const g = 1 + grain[i] * 0.08;
+      let r = paper[0] * g, gg = paper[1] * g, b = paper[2] * g, rough = pr, metal = 0, cc = 0, ir = 0;
+      for (let k = 0; k < els.length; k++) {
+        let a = masks[k].a[i]; if (a <= 0.002) continue;
+        const e = els[k], f = foils[k];
+        let c: number[] | null = null, er = rough, em = 0, ec = 0, ei = 0;
+        let t = 0;
+        if (e.paint) { t = paintT(e.paint, x / PX, y / PX); a *= (e.paint.a0 ?? 1) + ((e.paint.a1 ?? 1) - (e.paint.a0 ?? 1)) * t; }
+        if (e.surface === "ink") {
+          c = inks[k]; const to = tos[k];
+          if (to) c = [c[0] + (to[0] - c[0]) * t, c[1] + (to[1] - c[1]) * t, c[2] + (to[2] - c[2]) * t];
+          er = stock.coating === "silk" ? 0.45 : pr;
+        } else if (e.surface === "spot") { c = [r * 0.88, gg * 0.88, b * 0.88]; er = 0.12; ec = 1; }
+        else if (f) {
+          c = f.rgb; er = f.rough; em = f.metal; ec = f.coat;
+          if (e.surface === "foil-holo") { // a faint rainbow in the foil itself; the iridescence does the rest as it turns
+            rb.setHSL((((x + y * 0.6) / w) * 2.2) % 1, 0.55, 0.78);
+            c = [c[0] * 0.55 + rb.r * 115, c[1] * 0.55 + rb.g * 115, c[2] * 0.55 + rb.b * 115]; ei = 1;
+          }
         }
+        if (c) { r += (c[0] - r) * a; gg += (c[1] - gg) * a; b += (c[2] - b) * a; }
+        rough += (er - rough) * a; metal += (em - metal) * a; cc += (ec - cc) * a; ir += (ei - ir) * a;
       }
-      if (c) { r += (c[0] - r) * a; gg += (c[1] - gg) * a; b += (c[2] - b) * a; }
-      rough += (er - rough) * a; metal += (em - metal) * a; cc += (ec - cc) * a; ir += (ei - ir) * a;
+      albedo[o] = Math.min(255, r); albedo[o + 1] = Math.min(255, gg); albedo[o + 2] = Math.min(255, b); albedo[o + 3] = 255;
+      // normal (tangent space: x right, y up the card); slopes are per 0.05 mm, so scale by the pixel size
+      const hl = H[y * w + Math.max(0, x - 1)], hr = H[y * w + Math.min(w - 1, x + 1)];
+      const hu = H[Math.max(0, y - 1) * w + x], hd = H[Math.min(h - 1, y + 1) * w + x];
+      const nx = -(hr - hl) / MM, ny = (hd - hu) / MM, inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
+      // dithered by a fraction of a step: 8-bit normals in smooth slopes otherwise show as stepped, pixelated reflections
+      const dz = ((((x * 73856093) ^ (y * 19349663)) >>> 0) % 1000) / 1000 - 0.5;
+      nrm[o] = (nx * inv * 0.5 + 0.5) * 255 + dz; nrm[o + 1] = (ny * inv * 0.5 + 0.5) * 255 - dz; nrm[o + 2] = (inv * 0.5 + 0.5) * 255; nrm[o + 3] = 255;
+      const ao = 1 - Math.min(0.55, Math.max(0, Hb[i] - H[i]) * 0.45);
+      orm[o] = ao * 255; orm[o + 1] = Math.min(1, Math.max(0.04, rough)) * 255; orm[o + 2] = metal * 255; orm[o + 3] = 255;
+      coat[j] = cc * 255; if (irid) irid[j] = ir * 255;
     }
-    albedo[o] = Math.min(255, r); albedo[o + 1] = Math.min(255, gg); albedo[o + 2] = Math.min(255, b); albedo[o + 3] = 255;
-    // normal (tangent space: x right, y up the card); slopes are per 0.05 mm, so scale by the pixel size
-    const hl = H[y * w + Math.max(0, x - 1)], hr = H[y * w + Math.min(w - 1, x + 1)];
-    const hu = H[Math.max(0, y - 1) * w + x], hd = H[Math.min(h - 1, y + 1) * w + x];
-    const nx = -(hr - hl) / MM, ny = (hd - hu) / MM, inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
-    // dithered by a fraction of a step: 8-bit normals in smooth slopes otherwise show as stepped, pixelated reflections
-    const dz = ((((x * 73856093) ^ (y * 19349663)) >>> 0) % 1000) / 1000 - 0.5;
-    nrm[o] = (nx * inv * 0.5 + 0.5) * 255 + dz; nrm[o + 1] = (ny * inv * 0.5 + 0.5) * 255 - dz; nrm[o + 2] = (inv * 0.5 + 0.5) * 255; nrm[o + 3] = 255;
-    const ao = 1 - Math.min(0.55, Math.max(0, Hb[i] - H[i]) * 0.45);
-    orm[o] = ao * 255; orm[o + 1] = Math.min(1, Math.max(0.04, rough)) * 255; orm[o + 2] = metal * 255; orm[o + 3] = 255;
-    coat[j] = cc * 255; irid[j] = ir * 255;
+    if ((y & 7) === 7) yield;
   }
-  return { map: tex(albedo, w, h, false, true), normal: tex(nrm, w, h), orm: tex(orm, w, h), coat: tex(coat, w, h, true), irid: tex(irid, w, h, true) };
+  return { map: tex(albedo, w, h, false, true), normal: tex(nrm, w, h), orm: tex(orm, w, h), coat: tex(coat, w, h, true), irid: irid ? tex(irid, w, h, true) : undefined };
 }
 
-export type CardMaps = { front: FaceMaps; back: FaceMaps; w: number; h: number };
-function buildCard(els: El[], stock: Stock, fonts: Fonts): CardMaps {
+// a card's maps; quick ones are only the flat picture of each face (drawn at once, shown while the real ones are made)
+export type CardMaps = { front: FaceMaps; back: FaceMaps; stock: Stock; quick?: boolean; key?: string };
+function* buildCard(els: El[], stock: Stock, fonts: Fonts): Gen<CardMaps> {
   const S = SIZES[stock.size], w = Math.round(S.w * PX), h = Math.round(S.h * PX);
-  const faces = (["front", "back"] as const).map((face) => {
+  const faces: { list: El[]; masks: Mask[]; rel: Float32Array }[] = [];
+  for (const face of ["front", "back"] as const) {
     const list = els.filter((e) => e.face === face);
-    const masks = list.map((e) => maskOf(e, w, h, fonts));
+    const masks: Mask[] = [];
+    for (const e of list) { masks.push(maskOf(e, w, h, fonts)); yield; }
     const rel = new Float32Array(w * h);
-    list.forEach((e, k) => {
-      if (e.press === "flat" && e.surface === "ink") return;
-      const m = masks[k], halo = e.press === "deep-emboss" || e.press === "letterpress";
-      for (let i = 0; i < rel.length; i++) if (halo || m.a[i] > 0.002) rel[i] += pressHeight(e.press, e.surface, m, i, w, h);
-    });
-    return { list, masks, rel: blur(rel, w, h, 1.5 * MM) }; // a hair of softening, so the pixel steps of the masks never show as ridges
-  });
-  const grain = paperNoise(w, h, stock.texture);
-  const out = faces.map((f, k) => {
-    const other = blur(mirror(faces[1 - k].rel, w, h), w, h, 4 * MM);
+    for (let k = 0; k < list.length; k++) {
+      const e = list[k], m = masks[k];
+      if (e.press === "flat" && e.surface === "ink") continue;
+      const d = yield* distOf(m, w, h);
+      const b = e.press === "deep-emboss" ? yield* blurOf(m, w, h, Math.round(16 * MM)) : e.press === "letterpress" ? yield* blurOf(m, w, h, Math.round(5 * MM)) : null;
+      for (let i = 0; i < rel.length; i++) {
+        if (b || m.a[i] > 0.002) rel[i] += pressHeight(e.press, e.surface, m, i, d, b);
+        if ((i & 0x3ffff) === 0) yield;
+      }
+    }
+    faces.push({ list, masks, rel: yield* blur(rel, w, h, 1.5 * MM) }); // a hair of softening, so the pixel steps of the masks never show as ridges
+  }
+  const grain = yield* paperNoise(w, h, stock.texture);
+  const out: FaceMaps[] = [];
+  for (let k = 0; k < 2; k++) {
+    const f = faces[k];
+    const other = stock.through > 0 ? yield* blur(mirror(faces[1 - k].rel, w, h), w, h, 4 * MM) : null;
     const H = new Float32Array(w * h);
     // foil and varnish lie smooth over the paper's grain
     const glaze = new Float32Array(w * h);
     f.list.forEach((e, j) => { if (e.surface === "spot" || e.surface.startsWith("foil")) { const a = f.masks[j].a; for (let i = 0; i < a.length; i++) glaze[i] = Math.max(glaze[i], a[i]); } });
-    for (let i = 0; i < H.length; i++) H[i] = f.rel[i] - other[i] * stock.through + grain[i] * (1 - glaze[i]);
-    return faceMaps(f.list, f.masks, H, stock, k === 0 ? stock.paper : stock.back, w, h);
-  });
-  return { front: out[0], back: out[1], w, h };
+    for (let i = 0; i < H.length; i++) H[i] = f.rel[i] - (other ? other[i] * stock.through : 0) + grain[i] * (1 - glaze[i]);
+    yield;
+    out.push(yield* faceMaps(f.list, f.masks, H, stock, k === 0 ? stock.paper : stock.back, w, h));
+  }
+  return { front: out[0], back: out[1], stock };
 }
-function disposeMaps(m: CardMaps) { for (const f of [m.front, m.back]) for (const t of Object.values(f)) t.dispose(); }
+function disposeMaps(m: CardMaps) { for (const f of [m.front, m.back]) for (const t of Object.values(f)) t?.dispose(); }
+
+// runs one generator a few milliseconds at a time between frames
+function slices<T>(g: Gen<T>, budget = 7): Promise<T> {
+  return new Promise((res) => {
+    const step = () => {
+      const t0 = performance.now();
+      for (;;) { const r = g.next(); if (r.done) { res(r.value); return; } if (performance.now() - t0 > budget) break; }
+      setTimeout(step, 0);
+    };
+    step();
+  });
+}
+// cards are made one at a time, and the last few are kept (each is tens of MB of textures, so not many)
+const mapsCache = new Map<string, CardMaps>();
+const making = new Map<string, Promise<CardMaps>>();
+let line: Promise<unknown> = Promise.resolve();
+export const cardKey = (els: El[], stock: Stock) => JSON.stringify([els, { ...stock, edge: 0, corner: 0, thickness: 0, accent: 0 }]); // the parts the maps use
+export function requestCard(els: El[], stock: Stock, fonts: Fonts): Promise<CardMaps> {
+  const key = cardKey(els, stock);
+  const hit = mapsCache.get(key); if (hit) { mapsCache.delete(key); mapsCache.set(key, hit); return Promise.resolve(hit); }
+  const on = making.get(key); if (on) return on;
+  const p = line.then(() => slices(buildCard(els, stock, fonts))).then((m) => {
+    m.key = key; making.delete(key); mapsCache.set(key, m);
+    while (mapsCache.size > 6) { const k = mapsCache.keys().next().value!; const old = mapsCache.get(k)!; mapsCache.delete(k); setTimeout(() => disposeMaps(old), 1500); }
+    return m;
+  });
+  line = p.catch(() => {}); making.set(key, p); return p;
+}
+export const cachedCard = (els: El[], stock: Stock) => mapsCache.get(cardKey(els, stock)) ?? null;
+// the quick stand-in: each face drawn flat, at once
+const quickCache = new Map<string, CardMaps>();
+export function quickCard(els: El[], stock: Stock, fonts: Fonts): CardMaps {
+  const key = cardKey(els, stock);
+  const hit = quickCache.get(key); if (hit) return hit;
+  const face = (f: "front" | "back") => { const c = document.createElement("canvas"); drawFlat(c, els, stock, f, 10, fonts); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return { map: t }; };
+  const m: CardMaps = { front: face("front"), back: face("back"), stock, quick: true, key };
+  quickCache.set(key, m);
+  while (quickCache.size > 12) { const k = quickCache.keys().next().value!; disposeMaps(quickCache.get(k)!); quickCache.delete(k); }
+  return m;
+}
 
 // ─── the same card, flat and quick (for the wall and the face previews) ───
 const mix = (a: number[], b: number[], t: number) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
@@ -414,16 +480,27 @@ function cardShape(W: number, H: number, r: number) {
   return s;
 }
 function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
+  if (!m.normal) return new THREE.MeshPhysicalMaterial({ map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
   return new THREE.MeshPhysicalMaterial({
     map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
     aoMap: m.orm, aoMapIntensity: 1, roughnessMap: m.orm, metalnessMap: m.orm, roughness: 1, metalness: 1,
     clearcoat: 1, clearcoatMap: m.coat, clearcoatRoughness: 0.1,
-    iridescence: 1, iridescenceMap: m.irid, iridescenceIOR: 1.6, iridescenceThicknessRange: [220, 880],
+    iridescence: m.irid ? 1 : 0, iridescenceMap: m.irid ?? null, iridescenceIOR: 1.6, iridescenceThicknessRange: [220, 880],
     sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75, sheenColor: new THREE.Color("#ffffff"),
   });
 }
 
-function Card({ maps, stock, relief, flip }: { maps: CardMaps; stock: Stock; relief: number; flip: number }) {
+// where a card sits in a scene of several (world units; the card is 3 wide): it eases there from wherever it is
+export type Pose = { x?: number; y?: number; z?: number; rz?: number; s?: number };
+type CardProps = { maps: CardMaps; relief?: number; flip?: number; spin?: boolean; pose?: Pose; enter?: Pose; interactive?: boolean; onTap?: () => void };
+// spin: a new colourway arrives with a full turn, swapped in while the card is edge on, so the change is never seen
+function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interactive = true, onTap }: CardProps) {
+  const [shown, setShown] = useState(maps);
+  // the same card made properly (or a change without the turn): show it straight away
+  if (maps !== shown && (!spin || maps.key === shown.key)) setShown(maps);
+  const latest = useRef({ maps, shown });
+  useEffect(() => { latest.current = { maps, shown }; });
+  const stock = shown.stock;
   const S = SIZES[stock.size], t = stock.thickness;
   const geo = useMemo(() => {
     const shape = cardShape(S.w, S.h, stock.corner);
@@ -438,16 +515,18 @@ function Card({ maps, stock, relief, flip }: { maps: CardMaps; stock: Stock; rel
   const mats = useMemo(() => {
     const e = stock.edge, foil = e.startsWith("foil") ? FOIL[e] : null;
     const edge = new THREE.MeshPhysicalMaterial({ color: foil ? foil.c : e === "ink" ? stock.ink : e === "accent" ? stock.accent : stock.paper, metalness: foil ? 1 : 0, roughness: foil ? 0.25 : 0.85 });
-    return { front: faceMaterial(maps.front, stock, relief), back: faceMaterial(maps.back, stock, relief), caps: new THREE.MeshBasicMaterial({ visible: false }), edge };
-  }, [maps, stock, relief]);
+    return { front: faceMaterial(shown.front, stock, relief), back: faceMaterial(shown.back, stock, relief), caps: new THREE.MeshBasicMaterial({ visible: false }), edge };
+  }, [shown, stock, relief]);
   useEffect(() => () => { for (const m of Object.values(mats)) m.dispose(); }, [mats]);
 
   // turning it: drag sideways to spin, it settles face up or face down; double click (or tap) flips it; at rest it
   // leans toward the pointer, or sways a little
-  const g = useRef<THREE.Group>(null);
-  const st = useRef({ yaw: 0, vy: 0, ty: 0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip });
+  const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null);
+  const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter };
+  const st = useRef({ yaw: 0, vy: 0, ty: 0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, spinning: false, swapped: false, base: 0, after: 0, p: { ...p0 } });
   const { gl } = useThree();
   useEffect(() => {
+    if (!interactive) return;
     const el = gl.domElement, s = st.current;
     const down = (e: PointerEvent) => { s.drag = true; s.lx = e.clientX; s.ly = e.clientY; s.lt = e.timeStamp; s.vy = 0; el.setPointerCapture(e.pointerId); };
     const move = (e: PointerEvent) => {
@@ -467,69 +546,79 @@ function Card({ maps, stock, relief, flip }: { maps: CardMaps; stock: Stock; rel
     return () => {
       el.removeEventListener("pointerdown", down); el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up);
       el.removeEventListener("pointercancel", up); el.removeEventListener("pointerleave", leave); el.removeEventListener("dblclick", dbl);
+      s.drag = false; s.hover = false;
     };
-  }, [gl]);
-  // flip: a counter (each change turns it over); an even/odd face request can be passed as a target instead
+  }, [gl, interactive]);
+  // flip: a counter (each change turns it over)
   useEffect(() => { const s = st.current; if (flip !== s.flip) { s.flip = flip; s.ty = Math.round(s.ty / Math.PI) * Math.PI + Math.PI; } }, [flip]);
   useFrame(({ clock }, delta) => {
-    const s = st.current, T = clock.elapsedTime;
-    let dt = Math.min(delta, 1 / 20);
-    if (!s.drag) {
-      const ty = s.ty + (s.hover ? s.hx * 0.3 : Math.sin(T * 0.6) * 0.09), tp = s.hover ? s.hy * 0.22 : Math.sin(T * 0.45) * 0.05;
-      while (dt > 0) { // damped springs, in small steps so a slow frame can't overshoot
-        const h = Math.min(dt, 1 / 120); dt -= h;
+    const s = st.current, T = clock.elapsedTime, L = latest.current;
+    const dt = Math.min(delta, 1 / 20);
+    // a new colourway waiting: turn once round, swap it in edge on, then settle on the face that was showing
+    if (spin && L.maps !== L.shown && !s.spinning && !s.drag) { s.spinning = true; s.swapped = false; s.base = (((Math.round(s.ty / Math.PI) % 2) + 2) % 2) * Math.PI; }
+    if (s.spinning) {
+      s.vy += (11 - s.vy) * Math.min(1, dt * 8); s.yaw += s.vy * dt;
+      if (!s.swapped && Math.abs(Math.cos(s.yaw)) < 0.3) { if (L.maps !== L.shown) setShown(L.maps); s.swapped = true; s.after = s.yaw; }
+      if (s.swapped && s.yaw - s.after > 0.5) { s.spinning = false; s.ty = s.base + Math.ceil((s.yaw - s.base) / (2 * Math.PI)) * 2 * Math.PI; }
+    } else if (!s.drag) {
+      const lean = interactive && s.hover;
+      const ty = s.ty + (lean ? s.hx * 0.3 : Math.sin(T * 0.6) * 0.09), tp = lean ? s.hy * 0.22 : Math.sin(T * 0.45) * 0.05;
+      let d = dt;
+      while (d > 0) { // damped springs, in small steps so a slow frame can't overshoot
+        const h = Math.min(d, 1 / 120); d -= h;
         s.vy += (90 * (ty - s.yaw) - 13 * s.vy) * h; s.yaw += s.vy * h;
         s.vp += (90 * (tp - s.pitch) - 13 * s.vp) * h; s.pitch += s.vp * h;
       }
     }
+    // the place in the scene, eased
+    const k = 1 - Math.exp(-dt * 7), want = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose };
+    for (const n of ["x", "y", "z", "rz", "s"] as const) s.p[n] += (want[n] - s.p[n]) * k;
+    place.current?.position.set(s.p.x, s.p.y, s.p.z); place.current?.rotation.set(0, 0, s.p.rz); place.current?.scale.setScalar(s.p.s);
     g.current?.rotation.set(s.pitch, s.yaw, 0);
   });
 
   return (
-    <group ref={g} scale={1 / 30}>
-      <mesh geometry={geo.side} material={[mats.caps, mats.edge]} />
-      <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} />
-      <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} />
+    <group ref={place} position={[p0.x, p0.y, p0.z]} rotation={[0, 0, p0.rz]} scale={p0.s} onClick={onTap ? (e) => { if (e.delta < 8) { e.stopPropagation(); onTap(); } } : undefined}>
+      <group ref={g} scale={1 / 30}>
+        <mesh geometry={geo.side} material={[mats.caps, mats.edge]} />
+        <mesh geometry={geo.face} material={mats.front} position={[0, 0, t / 2]} />
+        <mesh geometry={geo.face} material={mats.back} position={[0, 0, -t / 2]} rotation={[0, Math.PI, 0]} />
+      </group>
     </group>
   );
 }
 
 // the camera stands back far enough for the whole card (and a margin) to fit, on a narrow phone too; close up, it
-// eases in so the presses and foils can be looked at properly
-function Lens({ near }: { near: boolean }) {
+// eases in so the presses and foils can be looked at properly; dist widens the view for scenes of several cards
+function Lens({ near, dist = 1 }: { near: boolean; dist?: number }) {
   useFrame(({ camera, size }, dt) => {
-    const fit = Math.max(5.2, 3.9 / (2 * Math.tan((15 * Math.PI) / 180) * (size.width / size.height)));
+    const fit = Math.max(5.2, 3.9 / (2 * Math.tan((15 * Math.PI) / 180) * (size.width / size.height))) * dist;
     camera.position.z += ((near ? fit * 0.52 : fit) - camera.position.z) * Math.min(1, dt * 6);
   });
   return null;
 }
 
-// the maps take a moment to make, so they are made after the page has painted, and the last card stays up meanwhile
-function useCardMaps(els: El[], stock: Stock, fonts: Fonts | null) {
-  const [maps, setMaps] = useState<CardMaps | null>(null);
-  const [busy, setBusy] = useState(true);
-  const key = JSON.stringify([els, { ...stock, edge: 0, corner: 0, thickness: 0, accent: 0 }]); // the parts the maps use
+// a card's maps: the real ones when made (they are made in the background, a few at a time), the quick flat ones until
+function useLiveMaps(els: El[], stock: Stock) {
+  const fonts = useFonts();
+  const key = cardKey(els, stock);
+  const [full, setFull] = useState<CardMaps | null>(null);
   useEffect(() => {
     if (!fonts) return;
-    let gone = false;
-    const a = setTimeout(() => { if (!gone) setBusy(true); }, 0);
-    const t = setTimeout(() => {
-      if (gone) return;
-      const m = buildCard(els, stock, fonts);
-      setMaps((old) => { if (old) setTimeout(() => disposeMaps(old), 500); return m; }); setBusy(false);
-    }, 40);
-    return () => { gone = true; clearTimeout(t); clearTimeout(a); };
+    let live = true;
+    requestCard(els, stock, fonts).then((m) => { if (live) setFull(m); });
+    return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fonts, key]);
-  return { maps, busy };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => (!fonts ? null : full && full.key === key ? full : cachedCard(els, stock) ?? quickCard(els, stock, fonts)), [fonts, key, full]);
 }
 
-export function BusinessCard({ els, stock, relief = 1.6, flip = 0, near = false, className }: { els: El[]; stock: Stock; relief?: number; flip?: number; near?: boolean; className?: string }) {
-  const fonts = useFonts();
-  const { maps, busy } = useCardMaps(els, stock, fonts);
+// the scene: lights, the studio the foil reflects, the camera; put cards (LiveCard) inside
+export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y" }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string }) {
   return (
-    <div className={className} style={{ touchAction: "pan-y", position: "relative" }}>
-      <Canvas camera={{ position: [0, 0, 5.2], fov: 30 }} dpr={[1, 2]} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
+    <div className={className} style={{ touchAction: touch, ...style }}>
+      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
         <directionalLight position={[-3, 4, 4]} intensity={1.6} />
         <directionalLight position={[3, -1, 3]} intensity={0.35} />
         <Environment resolution={1024} frames={1}>
@@ -539,10 +628,27 @@ export function BusinessCard({ els, stock, relief = 1.6, flip = 0, near = false,
           <Lightformer form="ring" intensity={1.5} position={[0, 0, 6]} scale={3} />
           <Lightformer form="rect" intensity={1.2} color="#687ef5" position={[0, -4, 1]} scale={[8, 1.5, 1]} rotation-x={-Math.PI / 3} />
         </Environment>
-        <Lens near={near} />
-        {maps && <Card maps={maps} stock={stock} relief={relief} flip={flip} />}
+        <Lens near={near} dist={dist} />
+        {children}
       </Canvas>
-      <div aria-live="polite" className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1.5 text-[13px] text-white/80 backdrop-blur transition-opacity duration-300" style={{ opacity: busy ? 1 : 0 }}>Pressing the card</div>
+    </div>
+  );
+}
+// one card in a stage
+export function LiveCard({ els, stock, ...rest }: { els: El[]; stock: Stock } & Omit<CardProps, "maps">) {
+  const maps = useLiveMaps(els, stock);
+  return maps ? <Card maps={maps} {...rest} /> : null;
+}
+// make a card's maps ahead of time (so a colourway the viewer may pick next is ready)
+export function prefetchCard(els: El[], stock: Stock) { loadFonts().then((f) => requestCard(els, stock, f)); }
+
+// the lab's single card
+export function BusinessCard({ els, stock, relief = 1.6, flip = 0, near = false, className }: { els: El[]; stock: Stock; relief?: number; flip?: number; near?: boolean; className?: string }) {
+  const maps = useLiveMaps(els, stock);
+  return (
+    <div className={className} style={{ position: "relative" }}>
+      <CardStage near={near} className="relative h-full w-full">{maps && <Card maps={maps} relief={relief} flip={flip} />}</CardStage>
+      <div aria-live="polite" className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1.5 text-[13px] text-white/80 backdrop-blur transition-opacity duration-300" style={{ opacity: !maps || maps.quick ? 1 : 0 }}>Pressing the card</div>
     </div>
   );
 }

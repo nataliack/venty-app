@@ -7,6 +7,7 @@ import { cx } from "@/components/ui";
 import { BusinessCard, FlatFace, FOIL, PRESSES, SIZES, SURFACES, type El, type Press, type Stock, type Surface } from "./BusinessCard";
 import { DESIGNS, PALETTE, type Family } from "./designs";
 import { NC } from "./brand";
+import { ProfileCards } from "./ProfileCards";
 
 // ─── little visual controls ───
 const FOIL_CSS: Record<string, string> = {
@@ -98,6 +99,8 @@ export default function LabUI() {
     <div className="fixed inset-0 overflow-y-auto bg-[#05060b] text-white">
       <div ref={top} className="mx-auto max-w-[1360px] px-4 py-8 sm:px-6 sm:py-10">
         <p className="text-[14px] text-white/50">Venty lab · UI</p>
+        <div className="mt-6"><ProfileCards /></div>
+        <div className="my-16 h-px bg-white/10" />
         <h1 className="h1 mt-2 !text-[34px]">Natalia&apos;s card</h1>
         <p className="mt-2 max-w-[680px] text-[15px] leading-snug text-white/55">Two families, for Venty and her own. Pick a design and a colourway, turn the card in your hand, then change any paper, finish, press or colour. Every design is on the wall below.</p>
 
