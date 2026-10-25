@@ -141,9 +141,17 @@ export function StepRow({ steps, icon }: { steps: Step[]; icon: IconKey }) {
   const until = useRef(0), holding = useRef(false), self = useRef(false);
   const [nudge, setNudge] = useState(0);
   const pause = () => { until.current = Date.now() + RESUME; setNudge((x) => x + 1); };
+  // where each step comes to rest: its card's start, but never past the row's end (so the last card rests with its right
+  // edge on the page's padding); and where the row is, in steps, read between those
+  const stops = () => { const el = ref.current; const max = el ? el.scrollWidth - el.clientWidth : 0; return steps.map((_, n) => Math.min(n * (CARD + GAP), max)); };
+  const read = (x: number) => {
+    const st = stops(), c = Math.min(Math.max(x, 0), st[st.length - 1]);
+    for (let n = 1; n < st.length; n++) if (c <= st[n]) return n - 1 + (st[n] > st[n - 1] ? (c - st[n - 1]) / (st[n] - st[n - 1]) : 1);
+    return st.length - 1;
+  };
   const go = (i: number) => {
     self.current = true; setTimeout(() => { self.current = false; }, 900);
-    ref.current?.scrollTo({ left: i * (CARD + GAP), behavior: still ? "auto" : "smooth" });
+    ref.current?.scrollTo({ left: stops()[i], behavior: still ? "auto" : "smooth" });
   };
   useEffect(() => {
     if (still) return;
@@ -155,15 +163,17 @@ export function StepRow({ steps, icon }: { steps: Step[]; icon: IconKey }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [still, at, nudge]);
   // the caterpillar: between two steps the front of the knob gets there first, then the back follows
-  const i = Math.floor(f), t = f - i;
+  // (held to the track: a pull past either end of the row stretches the row, never the knob out of its track)
+  const fc = Math.min(steps.length - 1, Math.max(0, f));
+  const i = Math.floor(fc), t = fc - i;
   const front = i + ease(clamp(t * 2)), back = i + ease(clamp(t * 2 - 1));
   return (
     <div>
-      {/* the row runs to the screen's edges (on a computer, past the column, its ends fading); its end padding lets the
-          last card come to rest where the first one sits */}
-      <div ref={ref} onScroll={(e) => { setF(e.currentTarget.scrollLeft / (CARD + GAP)); if (!self.current) pause(); }}
+      {/* the row runs to the screen's edges (on a computer, past the column, its ends fading); the last card comes to
+          rest with its right edge on the page's padding */}
+      <div ref={ref} onScroll={(e) => { setF(read(e.currentTarget.scrollLeft)); if (!self.current) pause(); }}
         onPointerDown={() => { holding.current = true; pause(); }} onPointerUp={() => { holding.current = false; pause(); }} onPointerCancel={() => { holding.current = false; pause(); }} onWheel={pause}
-        className="-mx-6 flex snap-x snap-mandatory gap-3 overflow-x-auto pl-6 noscroll lg:[mask-image:linear-gradient(90deg,transparent,#000_24px,#000_calc(100%-24px),transparent)]" style={{ paddingRight: `calc(100% + 24px - ${CARD}px)`, scrollPaddingLeft: 24 }}>
+        className="-mx-6 flex snap-x snap-mandatory gap-3 overflow-x-auto pl-6 noscroll lg:[mask-image:linear-gradient(90deg,transparent,#000_24px,#000_calc(100%-24px),transparent)]" style={{ scrollPaddingLeft: 24 }}>
         {steps.map((s, n) => (
           <figure key={s.t} className="shrink-0 snap-start" style={{ width: CARD }}>
             <Bezel><Pic k={s.pic} w={CARD - 12} icon={icon} live={n === at && !still} /></Bezel>
@@ -173,10 +183,12 @@ export function StepRow({ steps, icon }: { steps: Step[]; icon: IconKey }) {
             </figcaption>
           </figure>
         ))}
+        {/* the row's end: with the gap before it, the page's 24px padding, where the last card's right edge comes to rest */}
+        <span className="w-3 shrink-0" aria-hidden />
       </div>
       <div className="relative mx-auto mt-4 rounded-full bg-[#12131c]/[.07] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85),0_1px_0_rgb(255_255_255/.6)]"
         style={{ width: SEG * steps.length, height: KH + 2 * CH }} role="tablist" aria-label="Steps">
-        <span className="pill-white absolute rounded-full" aria-hidden style={{ left: CH + back * SEG, top: CH, width: SEG - 2 * CH + (front - back) * SEG, height: KH }} />
+        <span className="pill-white absolute rounded-full" aria-hidden style={{ background: "#f3f1ec", left: CH + back * SEG, top: CH, width: SEG - 2 * CH + (front - back) * SEG, height: KH }} />
         {steps.map((s, n) => (
           <button key={s.t} role="tab" aria-selected={at === n} aria-label={s.t} onClick={() => { pause(); go(n); }}
             className="absolute top-0 h-full" style={{ left: n * SEG, width: SEG }} />
