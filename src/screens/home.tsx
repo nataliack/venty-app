@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, animate } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
@@ -299,14 +299,21 @@ function UpdatesButton() {
       </button>
       <Sheet open={open} onClose={() => setOpen(false)}>
         <h3 className="mb-2 text-[20px] font-normal tracking-[-.02em]">Notifications</h3>
-        {/* a quiet feed, not a stack of buttons: plain rows split by hairlines. Rows that lead somewhere are still tappable. */}
+        {/* a quiet feed, not a stack of buttons: plain rows split by hairlines. Rows that lead somewhere are still tappable.
+            The hairlines are their own straight lines between the rows (a row's rounded corners would bend a border at
+            its ends); the hover's rounded background is a layer inside the row */}
         <div className="-mx-2 flex flex-col">{list.map((u, i) => {
-          const body = <><span className="iconbadge grid h-9 w-9 shrink-0 place-items-center rounded-[11px]"><Icon name={u.icon} size={17} strokeWidth={1.9} /></span>
-            <span className="min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px]">{u.t}</span><span className="shrink-0 text-[13px] text-white/40">{u.when}</span></span><span className="mt-0.5 block text-[14px] leading-snug text-white/55">{u.d}</span></span></>;
-          const row = cx("flex items-start gap-3.5 rounded-[16px] px-2 py-3.5 text-left", i > 0 && "border-t border-white/[.07]");
-          return u.go
-            ? <button key={u.t} onClick={() => { setOpen(false); u.go!(); }} className={cx(row, "transition-colors hover:bg-white/[.04]")}>{body}</button>
-            : <div key={u.t} className={row}>{body}</div>;
+          const body = <><span className="iconbadge relative grid h-9 w-9 shrink-0 place-items-center rounded-[11px]"><Icon name={u.icon} size={17} strokeWidth={1.9} /></span>
+            <span className="relative min-w-0 flex-1"><span className="flex items-baseline justify-between gap-3"><span className="text-[16px]">{u.t}</span><span className="shrink-0 text-[13px] text-white/40">{u.when}</span></span><span className="mt-0.5 block text-[14px] leading-snug text-white/55">{u.d}</span></span></>;
+          const row = "relative flex items-start gap-3.5 px-2 py-3.5 text-left";
+          return (
+            <Fragment key={u.t}>
+              {i > 0 && <span aria-hidden className="mx-2 block h-px bg-white/[.07]" />}
+              {u.go
+                ? <button onClick={() => { setOpen(false); u.go!(); }} className={cx(row, "group")}><span aria-hidden className="absolute inset-x-0 inset-y-1 rounded-[14px] transition-colors group-hover:bg-white/[.04]" />{body}</button>
+                : <div className={row}>{body}</div>}
+            </Fragment>
+          );
         })}</div>
       </Sheet>
     </>
