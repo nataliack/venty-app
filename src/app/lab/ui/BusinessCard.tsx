@@ -1,13 +1,15 @@
 "use client";
-// Lab · Natalia's business card (25 Oct 2026). A real card you can turn in your hand: paper stock, thickness, corners and
-// painted edges, and on each face a set of elements, each with a finish (ink, blind, spot gloss, seven foils) and a press
-// (flat, emboss, chisel emboss, deep emboss, deboss, chisel deboss, letterpress). Nothing is a picture of a finish: every
-// element is drawn as a mask at 20 px per mm (508 dpi), and the masks become the maps a physical material reads:
-//   height  → normal map (the relief catches the light as the card turns), and an occlusion map (pressed hollows go dark)
+// Lab · Natalia's business card (25 Oct 2026). A real card you can turn in your hand: paper stock (a colour per face),
+// thickness, corners and painted edges, and on each face a set of elements, each with a finish (print, blind, spot gloss,
+// foils) and a press (flat, emboss, chisel emboss, deep emboss, deboss, chisel deboss, letterpress). An element is a
+// list of shapes (type, artwork, paths and strokes, rectangles, soft glows) drawn as one mask, and can be printed in a
+// colour or a gradient. Nothing is a picture of a finish: each mask becomes the maps a physical material reads:
+//   height  → normal map (the relief catches the light as the card turns), and an occlusion map (hollows go dark)
 //   finish  → colour, roughness and metal (foil), clear coat (spot gloss, black foil), iridescence (holographic foil)
 // Chisel is a distance field (a straight bevel from the edge in, so thin strokes become ridges and big shapes keep a
 // flat top); emboss and deboss are soft shoulders; letterpress is a crisp bite with a little squeezed-up lip. What is
 // pressed into one face shows through, mirrored and softened, on the other, as on real paper.
+// drawFlat draws the same card flat and fast (no relief maps), for the wall of every design.
 // Approach from two open projects (ideas only, no code taken): KonradJam/business-card-viewer (AGPL-3.0: masks driving a
 // clear coat map for spot UV, and a height map for emboss) and 1to1-Digital-Solutions/contact-card (MIT: an R3F card
 // drawn on canvas at runtime, damped springs, flip on double tap).
@@ -16,33 +18,40 @@ import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
 
-export const PX = 20; // texture pixels per mm
+export const PX = 16; // texture pixels per mm (406 dpi)
 
-export type Surface = "ink" | "blind" | "spot" | "foil-gold" | "foil-silver" | "foil-copper" | "foil-white" | "foil-black" | "foil-cornflower" | "foil-holo";
+export type Surface = "ink" | "blind" | "spot" | "foil-gold" | "foil-butter" | "foil-silver" | "foil-copper" | "foil-white" | "foil-black" | "foil-cornflower" | "foil-holo";
 export type Press = "flat" | "emboss" | "chisel-emboss" | "deep-emboss" | "deboss" | "chisel-deboss" | "letterpress";
 export const SURFACES: { k: Surface; name: string }[] = [
-  { k: "ink", name: "Print" }, { k: "blind", name: "Blind (no ink)" }, { k: "spot", name: "Spot gloss" },
+  { k: "ink", name: "Print" }, { k: "blind", name: "Blind" }, { k: "spot", name: "Spot gloss" },
   { k: "foil-white", name: "White foil" }, { k: "foil-black", name: "Black foil" }, { k: "foil-silver", name: "Silver foil" },
-  { k: "foil-gold", name: "Gold foil" }, { k: "foil-copper", name: "Copper foil" }, { k: "foil-cornflower", name: "Cornflower foil" },
-  { k: "foil-holo", name: "Holographic foil" },
+  { k: "foil-gold", name: "Gold foil" }, { k: "foil-butter", name: "Butter foil" }, { k: "foil-copper", name: "Copper foil" },
+  { k: "foil-cornflower", name: "Cornflower foil" }, { k: "foil-holo", name: "Holographic foil" },
 ];
 export const PRESSES: { k: Press; name: string }[] = [
   { k: "flat", name: "Flat" }, { k: "emboss", name: "Emboss" }, { k: "chisel-emboss", name: "Chisel emboss" }, { k: "deep-emboss", name: "Deep emboss" },
   { k: "deboss", name: "Deboss" }, { k: "chisel-deboss", name: "Chisel deboss" }, { k: "letterpress", name: "Letterpress" },
 ];
 
-type Base = { id: string; name: string; face: "front" | "back"; surface: Surface; press: Press };
-export type El = Base & (
-  | { kind: "text"; text: string; x: number; y: number; size: number; weight?: number; align?: CanvasTextAlign; tracking?: number }
-  | { kind: "art"; paths: string[]; x: number; y: number; w: number; flip?: boolean }
-);
-// x, y, size and w in mm from the card's top left; text y is the baseline
+export type FontKey = "grotesk" | "num" | "satoshi" | "serif" | "mono";
+// all sizes and positions in mm from the card's top left; text y is the first baseline; rot in degrees about (x, y)
+export type Shape =
+  | { t: "text"; s: string; x: number; y: number; size: number; font?: FontKey; weight?: number; align?: CanvasTextAlign; track?: number; lead?: number; rot?: number }
+  | { t: "art"; paths: string[]; x: number; y: number; w: number; flip?: boolean; evenodd?: boolean; rot?: number }
+  | { t: "path"; d: string; stroke?: number; dash?: number[]; evenodd?: boolean }
+  | { t: "rect"; x: number; y: number; w: number; h: number; r?: number }
+  | { t: "glow"; x: number; y: number; rx: number; ry: number };
+// a gradient print: the element's colour at `from` turns into `to` (and its opacity from a0 to a1) by `end`
+export type Paint = { to?: string; a0?: number; a1?: number; from: [number, number]; end: [number, number] };
+export type El = { id: string; name: string; face: "front" | "back"; surface: Surface; press: Press; color?: string; paint?: Paint; shapes: Shape[] };
 
-export type Edge = "paper" | "ink" | "cornflower" | "foil-gold" | "foil-silver";
+export type Edge = "paper" | "ink" | "accent" | "foil-gold" | "foil-silver";
 export type Stock = {
   size: "au" | "eu" | "us";
-  paper: string; // hex
-  ink: string; // hex, the colour "Print" uses
+  paper: string; // the front's paper (hex)
+  back: string; // the back's paper; duplexed card can differ
+  ink: string; // the colour "Print" uses unless an element has its own
+  accent: string; // the painted-edge colour
   coating: "uncoated" | "silk" | "soft";
   texture: "smooth" | "cotton" | "felt";
   thickness: number; // mm
@@ -50,7 +59,81 @@ export type Stock = {
   edge: Edge;
   through: number; // how much of one face's press shows on the other, 0–1
 };
-export const SIZES = { au: { w: 90, h: 55, name: "90 × 55 (Australia)" }, eu: { w: 85, h: 55, name: "85 × 55 (Europe)" }, us: { w: 88.9, h: 50.8, name: "3.5 × 2 in (US)" } };
+export const SIZES = { au: { w: 90, h: 55, name: "90 × 55" }, eu: { w: 85, h: 55, name: "85 × 55" }, us: { w: 88.9, h: 50.8, name: "3.5 × 2 in" } };
+
+// ─── fonts: the app's (Familjen Grotesk, Bigilla) and Natalia's (Satoshi, Playfair Display italic, IBM Plex Mono) ───
+export type Fonts = Record<FontKey, string>;
+let fontsP: Promise<Fonts> | null = null;
+export function loadFonts(): Promise<Fonts> {
+  if (fontsP) return fontsP;
+  const body = getComputedStyle(document.body);
+  const v = (n: string, f: string) => body.getPropertyValue(n).trim() || f;
+  const faces: [string, string, string, string][] = [
+    ["LabSatoshi", "/lab/ui/fonts/satoshi-400.woff2", "400", "normal"], ["LabSatoshi", "/lab/ui/fonts/satoshi-500.woff2", "500", "normal"],
+    ["LabSatoshi", "/lab/ui/fonts/satoshi-700.woff2", "700", "normal"], ["LabPlayfair", "/lab/ui/fonts/playfair-italic.woff2", "400", "italic"],
+    ["LabPlexMono", "/lab/ui/fonts/plex-mono-400.woff2", "400", "normal"],
+  ];
+  const fonts: Fonts = { grotesk: v("--font-grotesk", "sans-serif"), num: v("--font-num", "serif"), satoshi: "LabSatoshi", serif: "LabPlayfair", mono: "LabPlexMono" };
+  fontsP = Promise.all([
+    ...faces.map(([fam, url, weight, style]) => new FontFace(fam, `url(${url})`, { weight, style }).load().then((f) => { document.fonts.add(f); }).catch(() => {})),
+    ...[400, 500].map((w) => document.fonts.load(`${w} 40px ${fonts.grotesk}`)), document.fonts.load(`700 40px ${fonts.num}`),
+  ]).then(() => fonts);
+  return fontsP;
+}
+export function useFonts() {
+  const [f, setF] = useState<Fonts | null>(null);
+  useEffect(() => { let live = true; loadFonts().then((x) => { if (live) setF(x); }); return () => { live = false; }; }, []);
+  return f;
+}
+
+// ─── drawing shapes (white, into a mask) at px pixels per mm ───
+type BB = { x: number; y: number; w: number; h: number };
+const bbCache = new Map<string, BB>();
+function bboxOf(paths: string[]) {
+  const key = paths.map((p) => p.slice(0, 60) + p.length).join("|");
+  const hit = bbCache.get(key); if (hit) return hit;
+  const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg"), g = document.createElementNS(ns, "g");
+  svg.setAttribute("style", "position:absolute;width:0;height:0;visibility:hidden");
+  for (const d of paths) { const p = document.createElementNS(ns, "path"); p.setAttribute("d", d); g.appendChild(p); }
+  svg.appendChild(g); document.body.appendChild(svg);
+  const b = g.getBBox(); svg.remove();
+  const bb = { x: b.x, y: b.y, w: b.width, h: b.height }; bbCache.set(key, bb); return bb;
+}
+const path2d = new Map<string, Path2D>();
+const P2 = (d: string) => { let p = path2d.get(d); if (!p) { p = new Path2D(d); path2d.set(d, p); } return p; };
+function drawShapes(ctx: CanvasRenderingContext2D, shapes: Shape[], px: number, fonts: Fonts) {
+  for (const s of shapes) {
+    ctx.save(); ctx.fillStyle = "#fff"; ctx.strokeStyle = "#fff";
+    if (s.t === "text") {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.translate(s.x * px, s.y * px); if (s.rot) ctx.rotate((s.rot * Math.PI) / 180);
+      ctx.font = `${s.font === "serif" ? "italic " : ""}${s.weight ?? (s.font === "num" ? 700 : 400)} ${s.size * px}px ${fonts[s.font ?? "grotesk"]}`;
+      ctx.textAlign = s.align ?? "left"; ctx.textBaseline = "alphabetic";
+      (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${(s.track ?? 0) * s.size * px}px`;
+      s.s.split("\n").forEach((line, i) => ctx.fillText(line, 0, i * (s.lead ?? 1.22) * s.size * px));
+    } else {
+      ctx.setTransform(px, 0, 0, px, 0, 0);
+      if (s.t === "art") {
+        const bb = bboxOf(s.paths), k = s.w / bb.w;
+        ctx.translate(s.x, s.y); if (s.rot) ctx.rotate((s.rot * Math.PI) / 180);
+        if (s.flip) { ctx.translate(s.w, 0); ctx.scale(-1, 1); }
+        ctx.scale(k, k); ctx.translate(-bb.x, -bb.y);
+        for (const d of s.paths) ctx.fill(P2(d), s.evenodd ? "evenodd" : "nonzero");
+      } else if (s.t === "path") {
+        if (s.stroke) { ctx.lineWidth = s.stroke; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.setLineDash(s.dash ?? []); ctx.stroke(P2(s.d)); }
+        else ctx.fill(P2(s.d), s.evenodd ? "evenodd" : "nonzero");
+      } else if (s.t === "rect") {
+        ctx.beginPath(); ctx.roundRect(s.x, s.y, s.w, s.h, s.r ?? 0); ctx.fill();
+      } else {
+        // a soft ellipse of ink, as printed gradients are
+        ctx.translate(s.x, s.y); ctx.scale(s.rx, s.ry);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        for (const [at, o] of [[0, 1], [0.35, 0.82], [0.7, 0.28], [1, 0]]) g.addColorStop(at, `rgba(255,255,255,${o})`);
+        ctx.fillStyle = g; ctx.fillRect(-1, -1, 2, 2);
+      }
+    }
+    ctx.restore();
+  }
+}
 
 // ─── maths on whole images (Float32Array, w × h, rows top to bottom) ───
 const sm = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
@@ -118,56 +201,37 @@ function noise(w: number, h: number, seed: number, amp: number, rx: number, ry =
   return b;
 }
 
-// ─── masks ───
-type BB = { x: number; y: number; w: number; h: number };
-const bbCache = new Map<string, BB>();
-function bboxOf(paths: string[]) {
-  const key = paths.join("|").slice(0, 400) + paths.length;
-  const hit = bbCache.get(key); if (hit) return hit;
-  const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg"), g = document.createElementNS(ns, "g");
-  svg.setAttribute("style", "position:absolute;width:0;height:0;visibility:hidden");
-  for (const d of paths) { const p = document.createElementNS(ns, "path"); p.setAttribute("d", d); g.appendChild(p); }
-  svg.appendChild(g); document.body.appendChild(svg);
-  const b = g.getBBox(); svg.remove();
-  const bb = { x: b.x, y: b.y, w: b.width, h: b.height }; bbCache.set(key, bb); return bb;
-}
-type Mask = { a: Float32Array; d: Float32Array; blurs: Map<number, Float32Array> };
+// ─── masks (kept for the last few cards only: each is a few MB) ───
+type Mask = { a: Float32Array; d?: Float32Array; blurs: Map<number, Float32Array> };
 const maskCache = new Map<string, Mask>();
-function maskOf(el: El, w: number, h: number, font: string): Mask {
-  const key = JSON.stringify({ ...el, surface: 0, press: 0, name: 0 }) + w + "x" + h + font; // the finish doesn't change the shape
-  const hit = maskCache.get(key); if (hit) return hit;
+function maskOf(el: El, w: number, h: number, fonts: Fonts): Mask {
+  const key = JSON.stringify(el.shapes) + w + "x" + h; // the finish doesn't change the shape
+  const hit = maskCache.get(key); if (hit) { maskCache.delete(key); maskCache.set(key, hit); return hit; }
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   const ctx = c.getContext("2d", { willReadFrequently: true })!;
-  ctx.fillStyle = "#fff";
-  if (el.kind === "text") {
-    ctx.font = `${el.weight ?? 400} ${el.size * PX}px ${font}`;
-    ctx.textAlign = el.align ?? "left"; ctx.textBaseline = "alphabetic";
-    (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${(el.tracking ?? 0) * el.size * PX}px`;
-    ctx.fillText(el.text, el.x * PX, el.y * PX);
-  } else {
-    const bb = bboxOf(el.paths), s = (el.w * PX) / bb.w;
-    ctx.translate(el.x * PX, el.y * PX);
-    if (el.flip) { ctx.translate(el.w * PX, 0); ctx.scale(-1, 1); }
-    ctx.scale(s, s); ctx.translate(-bb.x, -bb.y);
-    for (const d of el.paths) ctx.fill(new Path2D(d));
-  }
+  drawShapes(ctx, el.shapes, PX, fonts);
   const img = ctx.getImageData(0, 0, w, h).data, a = new Float32Array(w * h);
   for (let i = 0; i < a.length; i++) a[i] = img[i * 4 + 3] / 255;
-  const m = { a, d: insideDist(a, w, h), blurs: new Map() };
-  maskCache.set(key, m); return m;
+  const m: Mask = { a, blurs: new Map() };
+  maskCache.set(key, m);
+  while (maskCache.size > 40) maskCache.delete(maskCache.keys().next().value!);
+  return m;
 }
+const distOf = (m: Mask, w: number, h: number) => (m.d ??= insideDist(m.a, w, h));
 const blurOf = (m: Mask, w: number, h: number, r: number) => { let b = m.blurs.get(r); if (!b) { b = blur(m.a, w, h, r); m.blurs.set(r, b); } return b; };
 
-// the height (in 0.1 mm) a press gives one pixel
+// the height (in 0.1 mm) a press gives one pixel (distances in px at PX per mm)
+const MM = PX / 20; // the presses were tuned at 20 px per mm
 function pressHeight(p: Press, surface: Surface, m: Mask, i: number, w: number, h: number) {
-  const d = m.d[i];
+  if (p === "flat" && surface === "ink") return 0;
+  const d = distOf(m, w, h)[i] / MM;
   switch (p) {
     case "emboss": return 2 * sm(d / 7);
     case "chisel-emboss": return 3 * Math.min(d, 14) / 14;
-    case "deep-emboss": return 3.6 * (0.7 * sm(d / 16) + 0.3 * blurOf(m, w, h, 16)[i]);
+    case "deep-emboss": return 3.6 * (0.7 * sm(d / 16) + 0.3 * blurOf(m, w, h, Math.round(16 * MM))[i]);
     case "deboss": return -1.7 * sm(d / 6);
     case "chisel-deboss": return -3 * Math.min(d, 14) / 14;
-    case "letterpress": return -1.3 * sm(d / 2) + 0.3 * Math.max(0, blurOf(m, w, h, 5)[i] - m.a[i]);
+    case "letterpress": return -1.3 * sm(d / 2) + 0.3 * Math.max(0, blurOf(m, w, h, Math.round(5 * MM))[i] - m.a[i]);
     case "flat":
       if (surface.startsWith("foil")) return -0.25 * sm(d / 1.5); // foil is stamped, so it sits a hair below the paper
       if (surface === "spot") return 0.15 * sm(d / 2); // a raised varnish
@@ -175,9 +239,10 @@ function pressHeight(p: Press, surface: Surface, m: Mask, i: number, w: number, 
   }
 }
 
-const hex = (c: string) => { const n = parseInt(c.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-const FOIL: Record<string, { c: string; rough: number; metal: number; coat: number }> = {
+export const hex = (c: string) => { const n = parseInt(c.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+export const FOIL: Record<string, { c: string; rough: number; metal: number; coat: number }> = {
   "foil-gold": { c: "#f1cd84", rough: 0.24, metal: 1, coat: 0 },
+  "foil-butter": { c: "#fbeaa8", rough: 0.22, metal: 1, coat: 0 },
   "foil-silver": { c: "#e3e7ee", rough: 0.2, metal: 1, coat: 0 },
   "foil-copper": { c: "#eaa37e", rough: 0.24, metal: 1, coat: 0 },
   "foil-cornflower": { c: "#9aa8fb", rough: 0.24, metal: 1, coat: 0 },
@@ -197,6 +262,12 @@ function paperNoise(w: number, h: number, t: Stock["texture"]) {
   noiseCache.set(key, n); return n;
 }
 
+// where along a gradient print a point is (0 at from, 1 at end)
+function paintT(p: Paint, xmm: number, ymm: number) {
+  const dx = p.end[0] - p.from[0], dy = p.end[1] - p.from[1];
+  return Math.min(1, Math.max(0, ((xmm - p.from[0]) * dx + (ymm - p.from[1]) * dy) / (dx * dx + dy * dy || 1)));
+}
+
 // ─── one face's maps ───
 type FaceMaps = { map: THREE.DataTexture; normal: THREE.DataTexture; orm: THREE.DataTexture; coat: THREE.DataTexture; irid: THREE.DataTexture };
 function tex(data: Uint8Array, w: number, h: number, red = false, srgb = false) {
@@ -206,39 +277,45 @@ function tex(data: Uint8Array, w: number, h: number, red = false, srgb = false) 
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.needsUpdate = true; return t;
 }
-function faceMaps(els: El[], masks: Mask[], H: Float32Array, stock: Stock, w: number, h: number): FaceMaps {
+function faceMaps(els: El[], masks: Mask[], H: Float32Array, stock: Stock, paperHex: string, w: number, h: number): FaceMaps {
   const N = w * h;
   const albedo = new Uint8Array(N * 4), nrm = new Uint8Array(N * 4), orm = new Uint8Array(N * 4), coat = new Uint8Array(N), irid = new Uint8Array(N);
-  const paper = hex(stock.paper), ink = hex(stock.ink), pr = PAPER_ROUGH[stock.coating];
+  const paper = hex(paperHex), pr = PAPER_ROUGH[stock.coating];
   const grain = paperNoise(w, h, stock.texture);
+  const inks = els.map((e) => hex(e.color ?? stock.ink)), tos = els.map((e) => (e.paint?.to ? hex(e.paint.to) : null));
   const foils = els.map((e) => (FOIL[e.surface] ? { ...FOIL[e.surface], rgb: hex(FOIL[e.surface].c) } : null));
-  // hollows go a little dark (light can't reach the bottom of a pressed letter)
-  const Hb = blur(H, w, h, 6);
+  const Hb = blur(H, w, h, 6 * MM); // hollows go a little dark (light can't reach the bottom of a pressed letter)
+  const rb = new THREE.Color();
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, o = ((h - 1 - y) * w + x) * 4, j = (h - 1 - y) * w + x; // textures start at the bottom row
     const g = 1 + grain[i] * (stock.texture === "smooth" ? 0.08 : 0.1);
     let r = paper[0] * g, gg = paper[1] * g, b = paper[2] * g, rough = pr, metal = 0, cc = 0, ir = 0;
     for (let k = 0; k < els.length; k++) {
-      const a = masks[k].a[i]; if (a <= 0.002) continue;
+      let a = masks[k].a[i]; if (a <= 0.002) continue;
       const e = els[k], f = foils[k];
       let c: number[] | null = null, er = rough, em = 0, ec = 0, ei = 0;
-      if (e.surface === "ink") { c = ink; er = stock.coating === "silk" ? 0.45 : pr; }
-      else if (e.surface === "spot") { c = [r * 0.9, gg * 0.9, b * 0.9]; er = 0.12; ec = 1; }
+      let t = 0;
+      if (e.paint) { t = paintT(e.paint, x / PX, y / PX); a *= (e.paint.a0 ?? 1) + ((e.paint.a1 ?? 1) - (e.paint.a0 ?? 1)) * t; }
+      if (e.surface === "ink") {
+        c = inks[k]; const to = tos[k];
+        if (to) c = [c[0] + (to[0] - c[0]) * t, c[1] + (to[1] - c[1]) * t, c[2] + (to[2] - c[2]) * t];
+        er = stock.coating === "silk" ? 0.45 : pr;
+      } else if (e.surface === "spot") { c = [r * 0.88, gg * 0.88, b * 0.88]; er = 0.12; ec = 1; }
       else if (f) {
         c = f.rgb; er = f.rough; em = f.metal; ec = f.coat;
         if (e.surface === "foil-holo") { // a faint rainbow in the foil itself; the iridescence does the rest as it turns
-          const hue = ((x + y * 0.6) / w) * 2.2 % 1, rb = new THREE.Color().setHSL(hue, 0.55, 0.78);
-          c = [c[0] * 0.55 + rb.r * 255 * 0.45, c[1] * 0.55 + rb.g * 255 * 0.45, c[2] * 0.55 + rb.b * 255 * 0.45]; ei = 1;
+          rb.setHSL((((x + y * 0.6) / w) * 2.2) % 1, 0.55, 0.78);
+          c = [c[0] * 0.55 + rb.r * 115, c[1] * 0.55 + rb.g * 115, c[2] * 0.55 + rb.b * 115]; ei = 1;
         }
       }
       if (c) { r += (c[0] - r) * a; gg += (c[1] - gg) * a; b += (c[2] - b) * a; }
       rough += (er - rough) * a; metal += (em - metal) * a; cc += (ec - cc) * a; ir += (ei - ir) * a;
     }
     albedo[o] = Math.min(255, r); albedo[o + 1] = Math.min(255, gg); albedo[o + 2] = Math.min(255, b); albedo[o + 3] = 255;
-    // normal (tangent space: x right, y up the card)
+    // normal (tangent space: x right, y up the card); slopes are per 0.05 mm, so scale by the pixel size
     const hl = H[y * w + Math.max(0, x - 1)], hr = H[y * w + Math.min(w - 1, x + 1)];
     const hu = H[Math.max(0, y - 1) * w + x], hd = H[Math.min(h - 1, y + 1) * w + x];
-    const nx = -(hr - hl), ny = hd - hu, inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
+    const nx = -(hr - hl) / MM, ny = (hd - hu) / MM, inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
     nrm[o] = (nx * inv * 0.5 + 0.5) * 255; nrm[o + 1] = (ny * inv * 0.5 + 0.5) * 255; nrm[o + 2] = (inv * 0.5 + 0.5) * 255; nrm[o + 3] = 255;
     const ao = 1 - Math.min(0.55, Math.max(0, Hb[i] - H[i]) * 0.45);
     orm[o] = ao * 255; orm[o + 1] = Math.min(1, Math.max(0.04, rough)) * 255; orm[o + 2] = metal * 255; orm[o + 3] = 255;
@@ -248,28 +325,78 @@ function faceMaps(els: El[], masks: Mask[], H: Float32Array, stock: Stock, w: nu
 }
 
 export type CardMaps = { front: FaceMaps; back: FaceMaps; w: number; h: number };
-function buildCard(els: El[], stock: Stock, font: string): CardMaps {
+function buildCard(els: El[], stock: Stock, fonts: Fonts): CardMaps {
   const S = SIZES[stock.size], w = Math.round(S.w * PX), h = Math.round(S.h * PX);
   const faces = (["front", "back"] as const).map((face) => {
     const list = els.filter((e) => e.face === face);
-    const masks = list.map((e) => maskOf(e, w, h, font));
+    const masks = list.map((e) => maskOf(e, w, h, fonts));
     const rel = new Float32Array(w * h);
-    list.forEach((e, k) => { const m = masks[k]; for (let i = 0; i < rel.length; i++) if (m.a[i] > 0.002 || e.press === "deep-emboss" || e.press === "letterpress") rel[i] += pressHeight(e.press, e.surface, m, i, w, h); });
-    return { list, masks, rel: blur(rel, w, h, 1.5) }; // a hair of softening, so the pixel steps of the masks never show as ridges
+    list.forEach((e, k) => {
+      if (e.press === "flat" && e.surface === "ink") return;
+      const m = masks[k], halo = e.press === "deep-emboss" || e.press === "letterpress";
+      for (let i = 0; i < rel.length; i++) if (halo || m.a[i] > 0.002) rel[i] += pressHeight(e.press, e.surface, m, i, w, h);
+    });
+    return { list, masks, rel: blur(rel, w, h, 1.5 * MM) }; // a hair of softening, so the pixel steps of the masks never show as ridges
   });
   const grain = paperNoise(w, h, stock.texture);
   const out = faces.map((f, k) => {
-    const other = blur(mirror(faces[1 - k].rel, w, h), w, h, 4);
+    const other = blur(mirror(faces[1 - k].rel, w, h), w, h, 4 * MM);
     const H = new Float32Array(w * h);
     // foil and varnish lie smooth over the paper's grain
     const glaze = new Float32Array(w * h);
     f.list.forEach((e, j) => { if (e.surface === "spot" || e.surface.startsWith("foil")) { const a = f.masks[j].a; for (let i = 0; i < a.length; i++) glaze[i] = Math.max(glaze[i], a[i]); } });
     for (let i = 0; i < H.length; i++) H[i] = f.rel[i] - other[i] * stock.through + grain[i] * (1 - 0.85 * glaze[i]);
-    return faceMaps(f.list, f.masks, H, stock, w, h);
+    return faceMaps(f.list, f.masks, H, stock, k === 0 ? stock.paper : stock.back, w, h);
   });
   return { front: out[0], back: out[1], w, h };
 }
 function disposeMaps(m: CardMaps) { for (const f of [m.front, m.back]) for (const t of Object.values(f)) t.dispose(); }
+
+// ─── the same card, flat and quick (for the wall and the face previews) ───
+const mix = (a: number[], b: number[], t: number) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+function foilStyle(ctx: CanvasRenderingContext2D, s: Surface, W: number, H: number) {
+  const f = FOIL[s]; const c = hex(f.c); const g = ctx.createLinearGradient(0, 0, W, H);
+  if (s === "foil-holo") { ["#f4d4ff", "#c9f1ff", "#fff3c4", "#d6dcff", "#ffd3e8"].forEach((x, i) => g.addColorStop(i / 4, x)); return g; }
+  if (f.metal) { g.addColorStop(0, mix(c, [255, 255, 255], 0.5)); g.addColorStop(0.35, mix(c, [0, 0, 0], 0.28)); g.addColorStop(0.6, mix(c, [255, 255, 255], 0.35)); g.addColorStop(1, mix(c, [0, 0, 0], 0.2)); return g; }
+  return f.c;
+}
+const scratch: HTMLCanvasElement[] = [];
+const scr = (i: number, w: number, h: number) => { const c = (scratch[i] ??= document.createElement("canvas")); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } const x = c.getContext("2d")!; x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = "source-over"; x.globalAlpha = 1; x.clearRect(0, 0, w, h); return x; };
+export function drawFlat(canvas: HTMLCanvasElement, els: El[], stock: Stock, face: "front" | "back", px: number, fonts: Fonts) {
+  const S = SIZES[stock.size], W = Math.round(S.w * px), H = Math.round(S.h * px);
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+  const paper = face === "front" ? stock.paper : stock.back;
+  ctx.fillStyle = paper; ctx.fillRect(0, 0, W, H);
+  const o = Math.max(0.7, px * 0.12);
+  for (const e of els.filter((x) => x.face === face)) {
+    // the element's mask, then its colour inside it
+    const m = scr(0, W, H); drawShapes(m, e.shapes, px, fonts);
+    if (e.paint) { // the opacity ramp
+      m.globalCompositeOperation = "destination-in";
+      const g = m.createLinearGradient(e.paint.from[0] * px, e.paint.from[1] * px, e.paint.end[0] * px, e.paint.end[1] * px);
+      g.addColorStop(0, `rgba(0,0,0,${e.paint.a0 ?? 1})`); g.addColorStop(1, `rgba(0,0,0,${e.paint.a1 ?? 1})`);
+      m.fillStyle = g; m.fillRect(0, 0, W, H);
+    }
+    const tint = (i: number, style: string | CanvasGradient) => { const t = scr(i, W, H); t.drawImage(m.canvas, 0, 0); t.globalCompositeOperation = "source-in"; t.fillStyle = style; t.fillRect(0, 0, W, H); return t.canvas; };
+    const raised = e.press.includes("emboss") || (e.press === "flat" && e.surface === "spot");
+    const sunk = e.press.includes("deboss") || e.press === "letterpress" || (e.press === "flat" && e.surface.startsWith("foil"));
+    const k = e.press === "deep-emboss" ? 2.2 : e.press.startsWith("chisel") ? 1.5 : 1;
+    if (raised || sunk) {
+      const dark = paper === "#0b0c15" || hex(paper).reduce((s, v) => s + v, 0) < 200;
+      const lo = tint(1, `rgba(0,0,0,${dark ? 0.7 : 0.28})`), hi = tint(2, `rgba(255,255,255,${dark ? 0.16 : 0.75})`);
+      const s = raised ? 1 : -1;
+      ctx.drawImage(lo, s * o * k, s * o * k); ctx.drawImage(hi, -s * o * k, -s * o * k);
+    }
+    let style: string | CanvasGradient = paper;
+    if (e.surface === "ink") {
+      style = e.color ?? stock.ink;
+      if (e.paint?.to) { const g = ctx.createLinearGradient(e.paint.from[0] * px, e.paint.from[1] * px, e.paint.end[0] * px, e.paint.end[1] * px); g.addColorStop(0, style); g.addColorStop(1, e.paint.to); style = g; }
+    } else if (e.surface === "spot") style = mix(hex(paper), [0, 0, 0], 0.1);
+    else if (FOIL[e.surface]) style = foilStyle(ctx, e.surface, W, H);
+    if (e.surface !== "blind") ctx.drawImage(tint(3, style), 0, 0); // blind: no ink, only the press shows
+  }
+}
 
 // ─── the card in 3D (units: mm, the group scaled down) ───
 function cardShape(W: number, H: number, r: number) {
@@ -281,11 +408,6 @@ function cardShape(W: number, H: number, r: number) {
   s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5, false);
   return s;
 }
-const EDGE: Record<Edge, { c?: string; metal: number; rough: number }> = {
-  paper: { metal: 0, rough: 0.9 }, ink: { metal: 0, rough: 0.6 }, cornflower: { c: "#687ef5", metal: 0, rough: 0.7 },
-  "foil-gold": { c: "#f1cd84", metal: 1, rough: 0.25 }, "foil-silver": { c: "#e3e7ee", metal: 1, rough: 0.2 },
-};
-
 function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
   return new THREE.MeshPhysicalMaterial({
     map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
@@ -309,8 +431,8 @@ function Card({ maps, stock, relief, flip }: { maps: CardMaps; stock: Stock; rel
   }, [S.w, S.h, stock.corner, t]);
   useEffect(() => () => { geo.face.dispose(); geo.side.dispose(); }, [geo]);
   const mats = useMemo(() => {
-    const e = EDGE[stock.edge];
-    const edge = new THREE.MeshPhysicalMaterial({ color: e.c ?? (stock.edge === "ink" ? stock.ink : stock.paper), metalness: e.metal, roughness: e.rough });
+    const e = stock.edge, foil = e.startsWith("foil") ? FOIL[e] : null;
+    const edge = new THREE.MeshPhysicalMaterial({ color: foil ? foil.c : e === "ink" ? stock.ink : e === "accent" ? stock.accent : stock.paper, metalness: foil ? 1 : 0, roughness: foil ? 0.25 : 0.85 });
     return { front: faceMaterial(maps.front, stock, relief), back: faceMaterial(maps.back, stock, relief), caps: new THREE.MeshBasicMaterial({ visible: false }), edge };
   }, [maps, stock, relief]);
   useEffect(() => () => { for (const m of Object.values(mats)) m.dispose(); }, [mats]);
@@ -342,6 +464,7 @@ function Card({ maps, stock, relief, flip }: { maps: CardMaps; stock: Stock; rel
       el.removeEventListener("pointercancel", up); el.removeEventListener("pointerleave", leave); el.removeEventListener("dblclick", dbl);
     };
   }, [gl]);
+  // flip: a counter (each change turns it over); an even/odd face request can be passed as a target instead
   useEffect(() => { const s = st.current; if (flip !== s.flip) { s.flip = flip; s.ty = Math.round(s.ty / Math.PI) * Math.PI + Math.PI; } }, [flip]);
   useFrame(({ clock }, delta) => {
     const s = st.current, T = clock.elapsedTime;
@@ -366,18 +489,6 @@ function Card({ maps, stock, relief, flip }: { maps: CardMaps; stock: Stock; rel
   );
 }
 
-// waits for the app's font (the canvas draws the type) and the card's SVG paths to measure
-function useFont() {
-  const [font, setFont] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    const fam = getComputedStyle(document.body).fontFamily;
-    Promise.all([400, 500].map((wt) => document.fonts.load(`${wt} 40px ${fam}`))).finally(() => { if (live) setFont(fam); });
-    return () => { live = false; };
-  }, []);
-  return font;
-}
-
 // the camera stands back far enough for the whole card (and a margin) to fit, on a narrow phone too; close up, it
 // eases in so the presses and foils can be looked at properly
 function Lens({ near }: { near: boolean }) {
@@ -388,14 +499,31 @@ function Lens({ near }: { near: boolean }) {
   return null;
 }
 
+// the maps take a moment to make, so they are made after the page has painted, and the last card stays up meanwhile
+function useCardMaps(els: El[], stock: Stock, fonts: Fonts | null) {
+  const [maps, setMaps] = useState<CardMaps | null>(null);
+  const [busy, setBusy] = useState(true);
+  const key = JSON.stringify([els, { ...stock, edge: 0, corner: 0, thickness: 0, accent: 0 }]); // the parts the maps use
+  useEffect(() => {
+    if (!fonts) return;
+    let gone = false;
+    const a = setTimeout(() => { if (!gone) setBusy(true); }, 0);
+    const t = setTimeout(() => {
+      if (gone) return;
+      const m = buildCard(els, stock, fonts);
+      setMaps((old) => { if (old) setTimeout(() => disposeMaps(old), 500); return m; }); setBusy(false);
+    }, 40);
+    return () => { gone = true; clearTimeout(t); clearTimeout(a); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fonts, key]);
+  return { maps, busy };
+}
+
 export function BusinessCard({ els, stock, relief = 1.6, flip = 0, near = false, className }: { els: El[]; stock: Stock; relief?: number; flip?: number; near?: boolean; className?: string }) {
-  const font = useFont();
-  const key = JSON.stringify([els, { ...stock, edge: 0, corner: 0, thickness: 0 }]); // the parts of the stock the maps use
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const maps = useMemo(() => (font ? buildCard(els, stock, font) : null), [font, key]);
-  useEffect(() => () => { if (maps) disposeMaps(maps); }, [maps]);
+  const fonts = useFonts();
+  const { maps, busy } = useCardMaps(els, stock, fonts);
   return (
-    <div className={className} style={{ touchAction: "pan-y" }}>
+    <div className={className} style={{ touchAction: "pan-y", position: "relative" }}>
       <Canvas camera={{ position: [0, 0, 5.2], fov: 30 }} dpr={[1, 2]} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; }}>
         <directionalLight position={[-3, 4, 4]} intensity={1.6} />
         <directionalLight position={[3, -1, 3]} intensity={0.35} />
@@ -409,6 +537,17 @@ export function BusinessCard({ els, stock, relief = 1.6, flip = 0, near = false,
         <Lens near={near} />
         {maps && <Card maps={maps} stock={stock} relief={relief} flip={flip} />}
       </Canvas>
+      <div aria-live="polite" className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1.5 text-[13px] text-white/80 backdrop-blur transition-opacity duration-300" style={{ opacity: busy ? 1 : 0 }}>Pressing the card</div>
     </div>
   );
+}
+
+// a flat face, drawn on a canvas (cheap enough for a wall of them)
+export function FlatFace({ els, stock, face, px = 5, className }: { els: El[]; stock: Stock; face: "front" | "back"; px?: number; className?: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const fonts = useFonts();
+  const key = JSON.stringify([els, stock, face, px]);
+  useEffect(() => { if (fonts && ref.current) drawFlat(ref.current, els, stock, face, px, fonts); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fonts, key]);
+  return <canvas ref={ref} className={className} style={{ aspectRatio: `${SIZES[stock.size].w} / ${SIZES[stock.size].h}` }} />;
 }
