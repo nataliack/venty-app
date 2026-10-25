@@ -479,10 +479,25 @@ function cardShape(W: number, H: number, r: number) {
   s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5, false);
   return s;
 }
+// cards mark the stencil buffer where their faces are drawn, so the shadow of a card above can be drawn on the cards
+// below and nowhere else (never on the background)
+const MARK_STENCIL = { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp };
+// the shadow a card throws on the ones below it: a soft dark rounded rectangle spreading a little past the card's edges,
+// a touch down and to the right (the light is up and to the left), drawn only where a card below was drawn
+let shadowTex: THREE.CanvasTexture | null = null;
+function softShadow() {
+  if (shadowTex) return shadowTex;
+  const c = document.createElement("canvas"); c.width = 360; c.height = 240;
+  const x = c.getContext("2d")!;
+  x.shadowColor = "#fff"; x.shadowBlur = 22; x.shadowOffsetX = 1000; x.fillStyle = "#fff"; // white: it is used as the alpha (the shape), the colour comes from the material
+  x.beginPath(); x.roundRect(-1000 + 55, 54, 250, 132, 10); x.fill(); // a touch inside the card, so the dark core never shows past its edge
+  shadowTex = new THREE.CanvasTexture(c); return shadowTex;
+}
+const SHADOW_GEO = new THREE.PlaneGeometry(1, 1);
 function faceMaterial(m: FaceMaps, stock: Stock, relief: number) {
-  if (!m.normal) return new THREE.MeshPhysicalMaterial({ transparent: true, map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
+  if (!m.normal) return new THREE.MeshPhysicalMaterial({ ...MARK_STENCIL, transparent: true, map: m.map, roughness: 0.85, metalness: 0, sheen: stock.coating === "soft" ? 0.3 : 0, sheenRoughness: 0.75 });
   return new THREE.MeshPhysicalMaterial({
-    transparent: true, map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
+    ...MARK_STENCIL, transparent: true, map: m.map, normalMap: m.normal, normalScale: new THREE.Vector2(relief, relief),
     aoMap: m.orm, aoMapIntensity: 1, roughnessMap: m.orm, metalnessMap: m.orm, roughness: 1, metalness: 1,
     clearcoat: 1, clearcoatMap: m.coat, clearcoatRoughness: 0.1,
     iridescence: m.irid ? 1 : 0, iridescenceMap: m.irid ?? null, iridescenceIOR: 1.6, iridescenceThicknessRange: [220, 880],
@@ -540,7 +555,10 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
 
   // turning it: drag sideways to spin, it settles face up or face down; double click (or tap) flips it; at rest it
   // leans toward the pointer, or sways a little
-  const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null);
+  const g = useRef<THREE.Group>(null), place = useRef<THREE.Group>(null), shade = useRef<THREE.Mesh>(null);
+  const shadeMat = useMemo(() => new THREE.MeshBasicMaterial({ alphaMap: softShadow(), color: "#05060d", transparent: true, opacity: 0, depthTest: false, depthWrite: false,
+    stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp }), []);
+  useEffect(() => () => shadeMat.dispose(), [shadeMat]);
   const p0 = { x: 0, y: 0, z: 0, rz: 0, s: 1, ...pose, ...enter, ...from };
   const y0 = startBack ? Math.PI : 0;
   const st = useRef({ yaw: y0 + (from?.yaw ?? 0), vy: 0, ty: y0, pitch: 0, vp: 0, drag: false, lx: 0, ly: 0, lt: 0, hx: 0, hy: 0, hover: false, flip, tip: -1, swapped: false, arr: arrive === undefined ? -2 : -1,
@@ -597,8 +615,8 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
     if (!s.drag && s.arr === -2) {
       // the showcase: a long slow sway and tilt; otherwise a breath of movement; a hovering pointer leans it
       const lean = interactive && s.hover, leanTo = leanHold;
-      const ty = s.ty + leanTo + (lean ? s.hx * 0.3 : show ? Math.sin(T * 0.32) * 0.5 + Math.sin(T * 0.11) * 0.15 : Math.sin(T * 0.6) * 0.09);
-      const tp = lean ? s.hy * 0.22 : show ? Math.sin(T * 0.23) * 0.16 : Math.sin(T * 0.45) * 0.05;
+      const ty = s.ty + leanTo + (lean ? s.hx * 0.3 : show ? Math.sin(T * 0.42) * 0.42 + Math.sin(T * 0.17 + 1) * 0.2 : Math.sin(T * 0.6) * 0.09);
+      const tp = lean ? s.hy * 0.22 : show ? Math.sin(T * 0.31) * 0.17 + Math.sin(T * 0.13) * 0.07 : Math.sin(T * 0.45) * 0.05;
       let d = dt;
       while (d > 0) { // damped springs (soft, so a turn over takes its time), in small steps so a slow frame can't overshoot
         const h = Math.min(d, 1 / 120); d -= h;
@@ -615,13 +633,21 @@ function Card({ maps, relief = 1.6, flip = 0, spin = false, pose, enter, interac
     }
     const m = matsNow.current;
     if (m.front.opacity !== s.o) { m.front.opacity = s.o; m.back.opacity = s.o; m.edge.opacity = s.o; }
-    const float = show ? Math.sin(T * 0.5) * 0.05 : 0;
-    place.current?.position.set(s.p.x, s.p.y + lift + float, s.p.z); place.current?.rotation.set(0, 0, s.p.rz); place.current?.scale.setScalar(s.p.s);
+    // the showcase's float: a slow loop up and down and side to side, and a breath nearer and back
+    const fx = show ? Math.sin(T * 0.37) * 0.05 : 0, fy = show ? Math.sin(T * 0.53) * 0.06 : 0, fz = show ? Math.sin(T * 0.29) * 0.12 : 0;
+    place.current?.position.set(s.p.x + fx, s.p.y + lift + fy, s.p.z + fz); place.current?.rotation.set(0, 0, s.p.rz + (show ? Math.sin(T * 0.23) * 0.02 : 0)); place.current?.scale.setScalar(s.p.s);
     g.current?.rotation.set(s.pitch + extraPitch, s.yaw, 0);
+    // the shadow narrows as the card turns, and fades with it
+    if (shade.current) {
+      const W = (S.w / 30) * (360 / 260), H = (S.h / 30) * (240 / 140);
+      shade.current.scale.set(W * Math.max(0.08, Math.abs(Math.cos(s.yaw))), H * Math.max(0.2, Math.abs(Math.cos(s.pitch + extraPitch))), 1);
+      (shade.current.material as THREE.MeshBasicMaterial).opacity = 0.42 * s.o;
+    }
   });
 
   return (
     <group ref={place} position={[p0.x, p0.y, p0.z]} rotation={[0, 0, p0.rz]} scale={p0.s} onClick={onTap ? (e) => { if (e.delta < 8) { e.stopPropagation(); onTap(); } } : undefined}>
+      {layer > 0 && <mesh ref={shade} geometry={SHADOW_GEO} material={shadeMat} renderOrder={layer * 10 - 1} position={[0.03, -0.07, -0.02]} frustumCulled={false} />}
       {layer > 0 && <DepthClear order={layer * 10} />}
       <group ref={g} scale={1 / 30}>
         <mesh geometry={geo.side} material={[mats.caps, mats.edge]} renderOrder={layer * 10 + 1} />
@@ -689,7 +715,7 @@ export function Sweep({ on }: { on: boolean }) {
 export function CardStage({ children, className, style, near = false, dist = 1, touch = "pan-y", offset = 0 }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; near?: boolean; dist?: number; touch?: string; offset?: number }) {
   return (
     <div className={className} style={{ touchAction: touch, ...style }}>
-      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
+      <Canvas camera={{ position: [0, 0, 5.2 * dist], fov: 30 }} dpr={[1, 2]} gl={{ stencil: true }} onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.toneMappingExposure = 1.18; }}>
         <directionalLight position={[-3, 4, 4]} intensity={1.6} />
         <directionalLight position={[3, -1, 3]} intensity={0.35} />
         <Environment resolution={1024} frames={1}>

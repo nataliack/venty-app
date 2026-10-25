@@ -4,11 +4,12 @@
 // and Add to contacts); the two cards by name (Venty, Natalia); the cards; the views; the colourways (swatches only);
 // then turn and Save card. The app's page behind: its dark and its dot grid.
 // The views, as icons that draw how the cards sit, in an inset track with a raised thumb:
-//   One card       the card on its own, to turn in your hand
-//   Stacked        both cards, the other peeking over the top; pick one and they trade places
+//   One card       the card on its own: it drifts, tilts and floats, a light sweeps across it now and then; drag
+//                  to turn it
+//   Stacked        both cards, the other peeking over the top, its shadow on the one below; pick one and they
+//                  shuffle: they part, swap once apart, and come together
 //   All its colours  the three colourways cascaded; tap one to bring it forward (the swatches rest)
 //   Front and back the two faces together
-//   Showcase       a long slow drift and tilt, a gentle float, and a light that sweeps across now and then
 // Motion is slow and quiet: cards arrive one after another from far back, lying almost flat in deep perspective, and
 // land slowly; a new colourway is tipped in like a page (back to edge on, swapped there, forward again); cards glide
 // between views and drop away when they leave. No full turns.
@@ -104,7 +105,7 @@ const inset = "inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .
 const raisedSnow = "inset 0 0 0 1px rgb(19 21 35 / .06), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(19 21 35 / .1), inset 0 0 12px 1px rgb(255 255 255 / .75), 0 1px 2px rgb(0 0 0 / .35), 0 6px 14px -6px rgb(0 0 0 / .6)";
 function Tabs({ fam, setFam }: { fam: Family; setFam: (f: Family) => void }) {
   return (
-    <div className="flex h-11 rounded-full p-1" style={{ background: "rgb(0 0 0 / .26)", boxShadow: inset }}>
+    <div className="flex h-11 rounded-full p-1" style={{ background: "#08090f", boxShadow: inset }}>
       {FAMS.map((f) => (
         <button key={f} type="button" onClick={() => setFam(f)} aria-pressed={fam === f} className="relative flex-1 rounded-full text-[15px] font-medium">
           {fam === f && <motion.span layoutId="card-tabs" className="absolute inset-0 rounded-full bg-snow" style={{ boxShadow: raisedSnow }} transition={{ type: "spring", bounce: 0.18, duration: 0.45 }} />}
@@ -141,18 +142,17 @@ function Swatches({ fam, way, setWay, rest }: { fam: Family; way: string; setWay
     </div>
   );
 }
-type View = "card" | "stack" | "colours" | "sides" | "show";
+type View = "card" | "stack" | "colours" | "sides";
 // each view's icon draws how its cards sit (24 grid, 1.6 strokes, the cards in the back drawn only where they show)
 const VIEWS: { k: View; name: string; icon: ReactNode }[] = [
   { k: "card", name: "One card", icon: <rect x="3" y="6.5" width="18" height="11" rx="2.2" /> },
   { k: "stack", name: "Both cards, stacked", icon: <><path d="M6 9.5V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-.5" /><rect x="3" y="9.5" width="15.5" height="10" rx="2" /></> },
   { k: "colours", name: "All its colours", icon: <><path d="M8.2 7.9V7.3a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-.6" /><path d="M5.6 10.5V9.9a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H16" /><rect x="3" y="10.5" width="13" height="9" rx="2" /></> },
   { k: "sides", name: "Front and back", icon: <><rect x="4" y="3.5" width="16" height="7.5" rx="1.8" /><rect x="4" y="13" width="16" height="7.5" rx="1.8" /><path d="M7 16.2h5.5M7 18h3.5" /></> },
-  { k: "show", name: "Showcase", icon: <><path d="M5.3 8.6 16.9 6.4a1.6 1.6 0 0 1 1.9 1.4l.9 8.4a1.6 1.6 0 0 1-1.5 1.8L6.4 18.6a1.6 1.6 0 0 1-1.7-1.5l-.7-6.8a1.6 1.6 0 0 1 1.3-1.7Z" /><path d="M20.4 2.1l.45 1.35 1.35.45-1.35.45-.45 1.35-.45-1.35-1.35-.45 1.35-.45Z" fill="currentColor" stroke="none" /></> },
 ];
 function ViewSwitch({ view, setView }: { view: View; setView: (v: View) => void }) {
   return (
-    <div className="flex h-12 rounded-full p-1" style={{ background: "rgb(0 0 0 / .26)", boxShadow: inset }} role="group" aria-label="View">
+    <div className="flex h-12 rounded-full p-1" style={{ background: "#08090f", boxShadow: inset }} role="group" aria-label="View">
       {VIEWS.map((v) => (
         <button key={v.k} type="button" onClick={() => setView(v.k)} aria-pressed={view === v.k} aria-label={v.name} title={v.name} className="relative grid flex-1 place-items-center rounded-full">
           {view === v.k && <motion.span layoutId="view-thumb" className="absolute inset-0 rounded-full bg-snow" style={{ boxShadow: raisedSnow }} transition={{ type: "spring", bounce: 0.16, duration: 0.6 }} />}
@@ -219,12 +219,17 @@ function DetailsSheet({ fam, onClose }: { fam: Family; onClose: () => void }) {
 
 // ─── what is on the stage in each view ───
 type Slot = { key: string; fam: Family; way: string; pose: Pose; layer: number; interactive?: boolean; spin?: boolean; flip?: number; startBack?: boolean; show?: boolean; onTap?: () => void; opacity?: number; lean?: number };
-// Stack: the one behind sits just behind and a little higher, at nearly full size (layers keep the two apart)
-const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, z: -0.05, rz: -0.045, s: 0.96 }, OVER: Pose = { y: 2.1, z: 0.05, s: 0.97 }, UNDER: Pose = { y: -0.3, z: -0.05, s: 0.96 };
+// Stacked: the one behind sits just behind and a little higher, at nearly full size (layers keep the two apart).
+// Trading places is a shuffle in two beats. First they part: the front card drops down and to the right to make room
+// while the one behind rises a little and to the left, both easing back a touch, until they no longer overlap; there
+// they swap layers (so the swap is never seen); then they come together, the new one settling in front and the old
+// one tucking in behind it
+const FRONT: Pose = { y: -0.16 }, BEHIND: Pose = { x: 0.08, y: 0.42, z: -0.05, rz: -0.045, s: 0.96 };
+const PART_DOWN: Pose = { x: 0.32, y: -1.02, rz: -0.07, s: 0.9 }, PART_UP: Pose = { x: -0.3, y: 1.0, rz: 0.06, s: 0.9 };
 // All its colours: a cascade, the pick in front and lowest, the others stepping up and back behind it
 const CASCADE: Pose[] = [{ x: -0.34, y: 0.5, z: -0.1, rz: 0.035, s: 0.86 }, { x: -0.12, y: 0.18, z: -0.05, rz: 0.015, s: 0.9 }, { x: 0.1, y: -0.16, s: 0.94 }];
 // how far the camera stands back in each view (the cards fill about seven eighths of the width in One card)
-const DIST: Record<View, number> = { card: 0.88, show: 0.88, stack: 0.9, colours: 0.95, sides: 0.98 };
+const DIST: Record<View, number> = { card: 0.88, stack: 0.9, colours: 0.95, sides: 0.98 };
 // what changed last, which decides how new cards come in and old ones go:
 //   reveal  the first arrival after loading (from far back, landing slowly)
 //   tab, view  a carousel, for the cards and for the views alike: the old card (or the whole arrangement) slides off
@@ -271,7 +276,7 @@ export function CardsScreen() {
   const [way, setWay] = useState(FIRST);
   const [view, setViewNow] = useState<View>("card");
   const [flips, setFlips] = useState<Record<string, number>>({});
-  const [step, setStep] = useState<"" | "over">("");
+  const [step, setStep] = useState<"" | "part">("");
   const [change, setChange] = useState<Change>("reveal");
   const [dir, setDir] = useState(1);
   const [save, setSave] = useState(false);
@@ -283,7 +288,7 @@ export function CardsScreen() {
     if (f === fam) return;
     setFam(f); setDir(FAMS.indexOf(f) > FAMS.indexOf(fam) ? 1 : -1); setChange("tab");
     // Stack: they trade places over the top (the old front card stays the top layer until the new one is above it)
-    if (view === "stack") { setStep("over"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 420); }
+    if (view === "stack") { setStep("part"); clearTimeout(t.current); t.current = setTimeout(() => setStep(""), 460); }
   };
   const order = VIEWS.map((x) => x.k);
   const setView = (v: View) => { if (v === view) return; setDir(order.indexOf(v) > order.indexOf(view) ? 1 : -1); setViewNow(v); setChange("view"); setStep(""); };
@@ -294,11 +299,11 @@ export function CardsScreen() {
   // every card on the stage is keyed by its view, so a new view is a new set (they cross fade)
   const main = (f: Family): Slot => ({ key: `${view}:main-${f}`, fam: f, way: way[f], pose: { y: 0 }, layer: 1, interactive: true, spin: true, flip: flip(`main-${f}`) });
   let slots: Slot[];
-  if (view === "card") slots = [main(fam)];
-  else if (view === "show") slots = [{ ...main(fam), pose: { y: 0.04, s: 1.02 }, show: true }];
+  if (view === "card") slots = [{ ...main(fam), show: true }]; // the card drifts, tilts and floats on its own
   else if (view === "stack") slots = FAMS.map((f) => {
-    const front = f === fam, top = step === "over" ? !front : front;
-    return { ...main(f), pose: front ? (step === "over" ? OVER : FRONT) : step === "over" ? UNDER : BEHIND, layer: top ? 1 : 0, interactive: front, onTap: front ? undefined : () => pick(f) };
+    // while they part, the old front card is still the top layer; they swap once apart
+    const front = f === fam, top = step === "part" ? !front : front;
+    return { ...main(f), pose: front ? (step === "part" ? PART_UP : FRONT) : step === "part" ? PART_DOWN : BEHIND, layer: top ? 1 : 0, interactive: front, onTap: front ? undefined : () => pick(f) };
   });
   else if (view === "sides") slots = [
     { ...main(fam), pose: { x: -0.1, y: 0.66, rz: 0.03, s: 0.84 }, layer: 0 },
@@ -331,10 +336,10 @@ export function CardsScreen() {
       <div className="dotgrid" />
       {/* the stage covers the whole screen, under the controls, so a card is never cut off */}
       <CardStage dist={DIST[view]} offset={offset} className="absolute inset-0">
-        <Sweep on={view === "show"} />
+        <Sweep on={view === "card"} />
         {shown && [...leaving, ...slots].map((s, i) => (
           <LiveCard key={s.key} {...ALL[s.fam][s.way]} madeOnly pose={s.pose} layer={s.layer} interactive={!!s.interactive} spin={s.spin} flip={s.flip ?? 0} startBack={s.startBack} show={s.show} onTap={s.onTap}
-            opacity={s.opacity ?? 1} lean={s.lean ?? 0} speed={view === "stack" ? 8 : 7}
+            opacity={s.opacity ?? 1} lean={s.lean ?? 0} speed={view === "stack" ? 9 : 7}
             arrive={change === "reveal" ? 0.7 + i * 0.2 : undefined} from={change === "reveal" ? undefined : from(s)} />
         ))}
       </CardStage>
@@ -373,7 +378,7 @@ export function ProfileCards() {
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="max-w-[540px] space-y-4 text-[15px] leading-snug text-white/65">
           <p>One screen: the back button, a centred title and her details (the person button: a sheet where every detail can be tapped or copied); the cards by name; the cards; the views; the colourways; then turn and save.</p>
-          <p>The views draw how the cards sit: one card, both stacked, all its colours cascaded (the swatches rest), front and back, and a slow showcase.</p>
+          <p>Four views, drawn as how the cards sit: one card (it drifts, tilts and floats, a light sweeping across it), both stacked (pick one and they shuffle: they part, swap once apart, and come together), all its colours cascaded (the swatches rest), and front and back. A card above throws a soft shadow on the cards below, and only on them.</p>
           <p>Motion: switching cards and switching views are the same carousel: the old card (or arrangement) slides off the way it is leaving, turning a little away, as the new one slides in from the other side, solid all the way (nothing fades, so no card shows through another); the direction follows the control. A new colour tips in like a page. Every move eases in and out. The stage covers the whole screen under the controls, so nothing is cut off. Nothing is shown half made: the 3D body&apos;s loader ring shows until the cards are ready; then they are put on the stage unseen for a moment (so their textures are on the GPU before anything moves) and arrive from far back, landing slowly.</p>
           <p className="text-[13.5px] text-white/40">For the app: bake each card&apos;s maps at build time (a script renders them to compressed images in /public), so the screen only downloads and shows them, a few hundred KB a card, instead of making them on the phone. Preload the first colourway of each card when the profile opens, the rest after; keep only the cards on screen in memory. Saving opens the phone&apos;s share sheet (Save Image, Save to Files, Contacts); an Apple Wallet pass would need a signed pass from a server.</p>
         </div>
