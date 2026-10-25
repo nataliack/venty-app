@@ -153,6 +153,8 @@ function Stage({ sex, pick }: CardsProps) {
 // that row: close up, head to the top of the stomach, turned to the right, never past the row's sides. Chosen, the whole
 // card turns snow, its pressed row the snow version of it, and the circle the primary's cornflower with its tick.
 const close = (s: Sex) => `/lab/sex-close-${s}.webp`;
+// the body fades out before the row, so it never touches it
+const FADE: CSSProperties = { maskImage: "linear-gradient(180deg, #000 58%, transparent calc(100% - 6px))", WebkitMaskImage: "linear-gradient(180deg, #000 58%, transparent calc(100% - 6px))" };
 const ROW_DARK: CSSProperties = { background: "rgb(0 0 0 / .26)", boxShadow: "inset 0 2px 5px rgb(0 0 0 / .55), inset 0 1px 1.5px rgb(0 0 0 / .5), inset 0 -1px 0 rgb(255 255 255 / .06)" };
 const ROW_SNOW: CSSProperties = { background: "rgb(52 62 110 / .07)", boxShadow: "inset 0 3px 7px rgb(28 36 84 / .22), inset 0 1px 1.5px rgb(28 36 84 / .22), inset 0 -1px 0 rgb(255 255 255 / .9), 0 1px 0 rgb(255 255 255 / .9)" };
 function CloseUp({ sex, pick }: CardsProps) {
@@ -166,8 +168,8 @@ function CloseUp({ sex, pick }: CardsProps) {
         <button key={s} onClick={() => pick(s)} role="radio" aria-checked={on} aria-label={label(s)}
           className={cx("relative h-[232px] overflow-hidden rounded-[22px] text-left transition-colors duration-300", on ? "bg-snow" : "bg-card shadow-[inset_0_0_0_1px_rgb(255_255_255/.08)]")}>
           {/* the body, head to the top of the stomach, turned to the right */}
-          <span aria-hidden className="absolute overflow-hidden" style={{ left: INSET, right: INSET, top: 0, bottom: INSET + ROW_H }}>
-            <img src={close(s)} alt="" className="absolute left-1/2 top-[10px] h-[168px] w-auto max-w-none -translate-x-1/2" />
+          <span aria-hidden className="absolute overflow-hidden" style={{ left: INSET, right: INSET, top: 0, bottom: INSET + ROW_H, ...FADE }}>
+            <img src={close(s)} alt="" className="absolute left-1/2 top-[12px] h-[150px] w-auto max-w-none -translate-x-1/2" />
           </span>
           {/* the pressed row: the name on two lines, the choice circle on its right */}
           <span className="absolute flex items-center justify-between rounded-[16px] px-3 transition-[background,box-shadow] duration-300" style={{ left: INSET, right: INSET, bottom: INSET, height: ROW_H, ...(on ? ROW_SNOW : ROW_DARK) }}>
@@ -197,7 +199,7 @@ function Screen({ children, ready }: { children: ReactNode; ready: boolean }) {
 }
 
 const VERSIONS: { k: string; name: string; note: string; C: (p: CardsProps) => ReactNode }[] = [
-  { k: "close", name: "6 · A pressed row and a close-up", note: "Jose's: at the foot of each card, a row pressed into it with the name on two lines and the app's choice circle on its right (a ring at rest). The body rises out of that row, close up (head, chest and the top of the stomach, turned to the right), never past the row's sides. Chosen, the whole card turns snow, the pressed row its snow version, the circle cornflower with a tick.", C: CloseUp },
+  { k: "close", name: "6 · A pressed row and a close-up", note: "Jose's: at the foot of each card, a row pressed into it with the name on two lines and the app's choice circle on its right (a ring at rest). The body rises out of that row, close up (head, chest and the top of the stomach, turned to the right), never past the row's sides, and fades out just above it so it never touches it. Chosen, the whole card turns snow, the pressed row its snow version, the circle cornflower with a tick.", C: CloseUp },
   { k: "portrait", name: "1 · Portrait", note: "The body waist up, three-quarter and posed (as on Body ready), bleeding off the card's foot; its name over a soft shade. The chosen card ringed in white with a tick, the other dimmed.", C: Portrait },
   { k: "floor", name: "2 · On the floor", note: "The whole body standing on the pattern floor, as on the measuring stage, the name under the card. The chosen one lit from above in cornflower, its floor brighter.", C: Floor },
   { k: "option", name: "3 · The app's option", note: "The same card as every other choice in the app (glass, snow once chosen), the body waist up on its right half. The most consistent.", C: AppOption },
