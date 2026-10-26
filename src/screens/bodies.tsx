@@ -76,14 +76,18 @@ export function BodyCard({ b, units, onClick, pick, className }: { b: Body; unit
   const notches = [...(b.done.length < 24 ? [INC] : []), ...(pick != null ? [PICK] : [])];
   return (
     <button onClick={onClick} aria-pressed={pick ?? undefined} aria-label={b.name} className={cx("tap relative block rounded-[24px] p-[5px] text-left", className ?? "w-full")} style={RIM}>
-      <span className="stage-ink relative block aspect-[4/5] overflow-hidden rounded-[19px]" style={notchMask(notches)}>
-        {/* the form's picture; with none yet, its 3D still (face and shoulders in profile) with a soft light behind */}
-        {!BODY_PIC[b.sex] && <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 70% at 70% 30%, rgb(104 126 245 / .16), transparent 70%)" }} />}
-        <span className="absolute inset-0 overflow-hidden"><BodyPic sex={b.sex} measures={b.measures} /></span>
-        <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS }} />
-        {notches.map((n) => <NotchShade key={n.side} n={n} />)}
-        {/* the height: white on a picture (its foot is the dark blur), ink on the light 3D still */}
-        <span className={cx("absolute inset-x-0 bottom-2 text-center text-[11px]", BODY_PIC[b.sex] ? "text-white/75" : "text-ink/60")}><N v={shown(b.measures.height, units)} className={cx("text-[15px]", BODY_PIC[b.sex] ? "text-white" : "text-ink")} /> <span translate="no">{units}</span></span>
+      {/* the cut is on a plain wrapper, not on the rounded stage: masked together, the stage's rounded clip left a
+          faint ghost of its corner in the raised corner */}
+      <span className="relative block" style={notchMask(notches)}>
+        <span className="stage-ink relative block aspect-[4/5] overflow-hidden rounded-[19px]">
+          {/* the form's picture; with none yet, its 3D still (face and shoulders in profile) with a soft light behind */}
+          {!BODY_PIC[b.sex] && <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 70% at 70% 30%, rgb(104 126 245 / .16), transparent 70%)" }} />}
+          <span className="absolute inset-0 overflow-hidden"><BodyPic sex={b.sex} measures={b.measures} /></span>
+          <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS }} />
+          {notches.map((n) => <NotchShade key={n.side} n={n} />)}
+          {/* the height: white on a picture (its foot is the dark blur), ink on the light 3D still */}
+          <span className={cx("absolute inset-x-0 bottom-2 text-center text-[11px]", BODY_PIC[b.sex] ? "text-white/75" : "text-ink/60")}><N v={shown(b.measures.height, units)} className={cx("text-[15px]", BODY_PIC[b.sex] ? "text-white" : "text-ink")} /> <span translate="no">{units}</span></span>
+        </span>
       </span>
       {b.done.length < 24 && <span className="pointer-events-none absolute left-0 top-0 grid place-items-center text-[11px] text-white/70" style={{ width: INC.w + 5, height: INC.h + 5 }}>Incomplete</span>}
       {pick != null && <span className="pointer-events-none absolute right-0 top-0 grid place-items-center" style={{ width: PICK.w + 5, height: PICK.h + 5 }}><PickBox on={pick} /></span>}
