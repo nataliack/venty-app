@@ -11,6 +11,7 @@ import { FlowHeader, MiniDial } from "./measure";
 import { Ico, SI } from "@/components/studio-icons";
 import dynamic from "next/dynamic";
 import { BodyLoader } from "@/components/BodyLoader";
+import { BodyPic } from "@/components/BodyStills";
 import { garment3dFor } from "@/lib/garment3d";
 import { LookSwitch } from "@/components/LookSwitch";
 import { PatternTray } from "@/components/PatternTray";
@@ -49,7 +50,7 @@ export function PatSelectBody() {
         <div className="mt-6 flex flex-col gap-2.5 lg:mt-0 lg:gap-3" data-need={pick ? "0" : "1"}>
           {bodies.map((x) => (
             <Option key={x.id} on={pick === x.id} onClick={() => setPick(x.id)} radioAt="center" className="flex h-[84px] items-center gap-4 rounded-[24px] p-2.5 pr-14 lg:h-[96px]">
-              <span className="grid h-full w-[54px] shrink-0 place-items-center overflow-hidden rounded-[16px] bg-primary/20 py-1.5"><BodyFigure sex={x.sex} width={22} glow={false} className="h-full w-full" /></span>
+              <span className="relative block h-full w-[52px] shrink-0 overflow-hidden rounded-[16px]"><BodyPic b={x} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-[17px] font-medium">{x.name}</span><span className="block text-[15px] text-white/60">{x.done.length} of 24 measurements</span></span>
             </Option>
           ))}

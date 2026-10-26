@@ -9,6 +9,7 @@ import { BodyFigure, Flat, Piece } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { draftSpec } from "./pattern";
 import { useKeyboard } from "./studio";
+import { BodyPic } from "@/components/BodyStills";
 import { LOOK, CAT, KINDS, byKind, LEVELS_, PIECES_, piecesIn, Img, Lvl, Frame, MadeMark, KindTiles, PressedPhoto, PINNED, pinIn, ToolBtn, SearchOpen, OnChips, Group, SheetFooter } from "./library";
 
 // Card: the flat drawing, the name, and one quiet line (level · pieces). Hover only lifts the edge.
@@ -197,8 +198,8 @@ export function TplBody() {
       </>} right={
       <div className="mt-5 flex flex-col gap-2.5 lg:mt-0 lg:gap-3">
         {bodies.map((x) => (
-          <Glass key={x.id} onClick={() => setSel(x.id)} selected={x.id === sel} className="flex h-[84px] w-full items-center gap-4 rounded-[24px] px-4 lg:h-[100px] lg:px-6">
-            <BodyFigure sex={x.sex} width={26} glow={false} />
+          <Glass key={x.id} onClick={() => setSel(x.id)} selected={x.id === sel} className="flex h-[84px] w-full items-center gap-4 rounded-[24px] p-2.5 pr-4 lg:h-[100px] lg:pr-6">
+            <span className="relative block h-full w-[52px] shrink-0 overflow-hidden rounded-[16px]"><BodyPic b={x} /></span>
             <div className="flex-1"><div className="text-[16px] font-semibold">{x.name}</div><div className="text-[14px] text-white/55">{x.done.length} of 24 measurements</div></div>
             <Check on={x.id === sel} className={x.id === sel ? "icon-primary !text-white" : ""} />
           </Glass>

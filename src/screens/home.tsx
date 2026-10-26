@@ -10,7 +10,7 @@ import { useInstall } from "@/components/Install";
 import { MapBoard } from "./print";
 import { piecesFor } from "./pattern";
 import { Icon, type IconName } from "@/components/icons";
-import { BodyPic, StillMaker } from "@/components/BodyStills";
+import { BodyPic } from "@/components/BodyStills";
 
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
 // the corners are rounded too (fillets), so the bar wraps the button like a cradle. Docked (home-screen app), the
@@ -489,12 +489,11 @@ export function Home() {
               </button>
               {bodies.map((b) => (
                 <button key={b.id} onClick={() => { set({ activeBody: b.id }); go("bodyPage"); }} className="card-soft tap flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4 text-left">
-                  <span className="stage-ink relative block h-[60px] w-11 shrink-0 overflow-hidden rounded-[14px]"><BodyPic sex={b.sex} measures={b.measures} /></span>
+                  <span className="relative block h-[60px] w-11 shrink-0 overflow-hidden rounded-[14px]"><BodyPic b={b} /></span>
                   <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/55">{b.done.length} of 24 measurements</span></span>
                 </button>
               ))}
             </div>
-            <StillMaker />
           </div>
           <div>
             <div className="mt-7"><SectionHead title="Your patterns" onAll={() => go("patterns")} /></div>

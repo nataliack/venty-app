@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
-import { VentyLogo, BodyFigure } from "./art";
+import { VentyLogo } from "./art";
+import { BodyPic } from "./BodyStills";
 import { Icon, type IconName } from "./icons";
 import { cx, Pill, Avatar } from "./ui";
 import { CreateSheet } from "@/screens/home";
@@ -47,7 +48,7 @@ export function Sidebar({ route }: { route: string }) {
       </nav>
       <div className="mt-auto">
         <div className="glass flex items-center gap-3 rounded-[20px] p-3">
-          <div className="grid h-14 w-10 place-items-center rounded-[12px] bg-primary/25"><BodyFigure sex={b.sex} width={18} glow={false} /></div>
+          <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[12px]"><BodyPic b={b} /></div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[14px] font-semibold">{b.name}</div>
             <div className="text-[11px] text-white/50">{Math.max(4, b.done.length)}/24 measures</div>

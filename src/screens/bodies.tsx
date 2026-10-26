@@ -10,7 +10,7 @@
 //   a time under a pressed switch (Base, Around, Lengths, Widths, Seated). Measured: raised, with a pencil. Estimated
 //   from the photo scan: raised, a periwinkle check. Missing: pressed in, "Not measured", the periwinkle add. A tile
 //   opens a sheet with the 3D body on that measurement (its dashed tape) and the dial. Rename and Delete under More.
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, fmt, type Body } from "@/lib/store";
@@ -20,7 +20,7 @@ import { Ruler } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { BodyStage } from "@/components/BodyStage";
 import { BodyLoader } from "@/components/BodyLoader";
-import { BODY_PIC, BodyPic, Still, StillMaker } from "@/components/BodyStills";
+import { BodyPic, Still, StillMaker } from "@/components/BodyStills";
 import { TabBar } from "./home";
 import { ToolBtn, SearchOpen, OnChips, Group, Choice } from "./library";
 
@@ -36,31 +36,44 @@ const shown = (v: number, units: "cm" | "in") => fmt(v, units).replace(/\.0$/, "
 const addedAt = (b: Body) => (/^b[0-9a-z]+$/.test(b.id) ? parseInt(b.id.slice(1), 36) : NaN);
 const added = (b: Body) => { const t = addedAt(b); return Number.isFinite(t) ? new Date(t).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : null; };
 
-// ─── raised corners: a corner of the card's stage cut away (a CSS mask), so the rim rises into it, its inner corner
-//     rounded and curving into the stage's edges, its shadow on the stage. "Incomplete" sits in the top-left one;
-//     choosing (Edit) raises a second at the top right with its box. w × h: the cut; f: the curve; rb: the inner corner ───
+// ─── raised corners: the card's rim rises into a corner of the stage ("Incomplete" top left; choosing, Edit, a second
+//     at the top right with its box), its inner corner rounded and curving into the stage's edges, its shadow on the
+//     stage. Drawn on top of the stage in the rim's own colour, not cut with a mask: a mask left a seam and soft edges
+//     on iPhone. The cover starts 2 px in from the card's edge (past the rim's light edge), its outer corner the
+//     card's own curve, so only the cut edge shows. w × h: the cut in the stage; f: the curves into the stage's edges;
+//     rb: the inner corner ───
 type Notch = { side: "l" | "r"; w: number; h: number; f?: number; rb?: number };
+const PAD = 5, CARD_R = 24, IN = 2;
+// the cut in the stage's own coordinates, for its shadow (drawn for the top right, flipped for the left)
 const notchPath = ({ w, h, f = 8, rb = 10 }: Notch) => {
   const W = w + f;
   return `M${f} 0H${W}V${h}H${f + rb}A${rb} ${rb} 0 0 1 ${f} ${h - rb}Z M0 0H${f}V${f}A${f} ${f} 0 0 0 0 0Z M${W - f} ${h}H${W}V${h + f}A${f} ${f} 0 0 0 ${W - f} ${h}Z`;
 };
-const notchSvg = (n: Notch, body: string) => {
-  const W = n.w + (n.f ?? 8), H = n.h + (n.f ?? 8);
-  return `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'>${n.side === "r" ? body : `<g transform='translate(${W} 0) scale(-1 1)'>${body}</g>`}</svg>`;
+// the cover in the card's coordinates, drawn for the top left: the card's corner, along the top rim, down the curve
+// into the cut's wall, round its inner corner, along its foot, the curve into the stage's left edge, back up the rim
+const coverPath = ({ w, h, f = 8, rb = 10 }: Notch) => {
+  const x = PAD + w, y = PAD + h, r = CARD_R - IN;
+  return `M${IN} ${CARD_R}A${r} ${r} 0 0 1 ${CARD_R} ${IN}H${x + f}V${PAD}A${f} ${f} 0 0 0 ${x} ${PAD + f}V${y - rb}A${rb} ${rb} 0 0 1 ${x - rb} ${y}H${PAD + f}A${f} ${f} 0 0 0 ${PAD} ${y + f}H${IN}Z`;
 };
-function notchMask(ns: Notch[]): CSSProperties {
-  if (!ns.length) return {};
-  const urls = ns.map((n) => `url("data:image/svg+xml,${encodeURIComponent(notchSvg(n, `<path d='${notchPath(n)}'/>`))}")`);
-  const img = [...urls, "linear-gradient(#000, #000)"].join(", ");
-  const pos = [...ns.map((n) => (n.side === "r" ? "top right" : "top left")), "0 0"].join(", ");
-  const size = [...ns.map((n) => `${n.w + (n.f ?? 8)}px ${n.h + (n.f ?? 8)}px`), "100% 100%"].join(", ");
-  return { WebkitMaskImage: img, maskImage: img, WebkitMaskPosition: pos, maskPosition: pos, WebkitMaskSize: size, maskSize: size, WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskComposite: "xor", maskComposite: "exclude" };
-}
+// the shadow, inside the stage (its rounded clip keeps it on the stage)
 function NotchShade({ n }: { n: Notch }) {
   const W = n.w + (n.f ?? 8), H = n.h + (n.f ?? 8);
   return (
     <svg width={W} height={H} className={cx("pointer-events-none absolute top-0 overflow-visible", n.side === "r" ? "right-0" : "left-0")} aria-hidden>
       <g transform={n.side === "r" ? undefined : `translate(${W} 0) scale(-1 1)`}><path d={notchPath(n)} transform="translate(-1 2.5)" fill="#000" opacity={0.75} style={{ filter: "blur(3.5px)" }} /></g>
+    </svg>
+  );
+}
+// the raised corner itself: the card's colour and its top light (white .035 fading to nothing halfway down a phone card)
+function NotchCover({ n }: { n: Notch }) {
+  const id = useId(), W = PAD + n.w + (n.f ?? 8), H = PAD + n.h + (n.f ?? 8);
+  return (
+    <svg width={W} height={H} className={cx("pointer-events-none absolute top-0", n.side === "r" ? "right-0" : "left-0")} aria-hidden>
+      <defs><linearGradient id={id} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="140"><stop offset="0" stopColor="#fff" stopOpacity=".035" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient></defs>
+      <g transform={n.side === "r" ? `translate(${W} 0) scale(-1 1)` : undefined}>
+        <path d={coverPath(n)} style={{ fill: "var(--color-card)" }} />
+        <path d={coverPath(n)} fill={`url(#${id})`} />
+      </g>
     </svg>
   );
 }
@@ -76,19 +89,14 @@ export function BodyCard({ b, units, onClick, pick, className }: { b: Body; unit
   const notches = [...(b.done.length < 24 ? [INC] : []), ...(pick != null ? [PICK] : [])];
   return (
     <button onClick={onClick} aria-pressed={pick ?? undefined} aria-label={b.name} className={cx("tap relative block rounded-[24px] p-[5px] text-left", className ?? "w-full")} style={RIM}>
-      {/* the cut is on a plain wrapper, not on the rounded stage: masked together, the stage's rounded clip left a
-          faint ghost of its corner in the raised corner */}
-      <span className="relative block" style={notchMask(notches)}>
-        <span className="stage-ink relative block aspect-[4/5] overflow-hidden rounded-[19px]">
-          {/* the form's picture; with none yet, its 3D still (face and shoulders in profile) with a soft light behind */}
-          {!BODY_PIC[b.sex] && <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 70% at 70% 30%, rgb(104 126 245 / .16), transparent 70%)" }} />}
-          <span className="absolute inset-0 overflow-hidden"><BodyPic sex={b.sex} measures={b.measures} /></span>
-          <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS }} />
-          {notches.map((n) => <NotchShade key={n.side} n={n} />)}
-          {/* the height: white on a picture (its foot is the dark blur), ink on the light 3D still */}
-          <span className={cx("absolute inset-x-0 bottom-2 text-center text-[11px]", BODY_PIC[b.sex] ? "text-white/75" : "text-ink/60")}><N v={shown(b.measures.height, units)} className={cx("text-[15px]", BODY_PIC[b.sex] ? "text-white" : "text-ink")} /> <span translate="no">{units}</span></span>
-        </span>
+      <span className="stage-ink relative block aspect-[4/5] overflow-hidden rounded-[19px]">
+        <span className="absolute inset-0"><BodyPic b={b} /></span>
+        <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS }} />
+        {notches.map((n) => <NotchShade key={n.side} n={n} />)}
+        {/* the height, white with a soft shadow (the turned-away pictures are lighter at the foot) */}
+        <span className="absolute inset-x-0 bottom-2 text-center text-[11px] text-white/80" style={{ textShadow: "0 1px 6px rgb(19 21 35 / .45)" }}><N v={shown(b.measures.height, units)} className="text-[15px] text-white" /> <span translate="no">{units}</span></span>
       </span>
+      {notches.map((n) => <NotchCover key={n.side} n={n} />)}
       {b.done.length < 24 && <span className="pointer-events-none absolute left-0 top-0 grid place-items-center text-[11px] text-white/70" style={{ width: INC.w + 5, height: INC.h + 5 }}>Incomplete</span>}
       {pick != null && <span className="pointer-events-none absolute right-0 top-0 grid place-items-center" style={{ width: PICK.w + 5, height: PICK.h + 5 }}><PickBox on={pick} /></span>}
       <span className="block px-2 pb-1.5 pt-2.5">

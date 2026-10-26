@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import { cx } from "@/components/ui";
 import { BodyFigure } from "@/components/art";
 import type { Sex } from "@/lib/data";
+import { useApp, type Body } from "@/lib/store";
 
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false });
 
@@ -90,12 +91,18 @@ export function Still({ sex, measures, shot = "whole", className }: { sex: Sex; 
     : <span className="grid h-full w-full place-items-center opacity-40"><BodyFigure sex={sex} width={60} variant="solid" glow={false} className="h-full w-full" /></span>;
 }
 
-// The body cards' pictures (the Body library and home's Your bodies only), cropped to the card's 4:5. A form with no
-// picture yet shows its 3D still: face and shoulders in profile.
-export const BODY_PIC: Partial<Record<Sex, string>> = { female: "/bodies/female.webp", male: "/bodies/male.webp" };
-export function BodyPic({ sex, measures }: { sex: Sex; measures: Record<string, number> }) {
-  const pic = BODY_PIC[sex];
-  return pic
-    ? <img src={pic} alt="" draggable={false} className="h-full w-full object-cover" />
-    : <Still sex={sex} measures={measures} shot="profile" className="origin-top scale-[2] object-cover object-top" />;
+// The bodies' pictures (every body card: the Body library, home's Your bodies, the Who is this for lists and the
+// sidebar), Jose's mannequins cropped to the card's 4:5. Three a form, the same three poses for both (upright, head
+// down, turned away). Bodies of a form take them in the order they were added; a fourth starts again at the first.
+export const BODY_PIC: Record<Sex, string[]> = {
+  female: ["/bodies/female-1.webp", "/bodies/female-2.webp", "/bodies/female-3.webp"],
+  male: ["/bodies/male-1.webp", "/bodies/male-2.webp", "/bodies/male-3.webp"],
+};
+export const bodyPic = (b: Pick<Body, "id" | "sex">, bodies: Pick<Body, "id" | "sex">[]) => {
+  const at = Math.max(0, bodies.filter((x) => x.sex === b.sex).findIndex((x) => x.id === b.id));
+  return BODY_PIC[b.sex][at % BODY_PIC[b.sex].length];
+};
+export function BodyPic({ b }: { b: Pick<Body, "id" | "sex"> }) {
+  const bodies = useApp((st) => st.bodies);
+  return <img src={bodyPic(b, bodies)} alt="" draggable={false} className="h-full w-full object-cover" />;
 }
