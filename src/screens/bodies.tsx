@@ -71,12 +71,12 @@ const PickBox = ({ on }: { on: boolean }) => (
     {on && <Icon name="check" size={13} strokeWidth={3} />}
   </span>
 );
-// shared with home's Your bodies; the picture area is square (the real pictures will be square)
+// the picture area is a little taller than square, 4:5 (the real pictures will be 4:5)
 export function BodyCard({ b, units, onClick, pick, className }: { b: Body; units: "cm" | "in"; onClick: () => void; pick?: boolean | null; className?: string }) {
   const notches = [...(b.done.length < 24 ? [INC] : []), ...(pick != null ? [PICK] : [])];
   return (
     <button onClick={onClick} aria-pressed={pick ?? undefined} aria-label={b.name} className={cx("tap relative block rounded-[24px] p-[5px] text-left", className ?? "w-full")} style={RIM}>
-      <span className="stage-ink relative block aspect-square overflow-hidden rounded-[19px]" style={notchMask(notches)}>
+      <span className="stage-ink relative block aspect-[4/5] overflow-hidden rounded-[19px]" style={notchMask(notches)}>
         {/* face and shoulders in profile, a soft light behind (a still of the body's own 3D form) */}
         <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 70% at 70% 30%, rgb(104 126 245 / .16), transparent 70%)" }} />
         <span className="absolute inset-0 overflow-hidden"><Still sex={b.sex} measures={b.measures} shot="profile" className="origin-top scale-[2] object-cover object-top" /></span>
