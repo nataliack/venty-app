@@ -71,11 +71,12 @@ const PickBox = ({ on }: { on: boolean }) => (
     {on && <Icon name="check" size={13} strokeWidth={3} />}
   </span>
 );
-function BodyCard({ b, units, onClick, pick }: { b: Body; units: "cm" | "in"; onClick: () => void; pick?: boolean | null }) {
+// shared with home's Your bodies; the picture area is square (the real pictures will be square)
+export function BodyCard({ b, units, onClick, pick, className }: { b: Body; units: "cm" | "in"; onClick: () => void; pick?: boolean | null; className?: string }) {
   const notches = [...(b.done.length < 24 ? [INC] : []), ...(pick != null ? [PICK] : [])];
   return (
-    <button onClick={onClick} aria-pressed={pick ?? undefined} aria-label={b.name} className="tap relative block w-full rounded-[24px] p-[5px] text-left" style={RIM}>
-      <span className="stage-ink relative block h-[150px] overflow-hidden rounded-[19px] lg:h-[200px]" style={notchMask(notches)}>
+    <button onClick={onClick} aria-pressed={pick ?? undefined} aria-label={b.name} className={cx("tap relative block rounded-[24px] p-[5px] text-left", className ?? "w-full")} style={RIM}>
+      <span className="stage-ink relative block aspect-square overflow-hidden rounded-[19px]" style={notchMask(notches)}>
         {/* face and shoulders in profile, a soft light behind (a still of the body's own 3D form) */}
         <span className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 70% at 70% 30%, rgb(104 126 245 / .16), transparent 70%)" }} />
         <span className="absolute inset-0 overflow-hidden"><Still sex={b.sex} measures={b.measures} shot="profile" className="origin-top scale-[2] object-cover object-top" /></span>
@@ -284,28 +285,28 @@ export function BodyPage() {
             </button>
           ))}
         </div>
-        {/* the measurements, two to a row. Measured: raised, the name over the number, a pencil. Estimated from the photo
-            scan: raised, a periwinkle check (each is checked once). Missing: pressed in, "Not measured", the add */}
+        {/* the measurements, two to a row, each a flat card with its button: the name over the number and a pencil to
+            change it; a scan estimate with a cornflower tick (each is checked once); missing, "Not measured" and a
+            cornflower plus */}
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {items.map((x) => done.has(x.key) || est.has(x.key) ? (
-            <button key={x.key} onClick={() => open(x.key)} aria-label={`${est.has(x.key) ? "Check" : "Change"} ${x.label}`} className="pill-dark tap flex h-[60px] items-center justify-between gap-2 rounded-[18px] pl-3.5 pr-2.5 text-left">
-              <span className="min-w-0">
-                <span className="block truncate text-[12px] leading-none text-white/60">{x.label}{est.has(x.key) && <span className="text-peri"> · estimate</span>}</span>
-                <span className="mt-1.5 block leading-none"><N v={shown(body.measures[x.key] ?? x.value, units)} className="text-[20px]" />{unit}</span>
-              </span>
-              {est.has(x.key)
-                ? <span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full text-white"><Icon name="check" size={15} strokeWidth={2.6} /></span>
-                : <span className="iconbadge grid h-8 w-8 shrink-0 place-items-center rounded-[10px]"><Icon name="pencil" size={15} /></span>}
-            </button>
-          ) : (
-            <button key={x.key} onClick={() => open(x.key)} aria-label={`Measure ${x.label}`} className="ruler-track tap flex h-[60px] items-center justify-between gap-2 rounded-[18px] pl-3.5 pr-2.5 text-left">
-              <span className="min-w-0">
-                <span className="block truncate text-[12px] leading-none text-white/60">{x.label}</span>
-                <span className="mt-1.5 block text-[13px] leading-none text-white/35">Not measured</span>
-              </span>
-              <span className="icon-primary grid h-8 w-8 shrink-0 place-items-center rounded-full text-white"><Icon name="plus" size={16} strokeWidth={2.4} /></span>
-            </button>
-          ))}
+          {items.map((x) => {
+            const has = done.has(x.key), guess = est.has(x.key);
+            return (
+              <button key={x.key} onClick={() => open(x.key)} aria-label={`${guess ? "Check" : has ? "Change" : "Measure"} ${x.label}`} className="card-soft tap flex h-[60px] items-center justify-between gap-2 rounded-[18px] pl-3.5 pr-2.5 text-left">
+                <span className="min-w-0">
+                  <span className="block truncate text-[12px] leading-none text-white/60">{x.label}{guess && <span className="text-peri"> · estimate</span>}</span>
+                  {has || guess
+                    ? <span className="mt-1.5 block leading-none"><N v={shown(body.measures[x.key] ?? x.value, units)} className="text-[20px]" />{unit}</span>
+                    : <span className="mt-1.5 block text-[13px] leading-none text-white/35">Not measured</span>}
+                </span>
+                {/* the action: a button you can press. Change: the dark secondary, round, a pencil. Measure (or check a
+                    scan estimate): cornflower, a plus (or a tick) */}
+                {has && !guess
+                  ? <span className="rb !h-9 !w-9 shrink-0" aria-hidden><Icon name="pencil" size={16} /></span>
+                  : <span className="pill-primary grid h-9 w-9 shrink-0 place-items-center rounded-full text-white" aria-hidden><Icon name={guess ? "check" : "plus"} size={17} strokeWidth={2.4} /></span>}
+              </button>
+            );
+          })}
         </div>
       </div>
       {/* change one: the 3D body on this measurement (its dashed tape) following the number, and the dial */}

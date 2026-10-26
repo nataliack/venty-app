@@ -10,6 +10,8 @@ import { useInstall } from "@/components/Install";
 import { MapBoard } from "./print";
 import { piecesFor } from "./pattern";
 import { Icon, type IconName } from "@/components/icons";
+import { BodyCard } from "./bodies";
+import { StillMaker } from "@/components/BodyStills";
 
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
 // the corners are rounded too (fillets), so the bar wraps the button like a cradle. Docked (home-screen app), the
@@ -434,7 +436,7 @@ function UpdatesButton() {
 // Home: the top keeps the Welcome sky (with a soft graph-paper grid fading down) and holds the one main job,
 // starting a pattern, as two clear choices. Everything else sits below on the dark page.
 export function Home() {
-  const { go, user, bodies, patterns, newDraft, setDraft, startBody, set } = useApp();
+  const { go, user, bodies, patterns, newDraft, setDraft, startBody, set, units } = useApp();
   const name = user.guest ? "Guest" : user.name;
   const desk = useDesk();
   const make = () => { newDraft(); go("patSelectBody"); };
@@ -480,17 +482,17 @@ export function Home() {
         <div className="lg:mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-12">
           <div>
             <div className="mt-7"><SectionHead title="Your bodies" onAll={() => go("bodies")} /></div>
-            <div className="noscroll -mx-6 mt-3 flex gap-2.5 overflow-x-auto px-6 pb-1 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
-              <button onClick={() => startBody()} aria-label="New body" className="tap grid h-[76px] w-[64px] shrink-0 place-items-center rounded-[20px] border border-dashed border-white/30 text-white/80 hover:border-white/60 lg:w-auto lg:grid-cols-[auto_auto] lg:justify-center lg:gap-2 lg:text-[15px] lg:font-medium">
-                <Icon name="plus" size={22} /><span className="hidden lg:inline">New body</span>
+            {/* the Body library's own cards (a still of each body, square, until the real pictures come), with New body
+                first as a tall dashed slot; room below for the cards' shadows */}
+            <div className="noscroll -mx-6 -mb-4 mt-3 flex items-stretch gap-3 overflow-x-auto px-6 pb-6 pt-1 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
+              <button onClick={() => startBody()} aria-label="New body" className="tap flex w-[64px] shrink-0 flex-col items-center justify-center gap-2 rounded-[24px] border border-dashed border-white/30 text-white/80 hover:border-white/60 lg:w-auto lg:flex-row">
+                <Icon name="plus" size={22} /><span className="hidden text-[15px] font-medium lg:inline">New body</span>
               </button>
-              {bodies.map((b) => (
-                <button key={b.id} onClick={() => { set({ activeBody: b.id }); go("bodyPage"); }} className="card-soft tap flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4 text-left">
-                  <span className="grid h-[60px] w-11 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-primary/20"><BodyFigure sex={b.sex} width={20} glow={false} className="h-[52px] w-full" /></span>
-                  <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/55">{b.done.length} of 24 measurements</span></span>
-                </button>
+              {bodies.filter((b) => b.name.trim()).map((b) => (
+                <BodyCard key={b.id} b={b} units={units} className="w-[150px] shrink-0 lg:w-auto" onClick={() => { set({ activeBody: b.id }); go("bodyPage"); }} />
               ))}
             </div>
+            <StillMaker />
           </div>
           <div>
             <div className="mt-7"><SectionHead title="Your patterns" onAll={() => go("patterns")} /></div>
