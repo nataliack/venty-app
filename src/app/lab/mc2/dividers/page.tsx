@@ -8,9 +8,10 @@ import { cx } from "@/components/ui";
 import { LOGO } from "@/components/art";
 import { Icon } from "@/components/icons";
 
-type Tone = "night" | "snow" | "paper" | "crown";
+type Tone = "night" | "white" | "snow" | "paper" | "crown";
 const TONES: { k: Tone; name: string; bg: string; dark: boolean }[] = [
   { k: "night", name: "Night", bg: "#0b0c15", dark: true },
+  { k: "white", name: "White", bg: "#ffffff", dark: false },
   { k: "snow", name: "Snow", bg: "#f0f4fe", dark: false },
   { k: "paper", name: "Paper", bg: "#f3f1ec", dark: false },
   { k: "crown", name: "Crown", bg: "#5a6c99", dark: true },
@@ -285,12 +286,15 @@ function EdgeGlow({ c }: { c: C }) {
 }
 
 // ─── the mark ───
+// Jose's pick (27 Oct 2026), for a white page: the lines stay solid out to the middle of each side and only then fade,
+// ink at 52% on light (3.7:1 on white where it is solid, so a 1 px line still reads), white at 38% on dark
 function MarkRule({ c }: { c: C }) {
+  const line = c.dark ? "rgb(255 255 255 / .38)" : "rgb(19 21 35 / .52)";
   return (
     <div className="flex h-8 items-center gap-6" aria-hidden>
-      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${c.line})` }} />
+      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${line} 55%)` }} />
       <svg viewBox={`${MARK_BOX.x} ${MARK_BOX.y} ${MARK_BOX.w} ${MARK_BOX.h}`} className="h-[22px] w-auto shrink-0"><path d={MARK} fill={c.accent} /></svg>
-      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${c.line}, transparent)` }} />
+      <span className="h-px flex-1" style={{ background: `linear-gradient(270deg, transparent, ${line} 55%)` }} />
     </div>
   );
 }
@@ -360,7 +364,7 @@ const GROUPS: { title: string; items: Def[] }[] = [
     { k: "edge", name: "Edge", h: 24, note: "Edge’s cornflower glow roaming a faint line.", D: EdgeGlow },
   ] },
   { title: "The mark", items: [
-    { k: "mark", name: "Mark", h: 32, note: "The mark, with a hairline fading out either side.", D: MarkRule },
+    { k: "mark", name: "Mark", h: 32, note: "Jose’s pick: the mark, with a hairline either side, solid near the mark and fading out at the edges. Readable on white.", D: MarkRule },
     { k: "flight", name: "Flight", h: 18, note: "The mark small and repeating, rising and falling.", D: Flight },
     { k: "stitched", name: "Stitched mark", h: 32, note: "The mark’s outline sewn in running stitch, the stitching carrying on either side.", D: MarkStitched },
   ] },
