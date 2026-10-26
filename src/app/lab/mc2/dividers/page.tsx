@@ -3,7 +3,7 @@
 // full bleed. Each is drawn from something Venty already has: the measuring tape, a sewing pattern's marks, stitches,
 // the fabric from Jose's films, the app's raised and pressed build, the three gradients, the mark. The switch shows
 // them on Night, Snow, Paper or Crown. Nothing here is used by the app.
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import { cx } from "@/components/ui";
 import { LOGO } from "@/components/art";
 import { Icon } from "@/components/icons";
@@ -45,6 +45,27 @@ function Ruler({ c }: { c: C }) {
       {ticks.filter((i) => i % 10 === 0 && i > 0).map((i) => <text key={i} x={i * 8 + 3} y={11} fontSize={10} fill={c.strong} style={num}>{i / 10}</text>)}
     </svg>
   );
+}
+// Jose's pick (27 Oct 2026): the ruler with no numbers, fading out at both ends. CSS only (no SVG, no script), in the
+// text colour, so the same divider works on any section: set `color` and it follows. A long tick every 80 px, a middle
+// one every 40, a short one every 8, all standing on a hairline.
+const tick = (pct: number) => `color-mix(in srgb, currentColor ${pct}%, transparent)`;
+const RULER_FADED: CSSProperties = {
+  height: 15,
+  backgroundImage: [
+    `linear-gradient(90deg, ${tick(60)} 1px, transparent 1px)`,
+    `linear-gradient(90deg, ${tick(38)} 1px, transparent 1px)`,
+    `linear-gradient(90deg, ${tick(24)} 1px, transparent 1px)`,
+    `linear-gradient(${tick(24)}, ${tick(24)})`,
+  ].join(", "),
+  backgroundSize: "80px 14px, 40px 9px, 8px 5px, 100% 1px",
+  backgroundPosition: "0 100%",
+  backgroundRepeat: "repeat-x, repeat-x, repeat-x, no-repeat",
+  WebkitMaskImage: "linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)",
+  maskImage: "linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)",
+};
+function RulerFaded({ c }: { c: C }) {
+  return <div aria-hidden style={{ ...RULER_FADED, color: c.strong }} />;
 }
 // the 3D body's tape: flat cornflower dashes running along
 function TapeDashes({ c }: { c: C }) {
@@ -301,6 +322,7 @@ type Def = { k: string; name: string; h: number; note: string; D: (p: { c: C }) 
 const GROUPS: { title: string; items: Def[] }[] = [
   { title: "Measuring", items: [
     { k: "tape", name: "Tape", h: 28, note: "The tape measure itself: cornflower, white ticks every 8 px, its numbers in Bigilla.", D: Tape },
+    { k: "ruler-faded", name: "Ruler, faded", h: 15, note: "Jose’s pick: the ruler with no numbers, fading out at both ends. CSS only, in the text colour.", D: RulerFaded },
     { k: "ruler", name: "Ruler", h: 22, note: "Just the scale: ticks and Bigilla numbers on the page.", D: Ruler },
     { k: "tape-run", name: "Tape round the body", h: 4, note: "The 3D body’s tape, flat cornflower dashes running along. Still with reduced motion.", D: TapeDashes },
     { k: "measures", name: "Measurements", h: 24, note: "A body’s measurements set out along the line, each on its tick.", D: Measures },
