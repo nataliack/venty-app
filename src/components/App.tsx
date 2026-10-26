@@ -109,14 +109,23 @@ function useStatusTint(id: string) {
 
 // Links that open a screen (app.venty.au/install: Add Venty to your home screen). The screen goes on top of wherever you
 // were, so leaving it takes you back there (on a first visit, to the splash and the intro), and the address goes back to
-// "/" so a reload, or the app added to the home screen, starts as usual.
-const LINKS: Record<string, string> = { "/install": "install" };
+// "/" so a reload, or the app added to the home screen, starts as usual. A phone-only screen opens only on a phone browser
+// (an iPhone, iPad or Android, as useInstall tells them); on a computer, or inside the home-screen app, the link simply
+// opens Venty.
+const LINKS: Record<string, { id: string; phoneOnly?: boolean }> = { "/install": { id: "install", phoneOnly: true } };
+function onPhoneBrowser() {
+  const ua = navigator.userAgent;
+  const phone = /iPhone|iPad|iPod|Android/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const app = document.documentElement.classList.contains("pwa") || window.matchMedia("(display-mode: standalone)").matches;
+  return phone && !app;
+}
 function openFromLink() {
-  const id = LINKS[location.pathname.replace(/\/+$/, "")];
-  if (!id) return;
+  const link = LINKS[location.pathname.replace(/\/+$/, "")];
+  if (!link) return;
   history.replaceState(history.state, "", "/" + location.search);
+  if (link.phoneOnly && !onPhoneBrowser()) return;
   const s = useApp.getState();
-  if (s.stack[s.stack.length - 1]?.id !== id) s.go(id);
+  if (s.stack[s.stack.length - 1]?.id !== link.id) s.go(link.id);
 }
 
 export default function App() {
