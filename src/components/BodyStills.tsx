@@ -92,7 +92,7 @@ export function Still({ sex, measures, shot = "whole", className }: { sex: Sex; 
 
 // The body cards' pictures (the Body library and home's Your bodies only), cropped to the card's 4:5. A form with no
 // picture yet shows its 3D still: face and shoulders in profile.
-export const BODY_PIC: Partial<Record<Sex, string>> = { female: "/bodies/female.webp" };
+export const BODY_PIC: Partial<Record<Sex, string>> = { female: "/bodies/female.webp", male: "/bodies/male.webp" };
 export function BodyPic({ sex, measures }: { sex: Sex; measures: Record<string, number> }) {
   const pic = BODY_PIC[sex];
   return pic
