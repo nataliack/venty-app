@@ -107,6 +107,18 @@ function useStatusTint(id: string) {
   }, [id]);
 }
 
+// Links that open a screen (app.venty.au/install: Add Venty to your home screen). The screen goes on top of wherever you
+// were, so leaving it takes you back there (on a first visit, to the splash and the intro), and the address goes back to
+// "/" so a reload, or the app added to the home screen, starts as usual.
+const LINKS: Record<string, string> = { "/install": "install" };
+function openFromLink() {
+  const id = LINKS[location.pathname.replace(/\/+$/, "")];
+  if (!id) return;
+  history.replaceState(history.state, "", "/" + location.search);
+  const s = useApp.getState();
+  if (s.stack[s.stack.length - 1]?.id !== id) s.go(id);
+}
+
 export default function App() {
   const [ready, setReady] = useState(false);
   const stack = useApp((s) => s.stack);
@@ -127,7 +139,7 @@ export default function App() {
 
   // wait for localStorage rehydration to avoid flashes / mismatches
   useEffect(() => {
-    const done = () => setReady(true);
+    const done = () => { openFromLink(); setReady(true); };
     if (useApp.persist.hasHydrated()) done();
     const unsub = useApp.persist.onFinishHydration(done);
     const t = setTimeout(done, 600);
