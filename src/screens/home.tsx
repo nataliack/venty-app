@@ -10,7 +10,7 @@ import { useInstall } from "@/components/Install";
 import { MapBoard } from "./print";
 import { piecesFor } from "./pattern";
 import { Icon, type IconName } from "@/components/icons";
-import { Still, StillMaker } from "@/components/BodyStills";
+import { BodyPic, StillMaker } from "@/components/BodyStills";
 
 // The bar's outline: a rounded pill with a round notch cut into the top centre. Where the notch meets the top edge
 // the corners are rounded too (fillets), so the bar wraps the button like a cradle. Docked (home-screen app), the
@@ -481,15 +481,15 @@ export function Home() {
         <div className="lg:mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-12">
           <div>
             <div className="mt-7"><SectionHead title="Your bodies" onAll={() => go("bodies")} /></div>
-            {/* the row as before (the picture, the name, how many are measured); the picture is the body's own 3D still,
-                the one on its Body library card */}
+            {/* the row as before (the picture, the name, how many are measured); the picture is the one on its Body library
+                card */}
             <div className="noscroll -mx-6 mt-3 flex gap-2.5 overflow-x-auto px-6 pb-1 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
               <button onClick={() => startBody()} aria-label="New body" className="tap grid h-[76px] w-[64px] shrink-0 place-items-center rounded-[20px] border border-dashed border-white/30 text-white/80 hover:border-white/60 lg:w-auto lg:grid-cols-[auto_auto] lg:justify-center lg:gap-2 lg:text-[15px] lg:font-medium">
                 <Icon name="plus" size={22} /><span className="hidden lg:inline">New body</span>
               </button>
               {bodies.map((b) => (
                 <button key={b.id} onClick={() => { set({ activeBody: b.id }); go("bodyPage"); }} className="card-soft tap flex h-[76px] shrink-0 items-center gap-3 rounded-[20px] pl-2 pr-4 text-left">
-                  <span className="stage-ink relative block h-[60px] w-11 shrink-0 overflow-hidden rounded-[14px]"><Still sex={b.sex} measures={b.measures} shot="profile" className="origin-top scale-[2] object-cover object-top" /></span>
+                  <span className="stage-ink relative block h-[60px] w-11 shrink-0 overflow-hidden rounded-[14px]"><BodyPic sex={b.sex} measures={b.measures} /></span>
                   <span className="min-w-0"><span className="block truncate text-[15px] font-medium">{b.name}</span><span className="block whitespace-nowrap text-[13px] text-white/55">{b.done.length} of 24 measurements</span></span>
                 </button>
               ))}
