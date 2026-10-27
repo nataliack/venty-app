@@ -155,6 +155,7 @@ function BriefSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 export function AIRead({ p }: { p?: Record<string, unknown> }) {
   const { go, draft, setDraft } = useApp();
+  const b = useApp((s) => s.body());
   const tab = (p?.tab as string) ?? "Overview";
   const chosen = draft.chosen ?? {};
   const [pick, setPick] = useState<string | null>(null);
@@ -177,7 +178,11 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
         <Split left={<>
           <HS className="mt-4 lg:mt-0">How should it fit?</HS>
           <Lead className="mt-2">How much room there is between your body and the {kindLabel(kind).toLowerCase()}. More room means a looser fit.</Lead>
-          <div className="relative mx-auto mt-3 h-[min(300px,33dvh)] w-full max-w-[320px] lg:h-[min(440px,48dvh)]"><BodyFigure sex={useApp.getState().body().sex} width={110} variant="solid" garment={draft.garment} spec={draftSpec(draft)} glow={false} className="h-full w-full" /></div>
+          {/* the body: the 3D body wearing the closest of the 3D garments to the design (as on the garment screen),
+              turning slowly by itself; drag to turn it */}
+          <div className="relative mx-auto mt-3 h-[min(300px,33dvh)] w-full max-w-[320px] lg:h-[min(440px,48dvh)]">
+            <Body3D sex={b.sex} measures={b.measures} focus="height" turn garments={[garment3dFor(kind, draft.details ?? TEMPLATE_DETAILS[draft.garment] ?? (draft.garment === "flutter" ? FLUTTER.read : undefined), b.sex, draft.garment)]} className="absolute inset-0" />
+          </div>
         </>} right={<>
           <div className="mt-4 grid grid-cols-2 gap-2.5 lg:mt-0" data-need={chosen.fit ? "0" : "1"}>{FITS.map((f) => (
             <Option key={f.key} on={!!chosen.fit && !own && preset?.key === f.key} onClick={() => { setCustom(false); setEase(f.ease); }} className="flex flex-col justify-between rounded-[20px] p-3.5 pr-11">
