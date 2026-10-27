@@ -256,10 +256,12 @@ export const detailOpts = (kind: Kind, key: string) => KIND_DETAILS[kind].opts[k
 // one plain line that says what the garment is, built from its details
 export function describe(kind: Kind, details: [string, string][]) {
   const v = (k: string) => (details.find(([x]) => x.toLowerCase() === k)?.[1] ?? "").toLowerCase();
+  // "sleeveless" and "thin straps" stand alone ("sleeveless sleeves" read wrong); the rest are sleeves
+  const arms = () => (v("sleeves") === "sleeveless" || v("sleeves") === "thin straps" ? v("sleeves") : `${v("sleeves")} sleeves`);
   if (kind === "trousers") return `${v("rise")} rise, ${v("leg")} leg, ${v("length")} length, ${v("pockets") === "none" ? "no" : v("pockets")} pockets.`.replace(/^./, (c) => c.toUpperCase());
   if (kind === "skirt") return `${v("length")} length, ${v("shape")}, ${v("waist")} waist.`.replace(/^./, (c) => c.toUpperCase());
-  if (kind === "top") return `${v("sleeves")} sleeves, ${v("neckline")}, ${v("length")} length, ${v("shape")} shape.`.replace(/^./, (c) => c.toUpperCase());
-  return `${v("length")} length, ${v("sleeves")} sleeves, ${v("neckline")}, ${v("skirt")} skirt.`.replace(/^./, (c) => c.toUpperCase());
+  if (kind === "top") return `${arms()}, ${v("neckline")}, ${v("length")} length, ${v("shape")} shape.`.replace(/^./, (c) => c.toUpperCase());
+  return `${v("length")} length, ${arms()}, ${v("neckline")}, ${v("skirt")} skirt.`.replace(/^./, (c) => c.toUpperCase());
 }
 
 // A pattern's name says what you asked for ("Straight mid-rise trousers", "Midi A-line skirt"); a pre-made pattern
@@ -270,15 +272,19 @@ export function nameFor(garment: GarmentKey, kind?: Kind, details?: [string, str
   const v = (k: string) => details.find(([x]) => x === k)?.[1] ?? "";
   const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
   if (kind === "trousers") return v("Length") === "Shorts" ? cap(`${v("Leg").toLowerCase()} ${v("Rise").toLowerCase()}-rise shorts`) : cap(`${v("Leg").toLowerCase()} ${v("Rise").toLowerCase()}-rise trousers`);
-  if (kind === "skirt") return `${v("Length")} ${v("Shape").toLowerCase()} skirt`.replace(/a-line/, "A-line");
+  // "Knee-length", not "Knee", at the front of a name
+  const len = (x: string) => (x === "Knee" ? "Knee-length" : x);
+  if (kind === "skirt") return `${len(v("Length"))} ${v("Shape").toLowerCase()} skirt`.replace(/a-line/, "A-line");
   if (kind === "top") {
     const sl = v("Sleeves"), len = v("Length");
     const arms = sl === "Thin straps" ? "strappy" : sl === "Sleeveless" ? "sleeveless" : `${sl.toLowerCase()}-sleeve`;
     const what = garment === "shirt" ? "shirt" : len === "Tunic" ? "tunic" : "top";
     return cap(`${len === "Cropped" ? "cropped " : ""}${arms} ${what}`);
   }
-  if (garment === "wrap") return `${v("Length")} wrap dress`;
-  return `${v("Length")} ${v("Skirt").toLowerCase()} dress`.replace(/a-line/, "A-line");
+  if (garment === "wrap") return `${len(v("Length"))} wrap dress`;
+  // a halter is what the dress is known by ("Knee-length halter dress")
+  if (v("Neckline") === "Halter") return `${len(v("Length"))} halter dress`;
+  return `${len(v("Length"))} ${v("Skirt").toLowerCase()} dress`.replace(/a-line/, "A-line");
 }
 
 // how deep each neckline usually sits below the base of the neck (cm): the neckline-depth dial starts here
@@ -326,11 +332,12 @@ export function readDesign(words: string | undefined, kind: Kind): { garment: Ga
   const read = new Map(KIND_DETAILS[kind].read.map(([k, v]) => [k, v]));
   const pick = (key: string, list: [RegExp, string][]) => { if (!read.has(key)) return; for (const [re, v] of list) if (re.test(t)) { read.set(key, v); return; } };
   pick("Sleeves", [[/sleeveless|strapless|\btank/, "Sleeveless"], [/flutter/, "Flutter"], [/puff/, "Puff"], [/bell sleeve/, "Bell"], [/three.quarter|3\/4/, "Three-quarter"], [/long sleeve/, "Long"], [/short sleeve/, "Short"], [/cap sleeve/, "Cap"]]);
-  pick("Neckline", [[/v.?neck/, "V-neck"], [/sweetheart/, "Sweetheart"], [/square neck/, "Square"], [/scoop/, "Scoop"], [/boat neck|bateau/, "Boat"], [/halter/, "Halter"], [/cowl/, "Cowl"], [/off.the.shoulder|off.shoulder/, "Off-shoulder"], [/high neck|turtle/, "High neck"], [/collar/, "Collar"], [/round neck|crew/, "Round"]]);
+  // a halter first: "a halter dress with a deep V neckline" is a halter (its V is the halter's own)
+  pick("Neckline", [[/halter/, "Halter"], [/v.?neck/, "V-neck"], [/sweetheart/, "Sweetheart"], [/square neck/, "Square"], [/scoop/, "Scoop"], [/boat neck|bateau/, "Boat"], [/cowl/, "Cowl"], [/off.the.shoulder|off.shoulder/, "Off-shoulder"], [/high neck|turtle/, "High neck"], [/collar/, "Collar"], [/round neck|crew/, "Round"]]);
   pick("Length", kind === "trousers" ? [[/shorts/, "Shorts"], [/crop/, "Cropped"], [/ankle/, "Ankle"], [/full.length|long/, "Full"]]
     : kind === "top" ? [[/crop/, "Cropped"], [/tunic|long/, "Tunic"], [/waist length/, "Waist"]]
     : [[/maxi|floor/, "Maxi"], [/midi/, "Midi"], [/knee/, "Knee"], [/mini/, "Mini"]]);
-  pick("Skirt", [[/bodycon|tight|figure.hugging/, "Bodycon"], [/pencil/, "Pencil"], [/pleat/, "Pleated"], [/circle/, "Full circle"], [/tier/, "Tiered"], [/bias|slip/, "Bias cut"], [/mermaid/, "Mermaid"], [/straight skirt/, "Straight"], [/a.line/, "A-line"]]);
+  pick("Skirt", [[/bodycon|tight|figure.hugging/, "Bodycon"], [/pencil/, "Pencil"], [/pleat/, "Pleated"], [/circle|full,? (swingy )?skirt|swing/, "Full circle"], [/tier/, "Tiered"], [/bias|slip/, "Bias cut"], [/mermaid/, "Mermaid"], [/straight skirt/, "Straight"], [/a.line/, "A-line"]]);
   pick("Shape", kind === "skirt" ? [[/pencil/, "Pencil"], [/pleat/, "Pleated"], [/circle/, "Full circle"], [/tier/, "Tiered"], [/bias|slip/, "Bias cut"], [/straight/, "Straight"], [/wrap/, "Wrap"], [/a.line/, "A-line"]]
     : [[/oversize/, "Oversized"], [/boxy/, "Boxy"], [/peplum/, "Peplum"], [/wrap/, "Wrap"], [/fitted|bodycon|tight|slim|close.fit|figure.hugging/, "Fitted"], [/relaxed|loose/, "Relaxed"]]);
   pick("Rise", [[/high.?(rise|waist)/, "High"], [/mid.?rise/, "Mid"], [/low.?rise/, "Low"]]);
@@ -354,5 +361,7 @@ export function readDesign(words: string | undefined, kind: Kind): { garment: Ga
   }
   if (/thin strap|spaghetti|strappy|\bslip\b|\bcami/.test(t) && read.has("Sleeves")) read.set("Sleeves", "Thin straps");
   if (/singlet|tank/.test(t) && read.has("Sleeves")) read.set("Sleeves", "Sleeveless");
+  // a halter is always sleeveless (as the garment is drawn)
+  if (read.get("Neckline") === "Halter" && read.has("Sleeves")) read.set("Sleeves", "Sleeveless");
   return { garment, details: [...read.entries()], lengthCm: lengthCmFor(kind, read.get("Length") ?? "") };
 }
