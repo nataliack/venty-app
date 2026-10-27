@@ -20,7 +20,12 @@ import { PatternTray } from "@/components/PatternTray";
 const Body3D = dynamic(() => import("@/components/Body3D").then((m) => m.Body3D), { ssr: false, loading: () => <BodyLoader /> });
 
 export const garmentName = (g: GarmentKey) => (g === "flutter" ? FLUTTER.name : templateBy(g).name);
-export const piecesFor = (g: GarmentKey): PieceKey[] => (g === "flutter" ? ["bodiceFront", "bodiceBack", "sleeve", "skirtFront", "skirtBack", "facing"] : templateBy(g).pieceSet);
+// details: what was asked for; without sleeves (sleeveless, thin straps, a halter) there is no sleeve piece
+export const piecesFor = (g: GarmentKey, details?: [string, string][]): PieceKey[] => {
+  const all: PieceKey[] = g === "flutter" ? ["bodiceFront", "bodiceBack", "sleeve", "skirtFront", "skirtBack", "facing"] : templateBy(g).pieceSet;
+  const sleeves = details?.find(([k]) => k === "Sleeves")?.[1];
+  return sleeves === "Sleeveless" || sleeves === "Thin straps" ? all.filter((k) => k !== "sleeve") : all;
+};
 
 // Reference thumbnail: your photo and sketch (merged into one image in the studio), or an illustrated stand-in.
 export function RefImage({ className }: { className?: string }) {
@@ -305,7 +310,7 @@ export function Generating({ p }: { p?: Record<string, unknown> }) {
   // A light page, so drafting reads as its own moment (not one more dark working screen): the pieces draft themselves
   // on pattern paper one after another, a pen point at the end of each line, with the four stages listed underneath.
   // No big percentage: the number font has no % sign, and the drawing says more about what is happening.
-  const pieces = piecesFor(draft.garment);
+  const pieces = piecesFor(draft.garment, draft.details);
   const k = pct / 100;
   const per = 0.86 / pieces.length; // each piece's share of the time; the last bit is the pieces settling
   const desk = useDesk();
@@ -346,7 +351,7 @@ export function Garment({ p }: { p?: Record<string, unknown> }) {
   const b = body();
   const [view, setView] = useState((p?.view as string) ?? "On your body");
   const name = nameFor(draft.garment, draft.source === "template" ? undefined : draft.kind, draft.details);
-  const pieces = piecesFor(draft.garment);
+  const pieces = piecesFor(draft.garment, draft.details);
   useEffect(() => { savePattern("Fitting"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const desk = useDesk();
   const { toast, node } = useToast();

@@ -68,7 +68,7 @@ export function Seam() {
       </>} right={<>
       <Glass className="relative mt-5 grid h-[min(210px,25dvh)] place-items-center rounded-[26px] lg:mt-0 lg:h-[min(340px,38dvh)]" >
         <div className="absolute inset-0 rounded-[26px]" style={GRID} />
-        <Piece k={piecesFor(draft.garment)[0]} width={120} label={PIECE_LABEL[piecesFor(draft.garment)[0]]} allowance={add ? amt ?? 1.5 : false} />
+        <Piece k={piecesFor(draft.garment, draft.details)[0]} width={120} label={PIECE_LABEL[piecesFor(draft.garment, draft.details)[0]]} allowance={add ? amt ?? 1.5 : false} />
         {add && amt !== null && <span className="absolute right-6 top-6 text-[15px] font-medium text-peri">{amt} cm</span>}
       </Glass>
       <div className="mt-3 flex flex-col gap-2.5" data-need={yes === null ? "1" : "0"}>
@@ -165,9 +165,9 @@ function FitBox({ className, children, onSize }: { className?: string; children:
 
 // The pattern map: exactly the layout you arranged (or a tidy one, for patterns made before layouts were saved), with
 // the sheets it prints on. Used on the finished page, the pattern's own page and the full-screen map.
-export function MapBoard({ garment, printer, at, className, style, labels = true }: { garment: GarmentKey; printer: "A4" | "A0"; at?: At; className?: string; style?: React.CSSProperties; labels?: boolean }) {
+export function MapBoard({ garment, details, printer, at, className, style, labels = true }: { garment: GarmentKey; details?: [string, string][]; printer: "A4" | "A0"; at?: At; className?: string; style?: React.CSSProperties; labels?: boolean }) {
   const a4 = printer !== "A0";
-  const pieces = piecesFor(garment);
+  const pieces = piecesFor(garment, details);
   const pos = at ?? pack(pieces);
   const area = useRef<HTMLDivElement>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -194,7 +194,7 @@ export function MapBoard({ garment, printer, at, className, style, labels = true
 export function Arrange() {
   const { go, draft, setDraft } = useApp();
   const a4 = draft.printer !== "A0";
-  const pieces = piecesFor(draft.garment);
+  const pieces = piecesFor(draft.garment, draft.details);
   const area = useRef<HTMLDivElement>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const saved = draft.layout && draft.layout.garment === draft.garment && draft.layout.printer === draft.printer ? draft.layout.at : null;
@@ -385,8 +385,8 @@ export function MiniMap({ p }: { p?: Record<string, unknown> }) {
       <Split cols="lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" left={<>
         <H1 className="mt-4 lg:mt-0">Your pattern map</H1>
         <Lead className="mt-2">{a4 ? "Where every piece sits on your sheets. Tape each row first, then join the rows. Match the triangles on the edges." : "Where every piece sits on your A0 sheet."}</Lead>
-      </>} right={desk ? <MapBoard garment={garment} printer={printer} at={at} className="mx-auto" style={paperStyle(true, 300)} /> : null} />
-      {!desk && <FitBox className="mt-4 min-h-[300px] flex-1">{(st) => <MapBoard garment={garment} printer={printer} at={at} style={st} />}</FitBox>}
+      </>} right={desk ? <MapBoard garment={garment} details={pat ? pat.spec?.details : draft.details} printer={printer} at={at} className="mx-auto" style={paperStyle(true, 300)} /> : null} />
+      {!desk && <FitBox className="mt-4 min-h-[300px] flex-1">{(st) => <MapBoard garment={garment} details={pat ? pat.spec?.details : draft.details} printer={printer} at={at} style={st} />}</FitBox>}
     </Screen>
   );
 }

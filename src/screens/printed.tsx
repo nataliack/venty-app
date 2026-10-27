@@ -29,7 +29,7 @@ const STRETCH = { "A lot": "stretchy", "A bit": "with a little stretch", No: "wi
 // ─── the pattern, the sheets it prints on, and what to buy, from the store's draft ───
 function useMade() {
   const { draft } = useApp();
-  const pieces = piecesFor(draft.garment);
+  const pieces = piecesFor(draft.garment, draft.details);
   const pos: At = (draft.layout?.garment === draft.garment ? draft.layout.at : undefined) ?? pack(pieces);
   // the sheets a piece lands on, from each piece's box (turned pieces swap their sides), as the layout counts them: a
   // piece has to reach a few mm into a sheet to need it

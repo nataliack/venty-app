@@ -575,7 +575,7 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
       </>} right={<>
         {/* the pattern map: always in sight here, since it is what you need while taping the sheets together */}
         <button onClick={() => go("minimap", { id: pat.id })} className="card-soft tap mt-3 flex w-full items-center gap-4 rounded-[24px] p-3 pr-4 text-left lg:mt-0">
-          <MapBoard garment={pat.garment} printer={sp.printer} at={sp.layout} labels={false} className="w-[84px] shrink-0 lg:w-[110px]" />
+          <MapBoard garment={pat.garment} details={sp.details} printer={sp.printer} at={sp.layout} labels={false} className="w-[84px] shrink-0 lg:w-[110px]" />
           <span className="min-w-0 flex-1">
             <span className="block text-[17px]">Pattern map</span>
             <span className="mt-1 block text-[14px] leading-snug text-white/60">{sp.printer === "A0" ? "Where every piece sits on your A0 sheet" : `Where every piece sits on your ${sp.sheets ? `${sp.sheets} ` : ""}A4 sheets, and how to tape them`}</span>
@@ -587,7 +587,7 @@ export function PatternView({ p }: { p?: Record<string, unknown> }) {
         {/* everything else the pattern needs: the fastening, interfacing for facings, thread */}
         <div className="card-soft mt-3 rounded-[24px] px-5 pb-3 pt-4">
           <div className="text-[15px] font-medium text-white/85">You will also need</div>
-          <ul className="mt-2 flex flex-col gap-2">{notionsFor(sp.details ?? (pat.garment === "flutter" ? FLUTTER.read : []), piecesFor(pat.garment)).map((n) => <li key={n} className="flex items-start gap-2.5 text-[15px] leading-snug text-white/75"><Icon name="check" size={16} className="mt-0.5 shrink-0 text-peri" />{n}</li>)}</ul>
+          <ul className="mt-2 flex flex-col gap-2">{notionsFor(sp.details ?? (pat.garment === "flutter" ? FLUTTER.read : []), piecesFor(pat.garment, sp.details)).map((n) => <li key={n} className="flex items-start gap-2.5 text-[15px] leading-snug text-white/75"><Icon name="check" size={16} className="mt-0.5 shrink-0 text-peri" />{n}</li>)}</ul>
         </div>
         {list("How it was made", made)}
       </>} />
