@@ -153,6 +153,12 @@ function BriefSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
+// a small 3D stage on the page: its pattern floor fades out towards the box's sides and bottom
+const FLOOR_FADE: React.CSSProperties = {
+  maskImage: "linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent), linear-gradient(180deg, #000 78%, transparent)",
+  WebkitMaskImage: "linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent), linear-gradient(180deg, #000 78%, transparent)",
+  maskComposite: "intersect", WebkitMaskComposite: "source-in",
+};
 export function AIRead({ p }: { p?: Record<string, unknown> }) {
   const { go, draft, setDraft } = useApp();
   const b = useApp((s) => s.body());
@@ -179,9 +185,10 @@ export function AIRead({ p }: { p?: Record<string, unknown> }) {
           <HS className="mt-4 lg:mt-0">How should it fit?</HS>
           <Lead className="mt-2">How much room there is between your body and the {kindLabel(kind).toLowerCase()}. More room means a looser fit.</Lead>
           {/* the body: the 3D body wearing the closest of the 3D garments to the design (as on the garment screen),
-              turning slowly by itself; drag to turn it */}
-          <div className="relative mx-auto mt-3 h-[min(300px,33dvh)] w-full max-w-[320px] lg:h-[min(440px,48dvh)]">
-            <Body3D sex={b.sex} measures={b.measures} focus="height" turn garments={[garment3dFor(kind, draft.details ?? TEMPLATE_DETAILS[draft.garment] ?? (draft.garment === "flutter" ? FLUTTER.read : undefined), b.sex, draft.garment)]} className="absolute inset-0" />
+              turning slowly by itself on the pattern floor (as on the other 3D screens); drag to turn it. The floor is wider than
+              this box, so it fades out before the box's sides and bottom instead of stopping at them (FLOOR_FADE) */}
+          <div className="relative mx-auto mt-3 h-[min(300px,33dvh)] w-full max-w-[320px] lg:h-[min(440px,48dvh)]" style={FLOOR_FADE}>
+            <Body3D sex={b.sex} measures={b.measures} focus="height" stage="grid" lines="white" turn garments={[garment3dFor(kind, draft.details ?? TEMPLATE_DETAILS[draft.garment] ?? (draft.garment === "flutter" ? FLUTTER.read : undefined), b.sex, draft.garment)]} className="absolute inset-0" />
           </div>
         </>} right={<>
           <div className="mt-4 grid grid-cols-2 gap-2.5 lg:mt-0" data-need={chosen.fit ? "0" : "1"}>{FITS.map((f) => (
