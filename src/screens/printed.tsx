@@ -1,7 +1,8 @@
 "use client";
-// The end: the pattern is printed, now the sewing starts. A moment, so it is on paper (from the lab, /lab/mc3 round 3).
-// At the top, what has happened, pressed into the paper with its tick on a raised knob (Body ready's build). Then three
-// slides to drag, each on a surface pressed into the paper: the sheets flying into place and taped together (A4), or the
+// The end: the pattern is printed, now the sewing starts. A moment, on cloud (from the lab, /lab/mc3 round 3; cloud, not
+// paper, since 28 Oct 2026).
+// At the top, what has happened, pressed into the page with its tick on a raised knob (Body ready's build). Then three
+// slides to drag, each on a surface pressed into the page: the sheets flying into place and taped together (A4), or the
 // one A0 sheet; a moment after, the fabric to buy, said plainly; and help while you sew (the only raised things, as they
 // are the only buttons). Under them the pager from Add to home screen; then the title, View pattern map and Back to home.
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -19,10 +20,10 @@ const SLIDE_H = 392, GAP = 12, AFTER = 2600, RATIO = SHEET_H / SHEET_W;
 const SEG = 34, CH = 5, KH = 12;
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 const ease = (t: number) => t * t * (3 - 2 * t);
-const INK = "18 19 28";
-// pressed into the paper (a slide's floor), and raised off it (white, lit from the top: buttons only)
-const PRESSED = "bg-[#12131c]/[.045] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85)]";
-const raised = "bg-white shadow-[0_6px_14px_-8px_rgb(18_19_28/.32),0_1px_2px_rgb(18_19_28/.08),inset_0_-1px_0_rgb(18_19_28/.06)]";
+const INK = "24 30 70"; // the cloud's shade, a deep indigo ink
+// pressed into the page (a slide's floor), and raised off it (white, lit from the top: buttons only)
+const PRESSED = "bg-[#181e46]/[.045] shadow-[inset_0_3px_7px_rgb(24_30_70/.2),inset_0_1px_1.5px_rgb(24_30_70/.16),inset_0_-1px_0_rgb(255_255_255/.85)]";
+const raised = "bg-white shadow-[0_6px_14px_-8px_rgb(24_30_70/.32),0_1px_2px_rgb(24_30_70/.08),inset_0_-1px_0_rgb(24_30_70/.06)]";
 const SURFACE = cx("relative flex h-full flex-col overflow-hidden rounded-[26px] px-[18px] pb-[18px] pt-5 text-[#12131c]", PRESSED);
 const STRETCH = { "A lot": "stretchy", "A bit": "with a little stretch", No: "with no stretch" } as const;
 
@@ -79,14 +80,14 @@ function LayoutInk({ pieces, pos, cell }: { pieces: PieceKey[]; pos: At; cell: n
 function Sheet({ rc, cell, w, h, m, style }: { rc: [number, number]; cell: number; w: number; h: number; m: Made; style?: CSSProperties }) {
   const [r, c] = rc;
   return (
-    <div className="relative overflow-hidden bg-white shadow-[0_6px_14px_-8px_rgb(18_19_28/.35),0_0_0_1px_rgb(18_19_28/.06)]" style={{ width: w, height: h, ...style }}>
+    <div className="relative overflow-hidden bg-white shadow-[0_6px_14px_-8px_rgb(24_30_70/.35),0_0_0_1px_rgb(24_30_70/.06)]" style={{ width: w, height: h, ...style }}>
       <div className="absolute" style={{ left: -c * cell, top: -r * cell * RATIO }}><LayoutInk pieces={m.pieces} pos={m.pos} cell={cell} /></div>
       {[[3, 3], [w - 9, 3], [3, h - 9], [w - 9, h - 9]].map(([x, y], i) => <span key={i} className="absolute h-1.5 w-1.5 border-[#12131c]/25" style={{ left: x, top: y, borderLeftWidth: i % 2 ? 0 : 1, borderRightWidth: i % 2 ? 1 : 0, borderTopWidth: i < 2 ? 1 : 0, borderBottomWidth: i < 2 ? 0 : 1 }} />)}
     </div>
   );
 }
 
-// what has happened, pressed into the paper, its tick on a raised knob
+// what has happened, pressed into the page, its tick on a raised knob
 function Done({ children }: { children: string }) {
   return (
     <span className="inline-flex h-11 items-center gap-2.5 rounded-[14px] pl-2.5 pr-4 text-[15px] text-[#12131c]/75"
@@ -97,7 +98,7 @@ function Done({ children }: { children: string }) {
   );
 }
 
-// ─── slide 1 (A4): the sheets fly into place on a table pressed into the paper, one after another in the order to tape
+// ─── slide 1 (A4): the sheets fly into place on a table pressed into the page, one after another in the order to tape
 // them, each on a solid numbered badge; then the tape goes on along the joins and the numbers go. Show me again replays it ───
 function TapeTable({ m, run, taped, onAgain }: { m: Made; run: number; taped: boolean; onAgain: () => void }) {
   const still = useReducedMotion();
@@ -126,13 +127,13 @@ function TapeTable({ m, run, taped, onAgain }: { m: Made; run: number; taped: bo
               animate={{ x: 0, y: 0, rotate: 0, opacity: 1 }} transition={{ delay: 0.2 + i * 0.28, type: "spring", stiffness: 150, damping: 20 }}>
               <Sheet rc={[r, c]} cell={cell} w={cell} h={cell * RATIO} m={m} />
               {/* the order to tape them, on a solid badge (nothing shows through it) */}
-              <motion.span className="absolute left-1.5 top-1.5 grid h-5 min-w-5 place-items-center rounded-[6px] bg-[#e9e7e2] px-1 text-[11px] font-medium tabular-nums text-[#12131c]/75 shadow-[inset_0_1px_2px_rgb(18_19_28/.18),0_1px_0_rgb(255_255_255/.9)]"
+              <motion.span className="absolute left-1.5 top-1.5 grid h-5 min-w-5 place-items-center rounded-[6px] bg-[#e4e9f7] px-1 text-[11px] font-medium tabular-nums text-[#12131c]/75 shadow-[inset_0_1px_2px_rgb(24_30_70/.18),0_1px_0_rgb(255_255_255/.9)]"
                 animate={{ opacity: taped ? 0 : 1 }} transition={{ duration: 0.4 }} aria-hidden>{i + 1}</motion.span>
             </motion.div>
           );
         })}
         {joins.map((j, i) => (
-          <motion.span key={i} className="absolute z-50 rounded-[2px] bg-white/70 shadow-[0_1px_2px_rgb(18_19_28/.18)] backdrop-blur-[1px]"
+          <motion.span key={i} className="absolute z-50 rounded-[2px] bg-white/70 shadow-[0_1px_2px_rgb(24_30_70/.18)] backdrop-blur-[1px]"
             style={{ left: j.x, top: j.y, width: j.v ? 10 : 30, height: j.v ? 30 : 10, translate: "-50% -50%", rotate: `${(i % 3) - 1}deg` }}
             initial={false} animate={{ opacity: taped ? 1 : 0, scale: taped ? 1 : 0.6 }} transition={{ delay: taped ? i * 0.05 : 0, duration: 0.3 }} />
         ))}
@@ -178,13 +179,13 @@ function Fabric({ m }: { m: Made }) {
       <p className="mt-1.5 text-center text-[15px] leading-snug text-[#12131c]/70">of fabric {w} cm wide, {m.stretch}.</p>
       <p className="mt-4 text-center text-[14px] text-[#12131c]/55">Is the fabric at the shop another width?</p>
       {/* the fabric's width: a track pressed in, the knob raised, sliding to the width chosen */}
-      <div className="relative mt-2 flex h-11 self-center rounded-full bg-[#12131c]/[.07] p-[5px] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85)]" role="radiogroup" aria-label="The fabric's width">
+      <div className="relative mt-2 flex h-11 self-center rounded-full bg-[#181e46]/[.07] p-[5px] shadow-[inset_0_3px_7px_rgb(24_30_70/.2),inset_0_1px_1.5px_rgb(24_30_70/.16),inset_0_-1px_0_rgb(255_255_255/.85)]" role="radiogroup" aria-label="The fabric's width">
         <motion.span className={cx("absolute top-[5px] h-[34px] rounded-full", raised)} style={{ width: seg }} initial={false} animate={{ left: 5 + at * seg }} transition={still ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 28 }} aria-hidden />
         {widths.map((x) => (
           <button key={x} role="radio" aria-checked={w === x} onClick={() => setW(x)} className={cx("relative z-10 h-[34px] text-[15px] transition-colors", w === x ? "font-medium text-[#12131c]" : "text-[#12131c]/50")} style={{ width: seg }}>{x} cm</button>
         ))}
       </div>
-      <div className="mt-4 border-t border-[#12131c]/10 pt-3">
+      <div className="mt-4 border-t border-[#181e46]/10 pt-3">
         <h3 className="text-center text-[16px] font-medium">Also buy</h3>
         <ul className="mx-auto mt-1.5 w-fit space-y-1.5">{m.extras.map((t) => (
           <li key={t} className="flex gap-2.5 text-[15px] leading-snug"><span className="mt-[8px] h-[5px] w-[5px] shrink-0 rounded-full bg-[#12131c]/45" />{t}</li>
@@ -208,7 +209,7 @@ function Help({ m, taping, open }: { m: Made; taping: boolean; open: (t: string)
       <p className="mt-1 text-center text-[15px] leading-snug text-[#12131c]/60">Open any of these when you need it.</p>
       <div className="mt-4 flex flex-col gap-2.5">{rows.map(([ic, t, d]) => (
         <button key={t} onClick={() => open(t)} className={cx("tap flex items-center gap-3 rounded-[18px] p-3 text-left", raised)}>
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-[#12131c]/[.06] text-[#3c4b63] shadow-[inset_0_1px_2px_rgb(18_19_28/.14)]" aria-hidden><Icon name={ic} size={19} /></span>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-[#181e46]/[.06] text-[#3c4b63] shadow-[inset_0_1px_2px_rgb(24_30_70/.14)]" aria-hidden><Icon name={ic} size={19} /></span>
           <span className="min-w-0 flex-1"><span className="block text-[16px] leading-tight">{t}</span><span className="mt-0.5 block text-[14px] leading-snug text-[#12131c]/55">{d}</span></span>
           <Icon name="chevR" size={18} className="shrink-0 text-[#12131c]/35" />
         </button>
@@ -250,7 +251,7 @@ export function Printed({ p }: { p?: Record<string, unknown> }) {
   const fc = Math.min(slides.length - 1, Math.max(0, f)), i = Math.floor(fc), t = fc - i;
   const front = i + ease(clamp(t * 2)), back = i + ease(clamp(t * 2 - 1));
   return (
-    <div className="paper absolute inset-0 flex flex-col items-center lg:justify-center">
+    <div className="cloud absolute inset-0 flex flex-col items-center lg:justify-center">
       {/* one column: the phone's width, centred on a wider screen (and no taller than a tall phone there) */}
       <div className="flex h-full w-full max-w-[480px] flex-col lg:max-h-[900px]">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 noscroll" style={{ paddingTop: "var(--top)" }}>
@@ -267,10 +268,10 @@ export function Printed({ p }: { p?: Record<string, unknown> }) {
             <div className="shrink-0 snap-start" style={{ height: SLIDE_H, width: "calc(100% - 24px)" }}><Help m={m} taping={taping} open={(x) => toast("Opening " + x.toLowerCase())} /></div>
             <span className="w-3 shrink-0" aria-hidden />
           </div>
-          {/* the pager: a knob in a track pressed into the paper, following the drag */}
-          <div className="relative mx-auto mt-3 shrink-0 rounded-full bg-[#12131c]/[.07] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85),0_1px_0_rgb(255_255_255/.6)]"
+          {/* the pager: a knob in a track pressed into the page, following the drag */}
+          <div className="relative mx-auto mt-3 shrink-0 rounded-full bg-[#181e46]/[.07] shadow-[inset_0_3px_7px_rgb(24_30_70/.2),inset_0_1px_1.5px_rgb(24_30_70/.16),inset_0_-1px_0_rgb(255_255_255/.85),0_1px_0_rgb(255_255_255/.6)]"
             style={{ width: SEG * slides.length, height: KH + 2 * CH }} role="tablist" aria-label="Slides">
-            <span className="pill-white absolute rounded-full" aria-hidden style={{ background: "#f3f1ec", left: CH + back * SEG, top: CH, width: SEG - 2 * CH + (front - back) * SEG, height: KH }} />
+            <span className="pill-white absolute rounded-full" aria-hidden style={{ background: "#fff", left: CH + back * SEG, top: CH, width: SEG - 2 * CH + (front - back) * SEG, height: KH }} />
             {slides.map((s, k) => (
               <button key={s} role="tab" aria-selected={Math.round(fc) === k} aria-label={s} onClick={() => { touched.current = true; slideTo(k); }} className="absolute top-0 h-full" style={{ left: k * SEG, width: SEG }} />
             ))}

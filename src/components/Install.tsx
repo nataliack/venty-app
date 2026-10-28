@@ -1,5 +1,6 @@
 "use client";
-// "Add Venty to your home screen" (rebuilt from the lab, /lab/mc3, 26 Oct 2026). A moment, on paper: the way back, the
+// "Add Venty to your home screen" (rebuilt from the lab, /lab/mc3, 26 Oct 2026). A moment, on cloud (since 28 Oct 2026;
+// the whole page, so Safari's bars above and below take it too): the way back, the
 // title centred, then "Select an icon" over the icons in the measuring dial's pressed track (IconTrack), then the steps.
 // An iPhone cannot be added by a website (a page cannot open Safari's Add to Home Screen), so there the four taps are
 // shown as pictures to swipe (StepRow) and the only button is "Continue in my browser". Android/Chrome installs for real
@@ -72,7 +73,7 @@ export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
   const setK = (k: IconKey) => set({ appIcon: k });
   const icon = appIcon ?? "today";
   return (
-    <div className="paper absolute inset-0 flex flex-col items-center lg:justify-center">
+    <div className="cloud absolute inset-0 flex flex-col items-center lg:justify-center">
       {/* one column: the phone's width, centred on a wider screen (and no taller than a tall phone there) */}
       <div className="flex h-full w-full max-w-[480px] flex-col lg:max-h-[900px]">
         <div className="shrink-0 px-6" style={{ paddingTop: "var(--top)" }}>

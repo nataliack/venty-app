@@ -1,6 +1,6 @@
 "use client";
 // The home-screen icon selector on "Add Venty to your home screen" (chosen in the lab, /lab/mc3, 26 Oct 2026). The icons
-// slide in a track pressed into the paper (like the measuring dial's, in the paper's light build): drag or flick it, tap
+// slide in a track pressed into the page (like the measuring dial's, in the page's light build): drag or flick it, tap
 // an icon, or use the arrow keys. It loops without end and never jumps: each icon is placed by its running position (…, -1,
 // 0, 1, …) and only the nine nearest the centre are drawn, each named by its position, so nothing is cloned or reset as it
 // wraps round. It settles on the nearest icon, which is the choice. On arrival the centre icon (today's, the one the phone
@@ -22,7 +22,7 @@ const PX = 9, TICK = { major: [0.42, 0.42, 1.5], mid: [0.26, 0.24, 1], minor: [0
 const STEP = (BIG + SMALL) / 2 + GAP; // a finger's travel for one icon
 const R = TOP + BIG * 0.2237; // the track's corner: the raised icon's corner plus the room above it, so they run parallel
 const REST = 0.4; // how far the centre icon has grown before the track is touched
-const INK = "18 19 28"; // the paper's ink, for the shades
+const INK = "24 30 70"; // the cloud's shade (a deep indigo ink), for the shades
 
 // the loop's motion: where it is (p, in icons), and the finger, flick, tap and arrow-key handlers that move it and settle
 // it on an icon. `touched`: moved by hand at least once (until then nothing is chosen)
@@ -109,7 +109,7 @@ export function IconTrack({ k, setK }: { k: IconKey | null; setK: (k: IconKey) =
   return (
     <div ref={ref} role="slider" tabIndex={0} aria-label="Icon" aria-valuemin={0} aria-valuemax={N - 1} aria-valuenow={mod(near, N)} aria-valuetext={touched ? here.name : "None chosen"}
       data-need={k ? undefined : "1"} {...handlers}
-      className="relative cursor-grab touch-pan-y select-none bg-[#12131c]/[.07] shadow-[inset_0_3px_7px_rgb(18_19_28/.2),inset_0_1px_1.5px_rgb(18_19_28/.16),inset_0_-1px_0_rgb(255_255_255/.85),0_1px_0_rgb(255_255_255/.6)] outline-none active:cursor-grabbing"
+      className="relative cursor-grab touch-pan-y select-none bg-[#181e46]/[.07] shadow-[inset_0_3px_7px_rgb(24_30_70/.2),inset_0_1px_1.5px_rgb(24_30_70/.16),inset_0_-1px_0_rgb(255_255_255/.85),0_1px_0_rgb(255_255_255/.6)] outline-none active:cursor-grabbing"
       style={{ height: H, borderRadius: R, overflow: "hidden", clipPath: `inset(0 round ${R}px)` /* Safari leaks moving layers past a rounded overflow */ }}>
       {/* the icons, fading out towards the track's ends */}
       <div className="absolute inset-0 [mask-image:linear-gradient(90deg,transparent,#000_24%,#000_76%,transparent)]">
