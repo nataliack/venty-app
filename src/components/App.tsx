@@ -74,7 +74,7 @@ function StatusBar() {
 }
 
 // light screens: the colour at their top (Safari's bar follows it) and at their bottom
-const LIGHT_TOP: Record<string, string> = { home: "#f0f4fe", you: "#f0f4fe", prompt: "#f0f4fe", generating: "#f0f4fe", start: "#f3f1ec", install: "#eff4ff", printed: "#eff4ff" };
+const LIGHT_TOP: Record<string, string> = { home: "#f0f4fe", you: "#f0f4fe", prompt: "#f0f4fe", generating: "#f0f4fe", start: "#f3f1ec", install: "#eff4ff", printed: "#f3f1ec" };
 // splash, welcome and "Welcome, Ana" share one sky, so they cross-fade in place instead of sliding
 const SKY = new Set(["splash", "welcome", "signedin"]);
 // the tab bar's pages: from one to another they cross-fade in place (no slide), so the bar holds still and the current
@@ -90,7 +90,7 @@ function useStatusTint(id: string) {
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
-    const PAPER = new Set(["onboarding", "start", "ready"]), CLOUD = new Set(["printed", "install"]);
+    const PAPER = new Set(["onboarding", "start", "ready", "printed"]), CLOUD = new Set(["install"]);
     // On a short iOS 26 window (html.vp-short) the strip under the app shows this colour (flat colours only, gradients are
     // ignored), so it matches each screen's bottom: paper, the sky's blue floor (.sky-floor), or the dark page.
     // Tab screens in the home-screen app: the bar is docked, so the strip continues the bar's own bottom colour.

@@ -455,8 +455,8 @@ input { font: inherit; color: inherit; }
 /* ─── onboarding paper (light, editorial) ─── */
 .paper { background: #f3f1ec; color: #12131c; }
 .paper .lead { color: rgba(18,19,28,.62); }
-/* cloud (28 Oct 2026, Jose): Your pattern is complete and Add Venty to your home screen are on cloud, not paper,
-   their raised and pressed parts shaded in a deep indigo ink (24 30 70) to suit it */
+/* cloud (28 Oct 2026, Jose): Add Venty to your home screen is on cloud, not paper, its raised and pressed parts
+   shaded in a deep indigo ink (24 30 70) to suit it */
 .cloud { background: #eff4ff; color: #12131c; }
 .cloud .lead { color: rgba(18,19,28,.62); }
 .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18; mix-blend-mode: overlay;
