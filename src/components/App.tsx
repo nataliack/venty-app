@@ -19,6 +19,7 @@ import { About, Credits } from "@/screens/about";
 import dynamic from "next/dynamic";
 import { Pill, cx } from "./ui";
 import { InstallGuide, useAppIconLinks } from "./Install";
+import { preloadLater } from "@/lib/preload";
 import { Sidebar } from "./Sidebar";
 
 // Screens shown full-bleed on desktop (no sidebar)
@@ -80,13 +81,15 @@ const SKY = new Set(["splash", "welcome", "signedin"]);
 // the tab bar's pages: from one to another they cross-fade in place (no slide), so the bar holds still and the current
 // tab's circle glides to the next tab, like a native tab bar
 const TAB_PAGES = new Set(["home", "bodies", "patterns", "you"]);
-const CROWN_TOP = new Set(["splash", "welcome", "onboarding", "ready"]);
+const CROWN_TOP = new Set(["splash", "welcome", "ready"]);
+// the onboarding's photographs under their shade at the top (31 Oct 2026): the three tops average this
+const ONBOARDING_TOP = "#6e7383";
 // "Welcome, Ana" is on Haze (26 Oct 2026): its colour at the top and at the bottom
 const HAZE_TOP = "#96a7f9", HAZE_BOTTOM = "#7086ec";
 function useStatusTint(id: string) {
   useEffect(() => {
     const desk = window.matchMedia("(min-width: 1024px)").matches;
-    const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (id === "signedin" ? HAZE_TOP : CROWN_TOP.has(id) ? "#a7b1d3" : id === "tourAsk" ? "#4a525d" : "#0b0c15");
+    const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (id === "signedin" ? HAZE_TOP : CROWN_TOP.has(id) ? "#a7b1d3" : id === "onboarding" ? ONBOARDING_TOP : id === "tourAsk" ? "#4a525d" : "#0b0c15");
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
     m.content = color;
@@ -137,6 +140,8 @@ export default function App() {
   const S = SCREENS[top.id] ?? Home;
   useStatusTint(top.id);
   useAppIconLinks();
+  // the pictures further in, fetched once the app is idle (the splash fetches the first screens' own)
+  useEffect(() => { preloadLater(); }, []);
   const depth = useRef(stack.length);
   // the page shown before this one, to tell a switch between tabs from any other move
   const [shown, setShown] = useState(top.id);

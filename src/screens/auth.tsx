@@ -3,18 +3,21 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp, DEMO_EMAIL } from "@/lib/store";
 import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, cx, useDesk } from "@/components/ui";
-import { VentyLogo, BodyFigure, Flat, Piece } from "@/components/art";
+import { VentyLogo, BodyFigure, Piece } from "@/components/art";
+import { FIRST, LOOKS, ONBOARDING, START, TOUR, preload } from "@/lib/preload";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
 
 // Splash and "Welcome, Ana": the same logo position as Welcome, so the app opens straight into it. The splash is on
 // Crown with a slim loader at the bottom, where Welcome's buttons will appear; "Welcome, Ana" is on Haze (below).
+// Since 31 Oct 2026 the splash has a job: while it is up, the pictures of the screens a first visit goes through are
+// fetched (FIRST in lib/preload.ts), and its bar shows how far that has got (p, 0 to 1).
 let fromSplash = false;
-function Loader({ ms }: { ms: number }) {
+function Loader({ p }: { p: number }) {
   return (
     <div className="flex w-full max-w-[380px] flex-col items-center gap-2 lg:mb-[6dvh]" aria-label="Loading">
       <div className="grid h-14 w-full place-items-center">
         <div className="h-[3px] w-[132px] overflow-hidden rounded-full bg-white/25">
-          <motion.div className="h-full rounded-full bg-white" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: ms / 1000, ease: "easeInOut" }} />
+          <div className="h-full rounded-full bg-white" style={{ width: `${p * 100}%` }} />
         </div>
       </div>
       <div className="h-11" />
@@ -88,17 +91,26 @@ function SkyFrame({ children, onTap, logoIn = true, sky = "crown", loader }: { c
         </motion.div>
         <div className="my-auto flex max-w-[620px] flex-col items-center pt-8">{children}</div>
         {/* the slot Welcome's buttons use */}
-        {loader ?? <Loader ms={1900} />}
+        {loader ?? <Loader p={1} />}
       </div>
     </button>
   );
 }
 
+// the splash stays at least as long as it always has (the bar's least time, SPLASH_MS), until the first pictures are in,
+// and never longer than SPLASH_MAX whatever the network; a tap moves on at once
+const SPLASH_MS = 1900, SPLASH_MAX = 6000;
 export function Splash() {
   const replace = useApp((s) => s.replace);
-  const go = () => { fromSplash = true; replace("welcome"); };
-  useEffect(() => { const t = setTimeout(() => { fromSplash = true; replace("welcome"); }, 2100); return () => clearTimeout(t); }, [replace]);
-  return <SkyFrame onTap={go} />;
+  const left = useRef(false);
+  const go = () => { if (left.current) return; left.current = true; fromSplash = true; replace("welcome"); };
+  const t = useFill(SPLASH_MS); // the least time, as the bar used to fill
+  const [loaded, setLoaded] = useState(0);
+  useEffect(() => { let on = true; preload(FIRST, (k) => { if (on) setLoaded(k); }); return () => { on = false; }; }, []);
+  const p = Math.min(t, loaded), full = p >= 1;
+  useEffect(() => { if (!full) return; const id = setTimeout(go, 150); return () => clearTimeout(id); }, [full]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const id = setTimeout(go, SPLASH_MAX); return () => clearTimeout(id); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return <SkyFrame onTap={go} loader={<Loader p={p} />} />;
 }
 
 // Welcome: the Crown gradient (from the landing page).
@@ -183,16 +195,6 @@ const Hero = ({ title, lead }: { title: ReactNode; lead: string }) => (
 // ─── The arc of looks: garments and their patterns on cards along a gentle arch, drifting right to left forever ───
 // Four editorial looks and four close-ups of their sewing details (all generated with Higgsfield from the designer's
 // prompts, one campaign), alternating: a garment, then the craft in it.
-const LOOKS = [
-  "/auth/look-street-green.webp",
-  "/auth/detail-zip.webp",
-  "/auth/look-limo-mauve.webp",
-  "/auth/detail-corset.webp",
-  "/auth/look-cliff-rust.webp",
-  "/auth/detail-hems.webp",
-  "/auth/look-street-burgundy.webp",
-  "/auth/detail-bows.webp",
-];
 const CARD_W = 100, CARD_H = 134, GAP = 12;
 export function ArcCarousel() {
   const box = useRef<HTMLDivElement>(null);
@@ -327,47 +329,19 @@ const SLIDES = [
   { t: "Tweak the fit, then print at home", b: "Adjust the fit and length, see it on your body, then print on A4 sheets that tape together.", fig: "Printed on A4, taped together" },
 ];
 
-function Plate({ i, big }: { i: number; big: boolean }) {
-  const k = big ? 1.5 : 1;
-  if (i === 0) return (
-    <div className="absolute inset-0 grid place-items-center">
-      <div className="relative" style={{ width: 300 * k, height: 260 * k }}>
-        {/* photo */}
-        <motion.div initial={{ opacity: 0, y: 20, rotate: -12 }} animate={{ opacity: 1, y: 0, rotate: -8 }} transition={{ delay: 0.1, duration: 0.8 }} className="absolute overflow-hidden rounded-[18px] bg-[#c9cff0] shadow-2xl" style={{ left: 10 * k, top: 30 * k, width: 120 * k, height: 160 * k }}>
-          <div className="absolute inset-0" style={{ background: "radial-gradient(80% 60% at 40% 30%, #eef0ff, #9aa6e6 60%, #5b6bd0)" }} />
-          <div className="absolute inset-0 grid place-items-center"><Flat g="flutter" size={88 * k} stroke="#1c2040" fill="rgba(255,255,255,.55)" /></div>
-          <span className="absolute bottom-2 left-2 rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-medium text-[#12131c]">Photo</span>
-        </motion.div>
-        {/* screenshot on a phone */}
-        <motion.div initial={{ opacity: 0, y: 20, rotate: 10 }} animate={{ opacity: 1, y: 0, rotate: 6 }} transition={{ delay: 0.25, duration: 0.8 }} className="absolute rounded-[20px] border-[3px] border-[#12131c] bg-[#12131c] p-1 shadow-2xl" style={{ left: 150 * k, top: 8 * k, width: 100 * k, height: 190 * k }}>
-          <div className="relative h-full overflow-hidden rounded-[15px] bg-[#f3f1ec]">
-            <div className="grid grid-cols-2 gap-1 p-1.5">{(["slip", "wrap", "aline", "cami"] as const).map((g) => <div key={g} className="grid aspect-[3/4] place-items-center rounded-[6px] bg-[#dfe2f4]"><Flat g={g} size={30 * k} stroke="#1c2040" fill="rgba(104,126,245,.25)" /></div>)}</div>
-            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#12131c] px-2 py-0.5 text-[10px] text-white">Screenshot</span>
-          </div>
-        </motion.div>
-        {/* sketch */}
-        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="absolute rounded-[6px] bg-[#f3f1ec] shadow-xl" style={{ left: 205 * k, top: 182 * k, width: 74 * k, height: 70 * k, rotate: "4deg" }}><svg viewBox="0 0 74 70" className="h-full w-full"><path d="M30 12 Q37 18 44 12 L46 30 L56 60 Q37 64 18 60 L28 30 Z M28 30 Q37 33 46 30" fill="none" stroke="#2a2f48" strokeWidth="1.6" strokeLinejoin="round" /></svg></motion.div>
-      </div>
-    </div>
-  );
-  if (i === 1) return (
-    <div className="absolute inset-0 flex items-center justify-center gap-6 lg:gap-14">
-      <div className="relative">
-        <BodyFigure width={big ? 190 : 118} markers={[{ kind: "ring", y: 140, w: 100 }, { kind: "ring", y: 205, w: 72 }, { kind: "ring", y: 275, w: 110 }]} />
-        {[["Bust", "88", 0.25], ["Waist", "70", 0.37], ["Hips", "96", 0.5]].map(([l, v, y], j) => (
-          <motion.div key={l as string} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + j * 0.15 }} className="absolute -right-12 flex items-baseline gap-1 rounded-full bg-white px-2.5 py-1 text-[#12131c] shadow-lg lg:-right-20" style={{ top: `${(y as number) * 100}%` }}>
-            <span className="serif text-[18px] leading-none" translate="no">{v}</span><span className="text-[11px]" translate="no">cm</span>
-          </motion.div>
-        ))}
-      </div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="flex flex-col gap-3"><Piece k="bodiceFront" width={big ? 140 : 84} label="Bodice front" /><Piece k="skirtFront" width={big ? 110 : 64} label="Skirt front" /></motion.div>
-    </div>
-  );
+// Jose's three photographs (31 Oct 2026), each covering the picture panel, zoomed a little towards its subject (the
+// references, the mannequin, the taped sheets) and placed for the phone's panel, which is nearly the photos' own 3:4
+const SLIDE_PICS = [
+  { pos: "50% 57%", zoom: 1.16 },
+  { pos: "50% 52%", zoom: 1.1 },
+  { pos: "56% 60%", zoom: 1.1 },
+];
+function SlidePic({ i }: { i: number }) {
+  const pic = ONBOARDING[i], at = SLIDE_PICS[i];
   return (
-    <div className="absolute inset-0 grid place-items-center">
-      <div className="grid grid-cols-3 gap-1.5" style={{ scale: k }}>{Array.from({ length: 9 }, (_, n) => <motion.div key={n} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: n * 0.05 }} className="h-[84px] w-[62px] rounded-md border border-dashed border-white/40 bg-white/[.06]" />)}</div>
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }} className="absolute" style={{ scale: k }}><Piece k="bodiceFront" width={140} label="Bodice front" /></motion.div>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={pic.src} srcSet={pic.srcSet} sizes={pic.sizes} alt="" draggable={false} decoding="async"
+      className="absolute inset-0 h-full w-full select-none object-cover" style={{ objectPosition: at.pos, transform: `scale(${at.zoom})`, transformOrigin: at.pos }} />
   );
 }
 
@@ -383,7 +357,7 @@ export function TourAsk() {
   const photo = (
     <motion.div initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, ease: [0.2, 0.8, 0.2, 1] }} className="absolute inset-0">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/tour/meadow.webp" srcSet="/tour/meadow-640.webp 640w, /tour/meadow.webp 1080w" sizes="100vw" alt="" draggable={false} className="h-full w-full object-cover" style={{ objectPosition: "50% 30%" }} />
+      <img src={TOUR.src} srcSet={TOUR.srcSet} sizes={TOUR.sizes} alt="" draggable={false} className="h-full w-full object-cover" style={{ objectPosition: "50% 30%" }} />
       {/* a soft shade under the status bar, so its clock stays readable over the photo */}
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0b0c15]/45 to-transparent" />
     </motion.div>
@@ -440,7 +414,10 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   const image = (
     <div className="relative h-full overflow-hidden text-white">
       <Crown />
-      <AnimatePresence mode="wait"><motion.div key={i} className="pointer-events-none absolute inset-0" initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}><Plate i={i} big={desk} /></motion.div></AnimatePresence>
+      <AnimatePresence mode="wait"><motion.div key={i} className="pointer-events-none absolute inset-0" initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}><SlidePic i={i} /></motion.div></AnimatePresence>
+      {/* a soft shade from the top, so the bars and Skip read over a light sky, and one from the foot under the caption */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[170px] bg-gradient-to-b from-[#0b0c15]/50 via-[#0b0c15]/20 to-transparent" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[130px] bg-gradient-to-t from-[#0b0c15]/45 to-transparent" aria-hidden />
       <div className="absolute inset-x-0 top-0 flex items-center gap-4 px-5 lg:px-8" style={{ paddingTop: "var(--top)" }}>{bars}{skip}</div>
       <div className="absolute bottom-5 left-5 right-5 flex items-baseline gap-2 text-white/85 lg:bottom-8 lg:left-8"><span className="text-[14px]">Fig.&nbsp;<span className="serif">{i + 1}</span></span><span className="text-[14px] italic">{s.fig}</span></div>
     </div>
@@ -508,7 +485,7 @@ export function StartChoice() {
       <div className="night rounded-[28px] lg:rounded-[36px]" style={{ clipPath: `inset(0 round ${r}px)` }} aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div>
       <div className="pointer-events-none absolute inset-0" style={{ clipPath: cut }} aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/start/mannequin.webp" srcSet="/start/mannequin-1100.webp 1100w, /start/mannequin.webp 2000w" sizes="(min-width: 1024px) 960px, 180vw" alt="" draggable={false}
+        <img src={START.src} srcSet={START.srcSet} sizes={START.sizes} alt="" draggable={false}
           className="absolute left-1/2 top-[-2.4%] h-[127%] w-auto max-w-none -translate-x-1/2 select-none" />
       </div>
     </motion.div>
