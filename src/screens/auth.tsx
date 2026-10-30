@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { useApp, DEMO_EMAIL } from "@/lib/store";
 import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Piece } from "@/components/art";
@@ -324,9 +324,9 @@ export function SignedIn() {
 
 // ─── Onboarding: light, editorial, cinematic. Looks nothing like the app inside. ──────────────
 const SLIDES = [
-  { t: "Start with any look you love", b: "A photo, a screenshot, a magazine page or your own sketch. If you can picture it, Venty can draft it.", fig: "Any picture, any source" },
-  { t: "Drafted to your exact body", b: "Venty turns the look into a sewing pattern built from your own measurements, not a standard size.", fig: "Your measurements, not a size chart" },
-  { t: "Tweak the fit, then print at home", b: "Adjust the fit and length, see it on your body, then print on A4 sheets that tape together.", fig: "Printed on A4, taped together" },
+  { t: "Start with any look you love", b: "A photo, a screenshot, a magazine page or your own sketch. If you can picture it, Venty can draft it." },
+  { t: "Drafted to your exact body", b: "Venty turns the look into a sewing pattern built from your own measurements, not a standard size." },
+  { t: "Tweak the fit, then print at home", b: "Adjust the fit and length, see it on your body, then print on A4 sheets that tape together." },
 ];
 
 // Jose's three photographs (31 Oct 2026), each covering the picture panel, zoomed a little towards its subject (the
@@ -342,6 +342,39 @@ function SlidePic({ i }: { i: number }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={pic.src} srcSet={pic.srcSet} sizes={pic.sizes} alt="" draggable={false} decoding="async"
       className="absolute inset-0 h-full w-full select-none object-cover" style={{ objectPosition: at.pos, transform: `scale(${at.zoom})`, transformOrigin: at.pos }} />
+  );
+}
+// From one picture to the next (31 Oct 2026, Jose): the panel never shows what is behind the pictures. All three stay
+// mounted; the new one fades in on top of the one it replaces, which stays fully there underneath until it is covered,
+// and settles from a little zoomed in. The first one settles the same way when the onboarding opens. Still with reduced
+// motion (it simply changes).
+const ZOOM_FROM = 1.07;
+function SlidePics({ i }: { i: number }) {
+  const still = useReducedMotion();
+  const [shown, setShown] = useState(i);
+  const [under, setUnder] = useState<number | null>(null);
+  // each picture's entrances: a new one remounts it, so it fades up and settles every time it comes in, going back too
+  const [runs, setRuns] = useState([0, 0, 0]);
+  if (shown !== i) { setUnder(shown); setShown(i); setRuns((r) => r.map((n, k) => (k === i ? n + 1 : n))); }
+  return (
+    // its own presence: the screen transitions above turn initial animations off for everything mounted inside a
+    // screen, and each entrance here is one
+    <AnimatePresence>
+      {ONBOARDING.map((_, k) => {
+        const on = k === i, below = !on && k === under;
+        return (
+          <motion.div key={`${k}-${runs[k]}`} className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: on ? 2 : below ? 1 : 0 }}
+            initial={{ opacity: on && runs[k] === 0 ? 1 : 0, scale: still ? 1 : ZOOM_FROM }}
+            // the one coming in fades up and settles; the one under it holds still, settled (a value left out would snap back to
+            // `initial`); the rest wait at the back, opaque and zoomed in, so even two taps faster than a fade never let the
+            // panel show through
+            animate={on ? { opacity: 1, scale: 1 } : below ? { opacity: 1, scale: 1 } : { opacity: 1, scale: still ? 1 : ZOOM_FROM }}
+            transition={on && !still ? { opacity: { duration: 0.55, ease: [0.2, 0.8, 0.2, 1] }, scale: { duration: 1.6, ease: [0.16, 1, 0.3, 1] } } : { duration: 0 }}>
+            <SlidePic i={k} />
+          </motion.div>
+        );
+      })}
+    </AnimatePresence>
   );
 }
 
@@ -414,12 +447,10 @@ export function Onboarding({ p }: { p?: Record<string, unknown> }) {
   const image = (
     <div className="relative h-full overflow-hidden text-white">
       <Crown />
-      <AnimatePresence mode="wait"><motion.div key={i} className="pointer-events-none absolute inset-0" initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}><SlidePic i={i} /></motion.div></AnimatePresence>
-      {/* a soft shade from the top, so the bars and Skip read over a light sky, and one from the foot under the caption */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[170px] bg-gradient-to-b from-[#0b0c15]/50 via-[#0b0c15]/20 to-transparent" aria-hidden />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[130px] bg-gradient-to-t from-[#0b0c15]/45 to-transparent" aria-hidden />
-      <div className="absolute inset-x-0 top-0 flex items-center gap-4 px-5 lg:px-8" style={{ paddingTop: "var(--top)" }}>{bars}{skip}</div>
-      <div className="absolute bottom-5 left-5 right-5 flex items-baseline gap-2 text-white/85 lg:bottom-8 lg:left-8"><span className="text-[14px]">Fig.&nbsp;<span className="serif">{i + 1}</span></span><span className="text-[14px] italic">{s.fig}</span></div>
+      <SlidePics i={i} />
+      {/* a soft shade from the top, so the bars and Skip read over a light sky */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[3] h-[170px] bg-gradient-to-b from-[#0b0c15]/50 via-[#0b0c15]/20 to-transparent" aria-hidden />
+      <div className="absolute inset-x-0 top-0 z-[4] flex items-center gap-4 px-5 lg:px-8" style={{ paddingTop: "var(--top)" }}>{bars}{skip}</div>
     </div>
   );
   const words = (
