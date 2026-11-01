@@ -215,6 +215,43 @@ input { font: inherit; color: inherit; }
   html.pwa .device { --bottom: calc(max(env(safe-area-inset-bottom), 34px) + 8px); --dock: 0px; --tab-under: max(env(safe-area-inset-bottom), 24px); }
 }
 
+/* ─── the phone frame (PhoneFrame.tsx): on a tablet or a computer the app runs on the landing page's iPhone (.ftp in its
+   features.css), at an iPhone's screen size. --h: the titanium's hue (Venty's steel). Sizes in em: 1em = the phone's
+   width / 38.95, set on .pf ─── */
+.pf-page { position: fixed; inset: 0; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(60% 50% at 30% 20%, rgba(104,126,245,.16), transparent 70%), radial-gradient(50% 50% at 80% 90%, rgba(77,94,133,.22), transparent 70%), #05060b; }
+.pf { --h: 222; --r: 6.666em; --pad: 1.25em; --edge: 0.4em; position: relative; flex: none; border-radius: var(--r); background: #000; transform-origin: 50% 50%;
+  box-shadow: 0 0 0.1em 0.25em hsl(var(--h) 20% 25%), 0 0 0 var(--edge) hsl(var(--h) 30% 85%), 0 40px 90px -24px rgb(0 0 0 / .95); }
+/* the antenna bands: across the band, a corner's depth from top and foot */
+.pf::before { content: ""; position: absolute; top: var(--r); bottom: var(--r); left: calc(var(--edge) * -1); right: calc(var(--edge) * -1);
+  border: 0.5em solid hsl(var(--h) 20% 30%); border-left-width: 0; border-right-width: 0; pointer-events: none; }
+/* the buttons: the action button and the two volume buttons on the left, the side button on the right */
+.pf__btns { position: absolute; inset: calc(var(--edge) * -1); pointer-events: none; }
+.pf__btn { position: absolute; right: 100%; width: 0.333em; height: 6em; border-radius: 0.2em 0 0 0.2em; background: hsl(var(--h) 20% 95%);
+  box-shadow: inset -0.15em 0 0.1em #000, inset 0 0 0.1em hsl(var(--h) 30% 90%), inset 0 0.2em 0.1em hsl(var(--h) 30% 90%), inset 0 -0.2em 0.1em hsl(var(--h) 30% 90%), inset -0.1em 0.333em 0.1em rgb(0 0 0 / .5), inset -0.1em -0.333em 0.1em rgb(0 0 0 / .5); }
+.pf__btn.is-l1 { top: 13.33em; height: 3em; }
+.pf__btn.is-l2 { top: 18.33em; }
+.pf__btn.is-l3 { top: 25.83em; }
+.pf__btn.is-r1 { right: auto; left: 100%; top: 20em; height: 9.5em; transform: scaleX(-1); }
+/* the glass: the black border round the screen; the home bar at its foot */
+.pf__glass { position: absolute; inset: 0; z-index: 1; border: var(--pad) solid #000; border-radius: var(--r); }
+.pf__glass::after { content: ""; position: absolute; left: 50%; bottom: calc(var(--pad) * 0.6); z-index: 3; width: 36.6%; height: calc(var(--pad) * 0.42);
+  translate: -50% 0; border-radius: 1em; background: rgb(255 255 255 / .85); pointer-events: none; }
+.pf__screen { position: absolute; inset: 0; overflow: hidden; border-radius: calc(var(--r) - var(--pad)); background: #0b0c15; }
+.pf__app { display: block; border: 0; background: #0b0c15; }
+.pf__sheen { position: absolute; inset: 0; z-index: 2; border-radius: calc(var(--r) - var(--pad)); pointer-events: none;
+  background: linear-gradient(118deg, rgb(255 255 255 / .1) 0%, rgb(255 255 255 / .03) 22%, transparent 34%, transparent 70%, rgb(255 255 255 / .03) 100%); }
+.pf__island { position: absolute; left: 50%; top: 0.85em; z-index: 4; width: 33.3%; height: 3.4em; translate: -50% 0; border-radius: 1.7em; background: #000; pointer-events: none; }
+.pf__camera { position: absolute; top: calc(0.85em + 1.15em); right: calc(50% - 16.65% + 1.15em); z-index: 5; width: 1.1em; height: 1.1em; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(#6667ac, transparent 50%) no-repeat 33.3% 10% / 75% 50%, radial-gradient(#3e3f8a, transparent 50%) no-repeat 60% 85% / 50% 50%, #080928;
+  box-shadow: inset 0 0 0.25em #4c4da3; }
+/* the app inside the frame: the room an iPhone keeps at the top (the island, the clock) and at the foot (the home bar),
+   and the clock and battery drawn in (the frame draws the island, so the status bar's own pill goes) */
+html.in-frame .device { --top: 59px; --bottom: 34px; --dock: 8px; }
+html.in-frame .fakestatus { display: flex !important; height: 54px; padding-top: 4px; }
+html.in-frame .fakestatus > span:nth-child(2) { display: none; }
+html.in-frame .device[data-top="light"] .fakestatus { color: #26335f; }
+
 /* desktop: full-screen app with sidebar */
 @media (min-width: 1024px) {
   .device { position: fixed; inset: 0; --top: 36px; --bottom: 28px; width: auto; height: auto; border-radius: 0; box-shadow: none; }

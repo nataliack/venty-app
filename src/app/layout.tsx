@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
+import { FRAME_BOOT } from "@/lib/device";
 
 const grotesk = localFont({
   src: [
@@ -63,6 +64,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* Opened from the home screen (no browser bars)? Mark it before the app starts, so the layout can drop
             the space it reserves for Safari's toolbar. */}
         <Script id="pwa-boot" strategy="beforeInteractive">{PWA_BOOT}</Script>
+        {/* a phone, a tablet or a computer (lib/device.ts): on a tablet or a computer the app shows inside a phone */}
+        <Script id="frame-boot" strategy="beforeInteractive">{FRAME_BOOT}</Script>
       </body>
     </html>
   );

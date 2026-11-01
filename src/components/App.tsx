@@ -1,6 +1,6 @@
 "use client";
 import { haptic } from "@/lib/haptics";
-import { Component, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { Component, useEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { Splash, Welcome, SignUp, LogIn, EmailStep, SignedIn, TourAsk, Onboarding, StartChoice } from "@/screens/auth";
@@ -21,6 +21,8 @@ import { Pill, cx } from "./ui";
 import { InstallGuide, useAppIconLinks } from "./Install";
 import { preloadLater } from "@/lib/preload";
 import { Sidebar } from "./Sidebar";
+import { PhoneFrame } from "./PhoneFrame";
+import { isFramed, isPhone, isStandalone } from "@/lib/device";
 
 // Screens shown full-bleed on desktop (no sidebar)
 const FULL = new Set(["splash", "welcome", "signup", "login", "email", "signedin", "tourAsk", "onboarding", "start", "scanCam"]);
@@ -67,8 +69,8 @@ function StatusBar() {
       <span>{t}</span>
       <span className="absolute left-1/2 top-[11px] h-[30px] w-[110px] -translate-x-1/2 rounded-full bg-black" />
       <span className="flex items-center gap-1.5">
-        <svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="6" rx="1" /><rect x="10" y="2.5" width="3" height="8.5" rx="1" /><rect x="15" y="0" width="3" height="11" rx="1" /></svg>
-        <svg width="24" height="12" viewBox="0 0 24 12"><rect x=".5" y=".5" width="20" height="11" rx="3" fill="none" stroke="#fff" opacity=".5" /><rect x="2" y="2" width="16" height="8" rx="1.8" fill="#fff" /><rect x="21.5" y="4" width="1.5" height="4" rx=".7" fill="#fff" opacity=".5" /></svg>
+        <svg width="18" height="11" viewBox="0 0 18 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1" /><rect x="5" y="5" width="3" height="6" rx="1" /><rect x="10" y="2.5" width="3" height="8.5" rx="1" /><rect x="15" y="0" width="3" height="11" rx="1" /></svg>
+        <svg width="24" height="12" viewBox="0 0 24 12"><rect x=".5" y=".5" width="20" height="11" rx="3" fill="none" stroke="currentColor" opacity=".5" /><rect x="2" y="2" width="16" height="8" rx="1.8" fill="currentColor" /><rect x="21.5" y="4" width="1.5" height="4" rx=".7" fill="currentColor" opacity=".5" /></svg>
       </span>
     </div>
   );
@@ -112,16 +114,11 @@ function useStatusTint(id: string) {
 
 // Links that open a screen (app.venty.au/install: Add Venty to your home screen). The screen goes on top of wherever you
 // were, so leaving it takes you back there (on a first visit, to the splash and the intro), and the address goes back to
-// "/" so a reload, or the app added to the home screen, starts as usual. A phone-only screen opens only on a phone browser
-// (an iPhone, iPad or Android, as useInstall tells them); on a computer, or inside the home-screen app, the link simply
-// opens Venty.
+// "/" so a reload, or the app added to the home screen, starts as usual. A phone-only screen opens only on a phone's
+// browser (a real phone, told by the device itself, lib/device.ts, never by the window's width); on a tablet or a
+// computer (where the app runs inside the phone frame), or inside the home-screen app, the link simply opens Venty.
 const LINKS: Record<string, { id: string; phoneOnly?: boolean }> = { "/install": { id: "install", phoneOnly: true } };
-function onPhoneBrowser() {
-  const ua = navigator.userAgent;
-  const phone = /iPhone|iPad|iPod|Android/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const app = document.documentElement.classList.contains("pwa") || window.matchMedia("(display-mode: standalone)").matches;
-  return phone && !app;
-}
+const onPhoneBrowser = () => isPhone() && !isStandalone();
 function openFromLink() {
   const link = LINKS[location.pathname.replace(/\/+$/, "")];
   if (!link) return;
@@ -131,7 +128,17 @@ function openFromLink() {
   if (s.stack[s.stack.length - 1]?.id !== link.id) s.go(link.id);
 }
 
+// On a tablet or a computer the page shows the app on a phone (PhoneFrame: the app runs in a frame inside it); anywhere
+// else, the app itself. Read from the page (set before the app starts, lib/device.ts); the server draws neither.
+const noSub = () => () => {};
 export default function App() {
+  const mode = useSyncExternalStore(noSub, () => (isFramed() ? "frame" : "app"), () => null);
+  if (mode === "frame") return <PhoneFrame />;
+  if (mode === "app") return <VentyApp />;
+  return <div className="stage"><div className="device" /></div>;
+}
+
+function VentyApp() {
   const [ready, setReady] = useState(false);
   const stack = useApp((s) => s.stack);
   const dir = useApp((s) => s.dir);

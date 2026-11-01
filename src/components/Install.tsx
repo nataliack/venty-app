@@ -5,12 +5,13 @@
 // An iPhone cannot be added by a website (a page cannot open Safari's Add to Home Screen), so there the four taps are
 // shown as pictures to swipe (StepRow) and the only button is "Continue in my browser". Android/Chrome installs for real
 // (beforeinstallprompt), so there "Add to home screen" opens Chrome's own confirmation. The chosen icon is kept
-// (appIcon) and set on the page (useAppIconLinks), so it is the one the phone takes. Only offered on a phone browser,
-// never on desktop or when Venty is already open from the home screen.
+// (appIcon) and set on the page (useAppIconLinks), so it is the one the phone takes. Only offered on a real phone's
+// browser, never on a tablet or a computer or when Venty is already open from the home screen.
 import { useEffect, useState, type ReactNode } from "react";
 import { useApp } from "@/lib/store";
 import { iconSrc, type IconKey } from "@/lib/appIcons";
-import { NextButton, RB, TextButton, useDesk } from "./ui";
+import { NextButton, RB, TextButton } from "./ui";
+import { isPhone } from "@/lib/device";
 import { IconTrack } from "./IconTrack";
 import { Pic, StepRow, type Step } from "./InstallSteps";
 
@@ -22,10 +23,10 @@ if (typeof window !== "undefined") {
 }
 
 export function useInstall() {
-  const desk = useDesk();
-  const [state, setState] = useState({ standalone: true, ios: false, android: false, prompt: false });
+  const [state, setState] = useState({ phone: false, standalone: true, ios: false, android: false, prompt: false });
   useEffect(() => {
     const read = () => setState({
+      phone: isPhone(),
       standalone: document.documentElement.classList.contains("pwa"),
       ios: /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1),
       android: /Android/.test(navigator.userAgent),
@@ -34,8 +35,9 @@ export function useInstall() {
     read(); window.addEventListener("venty-installable", read);
     return () => window.removeEventListener("venty-installable", read);
   }, []);
-  // worth offering only on a phone browser, where it can actually be added
-  const offer = !desk && !state.standalone && (state.ios || state.prompt);
+  // worth offering only on a real phone's browser, where it can actually be added: told by the device itself, never by
+  // the window's width (on a tablet or a computer the app runs in the phone frame, a phone's width; never offered there)
+  const offer = state.phone && !state.standalone && (state.ios || state.prompt);
   return { ...state, offer };
 }
 

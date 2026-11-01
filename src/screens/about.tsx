@@ -1,13 +1,13 @@
 "use client";
 // About Venty (from the lab's "Portrait cover", 25 Oct 2026): Natalia's portrait (the sunny one, as on the cards'
 // profile, 1 Nov 2026) fills the top and fades into the page, her name over the fade; then her business cards as a
-// small cinematic stage (the cards float on Crown, a light glancing across them), which opens the cards screen; how to
+// small cinematic stage (the cards float on a dark Venty blue, a light glancing across them), which opens the cards screen; how to
 // contact her; a line about Venty; and last, the 3D credits on a page of their own. The copy speaks as Natalia (first
 // person), short and plain. The card pictures are stills of the real cards, so this page loads no 3D at all.
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useApp } from "@/lib/store";
-import { Screen, TopBar, HS, Lead, RB, Crown, cx } from "@/components/ui";
+import { Screen, TopBar, HS, Lead, RB, cx } from "@/components/ui";
 import { Icon, type IconName } from "@/components/icons";
 import { BODY_CREDIT, GARMENT_CREDITS, LICENCE_URL } from "@/lib/credits";
 
@@ -34,7 +34,8 @@ function Row({ icon, label, sub, href, onClick }: { icon: IconName; label: strin
   return <button onClick={onClick} className={cls}>{inner}</button>;
 }
 
-// her cards on a small stage: the two cards float in perspective on Crown, a light glancing across now and then
+// her cards on a small stage: the two cards float in perspective on a dark Venty blue (a cornflower light from above, so
+// the cream card and the dark one both stand out), a light glancing across now and then
 function CardsStage({ onOpen }: { onOpen: () => void }) {
   const still = useReducedMotion();
   const sway = (rotate: number[], duration: number) => (still ? {} : { animate: { rotate }, transition: { duration, repeat: Infinity, ease: "easeInOut" as const } });
@@ -42,7 +43,7 @@ function CardsStage({ onOpen }: { onOpen: () => void }) {
   return (
     <button onClick={onOpen} className="tap card-soft group mt-6 block w-full overflow-hidden rounded-[26px] text-left" aria-label="Open my business cards">
       <div className="relative h-[210px] overflow-hidden lg:h-[250px]" style={{ perspective: 900 }}>
-        <Crown className="!absolute" />
+        <div className="absolute inset-0" style={CARDS_BG} />
         <motion.div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}
           {...(still ? {} : { animate: { rotateY: [-9, 7, -9], rotateX: [9, 4, 9], y: [0, -5, 0] }, transition: { duration: 9, repeat: Infinity, ease: "easeInOut" } })}>
           <motion.img src="/cards/natalia-cream-back.webp" alt="" className={cx(card, "left-[31%] top-[13%]")} style={{ rotate: 6, z: -40 }} {...sway([6, 7.5, 6], 7)} />
@@ -55,13 +56,15 @@ function CardsStage({ onOpen }: { onOpen: () => void }) {
           </motion.div>
         </motion.div>
       </div>
-      <div className="flex items-center gap-3 px-4 py-3.5">
-        <span className="min-w-0 flex-1"><span className="block text-[17px] font-medium">My business cards</span><span className="block text-[14px] text-white/55">Both sides, every colour</span></span>
+      <div className="flex items-center gap-3 py-3 pl-4 pr-3">
+        <span className="min-w-0 flex-1 text-[17px] font-medium">My business cards</span>
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-ink transition-transform group-hover:translate-x-0.5"><Icon name="chevR" size={18} strokeWidth={2} /></span>
       </div>
     </button>
   );
 }
+
+const CARDS_BG = { background: "radial-gradient(90% 85% at 50% -5%, rgb(104 126 245 / .34), rgb(104 126 245 / .1) 50%, transparent 78%), linear-gradient(180deg, #161c42, #0e1230)" };
 
 const Section = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="mt-7">
@@ -79,7 +82,9 @@ export function About() {
         <div className="relative -mt-[var(--top)] h-[440px] lg:sticky lg:top-6 lg:mt-0 lg:h-[600px] lg:overflow-hidden lg:rounded-[32px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/people/natalia-sun.webp" alt="Natalia Chamon" className="absolute inset-0 h-full w-full object-cover object-[50%_20%]" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgb(11 12 21 / .4) 0%, transparent 22%, transparent 48%, var(--color-bg) 96%)" }} />
+          {/* a soft shade at the top (for the back button), the face clear, then a long eased fade into the page under
+              the name (no hard start) */}
+          <div className="absolute inset-x-0 top-0 -bottom-px" style={{ background: "linear-gradient(180deg, rgb(11 12 21 / .32) 0%, transparent 18%, transparent 44%, rgb(11 12 21 / .12) 54%, rgb(11 12 21 / .34) 64%, rgb(11 12 21 / .6) 74%, rgb(11 12 21 / .85) 84%, var(--color-bg) 93%)" }} />
           <div className="absolute left-5 lg:hidden" style={{ top: "var(--top)" }}><RB icon="back" label="Back" onClick={back} /></div>
           <div className="absolute inset-x-6 bottom-2 lg:bottom-7 lg:inset-x-7">
             <h1 className="text-[46px] font-normal leading-[.95] tracking-[-.04em] lg:text-[56px]">{NATALIA.first}<br />{NATALIA.last}</h1>

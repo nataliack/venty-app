@@ -34,7 +34,7 @@ export function You() {
   const [confirm, setConfirm] = useState(false);
   const [level, setLevel] = useState(false);
   const [logout, setLogout] = useState(false);
-  const { standalone } = useInstall();
+  const { phone, standalone } = useInstall();
   const kiosk = useApp((s) => s.kiosk);
   const { toast, node } = useToast();
   const desk = useDesk();
@@ -106,7 +106,8 @@ export function You() {
           </div>
           <div>
             <Group title="App">
-              {!standalone && <Row icon="addhome" label="Add Venty to your home screen" sub="Open it in one tap, like an app" onClick={() => go("install")} />}
+              {/* only on a real phone's browser (never on a tablet or a computer, or in the home-screen app) */}
+              {phone && !standalone && <Row icon="addhome" label="Add Venty to your home screen" sub="Open it in one tap, like an app" onClick={() => go("install")} />}
               <Row icon="book" label="App tour" sub="Three short pages on how Venty works" onClick={() => go("onboarding", { from: "app" })} />
               <Row icon="phone" label="Expo mode" sub="Starts over after 2 minutes idle" right={<Toggle on={kiosk} onChange={(v) => { set({ kiosk: v }); toast(v ? "Expo mode on" : "Expo mode off"); }} />} />
             </Group>
