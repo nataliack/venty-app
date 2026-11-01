@@ -1,8 +1,9 @@
 "use client";
-// About Venty (from the lab's "Portrait cover", 25 Oct 2026): who made Venty. Natalia's portrait fills the top and fades
-// into the page, her name over the fade; then her business cards as a small cinematic stage (the cards float on Crown,
-// a light glancing across them), which opens the cards screen; how to reach her; a line about Venty; and last, the 3D
-// credits on a page of their own. The card pictures are stills of the real cards, so this page loads no 3D at all.
+// About Venty (from the lab's "Portrait cover", 25 Oct 2026): Natalia's portrait (the sunny one, as on the cards'
+// profile, 1 Nov 2026) fills the top and fades into the page, her name over the fade; then her business cards as a
+// small cinematic stage (the cards float on Crown, a light glancing across them), which opens the cards screen; how to
+// contact her; a line about Venty; and last, the 3D credits on a page of their own. The copy speaks as Natalia (first
+// person), short and plain. The card pictures are stills of the real cards, so this page loads no 3D at all.
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useApp } from "@/lib/store";
@@ -17,7 +18,7 @@ const CONTACTS: { icon: IconName; label: string; value: string; href: string }[]
   { icon: "phone", label: "Phone", value: "0420 991 942", href: "tel:+61420991942" },
   { icon: "linkedin", label: "LinkedIn", value: "linkedin.com/in/natalia-c", href: "https://www.linkedin.com/in/natalia-c-8201a8226/" },
 ];
-const VENTY = "Venty drafts sewing patterns to your own measurements. This is the demo made for the QUT Design Festival 2026.";
+const VENTY = "Venty drafts sewing patterns to your measurements, ready to print at home. This demo was made for the QUT Design Festival 2026.";
 
 // a row that leads somewhere: an icon badge, a label and a line under it, a chevron
 function Row({ icon, label, sub, href, onClick }: { icon: IconName; label: string; sub: string; href?: string; onClick?: () => void }) {
@@ -39,7 +40,7 @@ function CardsStage({ onOpen }: { onOpen: () => void }) {
   const sway = (rotate: number[], duration: number) => (still ? {} : { animate: { rotate }, transition: { duration, repeat: Infinity, ease: "easeInOut" as const } });
   const card = "absolute aspect-[90/55] w-[58%] rounded-[3px] shadow-[0_1px_0_rgb(255_255_255/.12),0_18px_30px_-14px_rgb(19_21_35/.75),0_4px_10px_-4px_rgb(19_21_35/.5)]";
   return (
-    <button onClick={onOpen} className="tap card-soft group mt-6 block w-full overflow-hidden rounded-[26px] text-left" aria-label="Open her business cards">
+    <button onClick={onOpen} className="tap card-soft group mt-6 block w-full overflow-hidden rounded-[26px] text-left" aria-label="Open my business cards">
       <div className="relative h-[210px] overflow-hidden lg:h-[250px]" style={{ perspective: 900 }}>
         <Crown className="!absolute" />
         <motion.div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}
@@ -55,7 +56,7 @@ function CardsStage({ onOpen }: { onOpen: () => void }) {
         </motion.div>
       </div>
       <div className="flex items-center gap-3 px-4 py-3.5">
-        <span className="min-w-0 flex-1"><span className="block text-[17px] font-medium">Her business cards</span><span className="block text-[14px] text-white/55">Turn them over, try their colours, save one</span></span>
+        <span className="min-w-0 flex-1"><span className="block text-[17px] font-medium">My business cards</span><span className="block text-[14px] text-white/55">Both sides, every colour</span></span>
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-ink transition-transform group-hover:translate-x-0.5"><Icon name="chevR" size={18} strokeWidth={2} /></span>
       </div>
     </button>
@@ -77,7 +78,7 @@ export function About() {
         {/* her portrait, fading into the page; on a desktop, a tall card of its own */}
         <div className="relative -mt-[var(--top)] h-[440px] lg:sticky lg:top-6 lg:mt-0 lg:h-[600px] lg:overflow-hidden lg:rounded-[32px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/people/natalia.webp" alt="Natalia Chamon" className="absolute inset-0 h-full w-full object-cover object-[50%_20%]" />
+          <img src="/people/natalia-sun.webp" alt="Natalia Chamon" className="absolute inset-0 h-full w-full object-cover object-[50%_20%]" />
           <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgb(11 12 21 / .4) 0%, transparent 22%, transparent 48%, var(--color-bg) 96%)" }} />
           <div className="absolute left-5 lg:hidden" style={{ top: "var(--top)" }}><RB icon="back" label="Back" onClick={back} /></div>
           <div className="absolute inset-x-6 bottom-2 lg:bottom-7 lg:inset-x-7">
@@ -88,7 +89,7 @@ export function About() {
         <div className="px-6 pb-4 lg:px-0">
           <div className="hidden lg:block"><RB icon="back" label="Back" onClick={back} /></div>
           <CardsStage onOpen={() => go("cards")} />
-          <Section title="Reach her">
+          <Section title="Contact me">
             {CONTACTS.map((c) => <Row key={c.label} icon={c.icon} label={c.label} sub={c.value} href={c.href} />)}
           </Section>
           <section className="mt-8 px-1">
@@ -96,7 +97,7 @@ export function About() {
             <p className="mt-2 text-[15px] leading-snug text-white/65">{VENTY}</p>
           </section>
           <Section title="Credits">
-            <Row icon="body" label="Who made the 3D bodies and garments" sub="3D credits" onClick={() => go("credits")} />
+            <Row icon="body" label="3D bodies and garments" sub="MakeHuman community" onClick={() => go("credits")} />
           </Section>
         </div>
       </div>
@@ -119,7 +120,7 @@ export function Credits() {
     <Screen header={<TopBar left="back" />}>
       <div className="lg:mx-auto lg:max-w-[640px]">
         <HS className="mt-2 lg:mt-0">3D credits</HS>
-        <Lead className="mt-3">The 3D body and the garments it wears were made by the MakeHuman community and shared under open licences. Every garment was changed for Venty: fitted to its bodies, resized with your measurements, and its textures made smaller.</Lead>
+        <Lead className="mt-3">The 3D bodies and garments are from the MakeHuman community, shared under open licences. Each garment was adapted for Venty: fitted to its bodies and sized to your measurements.</Lead>
         <div className="card-soft mt-6 rounded-[22px] px-4 py-3.5">
           <div className="text-[15px] font-medium">{BODY_CREDIT.title}</div>
           <div className="mt-1 flex items-center gap-2 text-[13px] text-white/55">{BODY_CREDIT.author}<Licence l={BODY_CREDIT.licence} /></div>
@@ -137,7 +138,7 @@ export function Credits() {
             </ul>
           </section>
         ))}
-        <p className="mt-6 px-1 text-[13px] leading-snug text-white/45">Each title opens the garment&apos;s page in the MakeHuman asset repository. CC BY: shared on condition its maker is credited. CC0: no rights reserved.</p>
+        <p className="mt-6 px-1 text-[13px] leading-snug text-white/45">Each title links to its page in the MakeHuman asset repository. CC BY: credit to the maker required. CC0: no rights reserved.</p>
       </div>
     </Screen>
   );

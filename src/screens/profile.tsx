@@ -111,7 +111,7 @@ export function You() {
               <Row icon="phone" label="Expo mode" sub="Starts over after 2 minutes idle" right={<Toggle on={kiosk} onChange={(v) => { set({ kiosk: v }); toast(v ? "Expo mode on" : "Expo mode off"); }} />} />
             </Group>
             <Group title="About">
-              <Row icon="user" label="Who made Venty" sub="Natalia Chamon, her cards, and the 3D credits" onClick={() => go("about")} />
+              <Row icon="user" label="About Venty" sub="Natalia Chamon, founder" onClick={() => go("about")} />
             </Group>
             <Group title="Privacy and AI">
               <Row icon="lock" label="Your privacy" sub="What Venty keeps, and where" onClick={() => go("info", { doc: "privacy" })} />
