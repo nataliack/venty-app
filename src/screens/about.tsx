@@ -34,16 +34,17 @@ function Row({ icon, label, sub, href, onClick }: { icon: IconName; label: strin
   return <button onClick={onClick} className={cls}>{inner}</button>;
 }
 
-// her cards on a small stage: the two cards float in perspective on a dark Venty blue (a cornflower light from above, so
-// the cream card and the dark one both stand out), a light glancing across now and then
+// her cards on a small stage, in the Body library card's build (1 Nov 2026, Jose): a raised rim in the card colour (8 px at
+// the top and sides, a little more than a body card's, and widening at the foot into the band with the words), round a
+// stage pressed into it in the contact icons' own near-black and shadow; the two cards float in perspective on it, a
+// light glancing across now and then
 function CardsStage({ onOpen }: { onOpen: () => void }) {
   const still = useReducedMotion();
   const sway = (rotate: number[], duration: number) => (still ? {} : { animate: { rotate }, transition: { duration, repeat: Infinity, ease: "easeInOut" as const } });
   const card = "absolute aspect-[90/55] w-[58%] rounded-[3px] shadow-[0_1px_0_rgb(255_255_255/.12),0_18px_30px_-14px_rgb(19_21_35/.75),0_4px_10px_-4px_rgb(19_21_35/.5)]";
   return (
-    <button onClick={onOpen} className="tap card-soft group mt-6 block w-full overflow-hidden rounded-[26px] text-left" aria-label="Open my business cards">
-      <div className="relative h-[210px] overflow-hidden lg:h-[250px]" style={{ perspective: 900 }}>
-        <div className="absolute inset-0" style={CARDS_BG} />
+    <button onClick={onOpen} className="tap group mt-6 block w-full rounded-[26px] px-2 pt-2 text-left" style={RIM} aria-label="Open my business cards">
+      <div className="relative h-[200px] overflow-hidden rounded-[18px] lg:h-[240px]" style={{ ...PRESSED_BG, perspective: 900 }}>
         <motion.div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}
           {...(still ? {} : { animate: { rotateY: [-9, 7, -9], rotateX: [9, 4, 9], y: [0, -5, 0] }, transition: { duration: 9, repeat: Infinity, ease: "easeInOut" } })}>
           <motion.img src="/cards/natalia-cream-back.webp" alt="" className={cx(card, "left-[31%] top-[13%]")} style={{ rotate: 6, z: -40 }} {...sway([6, 7.5, 6], 7)} />
@@ -55,8 +56,9 @@ function CardsStage({ onOpen }: { onOpen: () => void }) {
               animate={{ x: ["-120%", "260%"] }} transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 3.4, ease: "easeInOut" }} />}
           </motion.div>
         </motion.div>
+        <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS }} />
       </div>
-      <div className="flex items-center gap-3 py-3 pl-4 pr-3">
+      <div className="flex items-center gap-3 py-3 pl-2.5 pr-1">
         <span className="min-w-0 flex-1 text-[17px] font-medium">My business cards</span>
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-ink transition-transform group-hover:translate-x-0.5"><Icon name="chevR" size={18} strokeWidth={2} /></span>
       </div>
@@ -64,7 +66,10 @@ function CardsStage({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-const CARDS_BG = { background: "radial-gradient(90% 85% at 50% -5%, rgb(104 126 245 / .34), rgb(104 126 245 / .1) 50%, transparent 78%), linear-gradient(180deg, #161c42, #0e1230)" };
+// the builds: the rim (as the Body library's cards), and the stage pressed into it (the contact icons' .iconbadge)
+const RIM = { background: "linear-gradient(180deg, rgb(255 255 255 / .035), rgb(255 255 255 / 0) 50%) var(--color-card)", boxShadow: "0 18px 36px -16px rgb(0 0 0 / .8), 0 2px 4px rgb(0 0 0 / .35), inset 0 0 0 1px rgb(255 255 255 / .07), inset 0 1px 0 rgb(255 255 255 / .1), inset 0 -1px 0 rgb(0 0 0 / .35)" };
+const PRESSED_BG = { background: "linear-gradient(rgb(0 0 0 / .26), rgb(0 0 0 / .26)), var(--color-card)" };
+const PRESS = "inset 0 3px 7px rgb(0 0 0 / .65), inset 0 1px 1.5px rgb(0 0 0 / .55), inset 0 -1px 0 rgb(255 255 255 / .06)";
 
 const Section = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="mt-7">

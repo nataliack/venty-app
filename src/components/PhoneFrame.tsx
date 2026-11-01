@@ -1,10 +1,10 @@
 "use client";
 // On a tablet or a computer the app is shown on a phone (1 Nov 2026, Jose): the landing page's iPhone (its Features
 // card, .ftp in features.css: the titanium band with its antenna bands and buttons, the black border round the screen,
-// the island with its camera, a sheen on the glass, the home bar) with the app running inside it, in a frame exactly an
-// iPhone's screen (393 x 852), so every screen is its phone layout and nothing of the computer's width reaches it. The
-// phone is scaled to fit the window (never above its real size), centred on the dark page. On a phone none of this is
-// used (lib/device.ts).
+// the island with its camera, the home bar; no sheen on the glass, which lay over the top of every screen like a glow)
+// with the app running inside it, in a frame exactly an iPhone's screen (393 x 852), so every screen is its phone layout
+// and nothing of the computer's width reaches it. The phone is scaled to fit the window (never above its real size),
+// centred on the dark page. On a phone none of this is used (lib/device.ts).
 import { useEffect, useState } from "react";
 
 const SCREEN_W = 393, SCREEN_H = 852;
@@ -31,7 +31,6 @@ export function PhoneFrame() {
             <iframe src={src} title="Venty" className="pf__app" style={{ width: SCREEN_W, height: SCREEN_H }}
               allow="camera; microphone; clipboard-read; clipboard-write; web-share; fullscreen; accelerometer; gyroscope" />
           </div>
-          <span className="pf__sheen" aria-hidden />
           <span className="pf__island" aria-hidden />
           <span className="pf__camera" aria-hidden />
         </div>
