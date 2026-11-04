@@ -110,7 +110,7 @@ export function BodyCard({ b, units, onClick, pick, className }: { b: Body; unit
   );
 }
 
-// ─── no bodies yet: a cinematic carousel (it moves on by itself; drag it or tap its marks), then one big Set up a body.
+// ─── no bodies yet: a cinematic carousel (it moves on by itself; swipe it or tap its marks), then one big Set up a body.
 //     Its pictures are stand-ins until the real ones are made ───
 const DEMO = { sex: "female" as const, measures: { height: 166, bust: 88, waist: 69, hips: 95 } };
 const Floor = () => (
@@ -122,38 +122,49 @@ const Floor = () => (
 );
 const SLIDES: { k: string; cap: string; art: ReactNode }[] = [
   { k: "form", cap: "Your body, as a 3D form", art: <><div className="night" aria-hidden><span className="drift n1" /><span className="drift n2" /><span className="drift n3" /></div><img src="/start/mannequin-1100.webp" alt="" draggable={false} className="absolute left-1/2 top-[6%] h-[118%] max-w-none -translate-x-1/2 object-contain" /></> },
-  { k: "tape", cap: "Measured where it matters", art: <div className="stage-ink absolute inset-0"><span className="absolute inset-x-6 bottom-0 top-6"><Still {...DEMO} shot="bust" className="object-cover object-center" /></span></div> },
+  { k: "tape", cap: "Measured where it matters", art: <div className="stage-ink absolute inset-0"><Still {...DEMO} shot="bust" className="object-cover object-[50%_30%]" /></div> },
   { k: "stage", cap: "Every pattern drafted to it", art: <div className="stage-ink absolute inset-0"><Floor /><span className="absolute inset-x-10 bottom-6 top-8"><Still {...DEMO} /></span></div> },
   { k: "look", cap: "Then make what you love", art: <img src="/auth/look-cliff-rust.webp" alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" /> },
 ];
 function EmptyHero({ onStart }: { onStart: () => void }) {
+  // the phone's own scrolling, snapping a slide at a time (smooth under the finger, with its own momentum); it moves on
+  // by itself every few seconds, and holds while a finger is on it (and a moment after)
+  const row = useRef<HTMLDivElement>(null);
   const [i, setI] = useState(0);
-  const [held, setHeld] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-  const [w, setW] = useState(331);
-  useEffect(() => { const el = box.current; if (!el) return; const ro = new ResizeObserver(() => setW(el.clientWidth)); ro.observe(el); setW(el.clientWidth); return () => ro.disconnect(); }, []);
-  useEffect(() => { if (held) return; const t = setInterval(() => setI((x) => (x + 1) % SLIDES.length), 4500); return () => clearInterval(t); }, [held]);
+  const until = useRef(0), mine = useRef(false);
+  const hold = () => { until.current = Date.now() + 4000; };
+  const to = (k: number) => {
+    const el = row.current; if (!el) return;
+    mine.current = true; setTimeout(() => { mine.current = false; }, 900);
+    el.scrollTo({ left: k * el.clientWidth, behavior: "smooth" });
+  };
+  useEffect(() => {
+    const t = setInterval(() => { if (Date.now() >= until.current) to((Math.round((row.current?.scrollLeft ?? 0) / (row.current?.clientWidth || 1)) + 1) % SLIDES.length); }, 4500);
+    return () => clearInterval(t);
+  }, []);
   return (
-    <div className="lg:max-w-[460px]">
-      <div className="mt-5 rounded-[32px] p-[7px]" style={RIM}>
-        <div ref={box} className="relative h-[min(440px,52dvh)] overflow-hidden rounded-[26px]">
-          <motion.div className="absolute inset-y-0 left-0 flex" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.25}
-            onDragStart={() => setHeld(true)} onDragEnd={(_, d) => { setHeld(false); if (Math.abs(d.offset.x) > 50) setI((x) => (x + (d.offset.x < 0 ? 1 : SLIDES.length - 1)) % SLIDES.length); }}
-            animate={{ x: -i * w }} transition={{ type: "spring", bounce: 0, duration: 0.7 }}>
-            {SLIDES.map((s) => <div key={s.k} className="relative h-full shrink-0 overflow-hidden" style={{ width: w }}>{s.art}</div>)}
-          </motion.div>
+    // the room between the title and the tab bar: the carousel takes what is left (never less than 240px, never more
+    // than 560), the whole group centred in it, so nothing is pushed to the top and nothing ever scrolls
+    <div className="flex min-h-0 flex-1 flex-col justify-center py-3">
+      <div className="flex min-h-[240px] flex-1 flex-col rounded-[32px] p-[7px]" style={{ ...RIM, maxHeight: 560 }}>
+        <div data-carousel className="relative min-h-0 flex-1 overflow-hidden rounded-[26px]">
+          <div ref={row} className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain noscroll"
+            onScroll={(e) => { const el = e.currentTarget; setI(Math.round(el.scrollLeft / (el.clientWidth || 1)) % SLIDES.length); if (!mine.current) hold(); }}
+            onPointerDown={hold} onTouchStart={hold}>
+            {SLIDES.map((sl) => <div key={sl.k} className="relative h-full w-full shrink-0 snap-center snap-always overflow-hidden">{sl.art}</div>)}
+          </div>
           <span className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: PRESS }} />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-bg/85 to-transparent" />
           <AnimatePresence mode="wait">
             <motion.p key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35 }} className="pointer-events-none absolute bottom-10 left-5 right-5 text-[24px] leading-[1.1] tracking-[-.025em]">{SLIDES[i].cap}</motion.p>
           </AnimatePresence>
           <div className="absolute bottom-4 left-5 flex gap-1.5">
-            {SLIDES.map((s, k) => <button key={s.k} onClick={() => setI(k)} aria-label={s.cap} className={cx("h-[5px] rounded-full transition-all duration-300", k === i ? "w-5 bg-snow" : "w-[5px] bg-white/35")} />)}
+            {SLIDES.map((sl, k) => <button key={sl.k} onClick={() => { hold(); to(k); }} aria-label={sl.cap} className={cx("h-[5px] rounded-full transition-all duration-300", k === i ? "w-5 bg-snow" : "w-[5px] bg-white/35")} />)}
           </div>
         </div>
       </div>
-      <Pill className="mt-4 !h-[60px] !text-[17px]" onClick={onStart}>Set up a body</Pill>
-      <p className="mt-2.5 text-center text-[14px] text-white/50">Four measurements to start, twenty more<br />when you have time.</p>
+      <Pill className="mt-4 !h-[60px] shrink-0 !text-[17px]" onClick={onStart}>Set up a body</Pill>
+      <p className="mt-2.5 shrink-0 text-center text-[14px] text-white/50">Four measurements to start, twenty more<br />when you have time.</p>
     </div>
   );
 }
@@ -194,7 +205,7 @@ export function Bodies() {
     </div>
   ) : desk ? undefined : <TabBar tab="bodies" />;
   return (
-    <Screen dock={!picking} footer={footer}>
+    <Screen dock={!picking} footer={footer} fill={list.length === 0}>
       <div className={cx("flex min-h-11 items-center gap-3 pt-1 lg:pt-2", list.length ? "justify-between" : "justify-center lg:justify-start")}>
         <H1 className="min-w-0">Body library</H1>
         {list.length > 0 && !picking && <Pill className="!h-10 !w-auto shrink-0 gap-1.5 px-4 !text-[15px]" icon={<Icon name="plus" size={18} strokeWidth={2.2} />} onClick={startBody}>New body</Pill>}
