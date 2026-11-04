@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { useApp, DEMO_EMAIL } from "@/lib/store";
-import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, cx, useDesk } from "@/components/ui";
+import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, NextButton, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Piece } from "@/components/art";
 import { FIRST, LOOKS, ONBOARDING, START, TOUR, preload } from "@/lib/preload";
 import { AppleLogo, GoogleLogo, Icon } from "@/components/icons";
@@ -278,6 +278,8 @@ export function LogIn() {
 
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
 
+// Sign up or log in with email. Create account (Log in) is the app's Next: faded until every field is right, and a tap
+// before that shakes what is still missing and says why under each field (never a silent, dead button)
 export function EmailStep({ p }: { p?: Record<string, unknown> }) {
   const login = p?.mode === "login";
   const done = useAuthDone();
@@ -286,18 +288,26 @@ export function EmailStep({ p }: { p?: Record<string, unknown> }) {
   const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
   const [sent, setSent] = useState(false);
-  const valid = emailOk(email) && pw.length >= (login ? 1 : 8) && (login || name.trim().length > 0);
-  const submit = () => valid && done(name, email);
+  const [tried, setTried] = useState(false);
+  const MIN = login ? 1 : 8;
+  const okName = login || name.trim().length > 0, okEmail = emailOk(email), okPw = pw.length >= MIN;
+  const valid = okName && okEmail && okPw;
+  const submit = () => (valid ? done(name, email) : setTried(true));
+  const nameErr = tried && !okName ? "Add your name" : undefined;
+  const emailErr = tried && !okEmail ? (email.trim() ? "Check your email address, like you@example.com" : "Add your email") : undefined;
+  const pwErr = tried && !okPw ? (login ? "Add your password" : pw ? `Use at least 8 characters (${pw.length} so far)` : "Choose a password of at least 8 characters") : undefined;
   return (
-    <AuthShell footer={<Pill onClick={submit} disabled={!valid}>{login ? "Log in" : "Create account"}</Pill>}>
+    <AuthShell footer={<div className="flex"><NextButton ready={valid} onClick={submit} onBlocked={() => setTried(true)} label={login ? "Log in" : "Create account"} className="flex-1" /></div>}>
       <div className="flex h-12 items-center"><RB icon="back" onClick={useApp.getState().back} /></div>
       <HS className="mt-6">{login ? "Log in with email" : "Sign up with email"}</HS>
-      <form className="mt-8 flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        {!login && <Field label="Your name" value={name} onChange={setName} placeholder="First name" autoComplete="given-name" />}
-        <Field label="Email" value={email} onChange={setEmail} inputMode="email" type="email" placeholder="you@example.com" autoComplete="email" error={email && !emailOk(email) ? "Check your email address" : undefined} />
+      <form className="mt-8 flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); submit(); }} noValidate>
+        {!login && <Field label="Your name" value={name} onChange={setName} placeholder="First name" autoComplete="given-name" need={!okName} error={nameErr} />}
+        <Field label="Email" value={email} onChange={setEmail} inputMode="email" type="email" placeholder="you@example.com" autoComplete="email" need={!okEmail} error={emailErr} />
         <div className="relative">
-          <Field label="Password" value={pw} onChange={setPw} type={show ? "text" : "password"} placeholder={login ? "Your password" : "At least 8 characters"} autoComplete={login ? "current-password" : "new-password"} />
-          <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"} className="absolute bottom-0 right-1 grid h-14 w-12 place-items-center text-white/55"><Icon name="eye" size={20} /></button>
+          <Field label="Password" value={pw} onChange={setPw} type={show ? "text" : "password"} placeholder={login ? "Your password" : "At least 8 characters"} autoComplete={login ? "current-password" : "new-password"}
+            need={!okPw} error={pwErr} hint={login ? undefined : "At least 8 characters"} />
+          {/* on the field itself (its label above it), whatever shows under it */}
+          <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"} className="absolute right-1 top-[27px] grid h-14 w-12 place-items-center text-white/55"><Icon name="eye" size={20} /></button>
         </div>
         {login && <button type="button" className="self-end text-[15px] font-medium text-white/70" onClick={() => setSent(true)}>{sent ? "Reset link sent" : "Forgot password?"}</button>}
         <button type="submit" className="hidden" />

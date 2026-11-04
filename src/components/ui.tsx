@@ -130,9 +130,10 @@ export function Arrows({ onPrev, onNext, hidePrev, ready = true, label = "Next" 
   );
 }
 
-export function NextButton({ ready, onClick, label = "Next", className }: { ready: boolean; onClick?: () => void; label?: string; nudge?: boolean; className?: string }) {
+// onBlocked: a tap while it is not ready (besides the shake), for a screen that then says what is missing
+export function NextButton({ ready, onClick, onBlocked, label = "Next", className }: { ready: boolean; onClick?: () => void; onBlocked?: () => void; label?: string; nudge?: boolean; className?: string }) {
   return (
-    <button aria-disabled={!ready} aria-label={label} onClick={(e) => (ready ? onClick?.() : showNeeded(e.currentTarget))}
+    <button aria-disabled={!ready} aria-label={label} onClick={(e) => { if (ready) onClick?.(); else { onBlocked?.(); showNeeded(e.currentTarget); } }}
       className={cx("pill pill-primary min-w-0 px-6", !ready && "is-off", className)}>
       <span className="truncate">{label}</span>
     </button>
@@ -247,14 +248,14 @@ export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) =
   );
 }
 
-export function Field({ label, value, onChange, type = "text", placeholder, inputMode, autoComplete = "off", error }: { label: string; value: string; onChange: (v: string) => void; type?: string; focus?: boolean; placeholder?: string; inputMode?: "email" | "text"; autoComplete?: string; error?: string }) {
+export function Field({ label, value, onChange, type = "text", placeholder, inputMode, autoComplete = "off", error, need, hint }: { label: string; value: string; onChange: (v: string) => void; type?: string; focus?: boolean; placeholder?: string; inputMode?: "email" | "text"; autoComplete?: string; error?: string; need?: boolean; hint?: string }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-[14px] font-medium text-white/70">{label}</span>
-      <span className="field flex h-14 items-center px-4">
+      <span className="field flex h-14 items-center px-4" data-need={need === undefined ? undefined : need ? "1" : "0"}>
         <input value={value} onChange={(e) => onChange(e.target.value)} type={type} placeholder={placeholder} inputMode={inputMode} autoComplete={autoComplete} autoCapitalize="off" spellCheck={false} className="text-[17px]" />
       </span>
-      {error && <span className="mt-1.5 block text-[13px] text-peri">{error}</span>}
+      {error ? <span className="mt-1.5 block text-[13px] text-peri" role="alert">{error}</span> : hint && <span className="mt-1.5 block text-[13px] text-white/45">{hint}</span>}
     </label>
   );
 }
