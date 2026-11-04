@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
 import { FRAME_BOOT } from "@/lib/device";
+import { Visits } from "@/components/Visits";
 
 const grotesk = localFont({
   src: [
@@ -59,13 +60,16 @@ fit();window.addEventListener("resize",fit);window.addEventListener("orientation
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en-AU" className={`${grotesk.variable} ${num.variable}`} suppressHydrationWarning>
+      {/* a phone, a tablet or a computer, and the colour the last screen had (lib/device.ts): inline in the head, so it runs
+          while the page is read, before anything is drawn (a next/script runs only once Next has loaded) */}
+      <head><script dangerouslySetInnerHTML={{ __html: FRAME_BOOT }} /></head>
       <body>
         {children}
         {/* Opened from the home screen (no browser bars)? Mark it before the app starts, so the layout can drop
             the space it reserves for Safari's toolbar. */}
         <Script id="pwa-boot" strategy="beforeInteractive">{PWA_BOOT}</Script>
-        {/* a phone, a tablet or a computer (lib/device.ts): on a tablet or a computer the app shows inside a phone */}
-        <Script id="frame-boot" strategy="beforeInteractive">{FRAME_BOOT}</Script>
+        {/* anonymous visit counts, no cookies (Vercel Web Analytics) */}
+        <Visits />
       </body>
     </html>
   );

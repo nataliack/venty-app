@@ -15,6 +15,9 @@ var off=/[?&]noframe=1/.test(location.search);try{off=off||localStorage.getItem(
 if(phone)d.classList.add("phone");
 if(inFrame)d.classList.add("in-frame");
 else if(!phone&&!standalone&&!off)d.classList.add("framed");
+// the colour the last screen had at its top (useStatusTint keeps it): the page and the device take it at once, so a
+// reload never flashes the dark default round Safari's bars (html.booting, until the app has drawn its screen)
+if(!d.classList.contains("framed")){try{var t=localStorage.getItem("venty-tint");if(t&&/^#[0-9a-f]{3,8}$/i.test(t)){d.style.background=t;d.style.setProperty("--boot-bg",t);d.classList.add("booting");}}catch(e){}}
 }catch(e){}})();`;
 
 const has = (c: string) => typeof document !== "undefined" && document.documentElement.classList.contains(c);

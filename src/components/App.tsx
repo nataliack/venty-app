@@ -1,6 +1,6 @@
 "use client";
 import { haptic } from "@/lib/haptics";
-import { Component, useEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
+import { Component, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/lib/store";
 import { Splash, Welcome, SignUp, LogIn, EmailStep, SignedIn, TourAsk, Onboarding, StartChoice } from "@/screens/auth";
@@ -88,8 +88,10 @@ const CROWN_TOP = new Set(["splash", "welcome", "ready"]);
 const ONBOARDING_TOP = "#6e7383";
 // "Welcome, Ana" is on Haze (26 Oct 2026): its colour at the top and at the bottom
 const HAZE_TOP = "#96a7f9", HAZE_BOTTOM = "#7086ec";
+// before the screen paints (a layout effect), so Safari's bars never show the colour of the screen before; and kept
+// (venty-tint) so a reload starts in it too (FRAME_BOOT, lib/device.ts)
 function useStatusTint(id: string) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const desk = window.matchMedia("(min-width: 1024px)").matches;
     const color = desk ? "#0b0c15" : LIGHT_TOP[id] ?? (id === "signedin" ? HAZE_TOP : CROWN_TOP.has(id) ? "#a7b1d3" : id === "onboarding" ? ONBOARDING_TOP : id === "tourAsk" ? "#4a525d" : "#0b0c15");
     let m = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
@@ -107,6 +109,7 @@ function useStatusTint(id: string) {
     // The home-screen app has a see-through status bar already, so there it keeps the bottom strip's colour.
     const fill = pwa ? bottom : color;
     document.documentElement.style.background = fill; document.body.style.background = fill;
+    try { localStorage.setItem("venty-tint", fill); } catch {}
     const t = setTimeout(() => document.querySelector(".device")?.setAttribute("data-top", id in LIGHT_TOP ? "light" : "dark"), 0);
     return () => clearTimeout(t);
   }, [id]);
@@ -125,7 +128,7 @@ function openFromLink() {
   history.replaceState(history.state, "", "/" + location.search);
   if (link.phoneOnly && !onPhoneBrowser()) return;
   const s = useApp.getState();
-  if (s.stack[s.stack.length - 1]?.id !== link.id) s.go(link.id);
+  if (s.stack[s.stack.length - 1]?.id !== link.id) s.go(link.id, { from: "link" });
 }
 
 // On a tablet or a computer the page shows the app on a phone (PhoneFrame: the app runs in a frame inside it); anywhere
@@ -158,6 +161,8 @@ function VentyApp() {
   const [resetAsk, setResetAsk] = useState(false);
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // the boot's colour (html.booting, lib/device.ts) gives way once the app has drawn its screen
+  useEffect(() => { if (ready) document.documentElement.classList.remove("booting"); }, [ready]);
   // wait for localStorage rehydration to avoid flashes / mismatches
   useEffect(() => {
     const done = () => { openFromLink(); setReady(true); };

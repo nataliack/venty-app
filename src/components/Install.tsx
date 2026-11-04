@@ -7,13 +7,13 @@
 // (beforeinstallprompt), so there "Add to home screen" opens Chrome's own confirmation. The chosen icon is kept
 // (appIcon) and set on the page (useAppIconLinks), so it is the one the phone takes. Only offered on a real phone's
 // browser, never on a tablet or a computer or when Venty is already open from the home screen.
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useApp } from "@/lib/store";
 import { iconSrc, type IconKey } from "@/lib/appIcons";
 import { NextButton, RB, TextButton } from "./ui";
 import { isPhone } from "@/lib/device";
 import { IconTrack } from "./IconTrack";
-import { Pic, StepRow, type Step } from "./InstallSteps";
+import { Pic, StepRow, PIC_H, type Step } from "./InstallSteps";
 
 type BIP = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 let deferred: BIP | null = null;
@@ -63,14 +63,53 @@ const IOS: Step[] = [
 
 const Label = ({ children }: { children: ReactNode }) => <p className="text-center text-[15px] text-[#12131c]/60">{children}</p>;
 
-// A page, not a pop-up. In the onboarding it sits between "Before we begin" and naming the body (p.then), elsewhere it
-// simply goes back.
+// A page, not a pop-up. In the onboarding it sits between "Before we begin" and naming the body (p.then); opened from
+// app.venty.au/install (p.from "link") it leads to the very start, the splash and then Welcome; elsewhere it simply goes
+// back. It always fits the room it has, never scrolling (on a phone's browser, Safari's bars take a good part of the
+// screen): the gaps close up first, then the step pictures get shorter, their cards keeping their width, and on the very
+// shortest (an iPhone SE in Safari) each step keeps its title alone.
 export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
   const { go, back, appIcon, set } = useApp();
   const { ios, android, prompt } = useInstall();
   const os = android && !ios ? "android" : "ios";
   const then = p?.then as string | undefined;
-  const done = () => (then ? go(then) : back());
+  const done = () => (then ? go(then) : p?.from === "link" ? set({ stack: [{ id: "splash" }], dir: 1 }) : back());
+  // the gaps (each a share of their full 20 + 24 + 24) and the pictures' height, fitted to the room
+  const room = useRef<HTMLDivElement>(null);
+  const [fitted, setFitted] = useState({ gaps: 1, picH: PIC_H, terse: false });
+  const descH = useRef(0); // the tallest step description, last seen (hidden once terse)
+  useEffect(() => {
+    const el = room.current; if (!el) return;
+    const fit = () => {
+      // what does not give: everything but the gaps (data-gap) and the pictures (data-pic, at their present height)
+      let fixed = 0, gapsFull = 0;
+      for (const c of Array.from(el.children) as HTMLElement[]) {
+        if (c.dataset.gap) { gapsFull += Number(c.dataset.gap); continue; }
+        fixed += c.offsetHeight + parseFloat(getComputedStyle(c).marginTop || "0");
+        const pic = c.querySelector<HTMLElement>("[data-pic]");
+        if (pic) fixed -= pic.offsetHeight;
+        const descs = Array.from(c.querySelectorAll<HTMLElement>("[data-desc]"));
+        if (descs.length) descH.current = Math.max(...descs.map((d) => d.offsetHeight + 4));
+      }
+      // with the descriptions in (they may be hidden now)
+      const shown = !!el.querySelector("[data-desc]");
+      const fixedFull = fixed + (shown ? 0 : descH.current);
+      const GAPS_MIN = 0.25, PIC_SOFT = 100, PIC_MIN = 64;
+      // the room for the gaps and the pictures, with the descriptions; without them only if that is still too little
+      let need = el.clientHeight - fixedFull, terse = false;
+      if (need - gapsFull * GAPS_MIN < PIC_SOFT && descH.current) { terse = true; need += descH.current; }
+      let gaps = 1, picH = PIC_H;
+      if (need < gapsFull + PIC_H) {
+        gaps = Math.max(GAPS_MIN, (need - PIC_H) / gapsFull);
+        if (gaps === GAPS_MIN) picH = Math.max(PIC_MIN, Math.floor(need - gapsFull * GAPS_MIN));
+      }
+      setFitted((f) => (Math.abs(f.picH - picH) > 1 || Math.abs(f.gaps - gaps) > 0.02 || f.terse !== terse ? { gaps, picH, terse } : f));
+    };
+    fit();
+    // the room, and each part in it (a caption that wraps differently at a new width changes the height to fit)
+    const ro = new ResizeObserver(fit); ro.observe(el); for (const c of Array.from(el.children)) ro.observe(c);
+    return () => ro.disconnect();
+  }, [os, prompt]);
   const install = async () => { if (!deferred) return; await deferred.prompt(); try { await deferred.userChoice; } catch {} deferred = null; done(); };
   const setK = (k: IconKey) => set({ appIcon: k });
   const icon = appIcon ?? "today";
@@ -84,26 +123,26 @@ export function InstallGuide({ p }: { p?: Record<string, unknown> }) {
         </div>
         {/* the height to spare is shared evenly by the three gaps (above the icons, between the two parts, above the
             buttons), each keeping its least, so a taller phone gets even room, not a gap at the top or the bottom */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 noscroll">
-          <div className="min-h-5 flex-1" />
+        <div ref={room} className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 noscroll">
+          <div className="flex-1" data-gap="20" style={{ minHeight: 20 * fitted.gaps }} />
           <Label>Select an icon</Label>
           <div className="mt-3"><IconTrack k={appIcon} setK={setK} /></div>
-          <div className="min-h-6 flex-1" />
+          <div className="flex-1" data-gap="24" style={{ minHeight: 24 * fitted.gaps }} />
           {os === "ios" ? (
             <>
               <Label>Then follow these steps</Label>
-              <div className="mt-3"><StepRow steps={IOS} icon={icon} /></div>
+              <div className="mt-3"><StepRow steps={IOS} icon={icon} picH={fitted.picH} terse={fitted.terse} /></div>
             </>
           ) : (
             <>
               <Label>{prompt ? "Then confirm it in Chrome" : "Then add it from Chrome’s menu"}</Label>
-              <Pic k={prompt ? "chromeInstall" : "chromeMenu"} icon={icon} live className="mt-3" />
+              <div className="mt-3"><Pic k={prompt ? "chromeInstall" : "chromeMenu"} icon={icon} live h={fitted.picH} /></div>
               <p className="mt-3 text-center text-[15px] leading-snug text-[#12131c]/60">
                 {prompt ? <>Chrome asks you to confirm,<br />then Venty is on your home screen.</> : <>Tap ⋮ at the top of Chrome,<br />then Add to Home screen.</>}
               </p>
             </>
           )}
-          <div className="min-h-6 flex-1" />
+          <div className="flex-1" data-gap="24" style={{ minHeight: 24 * fitted.gaps }} />
         </div>
         <div className="shrink-0 px-6" style={{ paddingBottom: "var(--bottom)" }}>
           {/* on Android, Chrome installs for real, so that is the primary; on an iPhone a page cannot open Safari's Add to

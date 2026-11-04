@@ -213,10 +213,11 @@ const DOCS: Record<string, { t: string; lead: string; parts: [string, string][] 
     t: "Your privacy",
     lead: "Venty keeps what you make on this device.",
     parts: [
-      ["What is saved", "Your bodies, measurements, patterns and preferences are saved in this browser, on this device. Nothing is sent to a server."],
+      ["What is saved", "Your bodies, measurements, patterns and preferences are saved in this browser, on this device. None of it is sent to a server."],
       ["Your scan photos", "Photos from a body scan are kept as small pictures with that body, so you can look back at them. Delete the body and its photos go with it."],
       ["The studio", "Photos and sketches you add in the studio are used while you make the pattern. They are not saved once you start a new one."],
       ["Signing in", "In this demo, signing in only sets your name and picture on this device. There is no account on a server."],
+      ["Visits", "Venty counts visits anonymously with Vercel Web Analytics: the page, the country, and the kind of device and browser. It uses no cookies and nothing that identifies you."],
       ["Clearing everything", "Reset in your profile removes everything Venty saved on this device."],
     ],
   },

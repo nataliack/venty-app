@@ -44,6 +44,9 @@ input { font: inherit; color: inherit; }
    and the bar takes the html/body colour instead, which useStatusTint (App.tsx) sets to each screen's top colour. */
 .device { position: fixed; inset: 0; overflow: hidden; background: transparent; isolation: isolate; }
 .device::before { content: ""; position: absolute; inset: 0; z-index: -1; background: #0b0c15; pointer-events: none; }
+/* a reload starts in the colour the last screen had (FRAME_BOOT in lib/device.ts), until the app has drawn its screen,
+   so Safari's bars and the page round them never flash the dark default first */
+html.booting body, html.booting .device::before { background: var(--boot-bg); }
 @media (min-width: 640px) and (max-width: 1023px) and (min-height: 720px) {
   .stage { position: fixed; inset: 0; overflow: auto; display: grid; place-items: center; padding: 24px;
     background: radial-gradient(60% 50% at 30% 20%, rgba(104,126,245,.18), transparent 70%), radial-gradient(50% 50% at 80% 90%, rgba(77,94,133,.25), transparent 70%), #05060b; }

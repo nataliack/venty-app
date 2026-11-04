@@ -22,18 +22,19 @@ export type PicKey = "bar" | "menu" | "share" | "add" | "chromeMenu" | "chromeIn
 
 // the frame, pressed into the page, scaled to `w` wide (or, with no `w`, to the width it is given). `live`: the thing to
 // tap pulses (the card in view)
-export function Pic({ k, w, icon, live, className }: { k: PicKey; w?: number; icon: IconKey; live?: boolean; className?: string }) {
+// h: a shorter picture (a short window): the art scaled to fit that height, centred across the width
+export function Pic({ k, w, h, icon, live, className }: { k: PicKey; w?: number; h?: number; icon: IconKey; live?: boolean; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(W);
   useEffect(() => {
     const el = ref.current; if (w || !el) return;
     const ro = new ResizeObserver(() => setFit(el.offsetWidth)); ro.observe(el); return () => ro.disconnect();
   }, [w]);
-  const width = w ?? fit, s = width / W;
+  const width = w ?? fit, s = Math.min(width / W, h ? h / H : Infinity);
   return (
     <div ref={ref} className={cx("relative shrink-0 overflow-hidden rounded-[22px] border border-[#181e46]/[.06] bg-[#e1e7f6] text-[#12131c] shadow-[inset_0_3px_7px_rgb(24_30_70/.2),inset_0_1px_1.5px_rgb(24_30_70/.16),inset_0_-1px_0_rgb(255_255_255/.85)]", live && "pic-live", className)}
-      style={{ width: w ?? "100%", height: H * s }} aria-hidden>
-      <div className="absolute left-0 top-0 origin-top-left" style={{ width: W, height: H, transform: `scale(${s})` }}>{ART[k](icon)}</div>
+      style={{ width: w ?? "100%", height: h ?? H * s }} data-pic aria-hidden>
+      <div className="absolute top-0 origin-top-left" style={{ left: (width - W * s) / 2, width: W, height: H, transform: `scale(${s})` }}>{ART[k](icon)}</div>
     </div>
   );
 }
@@ -146,13 +147,18 @@ const ART: Record<PicKey, (icon: IconKey) => ReactNode> = {
 };
 
 export type Step = { t: string; d: string; pic: PicKey };
-const CARD = 300, GAP = 12, AUTO = 4500, RESUME = 4000;
+const CARD_W = 300, GAP = 12, AUTO = 4500, RESUME = 4000;
+// a step's picture at full size (its width and height), for the page that fits them to the room it has
+export const PIC_W = W, PIC_H = H;
 // the pager: segments 34 wide; the knob is a segment less the 5px channel each side, the track its height plus 5 each side
 const SEG = 34, CH = 5, KH = 12;
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 const ease = (t: number) => t * t * (3 - 2 * t);
 
-export function StepRow({ steps, icon }: { steps: Step[]; icon: IconKey }) {
+// picH: the pictures' height (shorter on a short window, so the page fits, InstallGuide); the cards keep their width.
+// terse: the very shortest windows, each step its title alone
+export function StepRow({ steps, icon, picH, terse }: { steps: Step[]; icon: IconKey; picH?: number; terse?: boolean }) {
+  const CARD = CARD_W;
   const ref = useRef<HTMLDivElement>(null);
   const [f, setF] = useState(0); // where the row is, in cards
   const still = useReducedMotion();
@@ -197,10 +203,10 @@ export function StepRow({ steps, icon }: { steps: Step[]; icon: IconKey }) {
         className="-mx-6 flex snap-x snap-mandatory gap-3 overflow-x-auto pl-6 noscroll lg:[mask-image:linear-gradient(90deg,transparent,#000_24px,#000_calc(100%-24px),transparent)]" style={{ scrollPaddingLeft: 24 }}>
         {steps.map((s, n) => (
           <figure key={s.t} className="shrink-0 snap-start" style={{ width: CARD }}>
-            <Pic k={s.pic} w={CARD} icon={icon} live={n === at && !still} />
+            <Pic k={s.pic} w={CARD} h={picH} icon={icon} live={n === at && !still} />
             <figcaption className="mt-3 flex items-start gap-3 pr-2">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#181e46]/[.06] text-[15px] font-medium leading-none tabular-nums text-[#12131c]/75 shadow-[inset_0_1px_2px_rgb(24_30_70/.12)]" aria-hidden>{n + 1}</span>
-              <span className="pt-0.5 text-[16px] leading-tight">{s.t}<span className="mt-1 block text-[14px] leading-snug text-[#12131c]/55">{s.d}</span></span>
+              <span className="pt-0.5 text-[16px] leading-tight">{s.t}{!terse && <span data-desc className="mt-1 block text-[14px] leading-snug text-[#12131c]/55">{s.d}</span>}</span>
             </figcaption>
           </figure>
         ))}
