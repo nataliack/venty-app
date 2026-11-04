@@ -131,6 +131,9 @@ function openFromLink() {
   if (s.stack[s.stack.length - 1]?.id !== link.id) s.go(link.id, { from: "link" });
 }
 
+// how the screens change: forwards or back, in place (a tab switch), or at once (the browser has shown it)
+type Move = { dir: number; still: boolean; instant: boolean };
+
 // On a tablet or a computer the page shows the app on a phone (PhoneFrame: the app runs in a frame inside it); anywhere
 // else, the app itself. Read from the page (set before the app starts, lib/device.ts); the server draws neither.
 const noSub = () => () => {};
@@ -152,7 +155,11 @@ function VentyApp() {
   useAppIconLinks();
   // the pictures further in, fetched once the app is idle (the splash fetches the first screens' own)
   useEffect(() => { preloadLater(); }, []);
-  const depth = useRef(stack.length);
+  // the browser's history kept in step with the screens (below): how deep it is, and its own moves still to come back
+  const hist = useRef({ depth: 0, ignore: 0, until: 0 });
+  // a move the browser has already shown (the iPhone's swipe from the left edge, Android's back): no slide of our own
+  const [instant, setInstant] = useState(false);
+  useEffect(() => { if (!instant) return; const t = setTimeout(() => setInstant(false), 60); return () => clearTimeout(t); }, [instant]);
   // the page shown before this one, to tell a switch between tabs from any other move
   const [shown, setShown] = useState(top.id);
   const [from, setFrom] = useState(top.id);
@@ -172,14 +179,28 @@ function VentyApp() {
     return () => { unsub(); clearTimeout(t); };
   }, []);
 
-  // browser / Android back button → in-app back
+  // Back with the browser (4 Nov 2026): the history has one entry per screen, each knowing how deep it is (state.venty), so
+  // the browser's back (the iPhone's swipe from the left edge, Android's back button) lands on exactly the screen before,
+  // and the app does not slide a second time over the browser's own move (instant). A screen opened adds entries; the
+  // app's own back (and Home, Log out, Reset) steps the history back the same way, its moves not taken for the user's.
   useEffect(() => {
     if (!ready) return;
-    if (stack.length > depth.current) { try { history.pushState({ v: stack.length }, ""); } catch {} }
-    depth.current = stack.length;
+    const h = hist.current, len = stack.length;
+    if (!h.depth) { h.depth = len; try { history.replaceState({ ...(history.state ?? {}), venty: len }, ""); } catch {} return; }
+    if (len > h.depth) { for (let d = h.depth + 1; d <= len; d++) { try { history.pushState({ venty: d }, ""); } catch {} } }
+    else if (len < h.depth) { h.ignore++; h.until = Date.now() + 1500; try { history.go(len - h.depth); } catch { h.ignore--; } }
+    h.depth = len;
   }, [stack.length, ready]);
   useEffect(() => {
-    const onPop = () => { const s = useApp.getState(); if (s.stack.length > 1) { depth.current = s.stack.length - 1; s.back(); } };
+    const onPop = (e: PopStateEvent) => {
+      const h = hist.current;
+      if (h.ignore > 0 && Date.now() < h.until) { h.ignore--; return; }
+      h.ignore = 0;
+      const s = useApp.getState(), at = Math.max(1, Number((e.state as { venty?: number } | null)?.venty) || 1);
+      if (at < s.stack.length) { h.depth = at; setInstant(true); useApp.setState({ stack: s.stack.slice(0, at), dir: -1 }); }
+      // forward (a swipe from the right edge): that screen is gone, so the history steps back to where the app is
+      else if (at > s.stack.length) { h.ignore++; h.until = Date.now() + 1500; try { history.go(s.stack.length - at); } catch { h.ignore--; } }
+    };
     window.addEventListener("popstate", onPop); return () => window.removeEventListener("popstate", onPop);
   }, []);
 
@@ -213,16 +234,16 @@ function VentyApp() {
         {ready && !FULL.has(top.id) && <Sidebar route={top.id} />}
         <div className={cx("relative h-full flex-1 overflow-hidden")}>
         {ready && (
-          <AnimatePresence initial={false} custom={{ dir, still: tabSwap }} mode="popLayout">
-            <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={{ dir, still: tabSwap }} className="absolute inset-0"
+          <AnimatePresence initial={false} custom={{ dir, still: tabSwap, instant }} mode="popLayout">
+            <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={{ dir, still: tabSwap, instant }} className="absolute inset-0"
               variants={{
-                enter: (c: { dir: number; still: boolean }) => ({ x: SKY.has(top.id) || c.still ? 0 : c.dir > 0 ? 60 : -60, opacity: 0 }),
-                shown: { x: 0, opacity: 1 },
+                // instant: the browser has already shown the move (a swipe back), so the screens change at once
+                enter: (c: Move) => (c.instant ? { x: 0, opacity: 1 } : { x: SKY.has(top.id) || c.still ? 0 : c.dir > 0 ? 60 : -60, opacity: 0 }),
+                shown: (c: Move) => ({ x: 0, opacity: 1, transition: c.instant ? { duration: 0 } : { duration: 0.32, ease: [0.2, 0.8, 0.2, 1] } }),
                 // the leaving page reads the move from AnimatePresence's custom, so a tab switch leaves in place too
-                gone: (c: { dir: number; still: boolean }) => ({ x: SKY.has(top.id) || c.still ? 0 : c.dir > 0 ? -60 : 60, opacity: 0 }),
+                gone: (c: Move) => (c.instant ? { opacity: 0, transition: { duration: 0 } } : { x: SKY.has(top.id) || c.still ? 0 : c.dir > 0 ? -60 : 60, opacity: 0, transition: { duration: 0.32, ease: [0.2, 0.8, 0.2, 1] } }),
               }}
-              initial="enter" animate="shown" exit="gone"
-              transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}>
+              initial="enter" animate="shown" exit="gone">
               <Guard k={top.id + stack.length}><S p={top.p} /></Guard>
             </motion.div>
           </AnimatePresence>

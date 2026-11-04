@@ -1,6 +1,8 @@
 "use client";
 import { useRef, useState, type ReactNode } from "react";
 import { useApp, userPhoto, type User } from "@/lib/store";
+import { squarePhoto } from "@/lib/photo";
+import { remember } from "@/lib/accounts";
 import { Screen, TopBar, HS, Lead, Pill, Sheet, Toggle, Option, Arrows, Field, Avatar, cx, useToast, useDesk } from "@/components/ui";
 import { useInstall } from "@/components/Install";
 import { Icon, type IconName } from "@/components/icons";
@@ -153,18 +155,6 @@ export function You() {
   );
 }
 
-// a picked photo, as a small square JPEG (centre crop), so it can be kept on the device
-async function squarePhoto(file: File, size = 320): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
-    const s = Math.min(img.naturalWidth, img.naturalHeight);
-    const c = document.createElement("canvas");
-    c.width = size; c.height = size;
-    c.getContext("2d")!.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
-    return c.toDataURL("image/jpeg", 0.85);
-  } finally { URL.revokeObjectURL(url); }
-}
 
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
 
@@ -176,7 +166,10 @@ export function ProfileEdit() {
   const file = useRef<HTMLInputElement>(null);
   const changed = name.trim() !== user.name || email.trim() !== user.email || photo !== userPhoto(user);
   const valid = name.trim().length > 0 && (!email.trim() || emailOk(email));
-  const save = () => { set({ user: { ...user, name: name.trim(), email: email.trim(), photo } as User }); back(); };
+  const save = () => {
+    const next = { ...user, name: name.trim(), email: email.trim(), photo } as User;
+    set({ user: next, accounts: remember(useApp.getState().accounts, next, user.email) }); back();
+  };
   // the avatar here shows the picture being edited, not the saved one
   const preview = photo
     // eslint-disable-next-line @next/next/no-img-element
@@ -216,7 +209,7 @@ const DOCS: Record<string, { t: string; lead: string; parts: [string, string][] 
       ["What is saved", "Your bodies, measurements, patterns and preferences are saved in this browser, on this device. None of it is sent to a server."],
       ["Your scan photos", "Photos from a body scan are kept as small pictures with that body, so you can look back at them. Delete the body and its photos go with it."],
       ["The studio", "Photos and sketches you add in the studio are used while you make the pattern. They are not saved once you start a new one."],
-      ["Signing in", "In this demo, signing in only sets your name and picture on this device. There is no account on a server."],
+      ["Signing in", "In this demo, an account lives on this device only: its name, email and photo are remembered here so you can log back in, and a password is never kept. There is no account on a server."],
       ["Visits", "Venty counts visits anonymously with Vercel Web Analytics: the page, the country, and the kind of device and browser. It uses no cookies and nothing that identifies you."],
       ["Clearing everything", "Reset in your profile removes everything Venty saved on this device."],
     ],

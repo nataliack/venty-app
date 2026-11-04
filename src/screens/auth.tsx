@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { useApp, DEMO_EMAIL } from "@/lib/store";
+import { useApp, DEMO_EMAIL, type User } from "@/lib/store";
+import { findAccount, remember } from "@/lib/accounts";
+import { squarePhoto } from "@/lib/photo";
 import { Screen, Pill, Field, HS, Lead, Glow, RB, TextButton, TopAction, Crown, NextButton, cx, useDesk } from "@/components/ui";
 import { VentyLogo, BodyFigure, Piece } from "@/components/art";
 import { FIRST, LOOKS, ONBOARDING, START, TOUR, preload } from "@/lib/preload";
@@ -169,13 +171,17 @@ function AuthShell({ children, footer, actions }: { children: ReactNode; footer?
   );
 }
 
+// Signed up or logged in: the user (their name, email and photo, used everywhere: home, the profile, the sidebar), and
+// their account remembered on this device so they can log back in (lib/accounts.ts). photo: undefined keeps the
+// sample person's own (Apple and Google sign in as her), null is none.
 function useAuthDone() {
   const set = useApp((s) => s.set);
   const replace = useApp((s) => s.replace);
-  return (name: string, email: string, guest = false) => {
+  return (name: string, email: string, guest = false, photo?: string | null) => {
     const clean = (name || email.split("@")[0] || "Ana").trim();
     const nice = clean.charAt(0).toUpperCase() + clean.slice(1);
-    set({ user: { name: guest ? "there" : nice.split(/[\s._-]/)[0] || "Ana", email, guest } });
+    const user = { name: guest ? "there" : nice.split(/[\s._-]/)[0] || "Ana", email: email.trim(), guest, ...(photo !== undefined ? { photo } : {}) } as User;
+    set({ user, accounts: remember(useApp.getState().accounts, user) });
     replace(guest ? "tourAsk" : "signedin");
   };
 }
@@ -279,30 +285,67 @@ export function LogIn() {
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
 
 // Sign up or log in with email. Create account (Log in) is the app's Next: faded until every field is right, and a tap
-// before that shakes what is still missing and says why under each field (never a silent, dead button)
+// before that shakes what is still missing and says why under each field (never a silent, dead button).
+// Sign up can take a photo (optional), used wherever the avatar shows. Log in finds the account made on this device with
+// that email and brings back its name and photo; an email never used here is said so, with a way to sign up with it.
 export function EmailStep({ p }: { p?: Record<string, unknown> }) {
   const login = p?.mode === "login";
   const done = useAuthDone();
+  const accounts = useApp((s) => s.accounts);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => (typeof p?.email === "string" ? p.email : ""));
   const [pw, setPw] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
   const [show, setShow] = useState(false);
   const [sent, setSent] = useState(false);
   const [tried, setTried] = useState(false);
+  const [unknown, setUnknown] = useState(""); // the email last tried at Log in that has no account here
+  const file = useRef<HTMLInputElement>(null);
   const MIN = login ? 1 : 8;
   const okName = login || name.trim().length > 0, okEmail = emailOk(email), okPw = pw.length >= MIN;
   const valid = okName && okEmail && okPw;
-  const submit = () => (valid ? done(name, email) : setTried(true));
+  const submit = () => {
+    if (!valid) { setTried(true); return; }
+    if (!login) { done(name, email, false, photo); return; }
+    const acct = findAccount(accounts, email);
+    if (!acct) { setUnknown(email.trim()); return; }
+    done(acct.name, acct.email, false, acct.photo);
+  };
+  const noAccount = login && unknown !== "" && unknown.toLowerCase() === email.trim().toLowerCase();
   const nameErr = tried && !okName ? "Add your name" : undefined;
-  const emailErr = tried && !okEmail ? (email.trim() ? "Check your email address, like you@example.com" : "Add your email") : undefined;
+  const emailErr = tried && !okEmail ? (email.trim() ? "Check your email address, like you@example.com" : "Add your email") : noAccount ? "There is no account with this email on this device" : undefined;
   const pwErr = tried && !okPw ? (login ? "Add your password" : pw ? `Use at least 8 characters (${pw.length} so far)` : "Choose a password of at least 8 characters") : undefined;
   return (
     <AuthShell footer={<div className="flex"><NextButton ready={valid} onClick={submit} onBlocked={() => setTried(true)} label={login ? "Log in" : "Create account"} className="flex-1" /></div>}>
       <div className="flex h-12 items-center"><RB icon="back" onClick={useApp.getState().back} /></div>
       <HS className="mt-6">{login ? "Log in with email" : "Sign up with email"}</HS>
-      <form className="mt-8 flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); submit(); }} noValidate>
+      {login && <Lead className="mt-2">Use the email you signed up with on this device.</Lead>}
+      {!login && (
+        // your photo (optional): the round picture, and a chip that says what it does
+        <div className="mt-6 flex items-center gap-4">
+          <button type="button" onClick={() => file.current?.click()} aria-label={photo ? "Change your photo" : "Add a photo"} className="tap relative shrink-0 rounded-full">
+            <span className="avatar avatar-ring relative grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : <span className="text-[30px] font-medium leading-none text-[#3f4c80]">{(name.trim()[0] ?? "").toUpperCase() || <Icon name="user" size={26} />}</span>}
+            </span>
+            <span className="bell-btn absolute -bottom-0.5 -right-0.5 grid h-7 w-7 place-items-center rounded-full"><Icon name="camera" size={13} strokeWidth={2} /></span>
+          </button>
+          <div className="min-w-0">
+            <div className="flex gap-2">
+              <button type="button" onClick={() => file.current?.click()} className="chip">{photo ? "Change photo" : "Add a photo"}</button>
+              {photo && <button type="button" onClick={() => setPhoto(null)} className="chip">Remove</button>}
+            </div>
+            <p className="mt-1.5 text-[13px] text-white/45">Optional. It shows on your profile.</p>
+          </div>
+          <input ref={file} type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) { try { setPhoto(await squarePhoto(f)); } catch { /* not an image we can read */ } } }} />
+        </div>
+      )}
+      <form className={cx("flex flex-col gap-4", login ? "mt-7" : "mt-6")} onSubmit={(e) => { e.preventDefault(); submit(); }} noValidate>
         {!login && <Field label="Your name" value={name} onChange={setName} placeholder="First name" autoComplete="given-name" need={!okName} error={nameErr} />}
-        <Field label="Email" value={email} onChange={setEmail} inputMode="email" type="email" placeholder="you@example.com" autoComplete="email" need={!okEmail} error={emailErr} />
+        <Field label="Email" value={email} onChange={setEmail} inputMode="email" type="email" placeholder="you@example.com" autoComplete="email" need={!okEmail || noAccount} error={emailErr} />
+        {noAccount && (
+          <button type="button" onClick={() => useApp.getState().replace("email", { mode: "signup", email: email.trim() })} className="-mt-2 self-start text-[15px] font-medium text-[#a9b5fb] underline decoration-[#a9b5fb]/40 underline-offset-[3px]">Create an account with this email</button>
+        )}
         <div className="relative">
           <Field label="Password" value={pw} onChange={setPw} type={show ? "text" : "password"} placeholder={login ? "Your password" : "At least 8 characters"} autoComplete={login ? "current-password" : "new-password"}
             need={!okPw} error={pwErr} hint={login ? undefined : "At least 8 characters"} />

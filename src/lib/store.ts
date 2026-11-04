@@ -1,5 +1,6 @@
 "use client";
 import { create } from "zustand";
+import type { Account } from "./accounts";
 import type { IconKey } from "./appIcons";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import { defaultMeasures, templateBy, metresFor, nameFor, type GarmentKey, type Kind, type Sex, SEED_PATTERNS } from "./data";
@@ -86,6 +87,7 @@ type State = {
   stack: Route[];
   dir: 1 | -1;
   user: User;
+  accounts: Account[]; // the accounts made on this device (lib/accounts.ts), to log back in to
   units: "cm" | "in";
   experience: number | null;
   prefsDone: boolean; // units + experience chosen once, app-wide
@@ -127,6 +129,7 @@ const initial = () => ({
   stack: [{ id: "splash" }] as Route[],
   dir: 1 as 1 | -1,
   user: { name: "Ana", email: "", guest: true } as User,
+  accounts: [] as Account[],
   units: "cm" as const,
   experience: null as number | null,
   prefsDone: false,
