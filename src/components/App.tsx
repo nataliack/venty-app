@@ -155,6 +155,24 @@ function VentyApp() {
   useAppIconLinks();
   // the pictures further in, fetched once the app is idle (the splash fetches the first screens' own)
   useEffect(() => { preloadLater(); }, []);
+  // Each screen keeps where it was scrolled to (by its depth, id and details): taken as it leaves, given back when it is
+  // shown again (back, a swipe back, or a tab you return to); a screen closed (the stack shorter) forgets it
+  const scrollKey = `${stack.length}:${top.id}:${JSON.stringify(top.p ?? {})}`;
+  const scrolls = useRef(new Map<string, number[]>());
+  useLayoutEffect(() => {
+    const k = scrollKey, depth = stack.length, kept = scrolls.current; // one map for the app's life
+    for (const key of kept.keys()) if (Number(key.split(":")[0]) > depth) kept.delete(key);
+    const areas = () => Array.from(document.querySelectorAll<HTMLElement>(`[data-k="${CSS.escape(k)}"] :is(.scroller, .overflow-y-auto)`));
+    const was = kept.get(k);
+    let raf = 0;
+    if (was) {
+      // again for a few frames, as a screen's content can still be growing
+      let n = 0;
+      const put = () => { areas().forEach((el, i) => { if (was[i]) el.scrollTop = was[i]; }); if (++n < 4) raf = requestAnimationFrame(put); };
+      put();
+    }
+    return () => { cancelAnimationFrame(raf); const tops = areas().map((el) => el.scrollTop); if (tops.some((t) => t > 0)) kept.set(k, tops); else kept.delete(k); };
+  }, [scrollKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // the browser's history kept in step with the screens (below): how deep it is, and its own moves still to come back
   const hist = useRef({ depth: 0, ignore: 0, until: 0 });
   // a move the browser has already shown (the iPhone's swipe from the left edge, Android's back): no slide of our own
@@ -235,7 +253,7 @@ function VentyApp() {
         <div className={cx("relative h-full flex-1 overflow-hidden")}>
         {ready && (
           <AnimatePresence initial={false} custom={{ dir, still: tabSwap, instant }} mode="popLayout">
-            <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} custom={{ dir, still: tabSwap, instant }} className="absolute inset-0"
+            <motion.div key={top.id + ":" + stack.length + ":" + JSON.stringify(top.p ?? {})} data-k={scrollKey} custom={{ dir, still: tabSwap, instant }} className="absolute inset-0"
               variants={{
                 // instant: the browser has already shown the move (a swipe back), so the screens change at once
                 enter: (c: Move) => (c.instant ? { x: 0, opacity: 1 } : { x: SKY.has(top.id) || c.still ? 0 : c.dir > 0 ? 60 : -60, opacity: 0 }),

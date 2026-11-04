@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, animate } from "motion/react";
 import { useApp, type Pattern } from "@/lib/store";
@@ -127,9 +127,9 @@ function CreateCardBody({ onHeight, onPick }: { onHeight: (h: number) => void; o
 // · Home-screen app (html.pwa): docked like a native iOS tab bar. It runs full width to the bottom edge; icons stay in the
 //   top 80px and the bar grows underneath by --tab-under, the space kept free for the iPhone's home bar. The Create
 //   card still keeps 24px from the screen's edges.
+// (read at once, as the app only draws in the browser: a new bar is never drawn undocked first and then docked)
 const usePwaDock = () => {
-  const [docked, setDocked] = useState(false);
-  useEffect(() => { setDocked(document.documentElement.classList.contains("pwa") && window.matchMedia("(max-width: 639px)").matches); }, []);
+  const [docked] = useState(() => typeof document !== "undefined" && document.documentElement.classList.contains("pwa") && window.matchMedia("(max-width: 639px)").matches);
   return docked;
 };
 // TAB_SPREAD: the outer tabs sit at most this far beyond the inner ones, so on a wide bar (a Pro Max, or docked full
@@ -146,7 +146,10 @@ export function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" })
   const [cardH, setCardH] = useState(0);
   const [screen, setScreen] = useState<Element | null>(null);
   const notch = useEased(open ? BTN + 2 * G : RING);
-  useEffect(() => { const el = nav.current; if (!el) return; const fit = () => setSize([el.clientWidth, el.clientHeight || BAR_H]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
+  // measured before it is drawn (drawn first at a stand-in width and then redrawn, the bar flickered on every new screen,
+  // most of all on a swipe back), and its shapes' ids its own (the leaving screen's bar has its own for a moment too)
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  useLayoutEffect(() => { const el = nav.current; if (!el) return; const fit = () => setSize([el.clientWidth, el.clientHeight || BAR_H]); const ro = new ResizeObserver(fit); ro.observe(el); fit(); return () => ro.disconnect(); }, []);
   useEffect(() => {
     if (!open) return;
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -179,7 +182,7 @@ export function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" })
             initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94, y: 8 }} transition={{ duration: 0.38, ease: [0.2, 0.8, 0.2, 1] }}>
             {cardH > 0 && (
               <svg width={cardW} height={cardH + G + NOTCH_Y + RING} className="pointer-events-none absolute left-0 top-0 overflow-visible" style={{ filter: "drop-shadow(0 1px 2px rgb(0 0 0 / .3)) drop-shadow(0 18px 28px rgb(0 0 0 / .45))" }} aria-hidden>
-                <SnowShape id="createcard" d={cardPath(cardW, cardH)} h={cardH} />
+                <SnowShape id={`createcard${uid}`} d={cardPath(cardW, cardH)} h={cardH} />
               </svg>
             )}
             <CreateCardBody onHeight={setCardH} onPick={(i) => { setOpen(false); actions[i](); }} />
@@ -189,7 +192,7 @@ export function TabBar({ tab }: { tab: "home" | "bodies" | "patterns" | "you" })
             drawn over the card, so the card's shadow falls on the page but never on the bar */}
         <nav ref={nav} className="tabbar relative z-20" style={{ height: docked ? "calc(80px + var(--tab-under, 0px))" : 80 }}>
           <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="tabbar-shape pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
-            <SnowShape id="tab" d={notchPath(w, h, docked, notch)} h={BAR_H} />
+            <SnowShape id={`tab${uid}`} d={notchPath(w, h, docked, notch)} h={BAR_H} />
           </svg>
           {items.map(btn)}
         </nav>
