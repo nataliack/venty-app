@@ -48,9 +48,11 @@ export const viewport: Viewport = {
 // html.pwa: opened from the home screen. html.vp-short: innerHeight is shorter than the screen. Only shown in the
 // display readout (You tab); the layout no longer reacts to it, since on a real iPhone it read "short" while the app
 // actually reached the bottom edge.
+// (no comments inside the script itself: it is sent as it is, in the page. preview: on localhost only, venty-preview-pwa
+// = 1 previews the home-screen layout)
 const PWA_BOOT = `(function(){try{
 var d=document.documentElement;
-var preview=location.hostname==="localhost"&&localStorage.getItem("venty-preview-pwa")==="1"; // dev only: preview the home-screen layout
+var preview=location.hostname==="localhost"&&localStorage.getItem("venty-preview-pwa")==="1";
 if(!(preview||window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true))return;
 d.classList.add("pwa");
 var fit=function(){var portrait=window.innerHeight>window.innerWidth;var gap=(portrait?screen.height:screen.width)-window.innerHeight;d.classList.toggle("vp-short",portrait&&gap>20);};

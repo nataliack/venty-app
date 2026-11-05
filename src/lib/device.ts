@@ -6,6 +6,10 @@
 //   (PhoneFrame), the app itself running in a frame of a phone's size, so every screen is exactly its phone layout.
 // - html.in-frame: this is the app inside that frame.
 // ?noframe=1 (or localStorage venty-noframe = 1) keeps the app full width on a computer, for design work.
+// - venty-tint: the colour the last screen had at its top (useStatusTint keeps it); the page and the device take it at
+//   once, so a reload never flashes the dark default round Safari's bars (html.booting, until the app has drawn its
+//   screen). Not on the page round the phone frame.
+// No comments inside the script itself: it is sent as it is, in the page.
 export const FRAME_BOOT = `(function(){try{
 var d=document.documentElement,ua=navigator.userAgent;
 var phone=/iPhone|iPod/.test(ua)||(/Android/.test(ua)&&/Mobile/.test(ua))||(window.matchMedia("(pointer: coarse)").matches&&Math.min(screen.width,screen.height)<600);
@@ -15,8 +19,6 @@ var off=/[?&]noframe=1/.test(location.search);try{off=off||localStorage.getItem(
 if(phone)d.classList.add("phone");
 if(inFrame)d.classList.add("in-frame");
 else if(!phone&&!standalone&&!off)d.classList.add("framed");
-// the colour the last screen had at its top (useStatusTint keeps it): the page and the device take it at once, so a
-// reload never flashes the dark default round Safari's bars (html.booting, until the app has drawn its screen)
 if(!d.classList.contains("framed")){try{var t=localStorage.getItem("venty-tint");if(t&&/^#[0-9a-f]{3,8}$/i.test(t)){d.style.background=t;d.style.setProperty("--boot-bg",t);d.classList.add("booting");}}catch(e){}}
 }catch(e){}})();`;
 
